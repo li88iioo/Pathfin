@@ -12,7 +12,18 @@ import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -263,6 +274,94 @@ class PosterImageCacheTest {
             if (!aborted) oldEditor.abort()
             PosterImageCache.release(initial)
         }
+    }
+
+    @Test
+    fun obsoleteGenerationDeletionSerializesWithAccountRemovalAndPreservesOtherAccount() {
+        val account = session("serialized-removal-$runId")
+        val otherAccount = session("serialized-keep-$runId")
+        val loader = PosterImageCache.createLoader(context, account, client)
+        val other = PosterImageCache.createLoader(context, otherAccount, client)
+        val entered = CountDownLatch(1)
+        val proceed = CountDownLatch(1)
+        var removal: Thread? = null
+        val removed = AtomicReference<Result<Boolean>?>(null)
+        try {
+            val currentDisk = requireNotNull(loader.diskCache)
+            val otherDisk = requireNotNull(other.diskCache)
+            val key = PosterImageCache.requestKey(account, "https://poster-cache.invalid/Images/serialized")
+            val otherKey = PosterImageCache.requestKey(otherAccount, "https://poster-cache.invalid/Images/serialized-other")
+            write(currentDisk, key, "current-account-cache")
+            write(otherDisk, otherKey, "other-account-cache")
+            awaitCleanup()
+
+            // 模拟进程留下的真实 Coil 旧代次；目录仍由正式缓存清理负责删除。
+            val root = requireNotNull(File(currentDisk.directory.toString()).parentFile)
+            val obsolete = File(root, "generation-${UUID.randomUUID()}")
+            val oldDisk = DiskCache.Builder().directory(obsolete.toOkioPath()).maxSizeBytes(16L * 1024 * 1024).build()
+            try { write(oldDisk, key, "obsolete-generation-cache") } finally { oldDisk.shutdown() }
+            assertTrue(obsolete.isDirectory)
+            val firstClassification = AtomicBoolean(true)
+            val observedRoot = object : File(root.path) {
+                override fun listFiles(): Array<File>? = super.listFiles()?.map { child ->
+                    if (child.absolutePath != obsolete.absolutePath) child else object : File(child.path) {
+                        override fun isDirectory(): Boolean {
+                            val directory = super.isDirectory()
+                            if (firstClassification.compareAndSet(true, false)) {
+                                check(directory) { "旧代次必须是实际存在的目录" }
+                                entered.countDown()
+                                check(proceed.await(15, TimeUnit.SECONDS)) { "测试未释放旧代次目录分类" }
+                            }
+                            return directory
+                        }
+                    }
+                }?.toTypedArray()
+            }
+            try {
+                PosterImageCache::class.java.getDeclaredMethod("cleanObsoleteGenerations", File::class.java)
+                    .apply { isAccessible = true }.invoke(PosterImageCache, observedRoot)
+                assertTrue("正式旧代次清理必须已分类该目录", entered.await(5, TimeUnit.SECONDS))
+                val started = CountDownLatch(1)
+                val finished = CountDownLatch(1)
+                val removing = Thread({
+                    started.countDown()
+                    try { removed.set(runCatching { PosterImageCache.clearAccount(context, account) }) }
+                    finally { finished.countDown() }
+                }, "pathfin-cache-account-removal").also { removal = it; it.start() }
+                assertTrue("正式账号删除线程必须已启动", started.await(5, TimeUnit.SECONDS))
+                runBlocking { withTimeout(5_000) {
+                    while (finished.count != 0L && !blockedAtAccountRemoval(removing)) yield()
+                } }
+                removed.get()?.getOrThrow()
+                assertEquals("旧代次遍历未结束时，账号删除必须等待同一 IO 事务", 1L, finished.count)
+            } finally {
+                proceed.countDown()
+                removal?.join(5_000)
+                assertFalse("账号删除不能留下后台线程", removal?.isAlive == true)
+                awaitCleanup()
+            }
+            assertTrue(requireNotNull(removed.get()).getOrThrow())
+            assertFalse("正式账号删除必须实际移除目标根目录", root.exists())
+            assertEquals("other-account-cache", read(otherDisk, otherKey))
+            write(otherDisk, otherKey, "other-account-still-writable")
+            assertEquals("other-account-still-writable", read(otherDisk, otherKey))
+        } finally {
+            PosterImageCache.release(loader)
+            PosterImageCache.release(other)
+        }
+    }
+
+    private fun blockedAtAccountRemoval(thread: Thread): Boolean {
+        if (thread.state != Thread.State.BLOCKED) return false
+        val frame = thread.stackTrace.firstOrNull() ?: return false
+        return thread.state == Thread.State.BLOCKED && frame.className == PosterImageCache::class.java.name &&
+            frame.methodName == "clearIfUnchanged"
+    }
+
+    private fun awaitCleanup() {
+        val scope = PosterImageCache::class.java.getDeclaredField("cleanupScope").apply { isAccessible = true }
+            .get(PosterImageCache) as CoroutineScope
+        runBlocking { withTimeout(5_000) { requireNotNull(scope.coroutineContext[Job]).children.toList().joinAll() } }
     }
 
     private fun session(user: String = "fixture-$runId") = Session(

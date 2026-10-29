@@ -374,16 +374,15 @@ internal object PosterImageCache {
 
     private fun cleanObsoleteGenerations(root: File) {
         cleanupScope.launch {
-            val obsolete = synchronized(ioLock) {
-                val keep = synchronized(stateLock) { entries[root.absolutePath]?.diskCache?.directory?.toFile()?.name }
-                    ?: return@synchronized emptyList()
-                val activeDirectories = synchronized(stateLock) {
-                    records.values.mapNotNull { it.entry?.diskCache?.directory?.toFile()?.absolutePath }.toSet()
+            synchronized(ioLock) {
+                val retainedDirectories = synchronized(stateLock) {
+                    val current = entries[root.absolutePath]?.diskCache?.directory?.toFile()?.absolutePath ?: return@launch
+                    records.values.mapNotNull { it.entry?.diskCache?.directory?.toFile()?.absolutePath }.toSet() + current
                 }
-                root.listFiles().orEmpty().filter { it.name != keep && !it.name.startsWith(CURRENT) && it.absolutePath !in activeDirectories }
+                // 选择与删除共用账号移除、退役实例释放的 IO 事务，避免并发遍历同一旧目录。
+                root.listFiles().orEmpty().filter { !it.name.startsWith(CURRENT) && it.absolutePath !in retainedDirectories }
+                    .forEach { it.deleteRecursively() }
             }
-            // UUID 目录永不复用，迟到清理或旧 editor 只能影响其自己的旧代次。
-            obsolete.forEach { it.deleteRecursively() }
         }
     }
 
