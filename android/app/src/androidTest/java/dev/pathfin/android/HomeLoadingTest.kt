@@ -143,6 +143,7 @@ class HomeLoadingTest {
             fixture.nextUp.awaitRequest("下一集必须真实在途，才能验证续播是否被它阻塞")
             val resumed = awaitState(app, fixture, "首次续播一到即显示，不等待下一集") {
                 it.home.resumeLoaded && it.home.resume.map { item -> item.id } == listOf(RESUME_MOVIE) &&
+                    it.home.libraryItems[FIRST_LIBRARY]?.map { item -> item.id } == listOf(FIRST_MOVIE) &&
                     it.home.libraryItems[SECOND_LIBRARY]?.map { item -> item.id } == listOf(SECOND_MOVIE)
             }
             fixture.nextUp.assertStillBlocked()
