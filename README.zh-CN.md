@@ -4,6 +4,8 @@
 
 [English](README.md) | 简体中文
 
+[![Android APK](https://img.shields.io/badge/Android-下载%20APK%20%28arm64--v8a%29-3DDC84?style=flat-square&logo=android&logoColor=white)](https://github.com/li88iioo/Pathfin/releases/latest/download/Pathfin-arm64-v8a.apk)
+
 面向 Android 手机和平板的原生 Jellyfin 客户端，使用 Kotlin 和 Jetpack Compose，支持播放服务器媒体源提供的 STRM 原始 HTTP(S) 地址。
 
 ## 功能
@@ -22,6 +24,8 @@
 > **注：** STRM 直连播放与 STRM 画质切换目前仅在 [MediaFlux](https://github.com/li88iioo/MediaFlux) 生成的 STRM 和光鸭云盘上测试通过，其他来源的 STRM 未经验证。
 
 使用中遇到问题请先查看[帮助与常见问题](docs/help-faq.zh-CN.md)。
+
+版本变更见[更新日志](CHANGELOG.md)，正式安装包见 [GitHub Releases](https://github.com/li88iioo/Pathfin/releases)。
 
 ## STRM 云盘画质
 
@@ -64,6 +68,24 @@ cd android
 开发版包名为 `dev.pathfin.android.debug`，正式版为 `dev.pathfin.android`，数据独立。
 
 发布前对最终 APK 运行 `android/tools/verify_release.py`，通过 `--build-tools` 指定工具目录、`--expected-certificate-sha256` 指定已确认的生产签名证书摘要、`--output` 保存报告。检查包含正式包身份、预期签名、16 KiB 对齐、原生依赖、离线许可及测试资源隔离；不要从待验 APK 自身推定“预期证书”。完整安装与播放回归使用[独立正式包 smoke 工具](android/tools/production_smoke/README.md)，只能在没有个人账号的新装测试环境运行。
+
+## 更新日志与发布
+
+`CHANGELOG.md` 是版本变更内容的唯一维护入口。GitHub Release 使用对应版本的正文，应用内更新弹窗直接展示同一份内容。日志使用简短列表和绝对链接，避免表格、图片和复杂 Markdown。
+
+准备正式版本时，核对 `android/app/build.gradle.kts` 的 `versionName` 与递增的 `versionCode`，按 `git log --reverse --no-merges <上一个正式标签>..<目标提交>` 整理新增、优化、修复及必要的升级说明；首版核对截至目标提交的全部历史。日常开发提交不逐次追加日志，也不把本地 build 当作正式版本。
+
+版本标题格式为 `## [X.Y.Z] - YYYY-MM-DD`，正文至少包含一条 `- 内容` 列表。当前首版的“待发布”需在确认发版时替换为实际日期。对需要追溯的条目补充真实提交链接；已有上一正式标签时维护对应版本的比较链接，若保留 `[Unreleased]` 比较链接则更新到新标签与 `HEAD`。
+
+提交发版改动前可在仓库根目录验证并预览正文：
+
+```bash
+python3 -m unittest discover -s android/tools -p 'test_extract_release_notes.py'
+mkdir -p .superpowers/tmp
+python3 android/tools/extract_release_notes.py CHANGELOG.md 0.1.0 --output .superpowers/tmp/release-notes.md
+```
+
+将命令中的版本号替换为待发版本；“待发布”、无效日期、缺失或重复的版本章节、空变更列表都会导致检查失败。完成发布验收并提交后，再为最终提交创建并推送匹配的 `vX.Y.Z` 标签。流水线先提取日志，再构建和发布 APK；不再从标签说明或自动提交摘要生成另一份正文。
 
 ## 第三方组件
 
