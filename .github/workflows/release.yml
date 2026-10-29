@@ -83,9 +83,9 @@ jobs:
           python3 android/tools/package_source.py --native ffmpeg --output "dist/pathfin-$VERSION-ffmpeg-source.tar"
           python3 android/tools/package_source.py --native ass --output "dist/pathfin-$VERSION-ass-source.tar"
 
-      - name: Unit tests
+      - name: Unit tests and release lint
         working-directory: android
-        run: ./gradlew --no-daemon :app:testDebugUnitTest
+        run: ./gradlew --no-daemon testDebugUnitTest :app:lintRelease
 
       - name: Build signed release APK
         env:
