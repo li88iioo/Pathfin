@@ -40,6 +40,7 @@ import androidx.work.WorkManager
 import coil3.ImageLoader
 import dev.pathfin.android.VerificationDisplay
 import dev.pathfin.android.data.AppPreferencesStore
+import dev.pathfin.android.data.SafDocumentTransfer
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.domain.DownloadNetwork
@@ -68,8 +69,10 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -249,17 +252,181 @@ class DownloadQueueRaceTest {
         assertUnmetered(fixture, task.id)
     }
 
+    @Test fun cancellingTheCallerAfterInsertionCannotInterruptTheShortSchedulingCommit() = withFixture { fixture ->
+        val context = fixture.context
+        val firstDestination = fixture.document()
+        val secondDestination = fixture.document()
+        val store = DownloadStore(context)
+        val read = context.blockNextSettingsRead()
+        runBlocking {
+            val enqueue = launch(Dispatchers.Default) {
+                MediaDownloads.enqueue(context, fixture.profileId, "committed-before-cancel", "Committed", firstDestination)
+            }
+            try {
+                read.awaitEntered()
+                val committed = store.all().single()
+                assertEquals("门闩必须位于真实 insert 后的短排程提交内", "committed-before-cancel", committed.itemId)
+                withTimeout(2_000) { enqueue.cancelAndJoin() }
+                read.release()
+                // 第二个提交须经过同一 queueMutex，但不会替第一项修复缺失计划。
+                withTimeout(15_000) { MediaDownloads.enqueue(context, fixture.profileId, "independent", "Independent", secondDestination) }
+                val retained = checkNotNull(store.get(committed.id))
+                assertEquals("调用方取消不能把已经接受的入队提交改成失败", DownloadStatus.QUEUED, retained.status)
+                assertNull("排程尾部不能被线程 interrupt 误报失败", retained.error)
+                assertNotNull("调用方取消不能以线程 interrupt 截断已落盘任务的排程收尾", fixture.manager
+                    .getWorkInfoById(UUID.fromString(retained.workId)).get(10, TimeUnit.SECONDS))
+            } finally {
+                read.release()
+                enqueue.cancelAndJoin()
+            }
+        }
+    }
+
+    @Test fun removingATaskAfterInsertionKeepsTheDocumentAlreadyTransferredToIt() = withFixture { fixture ->
+        val context = fixture.context
+        val fileName = "${UUID.randomUUID()}.mp4"
+        val tree = fixture.tree(fileName)
+        runBlocking { SafDocumentTransfer.transfer { DownloadDirectories.persist(context, tree, it) } }
+        AppPreferencesStore(context).save(AppPreferences(downloadDirectoryUri = tree.toString()))
+        fun control(action: String): Bundle = checkNotNull(instrumentation.context.contentResolver.call(
+            Uri.parse("content://${VerificationDownloadDocumentsProvider.authority(instrumentation.context)}"),
+            VerificationDownloadDocumentsProvider.CREATE_CONTROL + action, fileName, null))
+        control("register")
+        try {
+            runBlocking {
+                val enqueue = async(Dispatchers.Default) {
+                    MediaDownloads.enqueueToDirectory(context, fixture.profileId, "removed-after-insert", "Removed", fileName)
+                }
+                var read: ReadGate? = null
+                try {
+                    await("设置提交门闩前必须先实际进入 createDocument") { control("status").getInt("entered") == 1 }
+                    val commit = context.blockNextSettingsRead().also { read = it }
+                    control("release")
+                    commit.awaitEntered()
+                    val store = DownloadStore(context)
+                    val task = store.all().single()
+                    val destination = Uri.parse(task.destinationUri)
+                    val bytes = "retained-after-task-removal".toByteArray()
+                    checkNotNull(context.contentResolver.openOutputStream(destination, "wt")).use { it.write(bytes) }
+                    withTimeout(2_000) {
+                        MediaDownloads.cancel(context, task.id, task.workId)
+                        MediaDownloads.remove(context, task.id)
+                    }
+                    assertTrue("必须实际移除已撤销任务，不能仅验证未进入任务的文档", store.all().isEmpty())
+                    commit.release()
+                    assertEquals(task.id, withTimeout(15_000) { enqueue.await() })
+                    val retained = runCatching {
+                        checkNotNull(context.contentResolver.openInputStream(destination)).use { it.readBytes() }
+                    }.getOrNull()
+                    assertArrayEquals("insert 已移交文件，移除任务后旧创建线程不能删除或截断它", bytes, retained)
+                } finally {
+                    read?.release()
+                    control("release")
+                    enqueue.cancelAndJoin()
+                }
+            }
+        } finally { control("remove") }
+    }
+
+    @Test fun aLateRetryValidationCannotReviveTheGenerationCancelledWhileItsQueryWasBlocked() = withFixture { fixture ->
+        val destination = fixture.document()
+        val store = DownloadStore(fixture.context)
+        val task = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
+            "cancel-during-retry", "Synthetic retry", destination.toString())
+        store.insert(task)
+        fun control(action: String): Bundle = checkNotNull(instrumentation.context.contentResolver.call(
+            Uri.parse("content://${VerificationDownloadDocumentsProvider.authority(instrumentation.context)}"),
+            VerificationDownloadDocumentsProvider.QUERY_CONTROL + action, DocumentsContract.getDocumentId(destination), null))
+        control("register")
+        try {
+            runBlocking {
+                val retry = async(Dispatchers.Default) { runCatching { MediaDownloads.retry(fixture.context, task.id) } }
+                try {
+                    await("重试必须实际进入目标查询后才撤销这一代任务") { control("status").getInt("entered") == 1 }
+                    withTimeout(2_000) { MediaDownloads.cancel(fixture.context, task.id, task.workId) }
+                    control("release")
+                    withTimeout(15_000) { retry.await() }.getOrThrow()
+                    val retained = checkNotNull(store.get(task.id))
+                    assertEquals("迟到资格检查不能把已取消任务重新排队", DownloadStatus.CANCELLED, retained.status)
+                    assertEquals("取消后不能提交新的执行代次", task.workId, retained.workId)
+                    assertTrue("已取消任务不能留下活跃系统计划", fixture.manager
+                        .getWorkInfosForUniqueWork("pathfin-download-${task.id}").get(10, TimeUnit.SECONDS).all { it.state.isFinished })
+                    assertTrue("迟到查询的实际游标必须关闭", control("status").let {
+                        it.getInt("returned") > 0 && it.getInt("cursorClosed") >= it.getInt("returned")
+                    })
+                } finally {
+                    control("release")
+                    retry.cancelAndJoin()
+                }
+            }
+        } finally { control("remove") }
+    }
+
     @Test fun recreatingTheCompositionDuringSlowDefaultDirectoryCreationCannotEnqueueTheSameSelectionTwice() =
         defaultDirectorySurvivesRecreation(recreateActivity = false)
 
     @Test fun recreatingTheActivityDuringSlowDefaultDirectoryCreationKeepsOneDocumentAndOneTask() =
         defaultDirectorySurvivesRecreation(recreateActivity = true)
 
+    @Test fun aCancelledLateCreateIsCleanedBeforeTheNextSameNameDocumentIsCommitted() = withFixture { fixture ->
+        val context = fixture.context
+        val fileName = "${UUID.randomUUID()}.mp4"
+        val tree = fixture.tree(fileName)
+        runBlocking { SafDocumentTransfer.transfer { DownloadDirectories.persist(context, tree, it) } }
+        AppPreferencesStore(context).save(AppPreferences(downloadDirectoryUri = tree.toString()))
+        fun control(action: String): Bundle = checkNotNull(instrumentation.context.contentResolver.call(
+            Uri.parse("content://${VerificationDownloadDocumentsProvider.authority(instrumentation.context)}"),
+            VerificationDownloadDocumentsProvider.CREATE_CONTROL + action, fileName, null))
+        control("register")
+        try {
+            runBlocking {
+                val first = launch(Dispatchers.Default) {
+                    MediaDownloads.enqueueToDirectory(context, fixture.profileId, "cancelled-create", "Cancelled", fileName)
+                }
+                var second: kotlinx.coroutines.Deferred<String?>? = null
+                try {
+                    await("首个调用必须实际阻塞在跨 APK 的 createDocument") { control("status").getInt("entered") == 1 }
+                    withTimeout(2_000) { first.cancelAndJoin() }
+                    assertTrue("调用方取消不能等待不协作的 Provider 返回", first.isCompleted)
+                    assertTrue("取消后、Provider 返回前不能提交任务", DownloadStore(context).all().isEmpty())
+                    val retained = async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+                        MediaDownloads.enqueueToDirectory(context, fixture.profileId, "retained-create", "Retained", fileName)
+                    }
+                    second = retained
+                    delay(200)
+                    assertEquals("下一次同名创建必须等前一个真实创建与清理结束", 1, control("status").getInt("entered"))
+                    control("release")
+                    val id = checkNotNull(withTimeout(15_000) { retained.await() })
+                    val tasks = DownloadStore(context).all()
+                    assertEquals("迟到的取消请求不得产生任务", listOf(id), tasks.map { it.id })
+                    val destination = Uri.parse(tasks.single().destinationUri)
+                    assertEquals("前次无人引用的文档应先删除，下一次可使用原名", fileName, DocumentsContract.getDocumentId(destination))
+                    assertEquals("夹具应确认两次创建都真实发生", 2, control("status").getInt("created"))
+                    val bytes = "retained-after-late-cleanup".toByteArray()
+                    checkNotNull(context.contentResolver.openOutputStream(destination, "wt")).use { it.write(bytes) }
+                    assertArrayEquals("旧创建清理不能删除或截断新任务文件", bytes,
+                        checkNotNull(context.contentResolver.openInputStream(destination)).use { it.readBytes() })
+                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+                    val names = checkNotNull(context.contentResolver.query(children,
+                        arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)).use { cursor ->
+                        buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
+                    }
+                    assertEquals("取消的原文件及任何同名后缀副本不能遗留", listOf(fileName),
+                        names.filter { it.replace(Regex(" \\([1-9][0-9]*\\)\\.mp4$"), ".mp4") == fileName })
+                } finally {
+                    control("release")
+                    first.cancelAndJoin()
+                    second?.cancelAndJoin()
+                }
+            }
+        } finally { control("remove") }
+    }
+
     private fun defaultDirectorySurvivesRecreation(recreateActivity: Boolean) = withFixture { fixture ->
         DownloadSourceFixture().use { source ->
             val context = fixture.context
             val tree = fixture.tree(source.fileName)
-            runBlocking { DownloadDirectories.persist(context, tree) }
+            runBlocking { SafDocumentTransfer.transfer { DownloadDirectories.persist(context, tree, it) } }
             AppPreferencesStore(context).save(AppPreferences(openLastServer = false, downloadDirectoryUri = tree.toString()))
             val sessions = SessionStore(context)
             val profile = sessions.loadProfiles().single()
@@ -649,7 +816,11 @@ class DownloadQueueRaceTest {
     private class ReadGate {
         private val entered = CountDownLatch(1)
         private val released = CountDownLatch(1)
-        fun pause() { entered.countDown(); check(released.await(20, TimeUnit.SECONDS)) { "未放行已捕获的网络偏好" } }
+        fun pause() {
+            entered.countDown()
+            try { check(released.await(20, TimeUnit.SECONDS)) { "未放行已捕获的网络偏好" } }
+            catch (interrupted: InterruptedException) { Thread.currentThread().interrupt(); throw interrupted }
+        }
         fun awaitEntered() { assertTrue("入队尚未实际读取旧网络偏好", entered.await(10, TimeUnit.SECONDS)) }
         fun release() { released.countDown() }
     }

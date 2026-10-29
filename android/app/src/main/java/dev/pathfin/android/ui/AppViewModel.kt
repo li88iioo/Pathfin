@@ -870,8 +870,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(actionBusy = it.actionBusy + key) }
         extraJobs[key] = viewModelScope.launch {
             try {
-                // 结果已由用户确认；提交由 VM 接管，旋转不能在写任务一半时丢掉目标。
-                withContext(NonCancellable + Dispatchers.IO) {
+                // VM 跨页面重建保留任务；Provider 准备可取消，入队入口只保护短持久提交。
+                withContext(Dispatchers.IO) {
                     val application = getApplication<Application>()
                     application.contentResolver.takePersistableUriPermission(uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
@@ -947,9 +947,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 // 默认目录只由本次 VM job 提交一次，Composition / Activity 重建只继续观察状态。
                 // 新文档与任务提交保持同一收尾：已落任务留给显式重试，未落任务由入口删除新文档。
                 val queued = try {
-                    withContext(NonCancellable) {
-                        MediaDownloads.enqueueToDirectory(getApplication<Application>(), profileId, item.id, item.name, source.fileName)
-                    }
+                    MediaDownloads.enqueueToDirectory(getApplication<Application>(), profileId, item.id, item.name, source.fileName)
                 } catch (_: DownloadDirectoryUnavailable) {
                     currentCoroutineContext().ensureActive()
                     if (epoch == generation && state.value.currentProfileId == profileId)

@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -33,8 +34,10 @@ public final class VerificationDownloadDocumentsProvider extends DocumentsProvid
     public static final String TREE_GRANT_EXTRA = "pathfin.fixture.treeGrant";
     public static final String CANCEL_RESULT_EXTRA = "pathfin.fixture.cancelResult";
     public static final String CREATE_CONTROL = "pathfin.fixture.download.create.";
+    public static final String QUERY_CONTROL = "pathfin.fixture.download.query.";
     private static final String ROOT = "Pathfin-verification";
     private final ConcurrentHashMap<String, CreateGate> createGates = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, QueryGate> queryGates = new ConcurrentHashMap<>();
     private static final String[] DOCUMENT_COLUMNS = {
         DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME,
         DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_FLAGS,
@@ -79,6 +82,7 @@ public final class VerificationDownloadDocumentsProvider extends DocumentsProvid
 
     /** verification 须先持有真实测试树授权；控制调用本身不授予任何文档权限。 */
     @Override public Bundle call(String method, String arg, Bundle extras) {
+        if (method.startsWith(QUERY_CONTROL)) return queryControl(method, arg);
         if (!method.startsWith(CREATE_CONTROL)) return super.call(method, arg, extras);
         requireVerificationCaller();
         if (Binder.getCallingUid() != getContext().getApplicationInfo().uid &&
@@ -103,6 +107,34 @@ public final class VerificationDownloadDocumentsProvider extends DocumentsProvid
         return result;
     }
 
+    private Bundle queryControl(String method, String id) {
+        requireVerificationCaller();
+        try { file(getContext(), id); }
+        catch (FileNotFoundException error) { throw new IllegalArgumentException(error); }
+        Uri document = DocumentsContract.buildDocumentUri(authority(getContext()), id);
+        Uri treeDocument = DocumentsContract.buildDocumentUriUsingTree(
+            DocumentsContract.buildTreeDocumentUri(authority(getContext()), ROOT), id);
+        int caller = Binder.getCallingUid();
+        if (caller != getContext().getApplicationInfo().uid &&
+            getContext().checkUriPermission(document, Binder.getCallingPid(), caller, Intent.FLAG_GRANT_READ_URI_PERMISSION) != PackageManager.PERMISSION_GRANTED &&
+            getContext().checkUriPermission(treeDocument, Binder.getCallingPid(), caller, Intent.FLAG_GRANT_READ_URI_PERMISSION) != PackageManager.PERMISSION_GRANTED)
+            throw new SecurityException("慢查询门闩需要真实文档或目录授权");
+        if (method.equals(QUERY_CONTROL + "register")) {
+            if (queryGates.size() >= 2 || queryGates.putIfAbsent(id, new QueryGate()) != null)
+                throw new IllegalStateException("查询门闩已存在或达到夹具上限");
+        }
+        QueryGate gate = queryGates.get(id);
+        if (gate == null) throw new IllegalArgumentException("未知查询门闩");
+        if (method.equals(QUERY_CONTROL + "release")) gate.release.countDown();
+        if (method.equals(QUERY_CONTROL + "remove")) {
+            gate.release.countDown(); queryGates.remove(id, gate);
+        }
+        Bundle result = new Bundle();
+        result.putInt("entered", gate.entered.get()); result.putInt("returned", gate.returned.get());
+        result.putInt("cursorClosed", gate.cursorClosed.get());
+        return result;
+    }
+
     @Override public Cursor queryRoots(String[] projection) {
         String[] columns = projection != null ? projection : new String[] {
             DocumentsContract.Root.COLUMN_ROOT_ID, DocumentsContract.Root.COLUMN_DOCUMENT_ID,
@@ -124,13 +156,29 @@ public final class VerificationDownloadDocumentsProvider extends DocumentsProvid
 
     @Override public Cursor queryDocument(String documentId, String[] projection) throws FileNotFoundException {
         requireVerificationCaller();
-        MatrixCursor cursor = new MatrixCursor(projection != null ? projection : DOCUMENT_COLUMNS);
+        QueryGate gate = queryGates.get(documentId);
+        if (gate != null) {
+            gate.entered.incrementAndGet();
+            try {
+                if (!gate.release.await(20, TimeUnit.SECONDS)) throw new FileNotFoundException("慢查询未在预算内释放");
+            } catch (InterruptedException error) {
+                Thread.currentThread().interrupt(); throw new FileNotFoundException("慢查询被中断");
+            }
+        }
+        MatrixCursor cursor = new MatrixCursor(projection != null ? projection : DOCUMENT_COLUMNS) {
+            private final AtomicBoolean closed = new AtomicBoolean();
+            @Override public void close() {
+                super.close();
+                if (gate != null && closed.compareAndSet(false, true)) gate.cursorClosed.incrementAndGet();
+            }
+        };
         if (ROOT.equals(documentId)) addDocument(cursor, documentId, root(getContext()), true);
         else {
             File file = file(getContext(), documentId);
             if (!file.isFile()) throw new FileNotFoundException("测试文档不存在");
             addDocument(cursor, documentId, file, false);
         }
+        if (gate != null) gate.returned.incrementAndGet();
         return cursor;
     }
 
@@ -193,6 +241,13 @@ public final class VerificationDownloadDocumentsProvider extends DocumentsProvid
         final CountDownLatch release = new CountDownLatch(1);
         final AtomicInteger entered = new AtomicInteger();
         final AtomicInteger created = new AtomicInteger();
+    }
+
+    private static final class QueryGate {
+        final CountDownLatch release = new CountDownLatch(1);
+        final AtomicInteger entered = new AtomicInteger();
+        final AtomicInteger returned = new AtomicInteger();
+        final AtomicInteger cursorClosed = new AtomicInteger();
     }
 
     @Override public boolean isChildDocument(String parentId, String documentId) {

@@ -18,6 +18,7 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.data.AppPreferencesStore
+import dev.pathfin.android.data.SafDocumentTransfer
 import dev.pathfin.android.domain.DownloadNetwork
 import dev.pathfin.android.i18n.tr
 import java.util.UUID
@@ -26,6 +27,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -40,6 +43,7 @@ import kotlinx.coroutines.withContext
 /** DownloadStore 是任务真值；WorkManager 仅执行由已保存任务和网络偏好派生的计划。 */
 object MediaDownloads {
     private val queueMutex = Mutex()
+    private val creationLock = Mutex()
     private val commands = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Application 冷启动与通知共用进程级命令，页面和旧 Worker 的取消不截断持久提交。 */
@@ -59,10 +63,23 @@ object MediaDownloads {
         displayName: String,
         destinationUri: Uri,
         sourceId: String? = null,
-    ): String = withContext(Dispatchers.IO) {
-        queueMutex.withLock {
+    ): String = SafDocumentTransfer.transfer { operation ->
+        DownloadDirectories.requireDestination(context, destinationUri, operation)
+        operation.runBlocking { enqueuePrepared(context, profileId, itemId, displayName, destinationUri, sourceId) }
+    }
+
+    private suspend fun enqueuePrepared(
+        context: Context,
+        profileId: String,
+        itemId: String,
+        displayName: String,
+        destinationUri: Uri,
+        sourceId: String?,
+        onInserted: () -> Unit = {},
+    ): String = queueMutex.withLock {
+        currentCoroutineContext().ensureActive()
+        withContext(NonCancellable) {
             require(profileId.isNotBlank() && itemId.isNotBlank()) { tr("下载媒体标识无效") }
-            DownloadDirectories.requireDestination(context, destinationUri)
             check(SessionStore(context).loadProfiles().any { it.id == profileId }) { tr("该账号已从本机移除，请重新登录后下载") }
             val task = DownloadTask(
                 id = UUID.randomUUID().toString(), workId = UUID.randomUUID().toString(),
@@ -71,7 +88,8 @@ object MediaDownloads {
             )
             val store = DownloadStore(context)
             store.insert(task)
-            withContext(NonCancellable) { synchronize(context, task.id) }
+            onInserted()
+            synchronize(context, task.id)
             task.id
         }
     }
@@ -86,14 +104,20 @@ object MediaDownloads {
         sourceId: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         val tree = AppPreferencesStore(context).load().downloadDirectoryUri?.toUri() ?: return@withContext null
-        val destination = DownloadDirectories.create(context, tree, fileName)
-        try {
-            enqueue(context, profileId, itemId, displayName, destination, sourceId)
-        } catch (error: Exception) {
-            // 已落盘的失败任务仍需原目标供重试；只清理未进入任务列表的本次新文档。
-            if (DownloadStore(context).all().none { it.destinationUri == destination.toString() })
-                runCatching { DocumentsContract.deleteDocument(context.contentResolver, destination) }
-            throw error
+        // 等待创建锁不占 SAF 工作线程；取消调用方也不能提前归还尚在创建/清理的租约。
+        creationLock.lock()
+        SafDocumentTransfer.transfer(onFinished = { creationLock.unlock() }) { operation ->
+            val destination = DownloadDirectories.create(context, tree, fileName, operation)
+            var committed = false
+            try {
+                operation.runBlocking {
+                    enqueuePrepared(context, profileId, itemId, displayName, destination, sourceId) { committed = true }
+                }
+            } finally {
+                // insert 一经确认即永久移交；后续移除记录不授权创建线程收回用户文件。
+                if (!committed && DownloadStore(context).all().none { it.destinationUri == destination.toString() })
+                    runCatching { DocumentsContract.deleteDocument(context.contentResolver, destination) }
+            }
         }
     }
 
@@ -112,20 +136,23 @@ object MediaDownloads {
             WorkManager.getInstance(context).cancelWorkById(UUID.fromString(workId)).result.get()
     }
 
-    suspend fun retry(context: Context, taskId: String, destinationUri: Uri? = null) = withContext(Dispatchers.IO) {
-        queueMutex.withLock {
-            val store = DownloadStore(context)
-            val task = store.get(taskId) ?: throw IllegalStateException(tr("下载记录已移除"))
-            val workManager = WorkManager.getInstance(context)
-            val info = workManager.getWorkInfoById(UUID.fromString(task.workId)).get()
-            check(task.status != DownloadStatus.COMPLETED) { tr("文件已保存，无需重新下载") }
-            check(!task.isActive || info == null || info.state.isFinished) { tr("任务仍在下载中") }
-            val destination = destinationUri ?: task.destinationUri.toUri()
-            DownloadDirectories.requireDestination(context, destination)
-            check(store.all().none { it.id != task.id && it.destinationUri == destination.toString() && it.isActive }) { tr("该目标文件已有下载任务") }
-            check(SessionStore(context).loadProfiles().any { it.id == task.profileId }) { tr("该账号已从本机移除，请重新登录后下载") }
-            withContext(NonCancellable) {
-                startAttempt(context, task, downloadConstraints(AppPreferencesStore(context).load().downloadNetwork), destination.toString())
+    suspend fun retry(context: Context, taskId: String, destinationUri: Uri? = null) = SafDocumentTransfer.transfer { operation ->
+        val store = DownloadStore(context)
+        val original = store.get(taskId) ?: throw IllegalStateException(tr("下载记录已移除"))
+        val info = WorkManager.getInstance(context).getWorkInfoById(UUID.fromString(original.workId)).get()
+        check(original.status != DownloadStatus.COMPLETED) { tr("文件已保存，无需重新下载") }
+        check(!original.isActive || info == null || info.state.isFinished) { tr("任务仍在下载中") }
+        val destination = destinationUri ?: original.destinationUri.toUri()
+        DownloadDirectories.requireDestination(context, destination, operation)
+        operation.runBlocking {
+            queueMutex.withLock {
+                currentCoroutineContext().ensureActive()
+                check(store.all().none { it.id != original.id && it.destinationUri == destination.toString() && it.isActive }) { tr("该目标文件已有下载任务") }
+                check(SessionStore(context).loadProfiles().any { it.id == original.profileId }) { tr("该账号已从本机移除，请重新登录后下载") }
+                withContext(NonCancellable) {
+                    // 资格检查针对 original；沿用同一代次/状态 CAS，迟到查询不能复活之后的取消或新代次。
+                    startAttempt(context, original, downloadConstraints(AppPreferencesStore(context).load().downloadNetwork), destination.toString())
+                }
             }
         }
     }

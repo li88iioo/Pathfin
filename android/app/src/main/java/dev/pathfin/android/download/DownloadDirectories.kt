@@ -4,12 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import dev.pathfin.android.data.SafDocumentTransfer
 import dev.pathfin.android.domain.DownloadMimeType
 import dev.pathfin.android.i18n.tr
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 
 /** 默认目录失效时，调用方可转到系统“另存为”，不丢失本次下载选择。 */
 class DownloadDirectoryUnavailable(cause: Throwable? = null) : IllegalStateException(
@@ -17,49 +15,36 @@ class DownloadDirectoryUnavailable(cause: Throwable? = null) : IllegalStateExcep
 )
 
 /** 仅使用用户通过系统文件选择器授予的文档与目录；不解析为文件系统路径。 */
-object DownloadDirectories {
-    private val creationLock = Mutex()
-
-    suspend fun persist(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
+internal object DownloadDirectories {
+    fun persist(context: Context, uri: Uri, operation: SafDocumentTransfer.Operation): String {
         val resolver = context.contentResolver
         val existing = resolver.persistedUriPermissions.any { it.uri == uri }
-        try {
+        return try {
             requireTree(uri)
             resolver.takePersistableUriPermission(uri, READ_WRITE)
-            directoryName(context, uri)
+            name(context, uri, operation)
         } catch (error: Exception) {
             if (!existing) runCatching { resolver.releasePersistableUriPermission(uri, READ_WRITE) }
-            throw DownloadDirectoryUnavailable(error)
+            throw error
         }
     }
 
-    suspend fun name(context: Context, uri: Uri): String = withContext(Dispatchers.IO) {
-        try { directoryName(context, uri) }
-        catch (error: Exception) { throw DownloadDirectoryUnavailable(error) }
-    }
-
-    internal suspend fun create(context: Context, tree: Uri, requestedName: String): Uri =
-        withContext(Dispatchers.IO) {
-            creationLock.withLock {
-                try {
-                    directoryName(context, tree)
-                    val resolver = context.contentResolver
-                    val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-                    val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-                    val names = mutableSetOf<String>()
-                    resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
-                        while (cursor.moveToNext()) names += cursor.getString(0).orEmpty()
-                    } ?: throw DownloadDirectoryUnavailable()
-                    val fileName = uniqueDownloadName(downloadDisplayName(requestedName), names)
-                    DocumentsContract.createDocument(resolver, parent,
-                        DownloadMimeType.fromFile(fileName) ?: "application/octet-stream", fileName)
-                        ?: throw DownloadDirectoryUnavailable()
-                } catch (error: DownloadDirectoryUnavailable) { throw error }
-                catch (error: Exception) { throw DownloadDirectoryUnavailable(error) }
-            }
+    fun create(context: Context, tree: Uri, requestedName: String, operation: SafDocumentTransfer.Operation): Uri = try {
+        name(context, tree, operation)
+        val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        val names = operation.query(context, children, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)) { cursor ->
+            buildSet { while (cursor.moveToNext()) add(cursor.getString(0).orEmpty()) }
         }
+        val fileName = uniqueDownloadName(downloadDisplayName(requestedName), names)
+        // 返回的新 URI 必须先由调用线程记录归属，不能在此处检查迟到取消而丢掉它。
+        DocumentsContract.createDocument(context.contentResolver, parent,
+            DownloadMimeType.fromFile(fileName) ?: "application/octet-stream", fileName)
+            ?: throw DownloadDirectoryUnavailable()
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (error: Exception) { throw DownloadDirectoryUnavailable(error) }
 
-    internal fun requireDestination(context: Context, uri: Uri) {
+    fun requireDestination(context: Context, uri: Uri, operation: SafDocumentTransfer.Operation) {
         require(uri.scheme == "content" && !uri.authority.isNullOrBlank() && uri.userInfo.isNullOrBlank()) {
             tr("请选择系统文件管理器提供的本地保存位置")
         }
@@ -71,25 +56,24 @@ object DownloadDirectories {
         if (!granted()) runCatching { resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
         check(granted()) { tr("该位置未授予长期写入权限，请重新选择本地保存位置") }
         // 查询由 DocumentsProvider 校验真正的树从属关系，不能仅依赖 URI 中的 treeId。
-        resolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_MIME_TYPE), null, null, null)?.use { cursor ->
+        operation.query(context, uri, arrayOf(DocumentsContract.Document.COLUMN_MIME_TYPE)) { cursor ->
             check(cursor.moveToFirst() && cursor.getString(0) != DocumentsContract.Document.MIME_TYPE_DIR) {
                 tr("目标文件不可用，请重新选择本地保存位置")
             }
-        } ?: error(tr("目标文件不可用，请重新选择本地保存位置"))
+        }
     }
 
-    private fun directoryName(context: Context, uri: Uri): String {
+    fun name(context: Context, uri: Uri, operation: SafDocumentTransfer.Operation): String {
         requireTree(uri)
         val resolver = context.contentResolver
         check(resolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission && it.isWritePermission })
         val document = DocumentsContract.buildDocumentUriUsingTree(uri, DocumentsContract.getTreeDocumentId(uri))
-        resolver.query(document, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_FLAGS), null, null, null)?.use { cursor ->
+        return operation.query(context, document, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+            DocumentsContract.Document.COLUMN_MIME_TYPE, DocumentsContract.Document.COLUMN_FLAGS)) { cursor ->
             check(cursor.moveToFirst() && cursor.getString(1) == DocumentsContract.Document.MIME_TYPE_DIR &&
                 cursor.getInt(2) and DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE != 0)
-            return cursor.getString(0).orEmpty().ifBlank { tr("已选择的目录") }
+            cursor.getString(0).orEmpty().ifBlank { tr("已选择的目录") }
         }
-        throw DownloadDirectoryUnavailable()
     }
 
     private fun requireTree(uri: Uri) {

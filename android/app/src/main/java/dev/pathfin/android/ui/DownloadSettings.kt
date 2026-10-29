@@ -14,6 +14,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
+import dev.pathfin.android.data.SafDocumentTransfer
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.domain.DownloadNetwork
 import dev.pathfin.android.download.DownloadDirectories
@@ -21,7 +22,7 @@ import dev.pathfin.android.i18n.tr
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-/** 与现有设置共用分组卡片和单选对话框；目录访问与授权在 IO 执行。 */
+/** 与现有设置共用分组卡片和单选对话框；目录访问与授权使用有界 SAF 操作。 */
 @Composable
 internal fun DownloadSettings(preferences: AppPreferences, onPreferences: (AppPreferences) -> Unit) {
     val context = LocalContext.current
@@ -39,7 +40,7 @@ internal fun DownloadSettings(preferences: AppPreferences, onPreferences: (AppPr
             directoryBusy = true
             scope.launch {
                 try {
-                    val name = DownloadDirectories.persist(context, uri)
+                    val name = SafDocumentTransfer.transfer { DownloadDirectories.persist(context, uri, it) }
                     onPreferences(current.copy(downloadDirectoryUri = uri.toString()))
                     directoryName = name
                 } catch (cancelled: CancellationException) { throw cancelled }
@@ -50,7 +51,7 @@ internal fun DownloadSettings(preferences: AppPreferences, onPreferences: (AppPr
     }
     LaunchedEffect(preferences.downloadDirectoryUri) {
         preferences.downloadDirectoryUri?.let { uri ->
-            directoryName = try { DownloadDirectories.name(context, uri.toUri()) }
+            directoryName = try { SafDocumentTransfer.transfer { DownloadDirectories.name(context, uri.toUri(), it) } }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { tr("目录不可用，请重新选择") }
         }

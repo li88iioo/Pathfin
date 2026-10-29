@@ -3,6 +3,7 @@ package dev.pathfin.android.data
 import android.content.Context
 import android.content.ContentProviderClient
 import android.content.res.AssetFileDescriptor
+import android.database.Cursor
 import android.net.Uri
 import android.os.CancellationSignal
 import dev.pathfin.android.i18n.tr
@@ -29,7 +30,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * SAF 的 open/read/write 都可能等待远程 Provider。取消立即结束调用方等待，后台独立取消 open、
+ * SAF 的 query/open/read/write 都可能等待远程 Provider。取消立即结束调用方等待，后台独立取消 open、
  * 关闭 FD；所有调用者共用有界执行器，不使用取消后仍等待阻塞子任务的 withContext(IO)。
  */
 internal object SafDocumentTransfer {
@@ -98,7 +99,7 @@ internal object SafDocumentTransfer {
         private val signal = CancellationSignal()
         private val resources = AtomicReference<OwnedResources?>()
         private val coroutine = AtomicReference<Job?>()
-        // 仅 transfer 线程持有/释放，直到本次 open/read/write 已返回才释放 Provider 引用。
+        // 每次操作只访问同一 Provider；仅 transfer 线程持有/释放其引用。
         private var provider: ContentProviderClient? = null
         private val lock = Any()
         @Volatile private var cancelled = false
@@ -143,7 +144,7 @@ internal object SafDocumentTransfer {
 
         /**
          * 在本次有界线程桥接 suspend API/进度。显式持有 Job，取消时即使线程正在阻塞读网络，
-         * 也能立刻取消其 HTTP 看护子协程；不能只依赖 interrupt 到下次挂起才被 runBlocking 察觉。
+         * 也能立刻取消其 HTTP 看护子协程；工作线程仍等实际 IO 与短提交结束后才收尾。
          */
         fun <T> runBlocking(block: suspend CoroutineScope.() -> T): T = kotlinx.coroutines.runBlocking {
             val job = checkNotNull(coroutineContext[Job])
@@ -152,20 +153,22 @@ internal object SafDocumentTransfer {
             finally { coroutine.compareAndSet(job, null) }
         }
 
-        /** 复用已打开文档的 Provider 与取消信号，不在 UI 线程等待远程文件名查询。 */
-        fun readDisplayName(uri: Uri): String? {
-            ensureActive()
-            val client = checkNotNull(provider) { tr("请先读取文档") }
-            val name = client.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, signal)?.use { cursor ->
-                if (!cursor.moveToFirst()) null else cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                    .takeIf { it >= 0 && !cursor.isNull(it) }?.let(cursor::getString)
+        /** Provider 可忽略取消；迟到的 Cursor 也必须先进入 use，再检查取消。 */
+        fun <T> query(context: Context, uri: Uri, projection: Array<String>, read: (Cursor) -> T): T =
+            requireNotNull(client(context, uri).query(uri, projection, null, signal)) { tr("文件服务不可用") }.use { cursor ->
+                ensureActive()
+                read(cursor).also { ensureActive() }
             }
+
+        private fun client(context: Context, uri: Uri): ContentProviderClient {
             ensureActive()
-            return name
+            return (provider ?: requireNotNull(context.contentResolver.acquireUnstableContentProviderClient(uri)) {
+                tr("文件服务不可用")
+            }.also { provider = it }).also { ensureActive() }
         }
 
         fun attach(value: FutureTask<Unit>) {
-            synchronized(lock) { task = value; if (cancelled) value.cancel(true) }
+            synchronized(lock) { task = value; if (cancelled) value.cancel(false) }
         }
 
         fun begin(): Boolean = synchronized(lock) {
@@ -173,15 +176,10 @@ internal object SafDocumentTransfer {
         }
 
         private fun open(context: Context, uri: Uri, mode: String): AssetFileDescriptor {
-            ensureActive()
-            val client = requireNotNull(context.contentResolver.acquireUnstableContentProviderClient(uri)) {
-                tr("文件服务不可用")
-            }.also { provider = it }
-            ensureActive()
             // ContentResolver 的 "r" 会转 typed */*；DocumentsProvider 在该分支调用无
             // CancellationSignal 的 openAssetFile。直接调用公开 client API 才能把取消传到
             // openDocument；仍由平台验证原 URI grant，并保留 AFD 的 offset/length 语义。
-            return requireNotNull(client.openAssetFile(uri, mode, signal)) { tr("文件服务未返回可读写文件") }
+            return requireNotNull(client(context, uri).openAssetFile(uri, mode, signal)) { tr("文件服务未返回可读写文件") }
         }
 
         fun closeProvider() { provider?.close(); provider = null }
@@ -202,7 +200,8 @@ internal object SafDocumentTransfer {
                 (!finished).also { if (it) pendingParts += 2 }
             }
             coroutine.get()?.cancel()
-            task?.let { it.cancel(true); executor.remove(it) }
+            // 资源由 Job/signal/FD 分别取消；线程 interrupt 会穿透短 NonCancellable 持久提交。
+            task?.let { it.cancel(false); executor.remove(it) }
             if (needsCleanup) {
                 // 两类各最多6个未归还 slot，清理队列覆盖总上限；挂起清理不能放行无限新任务。
                 cancellations.execute { try { runCatching { signal.cancel() } } finally { partFinished() } }

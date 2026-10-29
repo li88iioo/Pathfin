@@ -2,6 +2,7 @@ package dev.pathfin.android.playback
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -35,8 +36,11 @@ internal object LocalSubtitleImporter {
         try {
             return SafDocumentTransfer.transfer { operation ->
                 val bytes = operation.readBytes(context, uri, MAX_BYTES, tr("字幕文件不能超过 8 MB"))
-                val name = try { operation.readDisplayName(uri) } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { null }
+                val name = try { operation.query(context, uri, arrayOf(OpenableColumns.DISPLAY_NAME)) { cursor ->
+                    if (!cursor.moveToFirst()) null else cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        .takeIf { it >= 0 && !cursor.isNull(it) }?.let(cursor::getString)
+                } } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { null }
                 val subtitle = SubtitleUploadFile.prepare(bytes)
                 operation.ensureActive()
                 val id = "pathfin-local-${UUID.randomUUID()}"
