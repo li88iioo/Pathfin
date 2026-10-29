@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -16,7 +15,6 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.domain.MetadataRefreshMode
@@ -57,7 +55,7 @@ class MetadataRefreshDialogUiTest {
         touchOption("library-refresh-missing")
         touchOption("library-refresh-replace-images")
         touchOption("library-refresh-replace-trickplay")
-        compose.onNodeWithText(tr("取消")).performTouchInput { click() }
+        compose.onNodeWithText(tr("取消")).performVerificationTouchInput(compose) { click() }
         compose.onNodeWithTag("library-refresh-confirm").assertDoesNotExist()
         compose.runOnIdle {
             assertEquals(1, probe.dismissals)
@@ -132,7 +130,7 @@ class MetadataRefreshDialogUiTest {
                 }
             }
         }
-        compose.onNodeWithTag("library-refresh-confirm").assertIsDisplayed()
+        compose.onNodeWithTag("library-refresh-confirm").assertVerificationDisplayed(compose)
         return probe
     }
 
@@ -143,17 +141,17 @@ class MetadataRefreshDialogUiTest {
     }
 
     private fun touchOption(tag: String) {
-        compose.onNodeWithTag(tag).performScrollTo().performTouchInput { click() }
+        compose.onNodeWithTag(tag).performScrollTo().performVerificationTouchInput(compose) { click() }
     }
 
     private fun confirm() {
-        compose.onNodeWithTag("library-refresh-confirm").performTouchInput { click() }
+        compose.onNodeWithTag("library-refresh-confirm").performVerificationTouchInput(compose) { click() }
         compose.onNodeWithTag("library-refresh-confirm").assertDoesNotExist()
     }
 
     private fun reopen(probe: DialogProbe) {
         compose.runOnIdle { probe.visible.value = true }
-        compose.onNodeWithTag("library-refresh-confirm").assertIsDisplayed()
+        compose.onNodeWithTag("library-refresh-confirm").assertVerificationDisplayed(compose)
     }
 
     private class DialogProbe {

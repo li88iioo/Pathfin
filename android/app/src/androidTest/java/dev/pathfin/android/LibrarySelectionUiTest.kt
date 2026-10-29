@@ -53,23 +53,23 @@ class LibrarySelectionUiTest {
 
     @Test fun longPressStartsSelectionTapsToggleAndCancelOrBackLeaves() {
         show()
-        title("Alpha").performClick()
+        title("Alpha").performVerificationClick(compose)
         compose.runOnIdle { assertEquals("未选中时点按仍打开详情", listOf("alpha"), opened) }
 
-        title("Alpha").performTouchInput { longClick() }
+        title("Alpha").performVerificationTouchInput(compose) { longClick() }
         compose.onNodeWithTag("library-selection-count").assertTextEquals("已选择 1 项")
-        title("Beta").performClick()
-        title("Alpha").performClick()
+        title("Beta").performVerificationClick(compose)
+        title("Alpha").performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(setOf("beta"), selection.value)
             assertEquals("选择态的点按只增减选中，不打开详情", listOf("alpha"), opened)
         }
 
-        compose.onNodeWithTag("library-selection-cancel").performClick()
+        compose.onNodeWithTag("library-selection-cancel").performVerificationClick(compose)
         compose.onNodeWithTag("library-selection-count").assertDoesNotExist()
         compose.runOnIdle { assertEquals(emptySet<String>(), selection.value) }
 
-        title("Gamma").performTouchInput { longClick() }
+        title("Gamma").performVerificationTouchInput(compose) { longClick() }
         compose.onNodeWithTag("library-selection-count").assertTextEquals("已选择 1 项")
         Espresso.pressBack()
         compose.onNodeWithTag("library-selection-count").assertDoesNotExist()
@@ -85,27 +85,27 @@ class LibrarySelectionUiTest {
         compose.onNodeWithTag("library-selection-unplayed").assertExists()
         compose.onNodeWithTag("library-selection-refresh").assertDoesNotExist()
         compose.onNodeWithTag("library-selection-delete").assertDoesNotExist()
-        compose.onNodeWithTag("library-selection-unplayed").performClick()
+        compose.onNodeWithTag("library-selection-unplayed").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf<BatchMediaAction>(BatchMediaAction.Played(false)), actions) }
 
         canDelete.value = true; canRefresh.value = true
         selection.value = setOf("alpha", "beta")
         openMenu()
-        compose.onNodeWithTag("library-selection-delete").performClick()
+        compose.onNodeWithTag("library-selection-delete").performVerificationClick(compose)
         compose.onNodeWithText("确认删除已选的 2 项？", substring = true).assertExists()
-        compose.onNodeWithTag("library-selection-delete-confirm").performClick()
+        compose.onNodeWithTag("library-selection-delete-confirm").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(BatchMediaAction.Delete, actions.last()) }
 
         selection.value = setOf("alpha")
         openMenu()
-        compose.onNodeWithTag("library-selection-refresh").performClick()
+        compose.onNodeWithTag("library-selection-refresh").performVerificationClick(compose)
         // 默认是扫描，此时两个替换选项不可用。
         compose.onNodeWithTag("library-refresh-scan").assertIsSelected()
         compose.onNodeWithTag("library-refresh-replace-images").assertIsNotEnabled()
         compose.onNodeWithTag("library-refresh-replace-trickplay").assertIsNotEnabled()
-        compose.onNodeWithTag("library-refresh-missing").performClick()
-        compose.onNodeWithTag("library-refresh-replace-images").assertIsEnabled().performClick()
-        compose.onNodeWithTag("library-refresh-confirm").performClick()
+        compose.onNodeWithTag("library-refresh-missing").performVerificationClick(compose)
+        compose.onNodeWithTag("library-refresh-replace-images").assertIsEnabled().performVerificationClick(compose)
+        compose.onNodeWithTag("library-refresh-confirm").performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(BatchMediaAction.Refresh(MetadataRefreshOptions(MetadataRefreshMode.FULL_REFRESH,
                 MetadataRefreshMode.FULL_REFRESH, replaceAllImages = true)), actions.last())
@@ -118,14 +118,14 @@ class LibrarySelectionUiTest {
         for (query in listOf(original.copy(sort = LibrarySort.TITLE), original.copy(nameInitial = "B"),
                 original.copy(years = setOf(2026)), original.copy(tab = LibraryTab.GENRES))) {
             compose.runOnIdle { browser.value = browser.value.copy(query = original) }
-            title("Alpha").performTouchInput { longClick() }
+            title("Alpha").performVerificationTouchInput(compose) { longClick() }
             compose.onNodeWithTag("library-selection-count").assertTextEquals("已选择 1 项")
             compose.runOnIdle { browser.value = browser.value.copy(query = query) }
             compose.onNodeWithTag("library-selection-count").assertDoesNotExist()
             compose.runOnIdle { assertEquals(emptySet<String>(), selection.value) }
         }
         compose.runOnIdle { browser.value = browser.value.copy(query = original) }
-        title("Alpha").performTouchInput { longClick() }
+        title("Alpha").performVerificationTouchInput(compose) { longClick() }
         compose.runOnIdle { pageKey.value = "other-library" }
         compose.onNodeWithTag("library-selection-count").assertDoesNotExist()
         compose.runOnIdle { assertEquals(emptySet<String>(), selection.value) }
@@ -133,17 +133,17 @@ class LibrarySelectionUiTest {
 
     @Test fun appendingResultsAndChangingPosterStylePreserveSelection() {
         show()
-        title("Alpha").performTouchInput { longClick() }
+        title("Alpha").performVerificationTouchInput(compose) { longClick() }
         compose.runOnIdle {
             browser.value = browser.value.copy(content = ContentState(items = ITEMS + MediaItem("delta", "Delta", "Movie"), total = 4))
         }
         compose.onNodeWithTag("library-selection-count").assertTextEquals("已选择 1 项")
-        compose.onNodeWithTag("browser-style").performClick()
+        compose.onNodeWithTag("browser-style").performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(PosterStyle.BACKDROP, browser.value.style)
             assertEquals(setOf("alpha"), selection.value)
         }
-        title("Beta").performClick()
+        title("Beta").performVerificationClick(compose)
         compose.onNodeWithTag("library-selection-count").assertTextEquals("已选择 2 项")
         compose.runOnIdle { assertEquals(setOf("alpha", "beta"), selection.value) }
     }
@@ -154,11 +154,11 @@ class LibrarySelectionUiTest {
             compose.runOnIdle {
                 browser.value = BrowserUiState(query = query, content = ContentState(items = listOf(MediaItem("entry", "Entry", type)), total = 1))
             }
-            title("Entry").performTouchInput { longClick() }
+            title("Entry").performVerificationTouchInput(compose) { longClick() }
             compose.runOnIdle { assertEquals(emptySet<String>(), selection.value) }
             compose.runOnIdle { selection.value = setOf("stale-id") }
-            title("Entry").performTouchInput { longClick() }
-            title("Entry").performClick()
+            title("Entry").performVerificationTouchInput(compose) { longClick() }
+            title("Entry").performVerificationClick(compose)
             compose.runOnIdle {
                 assertEquals(setOf("stale-id"), selection.value)
                 assertEquals("entry", opened.last())
@@ -169,7 +169,7 @@ class LibrarySelectionUiTest {
     private fun title(name: String) = compose.onAllNodesWithText(name, substring = false).onFirst()
 
     private fun openMenu() {
-        compose.onNodeWithTag("library-selection-more").performClick()
+        compose.onNodeWithTag("library-selection-more").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("library-selection-played").fetchSemanticsNodes().isNotEmpty() }
     }
 

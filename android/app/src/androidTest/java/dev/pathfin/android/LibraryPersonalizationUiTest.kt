@@ -1,7 +1,5 @@
 package dev.pathfin.android
 
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.hasText
@@ -27,7 +25,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -86,7 +83,7 @@ class LibraryPersonalizationUiTest {
                 }
             }
             val clearTag = "poster-image-clear/pattern"
-            val originalTextBounds = compose.onNodeWithTag("poster-title/pattern", true).fetchSemanticsNode().boundsInRoot
+            val originalTextBounds = compose.onNodeWithTag("poster-title/pattern", true).readVerificationNode(compose) { it.boundsInRoot }
             var clear = pixels(clearTag)
             repeat(25) {
                 if (variance(clear) <= 3000) { Thread.sleep(80); clear = pixels(clearTag) }
@@ -101,14 +98,14 @@ class LibraryPersonalizationUiTest {
                 assertTrue("真实 RenderEffect 应降低棋盘空间对比，而非只改变语义标签", variance(restricted) < variance(clear) * .35)
                 assertTrue("模糊后仍需是真实图像的平均颜色，不能用暗色遮盖假扮模糊", restricted.average() in 75.0..185.0)
             } else compose.onNodeWithText("已遮盖", true).assertExists()
-            assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).fetchSemanticsNode().boundsInRoot)
+            assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).readVerificationNode(compose) { it.boundsInRoot })
             compose.onNodeWithText("不会被模糊的标题", true).assertExists()
             compose.onNodeWithText("2026", true).assertExists()
             compose.runOnIdle { item.value = item.value.copy(officialRating = "PG-13") }
             compose.onNodeWithTag(clearTag, true).assertExists()
             Thread.sleep(150)
             assertTrue("启用成人模糊时 PG-13 仍须保持真实清晰图片", variance(pixels(clearTag)) > 3000)
-            assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).fetchSemanticsNode().boundsInRoot)
+            assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).readVerificationNode(compose) { it.boundsInRoot })
             compose.runOnIdle {
                 item.value = item.value.copy(officialRating = "TV-MA")
                 preferences.value = preferences.value.copy(blurAdultCovers = false)
@@ -136,13 +133,13 @@ class LibraryPersonalizationUiTest {
                     }
                 }
             }
-            compose.onNodeWithTag("home-next-up").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithTag("home-next-up").performScrollTo().assertVerificationDisplayed(compose)
             // 剧集 A 已在继续观看中，接下来只保留剧集 B；未开始的下一集显示整集时长。
             compose.onAllNodesWithText("剧集A").assertCountEquals(1)
             val next = compose.onNode(hasText("剧集B") and hasAnyAncestor(hasTestTag("home-next-up")))
-            next.assertIsDisplayed()
-            compose.onNode(hasText("46 分") and hasAnyAncestor(hasTestTag("home-next-up"))).assertIsDisplayed()
-            next.performClick()
+            next.assertVerificationDisplayed(compose)
+            compose.onNode(hasText("46 分") and hasAnyAncestor(hasTestTag("home-next-up"))).assertVerificationDisplayed(compose)
+            next.performVerificationClick(compose)
             compose.runOnIdle { assertEquals("next-b", opened) }
             pullPageToRefresh(compose, stage = "next-up-home-refresh")
             compose.runOnIdle { assertEquals(1, homeRefreshes) }
@@ -153,7 +150,7 @@ class LibraryPersonalizationUiTest {
 
     private fun pixels(tag: String): IntArray {
         compose.waitForIdle()
-        val bounds = compose.onNodeWithTag(tag, true).fetchSemanticsNode().boundsInRoot
+        val bounds = compose.onNodeWithTag(tag, true).readVerificationNode(compose) { it.boundsInRoot }
         lateinit var windowBounds: Rect
         compose.runOnIdle {
             fun root(view: View): View? {

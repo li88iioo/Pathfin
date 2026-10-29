@@ -23,14 +23,12 @@ import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.down
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -168,12 +166,12 @@ class SoftPressIndicationTest {
                 try {
                     for (cancelled in listOf(true, false)) {
                         val label = "blur=$enabled ${if (cancelled) "Cancel" else "Up"}"
-                        card.performTouchInput { down(Offset(baseline.width / 2f, baseline.width * 11f / 32f)) }
+                        card.performVerificationTouchInput(compose) { down(Offset(baseline.width / 2f, baseline.width * 11f / 32f)) }
                         // LazyColumn 会延迟发出 Press；同时等待它与按下动画，仍早于长按阈值。
                         compose.mainClock.advanceTimeBy(300)
                         compose.waitForIdle()
                         assertServerCoverHeld(baseline, captureCard(), cardSurface, label)
-                        card.performTouchInput { if (cancelled) cancel() else up() }
+                        card.performVerificationTouchInput(compose) { if (cancelled) cancel() else up() }
                         compose.mainClock.advanceTimeBy(400)
                         compose.waitForIdle()
                         val restored = captureCard()
@@ -187,8 +185,8 @@ class SoftPressIndicationTest {
                     compose.mainClock.autoAdvance = true
                 }
             }
-            compose.onNodeWithContentDescription(tr("服务器操作 %1\$s", profile.displayName)).performTouchInput { click() }
-            compose.onNodeWithText(tr("显示名称"), substring = false).assertIsDisplayed()
+            compose.onNodeWithContentDescription(tr("服务器操作 %1\$s", profile.displayName)).performVerificationClick(compose)
+            compose.onNodeWithText(tr("显示名称"), substring = false).assertVerificationDisplayed(compose)
             compose.runOnIdle { assertEquals("更多按钮不能触发主卡点击", expectedOpens, opens) }
         } finally {
             loader.shutdown()

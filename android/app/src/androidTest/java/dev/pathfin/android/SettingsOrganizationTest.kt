@@ -81,19 +81,19 @@ class SettingsOrganizationTest {
         compose.onAllNodesWithText("弹幕", substring = true).assertCountEquals(0)
         choose("常规")
         page("general", vm)
-        compose.onNodeWithTag("pull-to-refresh-enabled").assertIsOn().performClick()
+        compose.onNodeWithTag("pull-to-refresh-enabled").assertIsOn().performVerificationClick(compose)
         persisted { !it.pullToRefreshEnabled }
         compose.onNodeWithTag("pull-to-refresh-enabled").assertIsOff()
-        compose.onNodeWithText("启动时打开上次的服务器").performClick()
+        compose.onNodeWithText("启动时打开上次的服务器").performVerificationClick(compose)
         persisted { !it.openLastServer }
         shot("02-general")
         back()
         choose("外观")
         page("appearance", vm)
-        compose.onNodeWithText("深色模式").assertIsDisplayed()
+        compose.onNodeWithText("深色模式").assertVerificationDisplayed(compose)
         compose.onAllNodesWithText("预测性返回动画", substring = false).assertCountEquals(0)
         compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-hide-system-status-bar"))
-        compose.onNodeWithTag("settings-hide-system-status-bar").assertIsOff().performClick()
+        compose.onNodeWithTag("settings-hide-system-status-bar").assertIsOff().performVerificationClick(compose)
         persisted { it.hideSystemStatusBar && !it.blurAdultCovers }
         shot("03-appearance")
         back()
@@ -118,7 +118,7 @@ class SettingsOrganizationTest {
         shot("05-tracks")
         back()
         compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-exo"))
-        compose.onNodeWithTag("settings-exo").performClick()
+        compose.onNodeWithTag("settings-exo").performVerificationClick(compose)
         page("exo", vm)
         choose("优先硬件解码")
         persisted { !it.preferHardwareVideoDecoder }
@@ -136,7 +136,7 @@ class SettingsOrganizationTest {
         back()
         choose("存储与备份")
         page("cache", vm)
-        compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertVerificationDisplayed(compose)
         choose("导入设置", click = false)
         shot("09-storage")
         assertEquals(1536, AppPreferencesStore(context).load().imageCacheSizeMb)
@@ -146,7 +146,7 @@ class SettingsOrganizationTest {
         choose("媒体库")
         page("library", vm)
         compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-blur-adult-covers"))
-        compose.onNodeWithTag("settings-blur-adult-covers").assertIsOff().performClick()
+        compose.onNodeWithTag("settings-blur-adult-covers").assertIsOff().performVerificationClick(compose)
         persisted { it.blurAdultCovers && it.hideSystemStatusBar }
         compose.onAllNodesWithTag("settings-blurred-ratings-input").assertCountEquals(0)
         shot("10-library")
@@ -155,8 +155,8 @@ class SettingsOrganizationTest {
     private fun choose(text: String, click: Boolean = true) {
         compose.onNodeWithTag("settings-list").performScrollToNode(hasText(text, substring = false))
         val option = compose.onNode(hasText(text, substring = false) and hasAnyAncestor(hasTestTag("settings-list")))
-        option.assertIsDisplayed()
-        if (click) option.performClick()
+        option.assertVerificationDisplayed(compose)
+        if (click) option.performVerificationClick(compose)
     }
     private fun back() {
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }

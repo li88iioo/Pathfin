@@ -10,12 +10,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
@@ -186,7 +184,7 @@ class PlaybackEpisodePagingTest {
             assertPage(complete, SERIES_A, TOTAL)
             compose.onNodeWithTag("playback-episodes").performScrollToIndex(TOTAL - 1)
             val lastTitle = title(SERIES_A, TOTAL)
-            compose.onNodeWithText(lastTitle).assertIsDisplayed()
+            compose.onNodeWithText(lastTitle).assertVerificationDisplayed(compose)
             compose.onNodeWithText("加载更多剧集").assertDoesNotExist()
             awaitJobs(app, fixture, "到达末集后分页和存储任务结束", activeJobs(app))
             assertEquals("到末尾后不请求第四页", listOf(0, PAGE_SIZE, PAGE_SIZE * 2), fixture.starts(SERIES_A))
@@ -293,8 +291,7 @@ class PlaybackEpisodePagingTest {
             }
             val list = compose.onNodeWithTag("playback-episodes")
             VerificationDisplay.awaitWindowReady(compose, "failed-episode-page-pull", list)
-            list.performTouchInput {
-                compose.runOnUiThread { visibleSize }
+            list.performVerificationTouchInput(compose) {
                 swipeDown()
             }
             compose.waitForIdle()

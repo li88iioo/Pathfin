@@ -22,18 +22,15 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -80,12 +77,12 @@ class MediaStreamInfoTest {
         compose.onNodeWithText("添加日期").assertDoesNotExist()
         openSheet()
         compose.onNodeWithTag("detail-media-info-list").performScrollToNode(hasTestTag("detail-media-version/1"))
-        compose.onNodeWithText("合成备用版本").assertIsDisplayed()
+        compose.onNodeWithText("合成备用版本").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("detail-media-info-list").performScrollToNode(hasTestTag("detail-media-version/1/stream/0"))
         compose.onNodeWithText("3840 × 2160").assertExists()
         compose.onNodeWithText("Main 10").assertExists()
         compose.onNodeWithTag("detail-media-info-close").assertDoesNotExist()
-        compose.onNodeWithTag("detail-media-info-sheet").performTouchInput {
+        compose.onNodeWithTag("detail-media-info-sheet").performVerificationTouchInput(compose) {
             swipeDown(startY = 10f, endY = height.toFloat() - 1f, durationMillis = 250)
         }
         compose.onNodeWithTag("detail-media-info-sheet").assertDoesNotExist()
@@ -109,7 +106,7 @@ class MediaStreamInfoTest {
         val clipboard = requireNotNull(instrumentation.targetContext.getSystemService(ClipboardManager::class.java))
         try {
             compose.onNodeWithTag("detail-file-info/path").assertTextEquals(shown)
-            compose.onNodeWithTag("detail-file-info/copy").performScrollTo().performClick()
+            compose.onNodeWithTag("detail-file-info/copy").performScrollTo().performVerificationClick(compose)
             compose.runOnIdle {
                 val clip = clipboard.primaryClip
                 assertTrue("复制内容必须是脱敏后的原始地址，不得包含链接认证", clip != null && clip.itemCount == 1 && clip.getItemAt(0).text?.toString() == safe)
@@ -166,7 +163,7 @@ class MediaStreamInfoTest {
             compose.runOnIdle { theme.value = value }
             compose.onNodeWithTag("detail-file-info/path").performScrollTo().assertTextEquals(path)
             assertWrapsWithoutOverflow(compose.onNodeWithTag("detail-file-info/path"))
-            val summary = compose.onNodeWithTag("detail-media-summary").performScrollTo().assertIsDisplayed()
+            val summary = compose.onNodeWithTag("detail-media-summary").performScrollTo().assertVerificationDisplayed(compose)
             val pixels = summary.captureToImage().toPixelMap()
             val background = pixels[pixels.width / 2, pixels.height - 3].luminance()
             assertTrue("中性卡应随深浅主题切换，不得保留浅色背景", if (value == ThemePreference.LIGHT) background > .6f else background < .2f)
@@ -198,7 +195,7 @@ class MediaStreamInfoTest {
     }
 
     private fun openSheet() {
-        compose.onNodeWithTag("detail-media-info-open").performScrollTo().performClick()
+        compose.onNodeWithTag("detail-media-info-open").performScrollTo().performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "technical-information-sheet",
             compose.onNodeWithTag("detail-media-info-handle"), compose.onNodeWithTag("detail-media-info-list"))
     }

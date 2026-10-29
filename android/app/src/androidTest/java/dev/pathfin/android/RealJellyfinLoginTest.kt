@@ -8,7 +8,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isPopup
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.ViewModelProvider
@@ -113,12 +112,12 @@ class RealJellyfinLoginTest {
             compose.waitUntil(10_000) { compose.onAllNodes(isPopup()).fetchSemanticsNodes().isEmpty() }
             val avatar = compose.onNodeWithContentDescription("切换服务器")
             VerificationDisplay.awaitWindowReady(compose, "real-server-avatar", avatar)
-            avatar.performClick()
+            avatar.performVerificationClick(compose)
             val target = hasText(profile.displayName) and hasAnyAncestor(isPopup())
             compose.waitUntil(10_000) { compose.onAllNodes(target).fetchSemanticsNodes().size == 1 }
             val row = compose.onNode(target)
             VerificationDisplay.awaitWindowReady(compose, "real-switch-target", row)
-            row.performClick()
+            row.performVerificationClick(compose)
             awaitHome(profile.id)
             assertEquals(profile.session, app.state.value.session)
         }

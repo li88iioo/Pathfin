@@ -3,10 +3,8 @@ package dev.pathfin.android
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -40,9 +38,9 @@ class DialogContentUiTest {
                 }
             }
         }
-        compose.onNodeWithTag("playback-source/source-19").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithTag("playback-source/source-19").performScrollTo().assertVerificationDisplayed(compose).performVerificationClick(compose)
         assertEquals(listOf("source-19"), choices)
-        compose.onNodeWithText("取消").assertIsDisplayed().performClick()
+        compose.onNodeWithText("取消").assertVerificationDisplayed(compose).performVerificationClick(compose)
         assertEquals(1, dismisses)
     }
 }

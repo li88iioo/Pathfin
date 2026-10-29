@@ -30,7 +30,7 @@ class SettingsFormsUiTest {
         val list = compose.onNodeWithTag("settings-list")
         list.performScrollToNode(hasTestTag("settings-blur-adult-covers"))
         val adult = compose.onNodeWithTag("settings-blur-adult-covers")
-        adult.assertIsOff().performClick().assertIsOn()
+        adult.assertIsOff().performVerificationClick(compose).assertIsOn()
         compose.runOnIdle {
             assertEquals(1, changes.size)
             assertTrue(state.value.preferences.blurAdultCovers)
@@ -38,7 +38,7 @@ class SettingsFormsUiTest {
         }
         // 成人模糊为直接开关，不再打开自定义分级表单。
         compose.onAllNodes(isDialog()).assertCountEquals(0)
-        adult.performClick().assertIsOff()
+        adult.performVerificationClick(compose).assertIsOff()
         compose.runOnIdle {
             assertEquals(2, changes.size)
             assertFalse(state.value.preferences.blurAdultCovers)
@@ -47,20 +47,20 @@ class SettingsFormsUiTest {
 
     @Test fun themeDialogShowsTheActualSelectionAndStatusBarChangeKeepsTheme() = screen("appearance") { state, changes ->
         fun option(label: String) = compose.onNode(hasText(label) and hasAnyAncestor(isDialog()))
-        compose.onNodeWithText("深色模式").performClick()
+        compose.onNodeWithText("深色模式").performVerificationClick(compose)
         option(ThemePreference.SYSTEM.label).assertIsSelected()
-        option(ThemePreference.DARK.label).assertIsNotSelected().performClick()
+        option(ThemePreference.DARK.label).assertIsNotSelected().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(ThemePreference.DARK, state.value.theme); assertTrue(changes.isEmpty()) }
-        compose.onNodeWithText("深色模式").performClick()
+        compose.onNodeWithText("深色模式").performVerificationClick(compose)
         // 切换深浅主题后重新打开，对话框窗口可能晚一帧挂上。
         compose.waitUntil(5_000) { compose.onAllNodes(hasText(ThemePreference.DARK.label) and hasAnyAncestor(isDialog())).fetchSemanticsNodes().isNotEmpty() }
         option(ThemePreference.DARK.label).assertIsSelected()
         option(ThemePreference.SYSTEM.label).assertIsNotSelected()
-        compose.onNode(hasText("取消") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNode(hasText("取消") and hasAnyAncestor(isDialog())).performVerificationClick(compose)
         compose.runOnIdle { assertEquals(ThemePreference.DARK, state.value.theme); assertTrue(changes.isEmpty()) }
         val list = compose.onNodeWithTag("settings-list")
         list.performScrollToNode(hasTestTag("settings-hide-system-status-bar"))
-        compose.onNodeWithTag("settings-hide-system-status-bar").assertIsOff().performClick().assertIsOn()
+        compose.onNodeWithTag("settings-hide-system-status-bar").assertIsOff().performVerificationClick(compose).assertIsOn()
         compose.runOnIdle {
             assertEquals(1, changes.size)
             assertTrue(state.value.preferences.hideSystemStatusBar)
@@ -74,22 +74,24 @@ class SettingsFormsUiTest {
         compose.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("settings-accent-options"))
         val row = compose.onNodeWithTag("settings-accent-options")
         val current = compose.onNodeWithTag("settings-accent-current")
-        val rowBounds = row.fetchSemanticsNode().boundsInRoot
-        val currentBounds = current.fetchSemanticsNode().boundsInRoot
+        val nodes = listOf(row, current).map { it.fetchSemanticsNode() }
+        val (rowBounds, currentBounds) = compose.runOnUiThread { nodes.map { it.boundsInRoot } }
         for (option in options) {
             val tag = "settings-accent/${option.name}"
-            val node = compose.onNodeWithTag(tag).performScrollTo().assertIsDisplayed()
-            val bounds = node.fetchSemanticsNode().boundsInRoot
+            val node = compose.onNodeWithTag(tag).performScrollTo().assertVerificationDisplayed(compose)
+            val bounds = node.readVerificationNode(compose) { it.boundsInRoot }
             val minimum = 48 * compose.density.density
             assertTrue("${option.name} 点击宽度不能被压缩", bounds.width >= minimum - 1)
             assertTrue("${option.name} 点击高度不能被压缩", bounds.height >= minimum - 1)
             assertEquals("${option.name} 必须留在同一行", rowBounds.top, bounds.top, 1f)
             val previous = changes.size
-            node.performClick().assertIsSelected()
+            node.performVerificationClick(compose).assertIsSelected()
             compose.onAllNodes(isSelected() and hasAnyAncestor(hasTestTag("settings-accent-options"))).assertCountEquals(1)
             if (option != AccentColor.WALLPAPER) current.assertTextEquals(option.label)
-            assertEquals("切换颜色后色样行不得跳位", rowBounds, row.fetchSemanticsNode().boundsInRoot)
-            assertEquals("切换颜色后当前色说明不得跳位", currentBounds, current.fetchSemanticsNode().boundsInRoot)
+            val updated = listOf(row, current).map { it.fetchSemanticsNode() }
+            val (afterRow, afterCurrent) = compose.runOnUiThread { updated.map { it.boundsInRoot } }
+            assertEquals("切换颜色后色样行不得跳位", rowBounds, afterRow)
+            assertEquals("切换颜色后当前色说明不得跳位", currentBounds, afterCurrent)
             compose.runOnIdle {
                 assertEquals(option, state.value.preferences.accentColor)
                 assertEquals(previous + 1, changes.size)

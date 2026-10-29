@@ -52,7 +52,7 @@ class SubtitleManagementUiTest {
         compose.onNodeWithTag("subtitle-open-search").assertDoesNotExist()
         compose.onNodeWithTag("subtitle-upload-file").assertDoesNotExist()
         compose.onNodeWithTag("subtitle-management-back").assertDoesNotExist()
-        compose.onNodeWithTag("subtitle-search-submit").assertIsEnabled().performClick()
+        compose.onNodeWithTag("subtitle-search-submit").assertIsEnabled().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.searches.get() == 2 }
     }
 
@@ -71,30 +71,30 @@ class SubtitleManagementUiTest {
         show(fixture, onChanged = { changed.incrementAndGet() })
         compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag("subtitle-open-search") and isEnabled()).fetchSemanticsNodes().size == 1 }
         VerificationDisplay.awaitWindowReady(compose, "subtitle-management-search", compose.onNodeWithTag("subtitle-open-search"))
-        compose.onNodeWithTag("subtitle-open-search").performClick()
+        compose.onNodeWithTag("subtitle-open-search").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("subtitle-search-result").fetchSemanticsNodes().size == 1 }
         assertEquals(1, fixture.searches.get())
         assertEquals(0, fixture.writes.get())
-        compose.onNodeWithTag("subtitle-search-result").performClick()
-        compose.onNodeWithText("取消").performClick()
+        compose.onNodeWithTag("subtitle-search-result").performVerificationClick(compose)
+        compose.onNodeWithText("取消").performVerificationClick(compose)
         assertEquals(0, fixture.writes.get())
-        compose.onNodeWithTag("subtitle-search-result").performClick()
-        compose.onNodeWithTag("subtitle-download-confirm").performClick()
+        compose.onNodeWithTag("subtitle-search-result").performVerificationClick(compose)
+        compose.onNodeWithTag("subtitle-download-confirm").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.writes.get() == 1 && fixture.userReads.get() >= 2 &&
             compose.onAllNodes(hasContentDescription("返回字幕") and isEnabled()).fetchSemanticsNodes().size == 1 }
         compose.waitForIdle()
         assertEquals("204 但轨道未变化时，不能重载播放器", 0, changed.get())
         compose.onNodeWithTag("subtitle-search-result").assertIsNotEnabled()
-        compose.onNodeWithContentDescription("返回字幕").performClick()
+        compose.onNodeWithContentDescription("返回字幕").performVerificationClick(compose)
         compose.onNodeWithText("等待服务器更新字幕列表").assertExists()
-        compose.onNodeWithText("检查更新").performClick()
+        compose.onNodeWithText("检查更新").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.userReads.get() >= 3 &&
             compose.onAllNodes(hasText("检查更新") and isEnabled()).fetchSemanticsNodes().size == 1 }
         compose.waitForIdle()
         assertEquals("主动检查得到同一字幕目录时也不能重载", 0, changed.get())
         compose.onNodeWithText("等待服务器更新字幕列表").assertExists()
         fixture.publishDownloadedTrack = true
-        compose.onNodeWithText("检查更新").performClick()
+        compose.onNodeWithText("检查更新").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { changed.get() == 1 }
         compose.waitForIdle()
         compose.onNodeWithText("等待服务器更新字幕列表").assertDoesNotExist()
@@ -110,10 +110,10 @@ class SubtitleManagementUiTest {
         show(fixture, onChanged = { changed.incrementAndGet() }, open = open)
         compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag("subtitle-open-search") and isEnabled()).fetchSemanticsNodes().size == 1 }
         VerificationDisplay.awaitWindowReady(compose, "subtitle-management-auto-verify", compose.onNodeWithTag("subtitle-open-search"))
-        compose.onNodeWithTag("subtitle-open-search").performClick()
+        compose.onNodeWithTag("subtitle-open-search").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("subtitle-search-result").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithTag("subtitle-search-result").performClick()
-        compose.onNodeWithTag("subtitle-download-confirm").performClick()
+        compose.onNodeWithTag("subtitle-search-result").performVerificationClick(compose)
+        compose.onNodeWithTag("subtitle-download-confirm").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.writes.get() == 1 && fixture.userReads.get() >= 2 }
         assertEquals(0, changed.get())
         compose.runOnIdle { open.value = false }
@@ -143,7 +143,7 @@ class SubtitleManagementUiTest {
 
         val readsBeforeCheck = fixture.userReads.get()
         compose.onNodeWithTag("subtitle-management-content").performScrollToNode(hasText("检查更新"))
-        compose.onNodeWithText("检查更新").assertIsEnabled().performClick()
+        compose.onNodeWithText("检查更新").assertIsEnabled().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) {
             fixture.userReads.get() > readsBeforeCheck &&
                 compose.onAllNodes(hasText("检查更新") and isEnabled()).fetchSemanticsNodes().size == 1
@@ -151,23 +151,23 @@ class SubtitleManagementUiTest {
         assertEquals("检查未确认结果只能读取目录", 1, fixture.writes.get())
         assertEquals(0, changed.get())
 
-        compose.onNodeWithText("结束等待").performClick()
+        compose.onNodeWithText("结束等待").performVerificationClick(compose)
         compose.onNodeWithText("结束等待").assertDoesNotExist()
         compose.onNodeWithTag("subtitle-search-result").assertIsEnabled()
         assertEquals("解除等待本身不能提交下载", 1, fixture.writes.get())
-        compose.onNodeWithContentDescription("返回字幕").performClick()
+        compose.onNodeWithContentDescription("返回字幕").performVerificationClick(compose)
         compose.onNodeWithTag("subtitle-upload-file").assertIsEnabled()
-        compose.onNodeWithTag("subtitle-open-search").performClick()
+        compose.onNodeWithTag("subtitle-open-search").performVerificationClick(compose)
         compose.onNodeWithTag("subtitle-management-content").performScrollToNode(hasTestTag("subtitle-search-result"))
-        compose.onNodeWithTag("subtitle-search-result").assertIsEnabled().performClick()
-        compose.onNodeWithText("取消").performClick()
+        compose.onNodeWithTag("subtitle-search-result").assertIsEnabled().performVerificationClick(compose)
+        compose.onNodeWithText("取消").performVerificationClick(compose)
         assertEquals("再次选择后取消确认也不能重放写入", 1, fixture.writes.get())
 
-        compose.onNodeWithTag("subtitle-search-result").performClick()
+        compose.onNodeWithTag("subtitle-search-result").performVerificationClick(compose)
         fixture.publishDownloadedTrack = true
-        compose.onNodeWithTag("subtitle-download-confirm").performClick()
+        compose.onNodeWithTag("subtitle-download-confirm").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.writes.get() == 2 && changed.get() == 1 }
-        compose.onNodeWithContentDescription("返回字幕").performClick()
+        compose.onNodeWithContentDescription("返回字幕").performVerificationClick(compose)
         compose.onNodeWithText("Downloaded Chinese").assertExists()
         assertEquals("必须由用户再次确认后才发送第二次下载", 2, fixture.writes.get())
         assertEquals(1, changed.get())
@@ -184,7 +184,7 @@ class SubtitleManagementUiTest {
 
         fixture.publishDownloadedTrack = true
         compose.waitUntil(WAIT_MS) { changed.get() == 1 }
-        compose.onNodeWithContentDescription("返回字幕").performClick()
+        compose.onNodeWithContentDescription("返回字幕").performVerificationClick(compose)
         compose.onNodeWithText("Downloaded Chinese").assertExists()
         compose.onNodeWithText("等待服务器更新字幕列表").assertDoesNotExist()
         compose.onNodeWithTag("subtitle-upload-file").assertIsEnabled()
@@ -200,9 +200,9 @@ class SubtitleManagementUiTest {
         try {
             confirmFirstDownload(fixture, "subtitle-management-verification-ownership")
             compose.waitUntil(WAIT_MS) { fixture.blockedReadStarted.count == 0L }
-            compose.onNodeWithText("结束等待").assertIsEnabled().performClick()
-            compose.onNodeWithTag("subtitle-search-result").assertIsEnabled().performClick()
-            compose.onNodeWithTag("subtitle-download-confirm").performClick()
+            compose.onNodeWithText("结束等待").assertIsEnabled().performVerificationClick(compose)
+            compose.onNodeWithTag("subtitle-search-result").assertIsEnabled().performVerificationClick(compose)
+            compose.onNodeWithTag("subtitle-download-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) {
                 fixture.writes.get() == 2 && fixture.userReads.get() >= 3 &&
                     compose.onAllNodes(hasText("检查更新") and isEnabled()).fetchSemanticsNodes().size == 1
@@ -217,7 +217,7 @@ class SubtitleManagementUiTest {
             }
             compose.waitForIdle()
             compose.onNodeWithTag("subtitle-search-result").assertIsNotEnabled()
-            compose.onNodeWithContentDescription("返回字幕").performClick()
+            compose.onNodeWithContentDescription("返回字幕").performVerificationClick(compose)
             compose.onNodeWithText("等待服务器更新字幕列表").assertExists()
             compose.onNodeWithText("Obsolete Chinese").assertDoesNotExist()
             compose.onNodeWithTag("subtitle-upload-file").assertIsNotEnabled()
@@ -225,7 +225,7 @@ class SubtitleManagementUiTest {
             assertEquals("结束等待和旧响应均不能自动重放下载", 2, fixture.writes.get())
 
             fixture.publishDownloadedTrack = true
-            compose.onNodeWithText("检查更新").assertIsEnabled().performClick()
+            compose.onNodeWithText("检查更新").assertIsEnabled().performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { changed.get() == 1 }
             compose.onNodeWithText("Downloaded Chinese").assertExists()
             compose.onNodeWithText("等待服务器更新字幕列表").assertDoesNotExist()
@@ -254,12 +254,12 @@ class SubtitleManagementUiTest {
         show(fixture, onChanged = { changed.incrementAndGet() }, onAuthExpired = { expired.incrementAndGet() })
         compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag("subtitle-open-search") and isEnabled()).fetchSemanticsNodes().size == 1 }
         VerificationDisplay.awaitWindowReady(compose, "subtitle-management-write-expired", compose.onNodeWithTag("subtitle-open-search"))
-        compose.onNodeWithTag("subtitle-open-search").performClick()
+        compose.onNodeWithTag("subtitle-open-search").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("subtitle-search-result").fetchSemanticsNodes().size == 1 }
         VerificationDisplay.awaitWindowReady(compose, "subtitle-management-write-expired-result", compose.onNodeWithTag("subtitle-search-result"))
-        compose.onNodeWithTag("subtitle-search-result").performClick()
+        compose.onNodeWithTag("subtitle-search-result").performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "subtitle-management-write-expired-confirm", compose.onNodeWithTag("subtitle-download-confirm"))
-        compose.onNodeWithTag("subtitle-download-confirm").assertIsEnabled().performClick()
+        compose.onNodeWithTag("subtitle-download-confirm").assertIsEnabled().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.writes.get() == 1 }
         assertEquals("必须先观察到字幕 POST，才能检查其后的 401 恢复", 1, fixture.writes.get())
         compose.waitUntil(WAIT_MS) { expired.get() > 0 }
@@ -275,10 +275,10 @@ class SubtitleManagementUiTest {
             compose.onAllNodes(hasTestTag("subtitle-open-search") and isEnabled()).fetchSemanticsNodes().size == 1
         }
         VerificationDisplay.awaitWindowReady(compose, stage, compose.onNodeWithTag("subtitle-open-search"))
-        compose.onNodeWithTag("subtitle-open-search").performClick()
+        compose.onNodeWithTag("subtitle-open-search").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("subtitle-search-result").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithTag("subtitle-search-result").performClick()
-        compose.onNodeWithTag("subtitle-download-confirm").performClick()
+        compose.onNodeWithTag("subtitle-search-result").performVerificationClick(compose)
+        compose.onNodeWithTag("subtitle-download-confirm").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.writes.get() == 1 && fixture.userReads.get() >= 2 }
     }
 

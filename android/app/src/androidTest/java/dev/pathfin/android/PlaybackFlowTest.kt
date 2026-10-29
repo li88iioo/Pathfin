@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.lifecycle.ViewModelProvider
@@ -83,15 +82,15 @@ class PlaybackFlowTest {
         }
         val retainedProfileIds = app.state.value.profiles.filterNot { it.id == syntheticProfile.id }.map { it.id }.toSet()
 
-        compose.onAllNodesWithText(MOVIE_NAME).onFirst().performScrollTo().performClick()
+        compose.onAllNodesWithText(MOVIE_NAME).onFirst().performScrollTo().performVerificationClick(compose)
         compose.waitUntil(timeoutMillis = WAIT_MS) {
             val state = app.state.value
             state.detailError?.let { throw AssertionError("测试详情读取失败：$it") }
             !state.detailLoading && state.details[ITEM_ID] != null
         }
         val playLabel = if (app.state.value.details.getValue(ITEM_ID).positionTicks > 0) "从头播放" else "播放"
-        if (playLabel == "从头播放") compose.onNodeWithContentDescription("播放选项").performScrollTo().performClick()
-        compose.onNodeWithText(playLabel).performScrollTo().performClick()
+        if (playLabel == "从头播放") compose.onNodeWithContentDescription("播放选项").performScrollTo().performVerificationClick(compose)
+        compose.onNodeWithText(playLabel).performScrollTo().performVerificationClick(compose)
 
         compose.waitUntil(timeoutMillis = WAIT_MS) {
             app.state.value.playbackError?.let { throw AssertionError("测试媒体准备失败：$it") }
@@ -123,7 +122,7 @@ class PlaybackFlowTest {
             assertTrue("重建后应保留 Seek 位置", originalPlayer.currentPosition >= SEEK_MS)
         }
 
-        compose.onNodeWithTag("player-back").performClick()
+        compose.onNodeWithTag("player-back").performVerificationClick(compose)
         compose.waitUntil(timeoutMillis = WAIT_MS) {
             app.state.value.activePlayback == null &&
                 (app.state.value.details[ITEM_ID]?.positionTicks ?: 0) >= SEEK_MS * 10_000
@@ -133,17 +132,17 @@ class PlaybackFlowTest {
             assertTrue(app.state.value.details.getValue(ITEM_ID).positionTicks >= SEEK_MS * 10_000)
         }
 
-        compose.onNodeWithContentDescription("返回").performClick()
+        compose.onNodeWithContentDescription("返回").performVerificationClick(compose)
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntil(WAIT_MS) { app.state.value.showServers }
         dismissOnlySyntheticAutofillSave(app, syntheticProfile, displayName)
         VerificationDisplay.awaitWindowReady(compose, "playback-cleanup-server-list", compose.onNodeWithTag("server-row/${syntheticProfile.id}"))
         compose.onNodeWithTag("server-row/${syntheticProfile.id}").assertExists()
-        compose.onNodeWithContentDescription("服务器操作 $displayName").performClick()
-        compose.onNodeWithText("从本机移除", substring = false).performClick()
+        compose.onNodeWithContentDescription("服务器操作 $displayName").performVerificationClick(compose)
+        compose.onNodeWithText("从本机移除", substring = false).performVerificationClick(compose)
         compose.onNodeWithText("删除服务器？", substring = false).assertExists()
         compose.onNodeWithText("从本机移除“$displayName”的账号与地址", substring = true).assertExists()
-        compose.onNodeWithText("删除", substring = false).performClick()
+        compose.onNodeWithText("删除", substring = false).performVerificationClick(compose)
         compose.waitUntil(timeoutMillis = WAIT_MS) {
             val state = app.state.value
             state.session == null && !state.loginBusy && state.profiles.none { it.id == syntheticProfile.id }

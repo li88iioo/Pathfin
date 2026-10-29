@@ -30,16 +30,16 @@ class PlaybackEpisodeFlowTest {
         start(app, playback, episodes.first())
         compose.onNodeWithTag("player-previous").assertIsNotEnabled()
         val first = main { checkNotNull(playback.player) }
-        compose.onNodeWithTag("player-next").performClick()
+        compose.onNodeWithTag("player-next").performVerificationClick(compose)
         awaitEpisode(app, playback, episodes[1])
         main { assertTrue(first.isReleased) }
-        compose.onNodeWithTag("player-previous").performClick()
+        compose.onNodeWithTag("player-previous").performVerificationClick(compose)
         awaitEpisode(app, playback, episodes.first())
-        compose.onNodeWithTag("player-more").performClick()
-        compose.onNodeWithText("选集").performClick()
+        compose.onNodeWithTag("player-more").performVerificationClick(compose)
+        compose.onNodeWithText("选集").performVerificationClick(compose)
         compose.waitUntil(WAIT) { app.state.value.playbackEpisodes.items.size == 3 }
         compose.onNodeWithTag("playback-episodes").performScrollToNode(hasText("S1E3 · Synthetic Episode 3"))
-        compose.onNodeWithText("S1E3 · Synthetic Episode 3").performClick()
+        compose.onNodeWithText("S1E3 · Synthetic Episode 3").performVerificationClick(compose)
         awaitEpisode(app, playback, episodes.last())
         compose.onNodeWithTag("player-next").assertIsNotEnabled()
         // 同一集再次播放后也必须能自动前进，不能以 itemId 永久去重。
@@ -145,7 +145,7 @@ class PlaybackEpisodeFlowTest {
         main { playback.player!!.pause() }
         compose.waitUntil(WAIT) { !playback.state.value.isPlaying }
         if (compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isEmpty())
-            compose.onNodeWithTag("player-video").performTouchInput { click(Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
     }
     private fun endCurrent(playback: PlaybackViewModel) = main {
         val player = requireNotNull(playback.player)

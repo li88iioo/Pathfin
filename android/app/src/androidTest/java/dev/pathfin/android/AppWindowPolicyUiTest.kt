@@ -150,8 +150,7 @@ class AppWindowPolicyUiTest {
                         assertSheetSwipeStaysAtOffset(tag, up = false, state)
                     }
                     val expandedOffset = compose.runOnIdle { state.requireOffset() }
-                    compose.onNodeWithTag("policy-sheet-list").performTouchInput {
-                        compose.runOnUiThread { visibleSize }
+                    compose.onNodeWithTag("policy-sheet-list").performVerificationTouchInput(compose) {
                         swipeUp(durationMillis = 180)
                     }
                     compose.runOnIdle {
@@ -168,9 +167,8 @@ class AppWindowPolicyUiTest {
                     assertStableHost(host, baseline, firstHostFrame, "$kind-collapsed")
                     click("policy-expand")
                     compose.waitUntil(5_000) { state.currentValue == SheetValue.Expanded }
-                    val contentHeight = compose.onNodeWithTag("policy-sheet-body").fetchSemanticsNode().boundsInRoot.height
-                    compose.onNodeWithTag("policy-sheet-handle").performTouchInput {
-                        compose.runOnUiThread { visibleSize }
+                    val contentHeight = compose.onNodeWithTag("policy-sheet-body").readVerificationNode(compose) { it.boundsInRoot }.height
+                    compose.onNodeWithTag("policy-sheet-handle").performVerificationTouchInput(compose) {
                         swipeDown(startY = height * 0.8f, endY = height + contentHeight * 0.9f, durationMillis = 250)
                     }
                 } else {
@@ -234,11 +232,7 @@ class AppWindowPolicyUiTest {
     private fun click(tag: String) {
         val target = compose.onNodeWithTag(tag)
         VerificationDisplay.awaitWindowReady(compose, "window-policy-touch-$tag", target)
-        target.performTouchInput {
-            // 每帧观察者也读取布局；触摸范围必须由同一个 UI 线程取得，避免坐标缓存竞争。
-            compose.runOnUiThread { visibleSize }
-            click()
-        }
+        target.performVerificationClick(compose)
     }
 
     private fun assertSheetSwipeStaysAtOffset(tag: String, up: Boolean, sheet: SheetState) {
@@ -247,8 +241,7 @@ class AppWindowPolicyUiTest {
         val offset = compose.runOnIdle { sheet.requireOffset() }
         compose.mainClock.autoAdvance = false
         try {
-            target.performTouchInput {
-                compose.runOnUiThread { visibleSize }
+            target.performVerificationTouchInput(compose) {
                 if (up) swipeUp(startY = height * 0.8f, endY = height * 0.2f, durationMillis = 120)
                 else swipeDown(startY = height * 0.2f, endY = height * 0.8f, durationMillis = 120)
             }

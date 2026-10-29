@@ -47,9 +47,9 @@ class CloudQualityUiTest {
             if (option.available) row.assertIsEnabled() else row.assertIsNotEnabled()
         }
         compose.onNodeWithText("码率上限 12 Mbps").assertDoesNotExist()
-        compose.onNodeWithTag("player-quality-data_saver").performScrollTo().performTouchInput { click() }
+        compose.onNodeWithTag("player-quality-data_saver").performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertTrue(selections.isEmpty()) }
-        compose.onNodeWithTag("player-quality-high").performScrollTo().performClick()
+        compose.onNodeWithTag("player-quality-high").performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf(PlaybackQuality.HIGH), selections) }
         // 回调只是请求切换，选中态仍由实际播放状态确认。
         compose.onNodeWithTag("player-quality-original").assertIsSelected()
@@ -65,23 +65,22 @@ class CloudQualityUiTest {
         val selections = mutableListOf<PlaybackQuality>()
         qualitySheet(state, selections)
         val original = compose.onNodeWithTag("player-quality-original").performScrollTo()
-        val originalBounds = original.fetchSemanticsNode().boundsInRoot
-        val sheetBounds = compose.onNodeWithTag("player-quality-sheet").fetchSemanticsNode().boundsInRoot
+        fun geometry() = listOf(original, compose.onNodeWithTag("player-quality-sheet")).map { it.fetchSemanticsNode() }
+            .let { nodes -> compose.runOnUiThread { nodes.map { it.boundsInRoot } } }
+        val bounds = geometry()
         compose.runOnIdle { state.value = state.value.copy(isChangingQuality = true) }
-        original.assertIsNotEnabled().performTouchInput { click() }
+        original.assertIsNotEnabled().performVerificationClick(compose)
         compose.onNodeWithTag("player-quality-high").assertIsSelected().assertIsNotEnabled()
         compose.runOnIdle { assertTrue(selections.isEmpty()) }
-        assertEquals(originalBounds, original.fetchSemanticsNode().boundsInRoot)
-        assertEquals(sheetBounds, compose.onNodeWithTag("player-quality-sheet").fetchSemanticsNode().boundsInRoot)
+        assertEquals(bounds, geometry())
         val error = "云盘画质暂时无法切换，请重试或继续观看当前画质。当前视频仍使用切换前的档位播放。"
         compose.runOnIdle { state.value = state.value.copy(isChangingQuality = false, qualityError = error) }
         compose.onNodeWithText(error).assertExists()
         original.assertIsEnabled()
         compose.onNodeWithTag("player-quality-high").assertIsSelected()
-        assertEquals(originalBounds, original.fetchSemanticsNode().boundsInRoot)
-        assertEquals(sheetBounds, compose.onNodeWithTag("player-quality-sheet").fetchSemanticsNode().boundsInRoot)
+        assertEquals(bounds, geometry())
         compose.runOnIdle { state.value = state.value.copy(qualityError = null) }
-        assertEquals(originalBounds, original.fetchSemanticsNode().boundsInRoot)
+        assertEquals(bounds.first(), original.readVerificationNode(compose) { it.boundsInRoot })
     }
 
     @Test fun nullOptionsKeepJellyfinBitratesButAnEmptyCloudListCannotOfferTranscoding() {
@@ -107,29 +106,29 @@ class CloudQualityUiTest {
         AppPreferences(originalPathEnabled = true),
     ) { state, changes ->
         val row = compose.onNodeWithTag("strm-default-quality")
-        row.assertIsEnabled().assertTextContains("原画").performClick()
+        row.assertIsEnabled().assertTextContains("原画").performVerificationClick(compose)
         PlaybackQuality.entries.forEach { quality ->
             compose.onNodeWithTag("strm-default-quality-${quality.name.lowercase()}").assertTextContains(quality.label)
         }
         compose.onNodeWithTag("strm-default-quality-original").assertIsSelected()
-        compose.onNodeWithTag("strm-default-quality-high").performClick().assertIsSelected()
+        compose.onNodeWithTag("strm-default-quality-high").performVerificationClick(compose).assertIsSelected()
         compose.runOnIdle {
             assertTrue(changes.isEmpty())
             assertEquals(PlaybackQuality.ORIGINAL, state.value.preferences.strmDefaultQuality)
         }
-        compose.onNode(hasText("取消") and hasAnyAncestor(isDialog())).performClick()
-        row.performClick()
+        compose.onNode(hasText("取消") and hasAnyAncestor(isDialog())).performVerificationClick(compose)
+        row.performVerificationClick(compose)
         compose.onNodeWithTag("strm-default-quality-original").assertIsSelected()
-        compose.onNodeWithTag("strm-default-quality-high").assertIsNotSelected().performClick()
-        compose.onNode(hasText("保存") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNodeWithTag("strm-default-quality-high").assertIsNotSelected().performVerificationClick(compose)
+        compose.onNode(hasText("保存") and hasAnyAncestor(isDialog())).performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(listOf(AppPreferences(originalPathEnabled = true, strmDefaultQuality = PlaybackQuality.HIGH)), changes)
             assertEquals(PlaybackQuality.HIGH, state.value.preferences.strmDefaultQuality)
         }
-        row.assertTextContains("高质量").performClick()
+        row.assertTextContains("高质量").performVerificationClick(compose)
         compose.onNodeWithTag("strm-default-quality-high").assertIsSelected()
-        compose.onNodeWithTag("strm-default-quality-standard").performClick()
-        compose.onNode(hasText("取消") and hasAnyAncestor(isDialog())).performClick()
+        compose.onNodeWithTag("strm-default-quality-standard").performVerificationClick(compose)
+        compose.onNode(hasText("取消") and hasAnyAncestor(isDialog())).performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(1, changes.size)
             assertEquals(PlaybackQuality.HIGH, state.value.preferences.strmDefaultQuality)
@@ -140,18 +139,18 @@ class CloudQualityUiTest {
         AppPreferences(originalPathEnabled = false, strmDefaultQuality = PlaybackQuality.STANDARD, liveTvDirectPlay = true),
     ) { state, changes ->
         val row = compose.onNodeWithTag("strm-default-quality")
-        val bounds = row.fetchSemanticsNode().boundsInRoot
-        row.assertIsNotEnabled().assertTextContains("标准").performTouchInput { click() }
+        val bounds = row.readVerificationNode(compose) { it.boundsInRoot }
+        row.assertIsNotEnabled().assertTextContains("标准").performVerificationClick(compose)
         compose.onAllNodes(isDialog()).assertCountEquals(0)
         compose.runOnIdle { assertTrue(changes.isEmpty()) }
-        compose.onNodeWithText("STRM 原始地址").performClick()
+        compose.onNodeWithText("STRM 原始地址").performVerificationClick(compose)
         row.assertIsEnabled()
-        assertEquals(bounds, row.fetchSemanticsNode().boundsInRoot)
+        assertEquals(bounds, row.readVerificationNode(compose) { it.boundsInRoot })
         compose.runOnIdle {
             assertEquals(1, changes.size)
             assertEquals(AppPreferences(originalPathEnabled = true, strmDefaultQuality = PlaybackQuality.STANDARD, liveTvDirectPlay = true), state.value.preferences)
         }
-        row.performClick()
+        row.performVerificationClick(compose)
         compose.onNodeWithTag("strm-default-quality-standard").assertIsSelected()
     }
 

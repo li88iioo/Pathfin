@@ -11,7 +11,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
@@ -21,7 +20,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.AnnotatedString
@@ -133,7 +131,7 @@ class LocalNetworkAccessTest {
         val app = showApp()
         fillLoginForm()
         val originalInputs = loginInputValues()
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { app.state.value.localNetworkPermissionRequest != null }
         val requestId = checkNotNull(app.state.value.localNetworkPermissionRequest)
         assertNull("尚未授权时不能建立会话", app.state.value.session)
@@ -148,14 +146,14 @@ class LocalNetworkAccessTest {
         }
         assertNull(app.state.value.session)
         assertTrue(app.state.value.localNetworkPermissionDenied)
-        compose.onNodeWithText(LocalNetworkPermission.DENIED_MESSAGE).assertIsDisplayed()
-        compose.onNodeWithTag("login-submit").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithText(LocalNetworkPermission.DENIED_MESSAGE).assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("login-submit").assertVerificationDisplayed(compose).assertIsEnabled()
         compose.onNodeWithTag("login-http").performScrollTo().assertIsOn()
         assertEquals("权限拒绝后必须完整保留表单", originalInputs, loginInputValues())
 
         // 再次请求后取消整个登录，迟到的“允许”回调不得激活已退出的会话。
         compose.runOnIdle { app.dismissLocalNetworkPermissionExplanation() }
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { app.state.value.localNetworkPermissionRequest != null }
         val cancelledRequestId = checkNotNull(app.state.value.localNetworkPermissionRequest)
         assertTrue("每次权限请求必须有独立身份", requestId != cancelledRequestId)
@@ -183,7 +181,7 @@ class LocalNetworkAccessTest {
         compose.continueToAccount(WAIT_MS)
         assertEquals("第一步必须探测到合成 fixture", FIXTURE_SERVER_ID, app.state.value.serverProbe?.info?.id)
         compose.enterAccount(FIXTURE_USER, FIXTURE_PASSWORD)
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) {
             val state = app.state.value
             state.loginError?.let { throw AssertionError("LAN 界面登录失败：$it") }
@@ -193,7 +191,7 @@ class LocalNetworkAccessTest {
         assertEquals(FIXTURE_SERVER_ID, app.state.value.session?.serverId)
         assertEquals("首页必须保留真实 LAN 地址", server.baseUrl, app.state.value.session?.server?.baseUrl)
         assertTrue("首页必须读到 fixture 媒体库", app.state.value.home.libraries.any { it.id == "fixture-library" })
-        compose.onAllNodesWithText(FIXTURE_MOVIE).onFirst().performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText(FIXTURE_MOVIE).onFirst().performScrollTo().assertVerificationDisplayed(compose)
     }
 
     private fun showApp(): AppViewModel {

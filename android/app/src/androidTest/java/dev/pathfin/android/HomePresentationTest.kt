@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
@@ -22,7 +21,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performSemanticsAction
@@ -113,14 +111,14 @@ class HomePresentationTest {
         var opened: MediaItem? = null
         var opens = 0
         showHome(home, onOpen = { opened = it; opens++ })
-        compose.onNodeWithContentDescription(collections.name).assertIsDisplayed().assertHasClickAction()
+        compose.onNodeWithContentDescription(collections.name).assertVerificationDisplayed(compose).assertHasClickAction()
         compose.onNodeWithText("最近入库 · ${collections.name}").assertDoesNotExist()
 
         val heading = compose.onNodeWithText("最近入库 · ${library.name}").performScrollTo()
-        heading.assertIsDisplayed()
+        heading.assertVerificationDisplayed(compose)
         val bounds = layoutBounds(heading)
         assertTrue("整行库标题必须保留至少48dp点击高度", bounds.height >= 48f * context.resources.displayMetrics.density - 1f)
-        heading.performClick()
+        heading.performVerificationClick(compose)
         compose.runOnIdle {
             assertSame("库标题应打开原库，而不是某张封面条目", library, opened)
             assertEquals("一个标题入口只能触发一次打开", 1, opens)
@@ -170,13 +168,13 @@ class HomePresentationTest {
         // 以首库为滚动锚点，让次库标题进入短屏；后续不重滚，避免对齐次库掩盖真实位移。
         compose.onNodeWithTag("home-list").performScrollToKey("library-shelf/${first.id}")
         VerificationDisplay.awaitWindowReady(compose, "home-shelf-stable-anchor", anchor, following)
-        anchor.assertIsDisplayed()
-        following.assertIsDisplayed()
+        anchor.assertVerificationDisplayed(compose)
+        following.assertVerificationDisplayed(compose)
         val anchorBefore = layoutBounds(anchor).top
         val before = layoutBounds(following)
         fun assertStable(stage: String) {
-            anchor.assertIsDisplayed()
-            following.assertIsDisplayed()
+            anchor.assertVerificationDisplayed(compose)
+            following.assertVerificationDisplayed(compose)
             assertSamePosition(anchorBefore, layoutBounds(anchor).top, "$stage 的首库滚动锚点")
             assertSamePosition(before.top, layoutBounds(following).top, stage)
         }
@@ -211,8 +209,8 @@ class HomePresentationTest {
             for (scale in listOf(1f, 1.6f)) {
                 compose.runOnIdle { theme.value = mode; fontScale.value = scale }
                 val heading = compose.onNodeWithText("最近入库 · ${library.name}").performScrollTo()
-                heading.assertIsDisplayed()
-                compose.onNodeWithTag("poster-rating", true).assertIsDisplayed()
+                heading.assertVerificationDisplayed(compose)
+                compose.onNodeWithTag("poster-rating", true).assertVerificationDisplayed(compose)
                 val pixels = compose.onNodeWithTag("poster-rating", true).captureToImage().toPixelMap()
                 var golden = 0
                 for (y in 0 until pixels.height) for (x in 0 until pixels.width) {
@@ -241,14 +239,14 @@ class HomePresentationTest {
             librariesLoaded = true, resumeLoaded = false, libraryItems = mapOf(library.id to listOf(movie))))
         showHome(home)
         val heading = compose.onNodeWithText("最近入库 · ${library.name}")
-        heading.assertIsDisplayed()
+        heading.assertVerificationDisplayed(compose)
         val before = layoutBounds(heading)
         val slot = layoutBounds(compose.onNodeWithTag("home-resume-content"))
         compose.runOnIdle { home.value = home.value.copy(resume = listOf(movie.copy(positionTicks = 50_000_000)), resumeLoaded = true) }
         assertEquals("慢续播不能推移已显示的媒体库", before, layoutBounds(heading))
         assertEquals(slot, layoutBounds(compose.onNodeWithTag("home-resume-content")))
         compose.runOnIdle { home.value = home.value.copy(resume = emptyList(), loading = false, loaded = true) }
-        compose.onNodeWithText("暂无观看记录").assertIsDisplayed()
+        compose.onNodeWithText("暂无观看记录").assertVerificationDisplayed(compose)
         assertEquals("空续播也不能收起已有空间", before, layoutBounds(heading))
     }
 

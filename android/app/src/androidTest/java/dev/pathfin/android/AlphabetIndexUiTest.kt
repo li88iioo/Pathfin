@@ -50,10 +50,10 @@ class AlphabetIndexUiTest {
 
     @Test fun holdingDownAndCancellingNeverSelectsOrVibrates() {
         val env = show()
-        rail().performTouchInput { down(point("M")) }
+        rail().performVerificationTouchInput(compose) { down(point("M")) }
         assertStableWindow(env, emptyList(), 0, preview = null)
         assertUnconsumedDowns(env, 1)
-        rail().performTouchInput { cancel() }
+        rail().performVerificationTouchInput(compose) { cancel() }
         assertStableWindow(env, emptyList(), 0, preview = null)
     }
 
@@ -68,7 +68,7 @@ class AlphabetIndexUiTest {
             Offset(-distance, diagonal), Offset(distance, diagonal),
         )
         paths.forEachIndexed { index, delta ->
-            rail().performTouchInput {
+            rail().performVerificationTouchInput(compose) {
                 val start = point("M")
                 down(start)
                 moveTo(start + delta, delayMillis = 16)
@@ -83,9 +83,9 @@ class AlphabetIndexUiTest {
 
     @Test fun verticalDragShowsPerLetterFeedbackButOnlyNormalUpSubmitsTheFinalLetter() {
         val env = show()
-        rail().performTouchInput { down(point("A")) }
+        rail().performVerificationTouchInput(compose) { down(point("A")) }
         assertStableWindow(env, emptyList(), 0, preview = null)
-        rail().performTouchInput {
+        rail().performVerificationTouchInput(compose) {
             moveTo(point("M"), delayMillis = 16)
             moveTo(point("N"), delayMillis = 16)
             moveTo(point("O"), delayMillis = 16)
@@ -94,7 +94,7 @@ class AlphabetIndexUiTest {
         // 指针仍按住，持续观察也必须零查询；只有预览和四次逐格触感。
         assertStableWindow(env, emptyList(), 4, preview = "M")
         assertUnconsumedDowns(env, 1)
-        rail().performTouchInput { up() }
+        rail().performVerificationTouchInput(compose) { up() }
         assertCommitted(env, listOf(env.original.copy(nameInitial = "M")), 4)
         compose.onNodeWithTag("library-index/M").assertIsSelected()
         assertStableWindow(env, listOf(env.original.copy(nameInitial = "M")), 4, preview = null)
@@ -102,12 +102,12 @@ class AlphabetIndexUiTest {
 
     @Test fun cancellingAConfirmedVerticalDragDiscardsItsPendingLetter() {
         val env = show()
-        rail().performTouchInput {
+        rail().performVerificationTouchInput(compose) {
             down(point("A"))
             moveTo(point("M"), delayMillis = 16)
         }
         assertStableWindow(env, emptyList(), 1, preview = "M")
-        rail().performTouchInput { cancel() }
+        rail().performVerificationTouchInput(compose) { cancel() }
         assertStableWindow(env, emptyList(), 1, preview = null)
         compose.onNodeWithTag("library-index/M").assertIsNotSelected()
         assertUnconsumedDowns(env, 1)
@@ -116,12 +116,12 @@ class AlphabetIndexUiTest {
     @Test fun leavingSidewaysAfterVerticalConfirmationCancelsInsteadOfSubmitting() {
         val env = show()
         val side = maxOf(env.touchSlop * 8f, railHeight() * .75f)
-        rail().performTouchInput {
+        rail().performVerificationTouchInput(compose) {
             down(point("A"))
             moveTo(point("M"), delayMillis = 16)
         }
         assertStableWindow(env, emptyList(), 1, preview = "M")
-        rail().performTouchInput {
+        rail().performVerificationTouchInput(compose) {
             moveTo(point("M") + Offset(-side, 0f), delayMillis = 16)
             moveTo(point("M"), delayMillis = 16)
             up()
@@ -133,14 +133,14 @@ class AlphabetIndexUiTest {
 
     @Test fun draggingBackToTheOriginallySelectedLetterKeepsItsFilter() {
         val env = show(defaultQuery().copy(nameInitial = "A"))
-        rail().performTouchInput {
+        rail().performVerificationTouchInput(compose) {
             down(point("A"))
             moveTo(point("M"), delayMillis = 16)
             moveTo(point("N"), delayMillis = 16)
             moveTo(point("A"), delayMillis = 16)
         }
         assertStableWindow(env, emptyList(), 3, preview = "A")
-        rail().performTouchInput { up() }
+        rail().performVerificationTouchInput(compose) { up() }
         assertCommitted(env, emptyList(), 3)
         compose.onNodeWithTag("library-index/A").assertIsSelected()
         assertStableWindow(env, emptyList(), 3, preview = null)
@@ -149,15 +149,15 @@ class AlphabetIndexUiTest {
 
     @Test fun tapsAndRepeatedTapsSelectThenClearOnlyOnUp() {
         val env = show()
-        rail().performTouchInput { down(point("M")) }
+        rail().performVerificationTouchInput(compose) { down(point("M")) }
         assertStableWindow(env, emptyList(), 0, preview = null)
-        rail().performTouchInput { up() }
+        rail().performVerificationTouchInput(compose) { up() }
         val selected = env.original.copy(nameInitial = "M")
         assertCommitted(env, listOf(selected), 1)
         compose.onNodeWithTag("library-index/M").assertIsSelected()
-        rail().performTouchInput { down(point("M")) }
+        rail().performVerificationTouchInput(compose) { down(point("M")) }
         assertStableWindow(env, listOf(selected), 1, preview = null)
-        rail().performTouchInput { up() }
+        rail().performVerificationTouchInput(compose) { up() }
         assertCommitted(env, listOf(selected, env.original), 2)
         compose.onNodeWithTag("library-index/M").assertIsNotSelected()
         assertStableWindow(env, listOf(selected, env.original), 2, preview = null)
@@ -247,8 +247,8 @@ class AlphabetIndexUiTest {
     }
 
     private fun rail() = compose.onNodeWithTag("library-index")
-    private fun railWidth() = rail().fetchSemanticsNode().boundsInRoot.width
-    private fun railHeight() = rail().fetchSemanticsNode().boundsInRoot.height
+    private fun railWidth() = rail().readVerificationNode(compose) { it.boundsInRoot }.width
+    private fun railHeight() = rail().readVerificationNode(compose) { it.boundsInRoot }.height
 
     private fun TouchInjectionScope.point(label: String): Offset {
         val index = when (label) { "0" -> 0; "#" -> 1; else -> { require(label.length == 1 && label[0] in 'A'..'Z'); label[0] - 'A' + 2 } }
@@ -270,7 +270,7 @@ class AlphabetIndexUiTest {
             compose.waitForIdle()
             compose.runOnIdle { assertSnapshot(env, expected, feedbackCount) }
             if (preview == null) compose.onNodeWithTag("library-index-preview").assertDoesNotExist()
-            else compose.onNodeWithTag("library-index-preview").assertIsDisplayed().assert(hasAnyDescendant(hasText(preview)))
+            else compose.onNodeWithTag("library-index-preview").assertVerificationDisplayed(compose).assert(hasAnyDescendant(hasText(preview)))
             val remaining = deadline - SystemClock.elapsedRealtime()
             if (remaining > 0L) tick.await(minOf(16L, remaining), TimeUnit.MILLISECONDS)
         } while (SystemClock.elapsedRealtime() < deadline)

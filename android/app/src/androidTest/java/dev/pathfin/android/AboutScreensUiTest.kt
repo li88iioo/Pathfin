@@ -59,16 +59,16 @@ class AboutScreensUiTest {
     @Test fun aboutLinksEveryHelpAndPolicyPage() {
         settings("about")
         compose.onNodeWithTag("about-update").assertTextContains("当前版本 ${BuildConfig.VERSION_NAME}").assertIsEnabled()
-        listOf("faq", "crash", "privacy", "disclaimer").forEach { compose.onNodeWithTag("about-$it").performScrollTo().performClick() }
-        compose.onNodeWithText("开源许可").performScrollTo().performClick()
+        listOf("faq", "crash", "privacy", "disclaimer").forEach { compose.onNodeWithTag("about-$it").performScrollTo().performVerificationClick(compose) }
+        compose.onNodeWithText("开源许可").performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf("faq", "crash", "privacy", "disclaimer", "licenses"), pages) }
     }
 
     @Test fun automaticUpdateCheckCanBeTurnedOffAndOn() {
         settings("about")
-        compose.onNodeWithTag("about-auto-update").assertIsOn().performClick()
+        compose.onNodeWithTag("about-auto-update").assertIsOn().performVerificationClick(compose)
         compose.runOnIdle { assertFalse(changes.last().autoCheckUpdates) }
-        compose.onNodeWithTag("about-auto-update").assertIsOff().performClick()
+        compose.onNodeWithTag("about-auto-update").assertIsOff().performVerificationClick(compose)
         compose.runOnIdle { assertTrue(changes.last().autoCheckUpdates) }
     }
 
@@ -79,7 +79,7 @@ class AboutScreensUiTest {
         compose.runOnIdle { state.value = state.value.copy(routes = listOf(Route.SettingsPage("privacy"))) }
         compose.onNodeWithTag("about-document-privacy").assertExists()
         compose.onNodeWithText("1. 不收集个人信息").assertExists()
-        compose.onNodeWithText("7. 协议变更").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("7. 协议变更").performScrollTo().assertVerificationDisplayed(compose)
         compose.runOnIdle { state.value = state.value.copy(routes = listOf(Route.SettingsPage("disclaimer"))) }
         compose.onNodeWithTag("about-document-disclaimer").assertExists()
         compose.onNodeWithText("2. 不提供任何内容").assertExists()
@@ -101,10 +101,10 @@ class AboutScreensUiTest {
         crashFile.writeText(record)
         settings("crash")
         compose.onNodeWithText("test crash", substring = true).assertExists()
-        compose.onNodeWithTag("about-crash-copy").assertIsEnabled().performScrollTo().performClick()
+        compose.onNodeWithTag("about-crash-copy").assertIsEnabled().performScrollTo().performVerificationClick(compose)
         compose.onNodeWithText("已复制崩溃日志").assertExists()
-        compose.onNodeWithText("确定").performClick()
-        compose.onNodeWithTag("about-crash-clear").performClick()
+        compose.onNodeWithText("确定").performVerificationClick(compose)
+        compose.onNodeWithTag("about-crash-clear").performVerificationClick(compose)
         compose.onNodeWithText("已清空崩溃日志").assertExists()
         compose.onNodeWithTag("about-crash-empty").assertExists()
         assertFalse(crashFile.exists())
@@ -115,9 +115,9 @@ class AboutScreensUiTest {
         android.system.Os.chmod(crashFile.absolutePath, 0)
         try {
             settings("crash")
-            compose.onNodeWithTag("about-crash-retry").assertExists().performClick()
+            compose.onNodeWithTag("about-crash-retry").assertExists().performVerificationClick(compose)
             compose.onNodeWithTag("about-crash-copy").assertIsNotEnabled()
-            compose.onNodeWithTag("about-crash-clear").assertIsEnabled().performClick()
+            compose.onNodeWithTag("about-crash-clear").assertIsEnabled().performVerificationClick(compose)
             compose.onNodeWithText("已清空崩溃日志").assertExists()
             compose.onNodeWithTag("about-crash-empty").assertExists()
             assertFalse(crashFile.exists())
@@ -139,17 +139,17 @@ class AboutScreensUiTest {
         }
         compose.onNodeWithText("发现新版本 v9.9.9").assertExists()
         compose.onNodeWithTag("update-notes").assertTextEquals("修复播放问题")
-        compose.onNodeWithTag("update-download").performClick()
+        compose.onNodeWithTag("update-download").performVerificationClick(compose)
 
         compose.runOnIdle { update.value = UpdateState.Downloading(release, 5_000_000) }
         compose.onNodeWithTag("update-progress").assertExists()
         compose.onNodeWithTag("update-download").assertDoesNotExist()
-        compose.onNodeWithTag("update-cancel").performClick()
-        compose.onNodeWithText("后台下载").performClick()
+        compose.onNodeWithTag("update-cancel").performVerificationClick(compose)
+        compose.onNodeWithText("后台下载").performVerificationClick(compose)
 
         compose.runOnIdle { update.value = UpdateState.Ready(release, File(context.cacheDir, "unused.apk")) }
         compose.onNodeWithTag("update-progress").assertDoesNotExist()
-        compose.onNodeWithTag("update-install").performClick()
+        compose.onNodeWithTag("update-install").performVerificationClick(compose)
 
         compose.runOnIdle { update.value = UpdateState.Available(release.copy(notes = ""), "安装包校验失败，请重新下载") }
         compose.onNodeWithTag("update-notes").assertTextEquals("此版本没有更新说明")

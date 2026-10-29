@@ -8,7 +8,6 @@ import android.content.pm.ActivityInfo
 import androidx.activity.enableEdgeToEdge
 import dev.pathfin.android.ui.LocalPlaybackFullscreen
 import androidx.compose.ui.test.isSelected
-import androidx.compose.ui.test.isDisplayed
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -23,7 +22,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.captureToImage
@@ -34,12 +32,12 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -69,11 +67,11 @@ class PlayerControlsLayoutTest {
         try {
             showControls(player)
             assertTimeFits()
-            val before = compose.onNodeWithTag("player-seek-slider").fetchSemanticsNode().boundsInRoot
+            val before = compose.onNodeWithTag("player-seek-slider").readVerificationNode(compose) { it.boundsInRoot }
             compose.runOnUiThread { player.setPosition(35_000_000) }
             compose.waitForIdle()
             assertTimeFits()
-            assertEquals(before, compose.onNodeWithTag("player-seek-slider").fetchSemanticsNode().boundsInRoot)
+            assertEquals(before, compose.onNodeWithTag("player-seek-slider").readVerificationNode(compose) { it.boundsInRoot })
         } finally { compose.runOnUiThread { player.release() } }
     }
 
@@ -107,16 +105,16 @@ class PlayerControlsLayoutTest {
             compose.runOnIdle { assertEquals(1, captures) }
             openPanel("player-more", "player-popup-more")
             compose.onNodeWithTag("player-audio-gain").clickWhenStationary()
-            compose.onNodeWithTag("player-gain-reset").assertIsDisplayed().clickWhenStationary()
+            compose.onNodeWithTag("player-gain-reset").assertVerificationDisplayed(compose).clickWhenStationary()
             compose.runOnIdle { assertEquals(100, gain) }
             compose.onNodeWithTag("playback-panel-close").clickWhenStationary()
             openPanel("player-more", "player-popup-more")
             compose.onNodeWithTag("player-menu-information").clickWhenStationary()
-            compose.onNodeWithTag("player-popup-info").assertIsDisplayed()
+            compose.onNodeWithTag("player-popup-info").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("player-info-close").clickWhenStationary()
             openPanel("player-more", "player-popup-more")
-            compose.onNodeWithTag("player-sleep-timer").assertIsDisplayed().clickWhenStationary()
-            compose.onNodeWithTag("player-sleep-15").assertIsDisplayed().clickWhenStationary()
+            compose.onNodeWithTag("player-sleep-timer").assertVerificationDisplayed(compose).clickWhenStationary()
+            compose.onNodeWithTag("player-sleep-15").assertVerificationDisplayed(compose).clickWhenStationary()
             compose.runOnIdle { assertEquals(15, timer) }
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
@@ -133,7 +131,7 @@ class PlayerControlsLayoutTest {
         try {
             awaitOrientation(android.content.res.Configuration.ORIENTATION_LANDSCAPE)
             showControls(player, onScreenshot = { captures++ })
-            compose.waitUntil(10_000) { compose.onNodeWithTag("player-controls").fetchSemanticsNode().boundsInRoot.let { it.width > it.height } }
+            compose.waitUntil(10_000) { compose.onNodeWithTag("player-controls").readVerificationNode(compose) { it.boundsInRoot }.let { it.width > it.height } }
             compose.onNodeWithTag("player-capture").clickWhenStationary()
             compose.runOnIdle { assertEquals(1, captures) }
             openPanel("player-more", "player-popup-more")
@@ -163,7 +161,7 @@ class PlayerControlsLayoutTest {
                 .listener(onSuccess = { _, _ -> loaded.set(true) }).build()
             showControls(player, clock = "21:30", battery = "80%", titleLogo = logo)
             compose.waitUntil(10_000) { loaded.get() }
-            compose.onNodeWithTag("player-media-logo").assertIsDisplayed()
+            compose.onNodeWithTag("player-media-logo").assertVerificationDisplayed(compose)
             assertStatusUnderToolbar()
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
@@ -181,7 +179,7 @@ class PlayerControlsLayoutTest {
             showControls(player, clock = "21:30", battery = "80%")
             compose.onNodeWithTag("player-media-logo").assertDoesNotExist()
             compose.onNodeWithTag("player-media-title").assertDoesNotExist()
-            compose.onNodeWithTag("player-title").assertIsDisplayed().assertTextEquals("Synthetic fixture")
+            compose.onNodeWithTag("player-title").assertVerificationDisplayed(compose).assertTextEquals("Synthetic fixture")
             assertStatusUnderToolbar()
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
@@ -201,7 +199,7 @@ class PlayerControlsLayoutTest {
                 .listener(onError = { _, _ -> failed.set(true) }).build()
             showControls(player, titleLogo = logo)
             compose.waitUntil(10_000) { failed.get() }
-            compose.onNodeWithTag("player-media-title").assertIsDisplayed().assertTextEquals("Synthetic fixture")
+            compose.onNodeWithTag("player-media-title").assertVerificationDisplayed(compose).assertTextEquals("Synthetic fixture")
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
         }
@@ -241,9 +239,8 @@ class PlayerControlsLayoutTest {
     }
 
     private fun assertStatusUnderToolbar() {
-        val status = compose.onNodeWithTag("player-status-line").fetchSemanticsNode().boundsInRoot
-        val more = compose.onNodeWithTag("player-more").fetchSemanticsNode().boundsInRoot
-        val back = compose.onNodeWithTag("player-back").fetchSemanticsNode().boundsInRoot
+        val nodes = listOf("player-status-line", "player-more", "player-back").map { compose.onNodeWithTag(it).fetchSemanticsNode() }
+        val (status, more, back) = compose.runOnIdle { nodes.map { it.boundsInRoot } }
         val tolerance = 32f * compose.activity.resources.displayMetrics.density
         assertTrue("状态行应在顶栏下方：status=$status more=$more", status.top >= more.bottom - 1f)
         assertTrue("状态行应靠右对齐到工具栏：status=$status more=$more", kotlin.math.abs(status.right - more.right) <= tolerance)
@@ -273,7 +270,7 @@ class PlayerControlsLayoutTest {
             showControls(player, ended = true, onSpeed = { speed = it })
             compose.onNodeWithTag("player-speed").assertDoesNotExist()
             openPanel("player-more", "player-popup-more")
-            compose.onNodeWithText("更多", substring = false).assertIsDisplayed()
+            compose.onNodeWithText("更多", substring = false).assertVerificationDisplayed(compose)
             assertLabelsFit("播放速度")
             compose.onNodeWithTag("player-menu-speed").clickWhenStationary()
             compose.onNodeWithTag("player-speed-0.5").clickWhenStationary()
@@ -358,7 +355,7 @@ class PlayerControlsLayoutTest {
             VerificationDisplay.awaitWindowReady(compose, "episode-layout-$orientation", compose.onNodeWithTag("playback-episodes"))
             compose.onNodeWithTag("playback-episode-season/2").assertIsSelected()
             compose.onNodeWithTag("playback-episodes-layout").assertIsOff()
-            compose.onNodeWithText("分集标题").assertIsDisplayed()
+            compose.onNodeWithText("分集标题").assertVerificationDisplayed(compose)
             assertEpisodeCellsFit(episodes.filter { it.parentIndexNumber == 2 }.take(6), expectedColumns = if (largeFont) null else 5)
             compose.onNodeWithText(episodeTitle(episodes.first { it.id == "layout-s2-e3" })).assertIsNotEnabled()
 
@@ -373,7 +370,7 @@ class PlayerControlsLayoutTest {
             compose.onNodeWithTag("playback-episode-season/2").assertIsSelected()
             compose.onNodeWithTag("playback-episodes").performScrollToIndex(0)
             val chosen = episodes.first { it.id == "layout-s2-e2" }
-            compose.onNodeWithText(episodeTitle(chosen)).assertIsDisplayed().assertIsEnabled().clickWhenStationary()
+            compose.onNodeWithText(episodeTitle(chosen)).assertVerificationDisplayed(compose).assertIsEnabled().clickWhenStationary()
             compose.waitUntil(5_000) { compose.runOnIdle { selected == chosen } }
             compose.runOnIdle { assertEquals(chosen, selected) }
             assertLabelsFit(episodeTitle(chosen))
@@ -390,7 +387,7 @@ class PlayerControlsLayoutTest {
             }
             compose.onNodeWithTag("playback-episode-season/1").assertIsSelected()
             compose.onNodeWithTag("playback-episodes").performScrollToIndex(0)
-            compose.onNodeWithText(episodeTitle(episodes.first())).assertIsDisplayed()
+            compose.onNodeWithText(episodeTitle(episodes.first())).assertVerificationDisplayed(compose)
             VerificationDisplay.awaitWindowReady(compose, "episode-layout-toggle", compose.onNodeWithTag("playback-episodes-layout"))
             compose.onNodeWithTag("playback-episodes-layout").clickWhenStationary()
             compose.waitUntil(5_000) { grid.value }
@@ -419,8 +416,13 @@ class PlayerControlsLayoutTest {
     }
 
     private fun assertEpisodeCellsFit(items: List<MediaItem>, expectedColumns: Int? = null) {
-        compose.waitUntil(5_000) { items.all { compose.onNodeWithText(episodeTitle(it)).isDisplayed() } }
-        val nodes = items.map { compose.onNodeWithText(episodeTitle(it)).assertIsDisplayed().fetchSemanticsNode() }
+        compose.waitUntil(5_000) {
+            items.all {
+                val nodes = compose.onAllNodesWithText(episodeTitle(it)).fetchSemanticsNodes()
+                nodes.isNotEmpty() && isVerificationNodeDisplayed(compose, nodes.single())
+            }
+        }
+        val nodes = items.map { compose.onNodeWithText(episodeTitle(it)).assertVerificationDisplayed(compose).fetchSemanticsNode() }
         val bounds = compose.runOnIdle { nodes.map { it.boundsInRoot } }
         val firstRow = bounds.takeWhile { kotlin.math.abs(it.top - bounds.first().top) < 1f }
         if (expectedColumns != null) assertEquals("标准字号的数字模式每行必须有五集", expectedColumns, firstRow.size)
@@ -430,13 +432,13 @@ class PlayerControlsLayoutTest {
     }
 
     private fun assertSettingsLayout(expectedTags: List<String>) {
-        compose.onNodeWithText("更多", substring = false).assertIsDisplayed()
+        compose.onNodeWithText("更多", substring = false).assertVerificationDisplayed(compose)
         val shortcutTags = expectedTags + "player-audio-only"
         shortcutTags.forEach { tag ->
             assertEquals("快捷入口必须唯一：$tag", 1, compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size)
-            compose.onNodeWithTag(tag).assertIsDisplayed().assertIsEnabled()
+            compose.onNodeWithTag(tag).assertVerificationDisplayed(compose).assertIsEnabled()
         }
-        compose.onNodeWithTag("player-sleep-timer").assertIsDisplayed()
+        compose.onNodeWithTag("player-sleep-timer").assertVerificationDisplayed(compose)
         val nodes = (shortcutTags + "player-sleep-timer").map { compose.onNodeWithTag(it).fetchSemanticsNode() }
         val bounds = compose.runOnIdle { nodes.map { it.boundsInRoot } }
         val shortcuts = bounds.dropLast(1)
@@ -482,8 +484,7 @@ class PlayerControlsLayoutTest {
         var previous: Rect? = null
         var stableSince = 0L
         compose.waitUntil(5_000) {
-            val node = fetchSemanticsNode()
-            val bounds = compose.runOnIdle { node.boundsInWindow }
+            val bounds = readVerificationNode(compose) { it.boundsInWindow }
             val now = SystemClock.uptimeMillis()
             if (bounds != previous) {
                 previous = bounds
@@ -491,7 +492,7 @@ class PlayerControlsLayoutTest {
             }
             bounds.width > 0f && bounds.height > 0f && now - stableSince >= 80L
         }
-        return performClick()
+        return performVerificationClick(compose)
     }
 
     private fun openPanel(button: String, panel: String) {

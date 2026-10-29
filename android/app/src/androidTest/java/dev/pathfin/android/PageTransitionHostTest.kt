@@ -51,9 +51,10 @@ class PageTransitionHostTest {
             compose.runOnIdle { state.value = AppState(showServers = true) }
             compose.mainClock.advanceTimeByFrame()
             compose.waitForIdle()
-            val viewport = compose.onNodeWithTag(CANVAS).fetchSemanticsNode().boundsInRoot
+            val nodes = listOf(compose.onNodeWithTag(CANVAS), page(Route.Home)).map { it.fetchSemanticsNode() }
+            val (viewport, home) = compose.runOnUiThread { nodes.map { it.boundsInRoot } }
             assertEquals("首次恢复的服务器页应直接占满窗口，不从默认 Home 推出", viewport,
-                page(Route.Home).fetchSemanticsNode().boundsInRoot)
+                home)
             compose.onAllNodesWithTag("page/${Route.Home.key}", useUnmergedTree = true).assertCountEquals(1)
         } finally { compose.mainClock.autoAdvance = true }
     }
@@ -61,32 +62,32 @@ class PageTransitionHostTest {
     @Test fun pushAndPopUseOppositeDirectionsAndOutgoingPagesCannotReceiveTouchOrAccessibility() {
         show()
         val canvas = compose.onNodeWithTag(CANVAS)
-        val viewport = canvas.fetchSemanticsNode().boundsInRoot
+        val viewport = canvas.readVerificationNode(compose) { it.boundsInRoot }
         compose.mainClock.autoAdvance = false
         try {
             navigate(listOf(Route.Home, Route.Settings))
-            val incoming = page(Route.Settings).fetchSemanticsNode().boundsInRoot
-            val outgoing = page(Route.Home, unmerged = true).fetchSemanticsNode().boundsInRoot
+            val pushing = listOf(page(Route.Settings), page(Route.Home, unmerged = true)).map { it.fetchSemanticsNode() }
+            val (incoming, outgoing) = compose.runOnUiThread { pushing.map { it.boundsInRoot } }
             assertTrue("推入页应从右侧进入", incoming.left > viewport.left + 1f && incoming.left < viewport.right)
             assertTrue("原页应向左离场", outgoing.right < viewport.right - 1f && outgoing.right > viewport.left)
             page(Route.Home).assertDoesNotExist()
             compose.onNodeWithText("home:initial").assertDoesNotExist()
             // 指针真实落在还看得到的离场页上；不能借 semantics 点击绕过 pointer shield。
             val point = Offset((outgoing.left + outgoing.right) / 2f - viewport.left, viewport.height / 2f)
-            canvas.performTouchInput { click(point) }
+            canvas.performVerificationTouchInput(compose) { click(point) }
             compose.runOnIdle { assertEquals("离场页不能响应点击", 0, clicks[Route.Home.key] ?: 0) }
             finishTransition()
-            page(Route.Settings).performTouchInput { click(center) }
+            page(Route.Settings).performVerificationTouchInput(compose) { click(center) }
             compose.runOnIdle { assertEquals("当前页仍须可以真实点击", 1, clicks[Route.Settings.key]) }
 
             navigate(listOf(Route.Home))
-            val returning = page(Route.Home).fetchSemanticsNode().boundsInRoot
-            val leaving = page(Route.Settings, unmerged = true).fetchSemanticsNode().boundsInRoot
+            val popping = listOf(page(Route.Home), page(Route.Settings, unmerged = true)).map { it.fetchSemanticsNode() }
+            val (returning, leaving) = compose.runOnUiThread { popping.map { it.boundsInRoot } }
             assertTrue("返回页应从左侧进入", returning.right < viewport.right - 1f && returning.right > viewport.left)
             assertTrue("被推出页应向右离场", leaving.left > viewport.left + 1f)
             page(Route.Settings).assertDoesNotExist()
             finishTransition()
-            page(Route.Home).assertIsDisplayed()
+            page(Route.Home).assertVerificationDisplayed(compose)
             page(Route.Settings, unmerged = true).assertDoesNotExist()
         } finally { compose.mainClock.autoAdvance = true }
     }
@@ -96,19 +97,20 @@ class PageTransitionHostTest {
         compose.mainClock.autoAdvance = false
         try {
             navigate(listOf(Route.Home, Route.Settings))
-            val before = page(Route.Settings).fetchSemanticsNode().boundsInRoot.left
+            val before = page(Route.Settings).readVerificationNode(compose) { it.boundsInRoot }.left
             assertTrue("必须在实际推入过程中更新数据", before > 1f)
             compose.runOnIdle { state.value = state.value.copy(notice = "updated") }
             compose.mainClock.advanceTimeByFrame()
-            val after = page(Route.Settings).fetchSemanticsNode().boundsInRoot.left
+            val after = page(Route.Settings).readVerificationNode(compose) { it.boundsInRoot }.left
             assertTrue("更新同一路由数据不能把页面重新推回右侧", after <= before)
             compose.onNodeWithText("settings:updated").assertExists()
             // 从原动画开始累计已超过280ms；若数据更新重启，旧页此时仍会被保留。
             compose.mainClock.advanceTimeBy(250)
             compose.waitForIdle()
             page(Route.Home, unmerged = true).assertDoesNotExist()
-            assertEquals(compose.onNodeWithTag(CANVAS).fetchSemanticsNode().boundsInRoot,
-                page(Route.Settings).fetchSemanticsNode().boundsInRoot)
+            val nodes = listOf(compose.onNodeWithTag(CANVAS), page(Route.Settings)).map { it.fetchSemanticsNode() }
+            val (viewport, settings) = compose.runOnUiThread { nodes.map { it.boundsInRoot } }
+            assertEquals(viewport, settings)
         } finally { compose.mainClock.autoAdvance = true }
     }
 
@@ -142,7 +144,7 @@ class PageTransitionHostTest {
                 assertEquals("与生产相同 SaveableStateHolder 应恢复原列表位置", anchor,
                     checkNotNull(rootList).let { it.firstVisibleItemIndex to it.firstVisibleItemScrollOffset })
             }
-            compose.onNodeWithTag("root-row/18", useUnmergedTree = true).assertIsDisplayed()
+            compose.onNodeWithTag("root-row/18", useUnmergedTree = true).assertVerificationDisplayed(compose)
             assertFalse(compose.activity.isFinishing)
         } finally { compose.mainClock.autoAdvance = true }
     }
@@ -154,7 +156,7 @@ class PageTransitionHostTest {
         compose.mainClock.autoAdvance = false
         try {
             navigate(listOf(Route.Home, Route.Settings))
-            assertTrue("必须在推进尚未完成时返回", page(Route.Settings).fetchSemanticsNode().boundsInRoot.left > 1f)
+            assertTrue("必须在推进尚未完成时返回", page(Route.Settings).readVerificationNode(compose) { it.boundsInRoot }.left > 1f)
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeBy(48)
@@ -165,14 +167,14 @@ class PageTransitionHostTest {
             }
             compose.mainClock.advanceTimeByFrame()
             finishTransition()
-            page(Route.Home).assertIsDisplayed()
+            page(Route.Home).assertVerificationDisplayed(compose)
             compose.onNodeWithTag("root-row/18", useUnmergedTree = true)
-                .assertIsDisplayed().assertTextEquals("Synthetic row 18:returned-live")
+                .assertVerificationDisplayed(compose).assertTextEquals("Synthetic row 18:returned-live")
             compose.runOnIdle {
                 assertEquals("中断后只能恢复同一个列表位置", anchor,
                     checkNotNull(rootList).let { it.firstVisibleItemIndex to it.firstVisibleItemScrollOffset })
             }
-            page(Route.Home).performTouchInput { click(center) }
+            page(Route.Home).performVerificationTouchInput(compose) { click(center) }
             compose.runOnIdle {
                 assertEquals("重新显示的原页必须真正恢复交互", 1, clicks[Route.Home.key])
                 state.value = state.value.copy(notice = "fresh-update")

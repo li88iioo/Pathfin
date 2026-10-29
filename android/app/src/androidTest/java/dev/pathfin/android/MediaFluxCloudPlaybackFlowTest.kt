@@ -92,11 +92,11 @@ class MediaFluxCloudPlaybackFlowTest {
             val negotiations = fixture.nextPlaybackRequests.get()
             val position = main { playback.player!!.pause(); playback.player!!.setPlaybackSpeed(1.5f); playback.player!!.currentPosition }
             // 真实菜单使用同一四档入口，不能仍显示Jellyfin码率说明。
-            compose.onNodeWithTag("player-more").performClick()
-            compose.onNodeWithTag("player-tools").performClick()
-            compose.onNodeWithTag("player-quality-sheet").assertIsDisplayed()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
+            compose.onNodeWithTag("player-tools").performVerificationClick(compose)
+            compose.onNodeWithTag("player-quality-sheet").assertVerificationDisplayed(compose)
             compose.onAllNodesWithText("码率上限", substring = true).assertCountEquals(0)
-            compose.onNodeWithTag("player-quality-high").performClick()
+            compose.onNodeWithTag("player-quality-high").performVerificationClick(compose)
             await { playback.currentRequest?.quality == PlaybackQuality.HIGH && !playback.state.value.isChangingQuality && playback.state.value.hasRenderedFrame }
             main {
                 assertEquals(1080, playback.player!!.videoSize.height)
@@ -207,7 +207,7 @@ class MediaFluxCloudPlaybackFlowTest {
             assertEquals("尚未选择版本不能预先解析云盘", 0, fixture.cloudVariantRequests.get())
             assertTrue(fixture.playbackBodies.all { it.getBoolean("EnableDirectPlay") })
             val selected = "source-$ITEM-second"
-            compose.onNodeWithTag("playback-source/$selected").performClick()
+            compose.onNodeWithTag("playback-source/$selected").performVerificationClick(compose)
             awaitUnsupportedOriginal(app, playback)
             assertNoJellyfinFallback(fixture)
             assertTrue("不能解析不兼容版本的原画", fixture.cloudResolutions.isEmpty())
@@ -217,7 +217,7 @@ class MediaFluxCloudPlaybackFlowTest {
             main { app.preparePlayback(MediaItem(ITEM, "Cloud verification", "Episode", seriesId = "pending-series"), true) }
             await { app.state.value.sourceSelection?.info?.sources?.size == 2 && !app.state.value.preparingPlay }
             val compatible = "source-$ITEM-first"
-            compose.onNodeWithTag("playback-source/$compatible").performClick()
+            compose.onNodeWithTag("playback-source/$compatible").performVerificationClick(compose)
             awaitVideo(app, playback)
             main {
                 val request = requireNotNull(playback.currentRequest)

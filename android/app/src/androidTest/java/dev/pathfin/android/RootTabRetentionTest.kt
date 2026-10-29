@@ -65,7 +65,7 @@ class RootTabRetentionTest {
         assertEquals(1, mounts[Route.Home.key])
         selectTab(Route.Favorites)
         page(Route.Home).assertDoesNotExist()
-        page(Route.Favorites).assertIsDisplayed()
+        page(Route.Favorites).assertVerificationDisplayed(compose)
         val hiddenHomeMeasurements = measurements[Route.Home.key]
         compose.runOnIdle { state.value = state.value.copy(notice = "favorites-update") }
         compose.waitForIdle()
@@ -74,13 +74,13 @@ class RootTabRetentionTest {
             assertEquals(false to false, capabilities[Route.Home.key])
             assertEquals(true to true, capabilities[Route.Favorites.key])
         }
-        compose.onNodeWithTag(CANVAS).performTouchInput { click(center) }
+        compose.onNodeWithTag(CANVAS).performVerificationTouchInput(compose) { click(center) }
         compose.runOnIdle {
             assertEquals(1, clicks[Route.Favorites.key])
             assertEquals(0, clicks[Route.Home.key] ?: 0)
         }
         selectTab(Route.Home)
-        compose.onNodeWithTag(CANVAS).performTouchInput { click(center) }
+        compose.onNodeWithTag(CANVAS).performVerificationTouchInput(compose) { click(center) }
         compose.runOnIdle {
             assertEquals("返回已访问页不能重新建立组合", 1, mounts[Route.Home.key])
             assertEquals(1, mounts[Route.Favorites.key])
@@ -127,7 +127,7 @@ class RootTabRetentionTest {
             assertEquals("离开根页同时释放隐藏的搜索页", 1, disposals[Route.Search.key])
         }
         page(Route.Home, unmerged = true).assertDoesNotExist()
-        page(detail).assertIsDisplayed()
+        page(detail).assertVerificationDisplayed(compose)
         navigate(listOf(Route.Home))
         compose.runOnIdle { assertEquals(2, mounts[Route.Home.key]) }
         compose.runOnIdle {
@@ -138,7 +138,7 @@ class RootTabRetentionTest {
             assertEquals("切换服务器账号释放上一账号根页", 2, disposals[Route.Home.key])
             assertEquals(3, mounts[Route.Home.key])
         }
-        compose.onNodeWithTag(CANVAS).performTouchInput { click(center) }
+        compose.onNodeWithTag(CANVAS).performVerificationTouchInput(compose) { click(center) }
         compose.onNodeWithTag("label/home").assertTextEquals("home:1:initial")
         assertFalse(compose.activity.isFinishing)
     }
@@ -168,7 +168,7 @@ class RootTabRetentionTest {
         show()
         selectTab(Route.Search)
         selectTab(Route.Home)
-        compose.onNodeWithTag(CANVAS).performTouchInput { click(center) }
+        compose.onNodeWithTag(CANVAS).performVerificationTouchInput(compose) { click(center) }
         compose.onNodeWithTag("label/home").assertTextEquals("home:1:initial")
         compose.mainClock.autoAdvance = false
         try {
@@ -176,20 +176,20 @@ class RootTabRetentionTest {
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeBy(48)
             compose.waitForIdle()
-            assertTrue("必须在推进未完成时返回", page(Route.Detail("interrupt-detail")).fetchSemanticsNode().boundsInRoot.left > 1f)
+            assertTrue("必须在推进未完成时返回", page(Route.Detail("interrupt-detail")).readVerificationNode(compose) { it.boundsInRoot }.left > 1f)
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeBy(48)
             compose.runOnIdle { state.value = state.value.copy(notice = "returned-live") }
             compose.mainClock.advanceTimeBy(400)
             compose.waitForIdle()
-            page(Route.Home).assertIsDisplayed()
+            page(Route.Home).assertVerificationDisplayed(compose)
             compose.onNodeWithTag("label/home").assertTextEquals("home:1:returned-live")
             compose.runOnIdle {
                 assertEquals(listOf(Route.Home), state.value.routes)
                 assertEquals(true to true, capabilities[Route.Home.key])
             }
-            compose.onNodeWithTag(CANVAS).performTouchInput { click(center) }
+            compose.onNodeWithTag(CANVAS).performVerificationTouchInput(compose) { click(center) }
             compose.mainClock.advanceTimeByFrame()
             compose.onNodeWithTag("label/home").assertTextEquals("home:2:returned-live")
             page(Route.Detail("interrupt-detail"), unmerged = true).assertDoesNotExist()
@@ -209,18 +209,18 @@ class RootTabRetentionTest {
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeBy(48)
             compose.waitForIdle()
-            assertTrue(page(detail).fetchSemanticsNode().boundsInRoot.left > 1f)
+            assertTrue(page(detail).readVerificationNode(compose) { it.boundsInRoot }.left > 1f)
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeBy(400)
             compose.waitForIdle()
-            compose.onNodeWithTag(SEARCH_INPUT).assertIsDisplayed().assertTextEquals("keep this search visit")
+            compose.onNodeWithTag(SEARCH_INPUT).assertVerificationDisplayed(compose).assertTextEquals("keep this search visit")
             compose.runOnIdle {
                 assertEquals(visit, state.value.searchVisitId)
                 assertEquals(listOf(Route.Search), state.value.routes)
                 assertEquals(true to true, capabilities[Route.Search.key])
             }
-            compose.onNodeWithTag(SEARCH_INPUT).performTouchInput { click(center) }
+            compose.onNodeWithTag(SEARCH_INPUT).performVerificationTouchInput(compose) { click(center) }
             compose.onNodeWithTag(SEARCH_INPUT).assertIsFocused().performTextReplacement("edited after return")
             compose.mainClock.advanceTimeByFrame()
             compose.onNodeWithTag(SEARCH_INPUT).assertTextEquals("edited after return")

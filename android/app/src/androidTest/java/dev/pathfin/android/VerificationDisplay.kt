@@ -11,10 +11,14 @@ import android.view.ViewTreeObserver
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.TouchInjectionScope
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicBoolean
@@ -86,40 +90,79 @@ internal object VerificationDisplay {
         }
     }
 
-    fun assertDisplayed(compose: AndroidComposeTestRule<*, *>, stage: String, target: SemanticsNodeInteraction): SemanticsNodeInteraction {
-        try {
-            return target.assertIsDisplayed()
-        } catch (failure: AssertionError) {
-            val owner = runCatching { target.fetchSemanticsNode().root as? ViewRootForTest }.getOrNull()
-            logWindowFailure(compose, stage, target, owner, failure)
-            throw failure
+}
+
+/** 在 UI 线程计算坐标并构建手势；返回测试线程后由原测试框架统一交付事件。 */
+internal fun SemanticsNodeInteraction.performVerificationTouchInput(
+    compose: ComposeTestRule,
+    block: TouchInjectionScope.() -> Unit,
+): SemanticsNodeInteraction = performTouchInput {
+    val scope = this
+    compose.runOnUiThread { scope.block() }
+}
+
+internal fun SemanticsNodeInteraction.performVerificationClick(compose: ComposeTestRule): SemanticsNodeInteraction =
+    performVerificationTouchInput(compose) { click() }
+
+/** 节点查询留在测试线程；可变布局缓存只能由 UI 线程读取。 */
+internal fun <T> SemanticsNodeInteraction.readVerificationNode(compose: ComposeTestRule, read: (SemanticsNode) -> T): T {
+    val node = fetchSemanticsNode()
+    return compose.runOnUiThread { read(node) }
+}
+
+internal fun isVerificationNodeDisplayed(compose: ComposeTestRule, node: SemanticsNode): Boolean = compose.runOnUiThread {
+    val view = (node.root as? ViewRootForTest)?.view ?: return@runOnUiThread false
+    val visible = Rect()
+    if (!view.isShown || !view.getLocalVisibleRect(visible) ||
+        !generateSequence(node.layoutInfo) { it.parentInfo }.all { it.isPlaced }) return@runOnUiThread false
+    val origin = IntArray(2).also(view::getLocationInWindow)
+    val viewport = androidx.compose.ui.geometry.Rect(
+        visible.left + origin[0].toFloat(), visible.top + origin[1].toFloat(),
+        visible.right + origin[0].toFloat(), visible.bottom + origin[1].toFloat(),
+    )
+    val area = node.boundsInWindow.intersect(viewport)
+    area.width > 0f && area.height > 0f
+}
+
+internal fun SemanticsNodeInteraction.assertVerificationDisplayed(
+    compose: AndroidComposeTestRule<*, *>,
+    stage: String = "displayed",
+): SemanticsNodeInteraction {
+    try {
+        if (!isVerificationNodeDisplayed(compose, fetchSemanticsNode())) {
+            throw AssertionError("$stage 节点必须实际显示在窗口内")
         }
+        return this
+    } catch (failure: AssertionError) {
+        val owner = runCatching { fetchSemanticsNode().root as? ViewRootForTest }.getOrNull()
+        logWindowFailure(compose, stage, this, owner, failure)
+        throw failure
     }
+}
 
-    private fun windowDiagnostic(compose: AndroidComposeTestRule<*, *>, owner: ViewRootForTest?): String = compose.runOnUiThread {
-        val activity = compose.activity
-        val view = owner?.view ?: activity.window.decorView
-        val visible = Rect()
-        val hasVisibleRect = view.getGlobalVisibleRect(visible)
-        val screen = IntArray(2).also(view::getLocationOnScreen)
-        val window = IntArray(2).also(view::getLocationInWindow)
-        "lifecycle=${activity.lifecycle.currentState} activityFocus=${activity.hasWindowFocus()} " +
-            "finishing=${activity.isFinishing} destroyed=${activity.isDestroyed} " +
-            "view=${view.javaClass.simpleName} attached=${view.isAttachedToWindow} laidOut=${view.isLaidOut} " +
-            "shown=${view.isShown} viewFocus=${view.hasWindowFocus()} windowVisibility=${view.windowVisibility} " +
-            "size=${view.width}x${view.height} layoutRequested=${view.isLayoutRequested} " +
-            "ownerResumed=${owner?.isLifecycleInResumedState} pendingMeasure=${owner?.hasPendingMeasureOrLayout} " +
-            "screen=${screen.contentToString()} window=${window.contentToString()} globalVisible=$hasVisibleRect:$visible"
-    }
+private fun windowDiagnostic(compose: AndroidComposeTestRule<*, *>, owner: ViewRootForTest?): String = compose.runOnUiThread {
+    val activity = compose.activity
+    val view = owner?.view ?: activity.window.decorView
+    val visible = Rect()
+    val hasVisibleRect = view.getGlobalVisibleRect(visible)
+    val screen = IntArray(2).also(view::getLocationOnScreen)
+    val window = IntArray(2).also(view::getLocationInWindow)
+    "lifecycle=${activity.lifecycle.currentState} activityFocus=${activity.hasWindowFocus()} " +
+        "finishing=${activity.isFinishing} destroyed=${activity.isDestroyed} " +
+        "view=${view.javaClass.simpleName} attached=${view.isAttachedToWindow} laidOut=${view.isLaidOut} " +
+        "shown=${view.isShown} viewFocus=${view.hasWindowFocus()} windowVisibility=${view.windowVisibility} " +
+        "size=${view.width}x${view.height} layoutRequested=${view.isLayoutRequested} " +
+        "ownerResumed=${owner?.isLifecycleInResumedState} pendingMeasure=${owner?.hasPendingMeasureOrLayout} " +
+        "screen=${screen.contentToString()} window=${window.contentToString()} globalVisible=$hasVisibleRect:$visible"
+}
 
-    private fun logWindowFailure(compose: AndroidComposeTestRule<*, *>, stage: String, target: SemanticsNodeInteraction,
-        owner: ViewRootForTest?, failure: Throwable) {
-        val node = runCatching { target.fetchSemanticsNode() }.getOrNull()
-        val bounds = node?.let {
-            compose.runOnUiThread { "placed=${it.layoutInfo.isPlaced} root=${it.boundsInRoot} window=${it.boundsInWindow}" }
-        } ?: "node unavailable"
-        Log.e("PathfinVerificationWindow", "$stage $bounds ${windowDiagnostic(compose, owner)}", failure)
-    }
+private fun logWindowFailure(compose: AndroidComposeTestRule<*, *>, stage: String, target: SemanticsNodeInteraction,
+    owner: ViewRootForTest?, failure: Throwable) {
+    val node = runCatching { target.fetchSemanticsNode() }.getOrNull()
+    val bounds = node?.let {
+        compose.runOnUiThread { "placed=${it.layoutInfo.isPlaced} root=${it.boundsInRoot} window=${it.boundsInWindow}" }
+    } ?: "node unavailable"
+    Log.e("PathfinVerificationWindow", "$stage $bounds ${windowDiagnostic(compose, owner)}", failure)
 }
 
 internal inline fun <reified A : ComponentActivity> createVerificationComposeRule() =

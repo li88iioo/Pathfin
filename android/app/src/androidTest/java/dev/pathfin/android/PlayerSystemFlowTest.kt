@@ -33,8 +33,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.Player
@@ -260,14 +258,14 @@ class PlayerSystemFlowTest {
     @SdkSuppress(minSdkVersion = 29)
     fun screenshotButtonWritesTheActualVideoPngAndOnlyItsNewUriIsDeleted() = withPlayback { active ->
         ensureControls()
-        compose.onNodeWithTag("player-play-pause").performClick()
+        compose.onNodeWithTag("player-play-pause").performVerificationClick(compose)
         await("截图前先暂停实际视频") { main { !active.player.isPlaying && !active.player.playWhenReady } }
         val before = ownScreenshots().keys
         val created = linkedSetOf<Uri>()
         try {
-            compose.onNodeWithTag("player-more").performClick()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
             compose.onAllNodes(hasScrollToIndexAction())[0].performScrollToNode(hasTestTag("player-screenshot"))
-            compose.onNodeWithTag("player-screenshot").performClick()
+            compose.onNodeWithTag("player-screenshot").performVerificationClick(compose)
             var saved: StoredScreenshot? = null
             await("截图按钮必须实际创建并完成 MediaStore PNG") {
                 val images = ownScreenshots().filterKeys { it !in before }
@@ -388,11 +386,11 @@ class PlayerSystemFlowTest {
 
     @Test fun chapterSheetSeeksTheActualPlayerToTheSecondChapterWithoutReplacingTheSession() = withPlayback { active ->
         ensureControls()
-        compose.onNodeWithTag("player-play-pause").performClick()
+        compose.onNodeWithTag("player-play-pause").performVerificationClick(compose)
         await("跳章节前实际暂停") { main { !active.player.playWhenReady && !active.player.isPlaying } }
         assertTrue(active.request.item.chapters.any { it.name == "测试章节二" && it.startPositionTicks == 600_000_000L })
-        compose.onNodeWithTag("player-chapters").performClick()
-        compose.onNodeWithText("测试章节二").performClick()
+        compose.onNodeWithTag("player-chapters").performVerificationClick(compose)
+        compose.onNodeWithText("测试章节二").performVerificationClick(compose)
         await("选择章节二必须实际 Seek 到60秒") { healthy(active); main { active.player.playbackState == Player.STATE_READY && active.player.currentPosition in 59_750..60_750 } }
         main { assertFalse("章节选择保留原暂停状态", active.player.playWhenReady) }
         assertContinuous(active)
@@ -469,17 +467,17 @@ class PlayerSystemFlowTest {
     }
     private fun ensureControls() {
         if (compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isEmpty())
-            compose.onNodeWithTag("player-video").performTouchInput { click(Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
         compose.waitUntil(WAIT) { compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isNotEmpty() }
     }
     private fun hideControls() {
         if (compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isNotEmpty())
-            compose.onNodeWithTag("player-video").performTouchInput { click(Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
         compose.waitUntil(WAIT) { compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isEmpty() }
     }
     private fun enterPip() {
         ensureControls()
-        compose.onNodeWithTag("player-pip").performClick()
+        compose.onNodeWithTag("player-pip").performVerificationClick(compose)
         await("系统必须实际进入PiP；锁屏/AppOps拒绝不能当作通过") { main { currentActivity.get()?.isInPictureInPictureMode == true } }
     }
 

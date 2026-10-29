@@ -2,7 +2,6 @@ package dev.pathfin.android
 
 import android.app.Application
 import android.content.Context
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -11,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.test.*
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
@@ -90,16 +88,16 @@ class DetailManagementActionsTest {
         openDetail(fixture, vm)
         val detailReads = fixture.detailReads.get()
         openMore("detail-refresh")
-        compose.onNodeWithTag("detail-refresh").touchClick("detail-refresh")
+        compose.onNodeWithTag("detail-refresh").assertVerificationDisplayed(compose, "detail-refresh").performVerificationClick(compose)
         awaitWindowTag("library-refresh-confirm", "detail-refresh-cancel-dialog")
         compose.onNodeWithTag("library-refresh-scan").assertIsSelected()
         compose.onNodeWithTag("library-refresh-replace-images").assertIsNotEnabled().assertIsOff()
         compose.onNodeWithTag("library-refresh-replace-trickplay").assertIsNotEnabled().assertIsOff()
         assertEquals("打开刷新菜单不能提前发起刷新", 0, fixture.refreshPosts.get())
 
-        compose.onNodeWithTag("library-refresh-replace_all").touchClick("detail-refresh-cancel-replace-all")
-        compose.onNodeWithTag("library-refresh-replace-images").assertIsEnabled().touchClick("detail-refresh-cancel-replace-images")
-        compose.onNodeWithText("取消", substring = false).touchClick("detail-refresh-cancel")
+        compose.onNodeWithTag("library-refresh-replace_all").assertVerificationDisplayed(compose, "detail-refresh-cancel-replace-all").performVerificationClick(compose)
+        compose.onNodeWithTag("library-refresh-replace-images").assertIsEnabled().assertVerificationDisplayed(compose, "detail-refresh-cancel-replace-images").performVerificationClick(compose)
+        compose.onNodeWithText("取消", substring = false).assertVerificationDisplayed(compose, "detail-refresh-cancel").performVerificationClick(compose)
         await(fixture, vm, "取消刷新后应关闭菜单并保留详情") {
             it.route == Route.Detail(ITEM_ID) &&
                 compose.onAllNodesWithTag("library-refresh-confirm").fetchSemanticsNodes().isEmpty()
@@ -109,13 +107,13 @@ class DetailManagementActionsTest {
         assertFalse("取消不能留下刷新任务", "refresh/$ITEM_ID" in vm.state.value.actionBusy)
 
         openMore("detail-refresh")
-        compose.onNodeWithTag("detail-refresh").touchClick("detail-refresh-reopen")
+        compose.onNodeWithTag("detail-refresh").assertVerificationDisplayed(compose, "detail-refresh-reopen").performVerificationClick(compose)
         awaitWindowTag("library-refresh-confirm", "detail-refresh-default-dialog")
         compose.onNodeWithTag("library-refresh-scan").assertIsSelected()
         compose.onNodeWithTag("library-refresh-replace-images").assertIsNotEnabled().assertIsOff()
         compose.onNodeWithTag("library-refresh-replace-trickplay").assertIsNotEnabled().assertIsOff()
         assertEquals("重新打开菜单仍不能提前刷新", 0, fixture.refreshPosts.get())
-        compose.onNodeWithTag("library-refresh-confirm").touchClick("detail-refresh-default-confirm")
+        compose.onNodeWithTag("library-refresh-confirm").assertVerificationDisplayed(compose, "detail-refresh-default-confirm").performVerificationClick(compose)
         await(fixture, vm, "确认默认选项后才允许发送真实 POST") {
             fixture.refreshPosts.get() == 1 && "refresh/$ITEM_ID" in it.actionBusy
         }
@@ -141,24 +139,24 @@ class DetailManagementActionsTest {
         assertTrue("刷新后必须真正重新读取详情", fixture.detailReads.get() > detailReads)
         assertEquals(1, fixture.refreshPosts.get())
         assertFalse(vm.state.value.routes.any { it is Route.MediaTools })
-        compose.onNodeWithTag("detail-content").assertIsDisplayed()
+        compose.onNodeWithTag("detail-content").assertVerificationDisplayed(compose)
         compose.onAllNodesWithText(REFRESHED_TITLE, substring = false).onFirst().assertExists()
     }
 
     @Test fun refreshSendsTheChosenMetadataImageAndTrickplayReplacementOptions() = withApp { fixture, vm ->
         openDetail(fixture, vm)
         openMore("detail-refresh")
-        compose.onNodeWithTag("detail-refresh").touchClick("detail-refresh-custom")
+        compose.onNodeWithTag("detail-refresh").assertVerificationDisplayed(compose, "detail-refresh-custom").performVerificationClick(compose)
         awaitWindowTag("library-refresh-confirm", "detail-refresh-custom-dialog")
-        compose.onNodeWithTag("library-refresh-replace_all").touchClick("detail-refresh-replace-all")
+        compose.onNodeWithTag("library-refresh-replace_all").assertVerificationDisplayed(compose, "detail-refresh-replace-all").performVerificationClick(compose)
         compose.onNodeWithTag("library-refresh-replace_all").assertIsSelected()
         compose.onNodeWithTag("library-refresh-replace-images").assertIsEnabled()
-            .touchClick("detail-refresh-replace-images").assertIsOn()
+            .assertVerificationDisplayed(compose, "detail-refresh-replace-images").performVerificationClick(compose).assertIsOn()
         compose.onNodeWithTag("library-refresh-replace-trickplay").assertIsEnabled()
-            .touchClick("detail-refresh-replace-trickplay").assertIsOn()
+            .assertVerificationDisplayed(compose, "detail-refresh-replace-trickplay").performVerificationClick(compose).assertIsOn()
         assertEquals("选择替换选项不能提前刷新", 0, fixture.refreshPosts.get())
 
-        compose.onNodeWithTag("library-refresh-confirm").touchClick("detail-refresh-custom-confirm")
+        compose.onNodeWithTag("library-refresh-confirm").assertVerificationDisplayed(compose, "detail-refresh-custom-confirm").performVerificationClick(compose)
         await(fixture, vm, "确认后应把自定义选项提交到真实刷新接口") {
             fixture.refreshPosts.get() == 1 && "refresh/$ITEM_ID" in it.actionBusy
         }
@@ -180,7 +178,7 @@ class DetailManagementActionsTest {
         }
         assertEquals(1, fixture.refreshPosts.get())
         assertFalse(vm.state.value.routes.any { it is Route.MediaTools })
-        compose.onNodeWithTag("detail-content").assertIsDisplayed()
+        compose.onNodeWithTag("detail-content").assertVerificationDisplayed(compose)
     }
 
     @Test fun deleteCancellationDoesNotWriteAndConfirmationDeletesThenRemovesDetailAndHomeCaches() = withApp { fixture, vm ->
@@ -189,9 +187,9 @@ class DetailManagementActionsTest {
         assertCached(vm.state.value, present = true)
 
         openMore("detail-delete")
-        compose.onNodeWithTag("detail-delete").touchClick("detail-delete")
+        compose.onNodeWithTag("detail-delete").assertVerificationDisplayed(compose, "detail-delete").performVerificationClick(compose)
         awaitWindowTag("detail-delete-confirm", "detail-delete-cancel-dialog")
-        compose.onNodeWithText("取消", substring = false).touchClick("detail-delete-cancel")
+        compose.onNodeWithText("取消", substring = false).assertVerificationDisplayed(compose, "detail-delete-cancel").performVerificationClick(compose)
         await(fixture, vm, "取消删除后应关闭确认框并保留详情") {
             it.route == Route.Detail(ITEM_ID) &&
                 compose.onAllNodesWithTag("detail-delete-confirm").fetchSemanticsNodes().isEmpty()
@@ -203,9 +201,9 @@ class DetailManagementActionsTest {
         assertCached(vm.state.value, present = true)
 
         openMore("detail-delete")
-        compose.onNodeWithTag("detail-delete").touchClick("detail-delete")
+        compose.onNodeWithTag("detail-delete").assertVerificationDisplayed(compose, "detail-delete").performVerificationClick(compose)
         awaitWindowTag("detail-delete-confirm", "detail-delete-confirm-dialog")
-        compose.onNodeWithTag("detail-delete-confirm").assertTextContains("确认删除").touchClick("detail-delete-confirm")
+        compose.onNodeWithTag("detail-delete-confirm").assertTextContains("确认删除").assertVerificationDisplayed(compose, "detail-delete-confirm").performVerificationClick(compose)
         await(fixture, vm, "确认后才允许发送真实 DELETE") {
             fixture.deletes.get() == 1 && "delete/$ITEM_ID" in it.actionBusy
         }
@@ -230,7 +228,7 @@ class DetailManagementActionsTest {
         assertEquals(1, fixture.deletes.get())
         assertTrue(fixture.deleted.get())
         assertEquals(0, fixture.refreshPosts.get())
-        compose.onNodeWithTag("home-list").assertIsDisplayed()
+        compose.onNodeWithTag("home-list").assertVerificationDisplayed(compose)
     }
 
     @Test fun batchPlayedSendsEveryItemAndReportsPartialFailureHonestly() = withApp { fixture, vm ->
@@ -320,7 +318,7 @@ class DetailManagementActionsTest {
     private fun openMore(action: String) {
         val more = compose.onNodeWithTag("detail-more")
         VerificationDisplay.awaitWindowReady(compose, "detail-more-$action", more)
-        more.touchClick("detail-more-$action")
+        more.assertVerificationDisplayed(compose, "detail-more-$action").performVerificationClick(compose)
         awaitWindowTag(action, action)
     }
 
@@ -330,25 +328,8 @@ class DetailManagementActionsTest {
         VerificationDisplay.awaitWindowReady(compose, stage, compose.onNodeWithTag(tag))
     }
 
-    private fun SemanticsNodeInteraction.touchClick(label: String): SemanticsNodeInteraction {
-        val node = fetchSemanticsNode()
-        performTouchInput {
-            compose.runOnUiThread {
-                // 先在 UI 线程初始化本次 injection scope 的懒坐标，后续 click 仍注入真实 DOWN/UP。
-                val size = visibleSize
-                val point = center
-                val owner = node.root as? ViewRootForTest
-                Log.i("PathfinDetailManagementTouch", "fixture=$label node=${node.id} bounds=${node.boundsInRoot} " +
-                    "visible=$size localCenter=$point root=${owner?.view?.width}x${owner?.view?.height}")
-                check(size.width > 0 && size.height > 0) { "合成详情触摸目标未布局：$label" }
-            }
-            click()
-        }
-        return this
-    }
-
     private fun openDetail(fixture: Fixture, vm: AppViewModel) {
-        compose.onAllNodesWithText(TITLE, substring = false).onFirst().performScrollTo().touchClick("open-synthetic-detail")
+        compose.onAllNodesWithText(TITLE, substring = false).onFirst().performScrollTo().assertVerificationDisplayed(compose, "open-synthetic-detail").performVerificationClick(compose)
         await(fixture, vm, "合成媒体详情必须完成真实读取") {
             it.route == Route.Detail(ITEM_ID) && !it.detailLoading &&
                 it.details[ITEM_ID]?.name == TITLE && it.detailExtras[ITEM_ID]?.loading == false

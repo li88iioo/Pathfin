@@ -80,13 +80,13 @@ class ManagementFeaturesUiTest {
             } }
             search(fixture)
             scrollIdentification("identification-result")
-            compose.onNodeWithTag("identification-result").performClick()
-            compose.onNodeWithText("应用识别结果？").assertIsDisplayed()
-            compose.onNodeWithText("取消", substring = false).performClick()
+            compose.onNodeWithTag("identification-result").performVerificationClick(compose)
+            compose.onNodeWithText("应用识别结果？").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
             assertEquals(0, fixture.applies.get())
-            compose.onNodeWithTag("identification-result").performClick()
+            compose.onNodeWithTag("identification-result").performVerificationClick(compose)
             compose.onNodeWithTag("identification-replace-images").assertIsOff()
-            compose.onNodeWithTag("identification-confirm").performClick()
+            compose.onNodeWithTag("identification-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.applies.get() == 1 }
             compose.onNodeWithTag("identification-back").assertIsNotEnabled()
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
@@ -95,13 +95,13 @@ class ManagementFeaturesUiTest {
             fixture.allowApply.countDown()
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); changed.get() == 1 }
             scrollIdentification("identification-success")
-            compose.onNodeWithTag("identification-success").assertIsDisplayed()
+            compose.onNodeWithTag("identification-success").assertVerificationDisplayed(compose)
             assertEquals(1, fixture.applies.get())
             // 结果页的返回先回到搜索条件，再次返回才离开识别页。
-            compose.onNodeWithTag("identification-back").assertIsEnabled().performClick()
-            compose.onNodeWithTag("identification-list").assertIsDisplayed()
+            compose.onNodeWithTag("identification-back").assertIsEnabled().performVerificationClick(compose)
+            compose.onNodeWithTag("identification-list").assertVerificationDisplayed(compose)
             assertEquals(0, backs.get())
-            compose.onNodeWithTag("identification-back").performClick()
+            compose.onNodeWithTag("identification-back").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { !shown.value }
             assertEquals(1, backs.get())
         }
@@ -115,14 +115,14 @@ class ManagementFeaturesUiTest {
                 MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Series"), session.value, api, {}, {})
             } }
             scrollIdentification("identification-search")
-            compose.onNodeWithTag("identification-search").performClick()
+            compose.onNodeWithTag("identification-search").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.searches.get() == 1 && exists("identification-error") }
             compose.onNodeWithTag("identification-search").assertIsEnabled()
             fixture.failSearch.set(false)
             compose.onNodeWithTag("identification-list").performScrollToIndex(0)
             val page = compose.onNodeWithTag("refreshable-page")
             // 列表的内容左右各留 16dp；8dp 仍在可滚动列表内，避开文本框的选择/焦点手势。
-            val gutterFraction = (8f * compose.activity.resources.displayMetrics.density) / page.fetchSemanticsNode().boundsInRoot.width
+            val gutterFraction = (8f * compose.activity.resources.displayMetrics.density) / page.readVerificationNode(compose) { it.boundsInRoot }.width
             pullPageToRefresh(compose, page, "identification-read-recovers", horizontalFraction = gutterFraction)
             awaitIdentification(fixture, "second-http-request") { fixture.searches.get() == 2 }
             var lastScrollFailure: Throwable? = null
@@ -130,7 +130,7 @@ class ManagementFeaturesUiTest {
                 awaitIdentification(fixture, "result-visible") {
                     runCatching {
                         scrollIdentification("identification-result")
-                        compose.onNodeWithTag("identification-result").assertIsDisplayed()
+                        compose.onNodeWithTag("identification-result").assertVerificationDisplayed(compose)
                     }.onFailure { lastScrollFailure = it }.isSuccess
                 }
             } catch (failure: Throwable) {
@@ -154,14 +154,14 @@ class ManagementFeaturesUiTest {
             val person = MediaItem("item", "Synthetic actor", "Person", providerIds = mapOf("Tmdb" to "85718", "Douban" to "not-offered"))
             compose.setContent { ManagementContent { MediaIdentificationScreen(person, session, api, {}, {}) } }
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("identification-id/Imdb") }
-            compose.onNodeWithText("识别人物").assertIsDisplayed()
+            compose.onNodeWithText("识别人物").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("identification-year").assertDoesNotExist()
             scrollIdentification("identification-id/Tmdb")
             compose.onNodeWithTag("identification-id/Tmdb").assertTextContains("85718")
             scrollIdentification("identification-id/Imdb")
             compose.onNodeWithTag("identification-id/Imdb").performTextReplacement("nm1395602")
             search(fixture)
-            compose.onNodeWithText("选择匹配结果").assertIsDisplayed()
+            compose.onNodeWithText("选择匹配结果").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("identification-result-image", useUnmergedTree = true).assertExists()
             val info = requireNotNull(fixture.lastSearchInfo.get())
             assertFalse("人物识别不带年份", info.has("Year"))
@@ -181,14 +181,14 @@ class ManagementFeaturesUiTest {
             } }
             search(fixture)
             scrollIdentification("identification-result")
-            compose.onNodeWithText("Synthetic match A").assertIsDisplayed()
+            compose.onNodeWithText("Synthetic match A").assertVerificationDisplayed(compose)
 
             fixture.failSearch.set(true)
             scrollIdentification("identification-name")
             compose.onNodeWithTag("identification-name").performTextReplacement("Query B")
             compose.onNodeWithTag("identification-show-results").assertDoesNotExist()
             scrollIdentification("identification-search")
-            compose.onNodeWithTag("identification-search").performClick()
+            compose.onNodeWithTag("identification-search").performVerificationClick(compose)
             awaitIdentification(fixture, "new-query-failed") { fixture.searches.get() == 2 && exists("identification-error") }
             assertEquals("Query B", fixture.lastQuery.get())
             // 旧候选若保留展示也不能再可点击；允许实现直接清空旧结果。
@@ -200,21 +200,21 @@ class ManagementFeaturesUiTest {
             fixture.failSearch.set(false)
             fixture.candidateName.set("Synthetic match B")
             scrollIdentification("identification-search")
-            compose.onNodeWithTag("identification-search").assertIsEnabled().performClick()
+            compose.onNodeWithTag("identification-search").assertIsEnabled().performVerificationClick(compose)
             awaitIdentification(fixture, "new-query-recovered") {
                 fixture.searches.get() == 3 && runCatching {
                     scrollIdentification("identification-result")
-                    compose.onNodeWithText("Synthetic match B").assertIsDisplayed()
+                    compose.onNodeWithText("Synthetic match B").assertVerificationDisplayed(compose)
                     true
                 }.getOrDefault(false)
             }
             scrollIdentification("identification-result")
-            compose.onNodeWithText("Synthetic match B").assertIsDisplayed()
+            compose.onNodeWithText("Synthetic match B").assertVerificationDisplayed(compose)
             compose.onAllNodesWithText("Synthetic match A").assertCountEquals(0)
-            compose.onNodeWithTag("identification-result").performClick()
-            compose.onNodeWithText("应用识别结果？").assertIsDisplayed()
+            compose.onNodeWithTag("identification-result").performVerificationClick(compose)
+            compose.onNodeWithText("应用识别结果？").assertVerificationDisplayed(compose)
             fixture.allowApply.countDown()
-            compose.onNodeWithTag("identification-confirm").performClick()
+            compose.onNodeWithTag("identification-confirm").performVerificationClick(compose)
             awaitIdentification(fixture, "only-new-candidate-applied") { changed.get() == 1 }
             assertEquals(1, fixture.applies.get())
             assertEquals("Synthetic match B", fixture.appliedName.get())
@@ -229,19 +229,19 @@ class ManagementFeaturesUiTest {
             } }
             waitForTask(fixture)
             scrollAdministration(hasTestTag("server-task-task"))
-            compose.onNodeWithTag("server-task-task").performClick()
-            compose.onNodeWithText("运行计划任务？").assertIsDisplayed()
-            compose.onNodeWithText("返回", substring = false).performClick()
+            compose.onNodeWithTag("server-task-task").performVerificationClick(compose)
+            compose.onNodeWithText("运行计划任务？").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("返回", substring = false).performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { !exists("server-task-confirm") }
             VerificationDisplay.awaitWindowReady(compose, "task-dialog-dismissed", compose.onNodeWithTag("server-task-task"))
             assertEquals(0, fixture.runs.get())
             fixture.failTaskReads.set(true)
-            compose.onNodeWithTag("server-task-task").performClick()
+            compose.onNodeWithTag("server-task-task").performVerificationClick(compose)
             awaitDialog("server-task-confirm", "task-dialog-reopened")
-            compose.onNodeWithTag("server-task-confirm").performClick()
+            compose.onNodeWithTag("server-task-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.runs.get() == 1 && exists("server-administration-error") }
             assertEquals(0, fixture.cancels.get())
-            compose.onNodeWithText("操作已接受，但重新读取失败。请刷新状态，不要重复提交。").assertIsDisplayed()
+            compose.onNodeWithText("操作已接受，但重新读取失败。请刷新状态，不要重复提交。").assertVerificationDisplayed(compose)
             val reads = fixture.taskReads.get()
             compose.onNodeWithTag("server-administration-list").performScrollToIndex(0)
             pullPageToRefresh(compose, stage = "accepted-task-read-fails")
@@ -253,24 +253,24 @@ class ManagementFeaturesUiTest {
             pullPageToRefresh(compose, stage = "accepted-task-read-recovers")
             compose.waitUntil(WAIT_MS) { !exists("server-administration-error") }
             scrollAdministration(hasTestTag("server-task-task"))
-            compose.onNodeWithTag("server-task-task").performClick()
-            compose.onNodeWithText("取消正在运行的任务？").assertIsDisplayed()
+            compose.onNodeWithTag("server-task-task").performVerificationClick(compose)
+            compose.onNodeWithText("取消正在运行的任务？").assertVerificationDisplayed(compose)
             awaitDialog("server-task-confirm", "task-cancel-dialog")
-            compose.onNodeWithTag("server-task-confirm").performClick()
+            compose.onNodeWithTag("server-task-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.cancels.get() == 1 }
             scrollAdministration(hasTestTag("server-restart"))
             compose.waitUntil(WAIT_MS) {
                 runCatching { compose.onNodeWithTag("server-restart").assertIsEnabled(); true }.getOrDefault(false)
             }
-            compose.onNodeWithTag("server-restart").performClick()
-            compose.onNodeWithText("重启此 Jellyfin 服务器？").assertIsDisplayed()
-            compose.onNodeWithText("取消", substring = false).performClick()
+            compose.onNodeWithTag("server-restart").performVerificationClick(compose)
+            compose.onNodeWithText("重启此 Jellyfin 服务器？").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { !exists("server-restart-confirm") }
             VerificationDisplay.awaitWindowReady(compose, "restart-dialog-dismissed", compose.onNodeWithTag("server-restart"))
             assertEquals(0, fixture.restarts.get())
-            compose.onNodeWithTag("server-restart").performClick()
+            compose.onNodeWithTag("server-restart").performVerificationClick(compose)
             awaitDialog("server-restart-confirm", "restart-dialog-reopened")
-            compose.onNodeWithTag("server-restart-confirm").performClick()
+            compose.onNodeWithTag("server-restart-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.restarts.get() == 1 && !exists("server-restart-confirm") }
             compose.onNodeWithTag("server-restart").assertIsNotEnabled()
             assertEquals(1, fixture.runs.get()); assertEquals(1, fixture.cancels.get())
@@ -298,9 +298,9 @@ class ManagementFeaturesUiTest {
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.taskPollStarted.count == 0L }
             fixture.failTaskReads.set(failedReload)
             scrollAdministration(hasTestTag("server-task-task"))
-            compose.onNodeWithTag("server-task-task").performClick()
+            compose.onNodeWithTag("server-task-task").performVerificationClick(compose)
             awaitDialog("server-task-confirm", "task-run-with-poll-in-flight")
-            compose.onNodeWithTag("server-task-confirm").performClick()
+            compose.onNodeWithTag("server-task-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) {
                 fixture.assertHealthy()
                 fixture.runs.get() == 1 && fixture.taskReads.get() >= 3 &&
@@ -317,7 +317,7 @@ class ManagementFeaturesUiTest {
             while (SystemClock.elapsedRealtime() < until) {
                 compose.waitForIdle(); fixture.assertHealthy()
                 compose.onNodeWithTag("server-task-task").assertContentDescriptionEquals("取消Synthetic scan")
-                if (failedReload) compose.onNodeWithText("操作已接受，但重新读取失败。请刷新状态，不要重复提交。").assertIsDisplayed()
+                if (failedReload) compose.onNodeWithText("操作已接受，但重新读取失败。请刷新状态，不要重复提交。").assertVerificationDisplayed(compose)
                 assertEquals("旧读取不能自动重放运行", 1, fixture.runs.get())
                 assertEquals("旧读取不能自动发起取消", 0, fixture.cancels.get())
                 SystemClock.sleep(25)
@@ -334,25 +334,25 @@ class ManagementFeaturesUiTest {
             } }
             waitForTask(fixture)
             scrollAdministration(hasText("更多", substring = false))
-            compose.onNodeWithText("更多", substring = false).performClick()
+            compose.onNodeWithText("更多", substring = false).performVerificationClick(compose)
             scrollActivityEnd(29)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.activityAppends.get() == 1 && runCatching {
                 scrollAdministration(hasText("Synthetic event 30", substring = false)); true
             }.getOrDefault(false) }
-            compose.onNodeWithText("Synthetic event 30", substring = false).assertIsDisplayed()
+            compose.onNodeWithText("Synthetic event 30", substring = false).assertVerificationDisplayed(compose)
             compose.onNodeWithTag("server-activity-more").assertDoesNotExist()
             val terminalRequests = fixture.activityRequests.size
-            repeat(3) { compose.onNodeWithTag("server-administration-list").performTouchInput { swipeUp() }; compose.waitForIdle() }
+            repeat(3) { compose.onNodeWithTag("server-administration-list").performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertActivityRequestsStayAt(fixture, terminalRequests)
             assertEquals(listOf(0, 30), fixture.activityRequests.map { it.first })
             assertEquals(0, fixture.runs.get()); assertEquals(0, fixture.restarts.get())
-            compose.onNodeWithTag("server-administration-back").performClick()
+            compose.onNodeWithTag("server-administration-back").performVerificationClick(compose)
             scrollAdministration(hasTestTag("server-logs-open"))
-            compose.onNodeWithTag("server-logs-open").performClick()
+            compose.onNodeWithTag("server-logs-open").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("server-log-file") }
-            compose.onNodeWithTag("server-log-file").performClick()
+            compose.onNodeWithTag("server-log-file").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); compose.onAllNodesWithText("synthetic safe log").fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText("synthetic safe log").assertIsDisplayed()
+            compose.onNodeWithText("synthetic safe log").assertVerificationDisplayed(compose)
             compose.onAllNodesWithText(TOKEN, substring = true).assertCountEquals(0)
             assertEquals(1, fixture.logReads.get())
             compose.runOnIdle { shown.value = false }
@@ -368,14 +368,14 @@ class ManagementFeaturesUiTest {
             } }
             waitForTask(fixture)
             scrollAdministration(hasText("更多", substring = false))
-            compose.onNodeWithText("更多", substring = false).performClick()
+            compose.onNodeWithText("更多", substring = false).performVerificationClick(compose)
             fixture.failActivityAt.set(60)
             scrollActivityEnd(29)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.activityRequests.any { it.first == 30 } }
             scrollActivityEnd(59)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.activityRequests.any { it.first == 60 } }
-            compose.onNodeWithText("Synthetic event 59", substring = false).assertIsDisplayed()
-            repeat(3) { compose.onNodeWithTag("server-administration-list").performTouchInput { swipeUp() }; compose.waitForIdle() }
+            compose.onNodeWithText("Synthetic event 59", substring = false).assertVerificationDisplayed(compose)
+            repeat(3) { compose.onNodeWithTag("server-administration-list").performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertActivityRequestsStayAt(fixture, 3)
             assertEquals(listOf(0, 30, 60), fixture.activityRequests.map { it.first })
 
@@ -387,7 +387,7 @@ class ManagementFeaturesUiTest {
             pullPageToRefresh(compose, page = list, stage = "activity-restore-read-range")
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.activityRefreshStarted.count == 0L }
             scrollAdministration(hasText("Synthetic event 59", substring = false))
-            compose.onNodeWithText("Synthetic event 59", substring = false).assertIsDisplayed()
+            compose.onNodeWithText("Synthetic event 59", substring = false).assertVerificationDisplayed(compose)
             fixture.releaseActivityRefresh.countDown()
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.activityRemainderStarted.count == 0L ||
                 compose.onAllNodesWithText("Refreshed synthetic event 59", substring = false).fetchSemanticsNodes().isNotEmpty() }
@@ -397,16 +397,16 @@ class ManagementFeaturesUiTest {
             fixture.releaseActivityRemainder.countDown()
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); runCatching {
                 scrollAdministration(hasText("Refreshed synthetic event 59", substring = false))
-                compose.onNodeWithText("Refreshed synthetic event 59", substring = false).assertIsDisplayed()
+                compose.onNodeWithText("Refreshed synthetic event 59", substring = false).assertVerificationDisplayed(compose)
                 true
             }.getOrDefault(false) }
             scrollActivityEnd(59, refreshed = true)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); runCatching {
                 scrollAdministration(hasText("Refreshed synthetic event 60", substring = false)); true
             }.getOrDefault(false) }
-            compose.onNodeWithText("Refreshed synthetic event 60", substring = false).assertIsDisplayed()
+            compose.onNodeWithText("Refreshed synthetic event 60", substring = false).assertVerificationDisplayed(compose)
             val terminalRequests = fixture.activityRequests.size
-            repeat(3) { list.performTouchInput { swipeUp() }; compose.waitForIdle() }
+            repeat(3) { list.performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertActivityRequestsStayAt(fixture, terminalRequests)
             compose.onNodeWithTag("server-activity-more").assertDoesNotExist()
             assertEquals(0, fixture.runs.get()); assertEquals(0, fixture.cancels.get()); assertEquals(0, fixture.restarts.get())
@@ -432,8 +432,8 @@ class ManagementFeaturesUiTest {
             openActivities(fixture)
             scrollActivityEnd(29)
             compose.waitUntil(WAIT_MS) { fixture.activityRequests.size == 2 }
-            compose.onNodeWithText("Synthetic event 29", substring = false).assertIsDisplayed()
-            repeat(3) { compose.onNodeWithTag("server-administration-list").performTouchInput { swipeUp() }; compose.waitForIdle() }
+            compose.onNodeWithText("Synthetic event 29", substring = false).assertVerificationDisplayed(compose)
+            repeat(3) { compose.onNodeWithTag("server-administration-list").performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertActivityRequestsStayAt(fixture, 2)
             compose.onNodeWithTag("server-administration-error").assertDoesNotExist()
             assertEquals(listOf(0, 30), fixture.activityRequests.map { it.first })
@@ -484,12 +484,12 @@ class ManagementFeaturesUiTest {
             pullPageToRefresh(compose, page = list, stage = "activity-range-failure-$mode")
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.activityRequests.size == 5 }
             scrollAdministration(hasText("Synthetic event 59", substring = false))
-            compose.onNodeWithText("Synthetic event 59", substring = false).assertIsDisplayed()
+            compose.onNodeWithText("Synthetic event 59", substring = false).assertVerificationDisplayed(compose)
             scrollAdministration(hasText("Synthetic event 0", substring = false))
-            compose.onNodeWithText("Synthetic event 0", substring = false).assertIsDisplayed()
+            compose.onNodeWithText("Synthetic event 0", substring = false).assertVerificationDisplayed(compose)
             compose.onAllNodesWithText("Refreshed synthetic event 0", substring = false).assertCountEquals(0)
-            compose.onNodeWithTag("server-administration-error").assertIsDisplayed()
-            repeat(2) { list.performTouchInput { swipeUp() }; compose.waitForIdle() }
+            compose.onNodeWithTag("server-administration-error").assertVerificationDisplayed(compose)
+            repeat(2) { list.performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertActivityRequestsStayAt(fixture, 5)
             assertEquals(listOf(0, 30, 60, 0, 30), fixture.activityRequests.map { it.first })
         }
@@ -506,14 +506,14 @@ class ManagementFeaturesUiTest {
         }
         val more = compose.onNodeWithText("更多", substring = false)
         VerificationDisplay.awaitWindowReady(compose, "activity-open", more)
-        more.performClick()
+        more.performVerificationClick(compose)
     }
 
     @Test fun nonAdministratorCannotReadAdministrativeData() {
         Fixture().use { fixture ->
             val api = JellyfinApi(); val session = fixture.session().copy(isAdministrator = false)
             compose.setContent { ManagementContent { ServerAdministrationScreen(session, api, {}) } }
-            compose.onNodeWithText("需要管理员权限").assertIsDisplayed()
+            compose.onNodeWithText("需要管理员权限").assertVerificationDisplayed(compose)
             compose.waitForIdle()
             assertEquals(0, fixture.total.get())
         }
@@ -521,7 +521,7 @@ class ManagementFeaturesUiTest {
 
     private fun search(fixture: Fixture) {
         scrollIdentification("identification-search")
-        compose.onNodeWithTag("identification-search").performClick()
+        compose.onNodeWithTag("identification-search").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) {
             fixture.assertHealthy()
             fixture.searches.get() > 0 && runCatching { scrollIdentification("identification-result"); true }.getOrDefault(false)
@@ -551,7 +551,7 @@ class ManagementFeaturesUiTest {
     /** 表单字段在搜索条件页，候选在结果页；需要表单字段时先从结果页返回。 */
     private fun scrollIdentification(tag: String) {
         val formTag = tag in setOf("identification-name", "identification-year", "identification-search") || tag.startsWith("identification-id/")
-        if (formTag && exists("identification-results")) { compose.onNodeWithTag("identification-back").performClick(); compose.waitForIdle() }
+        if (formTag && exists("identification-results")) { compose.onNodeWithTag("identification-back").performVerificationClick(compose); compose.waitForIdle() }
         val list = if (exists("identification-results")) "identification-results" else "identification-list"
         compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag))
     }
@@ -563,7 +563,7 @@ class ManagementFeaturesUiTest {
         }.getOrDefault(false) }
         val list = compose.onNodeWithTag("server-administration-list")
         VerificationDisplay.awaitWindowReady(compose, "activity-scroll-$index", list)
-        list.performTouchInput { swipeUp() }
+        list.performVerificationTouchInput(compose) { swipeUp() }
         compose.waitForIdle()
     }
     private fun assertActivityRequestsStayAt(fixture: Fixture, expected: Int) {

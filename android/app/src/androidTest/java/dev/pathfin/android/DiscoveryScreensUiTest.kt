@@ -12,7 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -21,17 +20,14 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -160,7 +156,7 @@ class DiscoveryScreensUiTest {
         assertEquals("刷新不能移动搜索框", input, bounds("search-query"))
         assertEquals("刷新不能移动筛选栏", filters, bounds("search-filters"))
         assertEquals("刷新不能替换或移动旧卡片", card, bounds("discovery-item/MOVIES/movie"))
-        compose.onNodeWithTag("search-filter/MOVIES").performClick().assertIsOn()
+        compose.onNodeWithTag("search-filter/MOVIES").performVerificationClick(compose).assertIsOn()
         compose.runOnIdle { assertEquals(setOf(DiscoveryCategory.MOVIES), state.value.categories) }
         compose.onNodeWithTag("search-query").performTextReplacement("合成电影")
         compose.onNodeWithTag("search-query").performImeAction()
@@ -291,8 +287,7 @@ class DiscoveryScreensUiTest {
         compose.onNodeWithTag("search-filters").assertDoesNotExist()
         grid.performScrollToIndex(0)
         val firstCard = bounds("discovery-item/MOVIES/grid-0")
-        grid.performTouchInput {
-            compose.runOnUiThread { visibleSize }
+        grid.performVerificationTouchInput(compose) {
             swipeDown()
         }
         compose.waitUntil(5_000) { compose.runOnIdle { refreshes == 1 } }
@@ -350,33 +345,16 @@ class DiscoveryScreensUiTest {
 
     private fun assertVisible(stage: String, target: SemanticsNodeInteraction) {
         VerificationDisplay.awaitWindowReady(compose, stage, target)
-        val node = target.fetchSemanticsNode()
-        compose.runOnIdle {
-            // Compose 1.12 的可见矩形缓存也由绘制访问；所有坐标统一从 UI 线程读取。
-            val view = checkNotNull(node.root as? ViewRootForTest).view
-            val localVisible = android.graphics.Rect()
-            assertTrue("$stage 宿主必须有真实可见区域", view.getLocalVisibleRect(localVisible))
-            val origin = IntArray(2).also(view::getLocationInWindow)
-            val viewport = Rect(localVisible.left + origin[0].toFloat(), localVisible.top + origin[1].toFloat(),
-                localVisible.right + origin[0].toFloat(), localVisible.bottom + origin[1].toFloat())
-            val area = node.boundsInWindow
-            val visible = area.intersect(viewport)
-            assertTrue("$stage 节点必须实际显示在窗口内：$area，窗口 $viewport",
-                node.layoutInfo.isPlaced && visible.width > 0f && visible.height > 0f)
-        }
+        target.assertVerificationDisplayed(compose, stage)
     }
 
     private fun touch(stage: String, target: SemanticsNodeInteraction) {
         assertVisible(stage, target)
-        target.performTouchInput {
-            compose.runOnUiThread { visibleSize }
-            click()
-        }
+        target.performVerificationClick(compose)
     }
 
     private fun bounds(tag: String): Rect {
-        val node = compose.onNodeWithTag(tag, true).fetchSemanticsNode()
-        return compose.runOnIdle { node.boundsInRoot }
+        return compose.onNodeWithTag(tag, true).readVerificationNode(compose) { it.boundsInRoot }
     }
 
     private fun show(

@@ -14,7 +14,6 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performSemanticsAction
@@ -115,7 +114,7 @@ class PlaybackPreferencesTest {
             compose.waitUntil(WAIT_MS) {
                 compose.onAllNodes(androidx.compose.ui.test.hasTestTag("player-seek-slider")).fetchSemanticsNodes().isNotEmpty()
             }
-            val bounds = compose.onNodeWithTag("player-seek-slider").fetchSemanticsNode().boundsInWindow
+            val bounds = compose.onNodeWithTag("player-seek-slider").readVerificationNode(compose) { it.boundsInWindow }
             tap(Point(bounds.center.x, bounds.center.y))
             compose.waitUntil(WAIT_MS) {
                 compose.runOnIdle {
@@ -144,15 +143,15 @@ class PlaybackPreferencesTest {
             state.home.error?.let { throw AssertionError("fixture 媒体库读取失败：$it") }
             state.session != null && state.home.loaded && !state.home.loading
         }
-        compose.onAllNodesWithText(MOVIE_NAME).onFirst().performScrollTo().performClick()
+        compose.onAllNodesWithText(MOVIE_NAME).onFirst().performScrollTo().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) {
             val state = app.state.value
             state.detailError?.let { throw AssertionError("fixture 详情读取失败：$it") }
             !state.detailLoading && state.details[ITEM_ID] != null
         }
         val resumed = app.state.value.details.getValue(ITEM_ID).positionTicks > 0
-        if (resumed) compose.onNodeWithContentDescription("播放选项").performScrollTo().performClick()
-        compose.onNodeWithText(if (resumed) "从头播放" else "播放").performScrollTo().performClick()
+        if (resumed) compose.onNodeWithContentDescription("播放选项").performScrollTo().performVerificationClick(compose)
+        compose.onNodeWithText(if (resumed) "从头播放" else "播放").performScrollTo().performVerificationClick(compose)
     }
 
     private fun holdAndRelease(playback: PlaybackViewModel, view: PlayerView, release: Int) {

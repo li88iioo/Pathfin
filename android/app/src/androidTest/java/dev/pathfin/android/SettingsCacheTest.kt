@@ -5,14 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -80,13 +78,13 @@ class SettingsCacheTest {
                 }
             }
             contentInstalled = true
-            compose.onNodeWithText("上限 1024 MB · 每个账号独立缓存", substring = true).assertIsDisplayed()
+            compose.onNodeWithText("上限 1024 MB · 每个账号独立缓存", substring = true).assertVerificationDisplayed(compose)
             openCapacityDialog()
             assertEquals("1024", inputText())
             compose.onNodeWithTag("cache-size-input").performTextReplacement("1536")
-            compose.onNodeWithText("保存", substring = false).assertIsEnabled().performClick()
+            compose.onNodeWithText("保存", substring = false).assertIsEnabled().performVerificationClick(compose)
             compose.onNodeWithTag("cache-size-input").assertDoesNotExist()
-            compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertIsDisplayed()
+            compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertVerificationDisplayed(compose)
             assertEquals(1, saves.get())
             assertEquals("重建 Store 后任意容量仍可读取，不能退回预设容量", 1536,
                 AppPreferencesStore(context).load().imageCacheSizeMb)
@@ -106,14 +104,14 @@ class SettingsCacheTest {
             }
             compose.onNodeWithTag("cache-size-input").performTextReplacement("2049")
             compose.onNodeWithText("保存", substring = false).assertIsEnabled()
-            compose.onNodeWithText("取消", substring = false).performClick()
+            compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
             compose.onNodeWithTag("cache-size-input").assertDoesNotExist()
-            compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertIsDisplayed()
+            compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertVerificationDisplayed(compose)
             assertEquals("取消合法新草稿也不能写入", 1, saves.get())
             assertEquals(1536, AppPreferencesStore(context).load().imageCacheSizeMb)
             openCapacityDialog()
             assertEquals("重新打开不能恢复已取消的容量草稿", "1536", inputText())
-            compose.onNodeWithText("取消", substring = false).performClick()
+            compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
         } finally {
             try {
                 if (contentInstalled) {
@@ -131,8 +129,8 @@ class SettingsCacheTest {
 
     private fun openCapacityDialog() {
         compose.onNodeWithTag("settings-list").performScrollToNode(hasText("容量上限"))
-        compose.onNodeWithText("容量上限", substring = false).performClick()
-        compose.onNodeWithTag("cache-size-input").assertIsDisplayed()
+        compose.onNodeWithText("容量上限", substring = false).performVerificationClick(compose)
+        compose.onNodeWithTag("cache-size-input").assertVerificationDisplayed(compose)
     }
 
     private fun inputText() = compose.onNodeWithTag("cache-size-input")

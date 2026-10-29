@@ -32,7 +32,7 @@ class PlaybackAudioWarningUiTest {
             compose.onNodeWithTag("player-decode-warning").assertDoesNotExist()
             compose.runOnIdle { state.value = state.value.copy(decodeWarning = "当前 DTS 音轨无法解码，请切换音轨或播放器") }
             compose.onNodeWithText("当前 DTS 音轨无法解码，请切换音轨或播放器").assertExists()
-            compose.onNodeWithTag("player-decode-warning-dismiss").performClick()
+            compose.onNodeWithTag("player-decode-warning-dismiss").performVerificationClick(compose)
             compose.runOnIdle { state.value = state.value.copy(isBuffering = true) }
             compose.onNodeWithTag("player-decode-warning").assertDoesNotExist()
             compose.runOnIdle { state.value = state.value.copy(playerGeneration = 1) }

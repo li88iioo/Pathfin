@@ -26,9 +26,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -127,7 +125,7 @@ class DetailMediaPreferencesUiTest {
             }
             compose.waitUntil(5_000) { variance(windowPixels("detail-background/checker")) > 3000 }
             val clear = windowPixels("detail-background/checker")
-            val originalBounds = compose.onNodeWithTag("foreground-title").fetchSemanticsNode().boundsInRoot
+            val originalBounds = compose.onNodeWithTag("foreground-title").readVerificationNode(compose) { it.boundsInRoot }
             compose.runOnIdle { preferences.value = preferences.value.copy(backgroundBlurRadiusDp = 18) }
             if (Build.VERSION.SDK_INT >= 31) {
                 compose.waitUntil(5_000) { variance(windowPixels("detail-background/checker")) < variance(clear) * .35 }
@@ -137,10 +135,10 @@ class DetailMediaPreferencesUiTest {
                 // 旧系统设置入口由生产界面明确禁用；组件不伪装为已经应用 RenderEffect。
                 assertTrue("旧系统应保留原图", variance(windowPixels("detail-background/checker")) > 3000)
             }
-            assertEquals(originalBounds, compose.onNodeWithTag("foreground-title").fetchSemanticsNode().boundsInRoot)
+            assertEquals(originalBounds, compose.onNodeWithTag("foreground-title").readVerificationNode(compose) { it.boundsInRoot })
             compose.runOnIdle { preferences.value = preferences.value.copy(backgroundBlurRadiusDp = 0) }
             compose.waitUntil(5_000) { variance(windowPixels("detail-background/checker")) > 3000 }
-            assertEquals(originalBounds, compose.onNodeWithTag("foreground-title").fetchSemanticsNode().boundsInRoot)
+            assertEquals(originalBounds, compose.onNodeWithTag("foreground-title").readVerificationNode(compose) { it.boundsInRoot })
         } finally { loader.shutdown() }
     }
 
@@ -172,14 +170,14 @@ class DetailMediaPreferencesUiTest {
             compose.onNodeWithText(first.name).assertDoesNotExist()
             compose.onNodeWithText(invalid.name).assertDoesNotExist()
             awaitColor("chapter-thumbnail/chapters/5", Color.Green)
-            compose.onNodeWithText(imageChapter.name).performClick()
+            compose.onNodeWithText(imageChapter.name).performVerificationClick(compose)
             compose.runOnIdle { assertSame(imageChapter, selected); assertEquals(5, selected!!.imageIndex) }
             compose.runOnIdle { hide.value = false }
             compose.onNodeWithTag("playback-chapters").performScrollToNode(hasText(first.name))
-            compose.onNodeWithText(first.name).performClick()
+            compose.onNodeWithText(first.name).performVerificationClick(compose)
             compose.runOnIdle { assertSame(first, selected); sheet.value = false; hide.value = true; selected = null }
             compose.onNodeWithTag("detail-chapter/0").assertDoesNotExist()
-            compose.onNodeWithTag("detail-chapter/1").performClick()
+            compose.onNodeWithTag("detail-chapter/1").performVerificationClick(compose)
             compose.runOnIdle { assertSame(imageChapter, selected); busy.value = true }
             compose.onNodeWithTag("detail-chapter/1").assertIsNotEnabled()
         } finally { loader.shutdown() }
@@ -204,7 +202,7 @@ class DetailMediaPreferencesUiTest {
             compose.runOnIdle { hide.value = false }
             compose.onNodeWithText("只有文字的章").assertExists()
             compose.runOnIdle { showChapters.value = false }
-            compose.onNodeWithTag("detail-play").performClick()
+            compose.onNodeWithTag("detail-play").performVerificationClick(compose)
             compose.runOnIdle { assertEquals(1, plays) }
         } finally { loader.shutdown() }
     }
@@ -225,7 +223,7 @@ class DetailMediaPreferencesUiTest {
     }
     private fun windowPixels(tag: String): IntArray {
         compose.waitForIdle()
-        val bounds = compose.onNodeWithTag(tag, true).fetchSemanticsNode().boundsInRoot
+        val bounds = compose.onNodeWithTag(tag, true).readVerificationNode(compose) { it.boundsInRoot }
         lateinit var area: Rect
         compose.runOnIdle {
             fun findCompose(view: View): View? {

@@ -5,11 +5,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.JellyfinApi
@@ -66,10 +64,10 @@ class MediaManagementFlowTest {
             compose.waitUntil(15_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("metadata-title")).fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("metadata-title").performTextReplacement("Pathfin UI fixture edited")
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-            compose.onNodeWithText("放弃未保存的修改？").assertIsDisplayed()
-            compose.onNodeWithText("继续编辑").performClick()
-            compose.onNodeWithTag("metadata-save").assertIsDisplayed()
-            compose.onNodeWithTag("metadata-save").performClick()
+            compose.onNodeWithText("放弃未保存的修改？").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("继续编辑").performVerificationClick(compose)
+            compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("metadata-save").performVerificationClick(compose)
             compose.waitUntil(15_000) { saved.get() == 1 }
             val after = management.editableMetadata(session, itemId).metadata
             assertEquals("Pathfin UI fixture edited", after.title)

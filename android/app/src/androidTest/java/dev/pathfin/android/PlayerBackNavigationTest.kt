@@ -10,13 +10,10 @@ import android.util.AtomicFile
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.ui.test.assertIsDisplayed
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
@@ -198,7 +195,7 @@ class PlayerBackNavigationTest {
                 assertNotNull(app.state.value.session)
                 assertNull("退出播放应释放 Media3 播放器", playback.player)
             }
-            compose.onNodeWithContentDescription("返回").assertIsDisplayed()
+            compose.onNodeWithContentDescription("返回").assertVerificationDisplayed(compose)
             assertEquals("返回、Compose effect 和 PlayerView 的退出路径只能停止同一会话一次", 1,
                 fixture.eventCount(STOP, playSessionId))
             assertEquals("重建和返回不能意外重新播放", 1, fixture.eventCount(START, playSessionId))
@@ -217,10 +214,10 @@ class PlayerBackNavigationTest {
 
     private fun showControlsThenReturn() {
         if (compose.onAllNodes(androidx.compose.ui.test.hasTestTag("player-back")).fetchSemanticsNodes().isEmpty()) {
-            compose.onNodeWithTag("player-video").performTouchInput { click(androidx.compose.ui.geometry.Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(androidx.compose.ui.geometry.Offset(width * .5f, height * .3f)) }
             compose.waitUntil(WAIT_MS) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("player-back")).fetchSemanticsNodes().isNotEmpty() }
         }
-        compose.onNodeWithTag("player-back").performClick()
+        compose.onNodeWithTag("player-back").performVerificationClick(compose)
     }
 
     private fun requestExternalBack(path: ReturnPath) {

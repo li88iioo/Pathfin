@@ -53,7 +53,7 @@ class LibraryIndexOverlayTest {
         rail().assertDoesNotExist()
         compose.mainClock.autoAdvance = false
         try {
-            activation().performTouchInput {
+            activation().performVerificationTouchInput(compose) {
                 val railHeight = minOf(height.toFloat(), 448.dp.toPx())
                 val railTop = (height - railHeight) / 2f
                 down(Offset(center.x, railTop + railHeight * 14.5f / 28f)) // M 的格子中心。
@@ -63,15 +63,15 @@ class LibraryIndexOverlayTest {
             assertUnchanged(fixture, haptics = emptyList())
             compose.mainClock.advanceTimeBy(200)
             compose.mainClock.advanceTimeByFrame()
-            rail().assertIsDisplayed()
-            compose.onNodeWithTag("library-index-preview").assertIsDisplayed().assert(hasAnyDescendant(hasText("M")))
+            rail().assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("library-index-preview").assertVerificationDisplayed(compose).assert(hasAnyDescendant(hasText("M")))
             assertUnchanged(fixture, haptics = listOf(HapticFeedbackType.LongPress)) // 唤出索引是更明显的长按振动
             assertEquals("浮层出现不能重排封面", initialCards, cardBounds())
 
             compose.mainClock.advanceTimeBy(5_000)
-            rail().assertIsDisplayed()
+            rail().assertVerificationDisplayed(compose)
             assertUnchanged(fixture, haptics = listOf(HapticFeedbackType.LongPress))
-            activation().performTouchInput { up() }
+            activation().performVerificationTouchInput(compose) { up() }
             compose.mainClock.advanceTimeByFrame()
             compose.runOnIdle {
                 assertEquals(listOf(fixture.initial.copy(nameInitial = "M")), fixture.queries)
@@ -80,7 +80,7 @@ class LibraryIndexOverlayTest {
             compose.onNodeWithTag("library-index-preview").assertDoesNotExist()
             compose.onNodeWithTag("library-index/M").assertIsSelected()
             compose.mainClock.advanceTimeBy(3_800)
-            rail().assertIsDisplayed()
+            rail().assertVerificationDisplayed(compose)
             compose.mainClock.advanceTimeBy(300)
             compose.mainClock.advanceTimeByFrame()
             rail().assertDoesNotExist()
@@ -95,17 +95,17 @@ class LibraryIndexOverlayTest {
 
     @Test fun hiddenHorizontalCancelAndMultiplePointersNeverOpenAndDisablingAnOpenDragCannotCommit() {
         val fixture = show()
-        activation().performTouchInput {
+        activation().performVerificationTouchInput(compose) {
             down(center)
             moveTo(center + Offset(-fixture.touchSlop * 4, 0f), delayMillis = 16)
             up()
         }
         rail().assertDoesNotExist()
         assertUnchanged(fixture, emptyList())
-        activation().performTouchInput { down(center); cancel() }
+        activation().performVerificationTouchInput(compose) { down(center); cancel() }
         rail().assertDoesNotExist()
         assertUnchanged(fixture, emptyList())
-        activation().performTouchInput {
+        activation().performVerificationTouchInput(compose) {
             down(0, center)
             down(1, center + Offset(0f, 10f))
             advanceEventTime(fixture.longPressTimeout + 100)
@@ -115,16 +115,16 @@ class LibraryIndexOverlayTest {
         assertUnchanged(fixture, emptyList())
 
         toggleIndex("显示字母索引")
-        rail().performTouchInput {
+        rail().performVerificationTouchInput(compose) {
             down(Offset(center.x, height * 2.5f / 28f)) // A
             moveTo(Offset(center.x, height * 14.5f / 28f), delayMillis = 16) // M
         }
-        compose.onNodeWithTag("library-index-preview").assertIsDisplayed()
+        compose.onNodeWithTag("library-index-preview").assertVerificationDisplayed(compose)
         assertUnchanged(fixture, listOf(HapticFeedbackType.TextHandleMove))
         compose.runOnIdle { fixture.enabled.value = false }
         rail().assertDoesNotExist()
         compose.onNodeWithTag("library-index-preview").assertDoesNotExist()
-        activation().performTouchInput { cancel() }
+        activation().performVerificationTouchInput(compose) { cancel() }
         assertUnchanged(fixture, listOf(HapticFeedbackType.TextHandleMove))
         val blockedAction = activation().fetchSemanticsNode().config[SemanticsActions.CustomActions].single()
         compose.runOnIdle { assertFalse("认证门闩禁止重新打开索引", blockedAction.action()) }
@@ -132,15 +132,16 @@ class LibraryIndexOverlayTest {
 
     @Test fun bothGridMarginsStayEqualAndOpeningClosingOrRemovingTheIndexNeverMovesCards() {
         val fixture = show()
-        val grid = compose.onNodeWithTag("browser-grid").fetchSemanticsNode().boundsInRoot
-        val initialCards = cardBounds()
+        val layout = bounds(compose.onNodeWithTag("browser-grid"), *cardTargets())
+        val grid = layout.first()
+        val initialCards = layout.drop(1)
         // 列宽余数可能相差1px，2:3图片高度因此相差至多2px，不能误认为换了下一行。
         val firstRow = initialCards.filter { kotlin.math.abs(it.top - initialCards.first().top) <= 3f }
         assertTrue("合成库必须真实排出多列", firstRow.size >= 2)
         assertEquals("没有右侧 AZ 常驻占位，左右封面外边距必须一致", firstRow.first().left - grid.left,
             grid.right - firstRow.last().right, 1f)
         toggleIndex("显示字母索引")
-        rail().assertIsDisplayed()
+        rail().assertVerificationDisplayed(compose)
         assertEquals(initialCards, cardBounds())
         toggleIndex("隐藏字母索引")
         rail().assertDoesNotExist()
@@ -149,7 +150,7 @@ class LibraryIndexOverlayTest {
         activation().assertDoesNotExist()
         assertEquals("启用索引能力也不能预留空间", initialCards, cardBounds())
         compose.runOnIdle { fixture.showIndex.value = true }
-        activation().assertIsDisplayed()
+        activation().assertVerificationDisplayed(compose)
         rail().assertDoesNotExist()
         assertEquals(initialCards, cardBounds())
         assertUnchanged(fixture, emptyList())
@@ -161,14 +162,12 @@ class LibraryIndexOverlayTest {
         toggleIndex("显示字母索引")
         val expected = mutableListOf<LibraryQuery>()
         for (label in listOf("0", "#", "Z")) {
-            compose.onNodeWithTag("library-index/$label").assertIsDisplayed().performTouchInput { click() }
+            compose.onNodeWithTag("library-index/$label").assertVerificationDisplayed(compose).performVerificationTouchInput(compose) { click() }
             expected += fixture.initial.copy(nameInitial = label)
             compose.runOnIdle { assertEquals("短屏必须通过实际字母中心触摸提交 $label", expected, fixture.queries) }
             compose.onNodeWithTag("library-index/$label").assertIsSelected()
         }
-        val activation = activation().fetchSemanticsNode().boundsInRoot
-        val toolbar = compose.onNodeWithTag("browser-toolbar").fetchSemanticsNode().boundsInRoot
-        val grid = compose.onNodeWithTag("browser-grid").fetchSemanticsNode().boundsInRoot
+        val (activation, toolbar, grid) = bounds(activation(), compose.onNodeWithTag("browser-toolbar"), compose.onNodeWithTag("browser-grid"))
         val bottomInset = with(compose.density) { 40.dp.toPx() }
         assertTrue("索引触摸区不得延伸到双行工具栏后面", activation.top >= toolbar.bottom)
         assertTrue("索引触摸区必须让出系统导航安全区", activation.bottom <= grid.bottom - bottomInset + 1f)
@@ -178,9 +177,8 @@ class LibraryIndexOverlayTest {
     @Test fun blankSpaceAboveOrBelowTheIndexAndCancelledEdgeDragsNeverSubmit() {
         val fixture = show(viewport = DpSize(360.dp, 620.dp), topInset = 24.dp, bottomInset = 16.dp)
         toggleIndex("显示字母索引")
-        val activation = activation().fetchSemanticsNode().boundsInRoot
-        val visible = rail().fetchSemanticsNode().boundsInRoot
-        activation().performTouchInput {
+        val (activation, visible) = bounds(activation(), rail())
+        activation().performVerificationTouchInput(compose) {
             val clearance = 18.dp.toPx()
             val above = visible.top - activation.top - clearance
             val below = visible.bottom - activation.top + clearance
@@ -189,10 +187,10 @@ class LibraryIndexOverlayTest {
             click(Offset(center.x, below))
         }
         assertUnchanged(fixture, emptyList())
-        val first = compose.onNodeWithTag("library-index/0").fetchSemanticsNode().boundsInRoot.center - activation.topLeft
-        val last = compose.onNodeWithTag("library-index/Z").fetchSemanticsNode().boundsInRoot.center - activation.topLeft
+        val (first, last) = bounds(compose.onNodeWithTag("library-index/0"), compose.onNodeWithTag("library-index/Z"))
+            .map { it.center - activation.topLeft }
         for ((start, end) in listOf(first to last, last to first)) {
-            activation().performTouchInput { down(start); moveTo(end, delayMillis = 16); cancel() }
+            activation().performVerificationTouchInput(compose) { down(start); moveTo(end, delayMillis = 16); cancel() }
             compose.runOnIdle { assertEquals(emptyList<LibraryQuery>(), fixture.queries) }
             compose.onNodeWithTag("library-index-preview").assertDoesNotExist()
         }
@@ -252,7 +250,12 @@ class LibraryIndexOverlayTest {
 
     private fun activation() = compose.onNodeWithTag("library-index-activation")
     private fun rail() = compose.onNodeWithTag("library-index")
-    private fun cardBounds(): List<Rect> = (1..3).map { compose.onNodeWithTag("poster-title/overlay-$it", true).fetchSemanticsNode().boundsInRoot }
+    private fun cardTargets() = (1..3).map { compose.onNodeWithTag("poster-title/overlay-$it", true) }.toTypedArray()
+    private fun cardBounds(): List<Rect> = bounds(*cardTargets())
+    private fun bounds(vararg targets: SemanticsNodeInteraction): List<Rect> {
+        val nodes = targets.map { it.fetchSemanticsNode() }
+        return compose.runOnIdle { nodes.map { it.boundsInRoot } }
+    }
     private fun toggleIndex(label: String) {
         val action = activation().fetchSemanticsNode().config[SemanticsActions.CustomActions].single { it.label == label }
         compose.runOnIdle { assertTrue(action.action()) }

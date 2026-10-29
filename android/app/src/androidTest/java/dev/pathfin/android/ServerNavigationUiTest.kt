@@ -79,28 +79,28 @@ class ServerNavigationUiTest {
         val busy = mutableStateOf(false)
         val switches = mutableListOf<ServerProfile>()
         showSwitcher(listOf(first, second), busy) { switches += it }
-        compose.onNodeWithContentDescription("切换服务器").performClick()
-        compose.onNodeWithText(first.displayName).assertIsDisplayed().assertIsSelected()
-        compose.onNodeWithText(second.displayName).assertIsDisplayed().assertIsNotSelected()
+        compose.onNodeWithContentDescription("切换服务器").performVerificationClick(compose)
+        compose.onNodeWithText(first.displayName).assertVerificationDisplayed(compose).assertIsSelected()
+        compose.onNodeWithText(second.displayName).assertVerificationDisplayed(compose).assertIsNotSelected()
         compose.onAllNodesWithContentDescription("当前服务器").assertCountEquals(1)
         assertOnlyProfileActions(2)
         screenshot("01-two-server-switcher", popup = true)
 
-        compose.onNodeWithText(second.displayName).performClick()
+        compose.onNodeWithText(second.displayName).performVerificationClick(compose)
         compose.runOnIdle { assertEquals("一次选择只能回调一次正确资料", listOf(second), switches) }
         compose.onNode(isPopup()).assertDoesNotExist()
 
         compose.runOnIdle { busy.value = true }
-        compose.onNodeWithContentDescription("切换服务器").assertIsNotEnabled().performTouchInput { click() }
+        compose.onNodeWithContentDescription("切换服务器").assertIsNotEnabled().performVerificationTouchInput(compose) { click() }
         compose.onNode(isPopup()).assertDoesNotExist()
         compose.runOnIdle { assertEquals(listOf(second), switches); busy.value = false }
 
         // 菜单已打开时转入 busy，现有条目也必须立刻禁止点击。
-        compose.onNodeWithContentDescription("切换服务器").performClick()
+        compose.onNodeWithContentDescription("切换服务器").performVerificationClick(compose)
         compose.runOnIdle { busy.value = true }
         compose.onNodeWithContentDescription("切换服务器").assertIsNotEnabled()
         compose.onNodeWithText(first.displayName).assertIsNotEnabled()
-        compose.onNodeWithText(second.displayName).assertIsNotEnabled().performTouchInput { click() }
+        compose.onNodeWithText(second.displayName).assertIsNotEnabled().performVerificationTouchInput(compose) { click() }
         compose.runOnIdle { assertEquals("忙时真实触摸不能多触发切换", listOf(second), switches) }
         assertOnlyProfileActions(2)
         screenshot("02-busy-server-switcher", popup = true)
@@ -125,10 +125,10 @@ class ServerNavigationUiTest {
             }
         }
         VerificationDisplay.awaitWindowReady(compose, "pending-server-switch", compose.onNodeWithContentDescription("切换服务器"))
-        compose.onNodeWithContentDescription("切换服务器").performClick()
-        compose.onNodeWithText(second.displayName).performClick()
-        compose.onNodeWithContentDescription("切换服务器").assertIsEnabled().performClick()
-        compose.onNodeWithText(first.displayName).assertIsEnabled().performClick()
+        compose.onNodeWithContentDescription("切换服务器").performVerificationClick(compose)
+        compose.onNodeWithText(second.displayName).performVerificationClick(compose)
+        compose.onNodeWithContentDescription("切换服务器").assertIsEnabled().performVerificationClick(compose)
+        compose.onNodeWithText(first.displayName).assertIsEnabled().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf(second, first), switches) }
         // 校验完成后的写入提交期仍禁止打断；普通busy测试继续覆盖密码等写操作。
         compose.runOnIdle { state.value = state.value.copy(switchingProfileId = null) }
@@ -151,9 +151,9 @@ class ServerNavigationUiTest {
             }
         }
         VerificationDisplay.awaitWindowReady(compose, "pending-manager-switch", compose.onNodeWithText(first.displayName))
-        compose.onNodeWithText(second.displayName).performScrollTo().performClick()
+        compose.onNodeWithText(second.displayName).performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf(second), opened); switching.value = false }
-        compose.onNodeWithText(first.displayName).performScrollTo().performClick()
+        compose.onNodeWithText(first.displayName).performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertEquals("账号写入不能被卡片选择打断", listOf(second), opened) }
     }
 
@@ -161,8 +161,8 @@ class ServerNavigationUiTest {
     fun oneProfileStillOpensItsSelectedListWithoutAccountActions() {
         var switches = 0
         showSwitcher(listOf(first), mutableStateOf(false)) { switches++ }
-        compose.onNodeWithContentDescription("切换服务器").assertIsEnabled().performClick()
-        compose.onNodeWithText(first.displayName).assertIsDisplayed().assertIsSelected()
+        compose.onNodeWithContentDescription("切换服务器").assertIsEnabled().performVerificationClick(compose)
+        compose.onNodeWithText(first.displayName).assertVerificationDisplayed(compose).assertIsSelected()
         compose.onAllNodesWithContentDescription("当前服务器").assertCountEquals(1)
         compose.onAllNodesWithText(second.displayName).assertCountEquals(0)
         assertOnlyProfileActions(1)
@@ -206,14 +206,14 @@ class ServerNavigationUiTest {
                 }
                 val serverMenu = compose.onNodeWithContentDescription("更多")
                 VerificationDisplay.awaitWindowReady(compose, "initial-server-menu", serverMenu)
-                serverMenu.performClick()
+                serverMenu.performVerificationClick(compose)
                 listOf("管理服务器", "刷新", "扫描全部媒体库", "媒体库控制台").forEach {
                     compose.onAllNodesWithText(it, substring = false).assertCountEquals(0)
                 }
                 val settings = compose.onNodeWithText("设置")
                 VerificationDisplay.awaitWindowReady(compose, "ordinary-account-menu", settings)
                 screenshot("04-standard-account-menu", popup = true)
-                settings.assertIsDisplayed().performClick()
+                settings.assertVerificationDisplayed(compose).performVerificationClick(compose)
                 compose.waitUntil(5_000) { vm.state.value.routes == listOf(Route.Home, Route.Settings) }
                 compose.waitUntil(5_000) { compose.onAllNodes(isPopup()).fetchSemanticsNodes().isEmpty() }
                 VerificationDisplay.awaitWindowReady(compose, "settings-after-menu", compose.onNodeWithTag("settings-list"))
@@ -225,17 +225,17 @@ class ServerNavigationUiTest {
                 assertEquals(listOf(Route.Home), vm.state.value.routes)
                 val row = compose.onNodeWithTag("server-row/${vm.state.value.currentProfileId}")
                 VerificationDisplay.awaitWindowReady(compose, "outer-server-list", row)
-                row.assertIsDisplayed()
-                compose.onNodeWithTag("server-add").assertIsDisplayed()
+                row.assertVerificationDisplayed(compose)
+                compose.onNodeWithTag("server-add").assertVerificationDisplayed(compose)
                 screenshot("05-server-management")
                 // 服务器列表的设置是根路由；系统返回应回列表，不能直接退出应用。导航只有图标，以无障碍名称定位。
-                compose.onNodeWithContentDescription("设置").performClick()
+                compose.onNodeWithContentDescription("设置").performVerificationClick(compose)
                 compose.waitUntil(5_000) { vm.state.value.showServers && vm.state.value.routes == listOf(Route.Settings) }
                 VerificationDisplay.awaitWindowReady(compose, "outer-settings-before-system-back", compose.onNodeWithTag("settings-list"))
                 Espresso.pressBack()
                 compose.waitUntil(5_000) { vm.state.value.showServers && vm.state.value.routes == listOf(Route.Home) }
                 VerificationDisplay.awaitWindowReady(compose, "outer-settings-returned-to-server-list", row)
-                row.assertIsDisplayed()
+                row.assertVerificationDisplayed(compose)
                 fixture.assertHealthy()
             } finally {
                 compose.runOnUiThread { compose.activity.viewModelStore.clear() }

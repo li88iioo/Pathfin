@@ -40,12 +40,12 @@ class AppBackHandlerTest {
             }
         }
         val canvas = compose.onNodeWithTag("back-canvas")
-        val initialBounds = canvas.fetchSemanticsNode().boundsInRoot
+        val initialBounds = canvas.readVerificationNode(compose) { it.boundsInRoot }
         val initialPixels = samplePixels()
         listOf(BackEventCompat.EDGE_LEFT, BackEventCompat.EDGE_RIGHT).forEach { edge ->
             startAndProgress(.75f, edge)
             compose.waitUntil { progress() > .7f }
-            assertEquals("手势中页面尺寸和位置不能变化", initialBounds, canvas.fetchSemanticsNode().boundsInRoot)
+            assertEquals("手势中页面尺寸和位置不能变化", initialBounds, canvas.readVerificationNode(compose) { it.boundsInRoot })
             assertEquals("手势中实际图层不能缩放、平移或露出黑底", initialPixels, samplePixels())
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.dispatchOnBackCancelled() }
             compose.waitUntil { progress() == 0f }

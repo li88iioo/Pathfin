@@ -54,15 +54,15 @@ class BrowserToolbarUiTest {
         compose.onNodeWithTag("browser-tab/RESUME").assertDoesNotExist()
         compose.onNodeWithTag("browser-tab/UPCOMING").assertDoesNotExist()
         compose.onNodeWithTag("browser-tab/COLLECTIONS").assertDoesNotExist()
-        compose.onNodeWithTag("browser-tab/GENRES").assertIsDisplayed()
+        compose.onNodeWithTag("browser-tab/GENRES").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("browser-tab/TAGS").assertDoesNotExist()
-        compose.onNodeWithTag("browser-tab/FAVORITES").assertIsDisplayed()
+        compose.onNodeWithTag("browser-tab/FAVORITES").assertVerificationDisplayed(compose)
 
         Espresso.pressBack()
         openSheet("browser-filter", "browser-filter-apply")
         compose.onNodeWithTag("browser-filter-choice/剧集状态/全部").assertDoesNotExist()
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasTestTag("browser-filter-value/类型/爵士"))
-        compose.onNodeWithTag("browser-filter-value/类型/爵士").assertIsDisplayed()
+        compose.onNodeWithTag("browser-filter-value/类型/爵士").assertVerificationDisplayed(compose)
     }
 
     @Test fun sortingUsesExplicitDirectionAndSelectingCurrentSortDoesNotInvertIt() {
@@ -75,17 +75,17 @@ class BrowserToolbarUiTest {
         compose.onNodeWithTag("browser-count").assert(hasAnyDescendant(hasText("1234")))
 
         openSheet("browser-sort", "browser-sort-option/DATE_CREATED")
-        compose.onNodeWithTag("browser-sort-option/DATE_CREATED").assertIsSelected().performClick()
+        compose.onNodeWithTag("browser-sort-option/DATE_CREATED").assertIsSelected().performVerificationClick(compose)
         compose.runOnIdle { assertEquals("重复选择当前排序不能反转升降序", original, state.value.query) }
         openSheet("browser-sort", "browser-sort-option/DATE_CREATED")
-        compose.onNodeWithTag("browser-sort-direction").assertTextContains("降序排序").performClick()
+        compose.onNodeWithTag("browser-sort-direction").assertTextContains("降序排序").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(descending = false), state.value.query) }
         compose.onNodeWithTag("browser-sort-direction-icon", true).assertContentDescriptionEquals("当前升序")
         openSheet("browser-sort", "browser-sort-option/TITLE")
-        compose.onNodeWithTag("browser-sort-option/TITLE").performClick()
+        compose.onNodeWithTag("browser-sort-option/TITLE").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(sort = LibrarySort.TITLE, descending = false), state.value.query) }
         openSheet("browser-sort", "browser-sort-option/TITLE")
-        compose.onNodeWithTag("browser-sort-direction").assertTextContains("升序排序").performClick()
+        compose.onNodeWithTag("browser-sort-direction").assertTextContains("升序排序").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(sort = LibrarySort.TITLE, descending = true), state.value.query) }
         compose.onNodeWithTag("browser-sort-direction-icon", true).assertContentDescriptionEquals("当前降序")
     }
@@ -116,7 +116,7 @@ class BrowserToolbarUiTest {
         compose.onNodeWithTag("browser-sort-direction-icon", true).assertDoesNotExist()
         compose.onNodeWithTag("browser-filter").assertDoesNotExist()
         compose.onNodeWithTag("library-index-activation").assertExists()
-        compose.onNodeWithTag("browser-reset").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("browser-reset").assertVerificationDisplayed(compose).performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals("类型页只能清除受支持的字母索引，原媒体筛选留待返回全部恢复",
                 original.copy(tab = LibraryTab.GENRES, nameInitial = null), state.value.query)
@@ -128,7 +128,7 @@ class BrowserToolbarUiTest {
         compose.onNodeWithTag("browser-sort").assertHasClickAction()
         compose.onNodeWithTag("browser-sort-direction-icon", true).assertContentDescriptionEquals("当前降序")
         compose.onNodeWithTag("browser-filter").assertIsEnabled()
-        compose.onNodeWithTag("browser-reset").assertIsDisplayed()
+        compose.onNodeWithTag("browser-reset").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("library-index-activation").assertExists()
         compose.runOnIdle { assertEquals(original.copy(nameInitial = null), state.value.query) }
     }
@@ -144,7 +144,7 @@ class BrowserToolbarUiTest {
             style.assertContentDescriptionEquals(if (poster) "封面样式：竖幅" else "封面样式：横幅")
             // performClick 注入真实触摸；网格重排后等实际窗口绘制完成，再取按钮的命中位置。
             VerificationDisplay.awaitWindowReady(compose, "browser-style-$index", style)
-            style.performClick()
+            style.performVerificationClick(compose)
             compose.runOnIdle {
                 assertEquals(if (poster) PosterStyle.BACKDROP else PosterStyle.POSTER, state.value.style)
                 assertEquals(original, state.value.query)
@@ -162,9 +162,9 @@ class BrowserToolbarUiTest {
         VerificationDisplay.awaitWindowReady(compose, "browser-toolbar", compose.onNodeWithTag("browser-category"))
         compose.onNodeWithTag("browser-reset").assertDoesNotExist()
         compose.runOnIdle { state.value = state.value.copy(query = plain.copy(nameInitial = "B")) }
-        compose.onNodeWithTag("browser-reset").assertIsDisplayed()
+        compose.onNodeWithTag("browser-reset").assertVerificationDisplayed(compose)
         compose.runOnIdle { state.value = state.value.copy(query = plain.copy(nameInitial = "B", played = false, genres = setOf("科幻"))) }
-        compose.onNodeWithTag("browser-reset").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("browser-reset").assertVerificationDisplayed(compose).performVerificationClick(compose)
         compose.runOnIdle { assertEquals("只清筛选与字母，排序和类型保持", plain, state.value.query) }
         compose.onNodeWithTag("browser-reset").assertDoesNotExist()
     }
@@ -179,7 +179,7 @@ class BrowserToolbarUiTest {
         openSheet("browser-filter", "browser-filter-apply")
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasTestTag("browser-filter-value/类型/科幻"))
         compose.onNodeWithTag("browser-filter-value/类型/科幻").assertIsSelected()
-        compose.onNodeWithTag("browser-filter-reset").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("browser-filter-reset").assertVerificationDisplayed(compose).performVerificationClick(compose)
         compose.runOnIdle { assertEquals("重置仅修改抽屉草稿", original, state.value.query) }
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasTestTag("browser-filter-all/类型"))
         compose.onNodeWithTag("browser-filter-all/类型").assertIsSelected()
@@ -188,8 +188,8 @@ class BrowserToolbarUiTest {
         openSheet("browser-filter", "browser-filter-apply")
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasTestTag("browser-filter-value/发行年份/2021"))
         compose.onNodeWithTag("browser-filter-value/发行年份/2021").assertIsSelected()
-        compose.onNodeWithTag("browser-filter-reset").performClick()
-        compose.onNodeWithTag("browser-filter-apply").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("browser-filter-reset").performVerificationClick(compose)
+        compose.onNodeWithTag("browser-filter-apply").assertVerificationDisplayed(compose).performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(played = null, favorite = null, genres = emptySet(), tags = emptySet(),
             years = emptySet(), officialRatings = emptySet()), state.value.query) }
     }
@@ -214,7 +214,7 @@ class BrowserToolbarUiTest {
         val grid = compose.onNodeWithTag("browser-grid")
         VerificationDisplay.awaitWindowReady(compose, "landscape-library-grid", grid)
         // 横屏海报可高于视口；验证真实滚动后资料可达，不要求把整个卡片压缩进首屏。
-        grid.performTouchInput { compose.runOnUiThread { visibleSize }; swipeUp() }
+        grid.performVerificationTouchInput(compose) { swipeUp() }
         compose.waitForIdle()
         assertTrue("横屏应实际滚动到海报下方资料", grid.fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange].value() > 0f)
@@ -229,7 +229,7 @@ class BrowserToolbarUiTest {
         val title = layouts.single()
         assertEquals(1, title.lineCount)
         assertEquals(TextAlign.Start, title.layoutInput.style.textAlign)
-        compose.onNodeWithTag("poster-subtitle/$id", true).assertTextEquals(subtitle).assertIsDisplayed()
+        compose.onNodeWithTag("poster-subtitle/$id", true).assertTextEquals(subtitle).assertVerificationDisplayed(compose)
     }
 
     private fun assertToolbarOrder() {
@@ -265,7 +265,7 @@ class BrowserToolbarUiTest {
     private fun openSheet(button: String, expected: String) {
         val node = compose.onNodeWithTag(button)
         VerificationDisplay.awaitWindowReady(compose, button, node)
-        node.assertIsEnabled().performClick()
+        node.assertIsEnabled().performVerificationClick(compose)
         val anchorTag = when (button) {
             "browser-sort" -> "browser-sort-sheet"
             "browser-category" -> "browser-category-sheet"
@@ -275,8 +275,8 @@ class BrowserToolbarUiTest {
         // ModalBottomSheet 拥有独立窗口；宿主 toolbar 的就绪不能代替新弹层首绘与焦点。
         val anchor = compose.onNodeWithTag(anchorTag)
         VerificationDisplay.awaitWindowReady(compose, "$button-dialog", anchor)
-        anchor.assertIsDisplayed()
-        compose.onNodeWithTag(expected).assertIsDisplayed()
+        anchor.assertVerificationDisplayed(compose)
+        compose.onNodeWithTag(expected).assertVerificationDisplayed(compose)
     }
 
     private fun show(state: MutableState<BrowserUiState>, viewport: MutableState<DpSize> = mutableStateOf(DpSize(390.dp, 760.dp)),

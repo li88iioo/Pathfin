@@ -80,18 +80,18 @@ class CastingFlowTest {
             CastSheetContent(state.value, "profile", permission.value, false, null, { discoveries.incrementAndGet() },
                 { permissions.incrementAndGet() }, {}, {}, {}, {}, {})
         } }
-        compose.onNodeWithText("DLNA 设备").assertIsDisplayed()
-        compose.onNodeWithTag("cast-permission").performClick()
+        compose.onNodeWithText("DLNA 设备").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("cast-permission").performVerificationClick(compose)
         assertEquals(1, permissions.get()); assertEquals(0, discoveries.get())
         compose.runOnIdle { permission.value = true }
-        compose.onNodeWithText("未发现 DLNA 设备").assertIsDisplayed()
+        compose.onNodeWithText("未发现 DLNA 设备").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("cast-retry").assertDoesNotExist()
         pullPageToRefresh(compose, stage = "cast-empty-discovery-pull")
         assertEquals(1, discoveries.get())
-        val bounds = compose.onNodeWithTag("cast-content").fetchSemanticsNode().boundsInRoot
+        val bounds = compose.onNodeWithTag("cast-content").readVerificationNode(compose) { it.boundsInRoot }
         compose.runOnIdle { state.value = state.value.copy(discovering = true) }
-        compose.onNodeWithTag("cast-discovering").assertIsDisplayed()
-        assertEquals("加载前后底部页尺寸稳定", bounds, compose.onNodeWithTag("cast-content").fetchSemanticsNode().boundsInRoot)
+        compose.onNodeWithTag("cast-discovering").assertVerificationDisplayed(compose)
+        assertEquals("加载前后底部页尺寸稳定", bounds, compose.onNodeWithTag("cast-content").readVerificationNode(compose) { it.boundsInRoot })
     }
 
     @Test fun controlsUseActualCallbacksBusyCannotPauseAgainAndOtherAccountIsIsolated() {
@@ -107,18 +107,18 @@ class CastingFlowTest {
         scroll("cast-play-pause")
         val toggle = compose.onNodeWithTag("cast-play-pause")
         VerificationDisplay.awaitWindowReady(compose, "cast-controls-pause", toggle)
-        toggle.assertIsDisplayed().assertIsEnabled().performClick()
+        toggle.assertVerificationDisplayed(compose).assertIsEnabled().performVerificationClick(compose)
         assertEquals(1, pauses.get())
         compose.runOnIdle { state.value = state.value.copy(status = CastStatus.PAUSED) }
         compose.waitUntil(10_000) {
             compose.onAllNodes(hasTestTag("cast-play-pause") and hasText("继续播放")).fetchSemanticsNodes().isNotEmpty()
         }
         VerificationDisplay.awaitWindowReady(compose, "cast-controls-resume", toggle)
-        toggle.assertIsDisplayed().assertIsEnabled().performClick()
+        toggle.assertVerificationDisplayed(compose).assertIsEnabled().performVerificationClick(compose)
         assertEquals(1, plays.get())
         compose.runOnIdle { state.value = state.value.copy(busy = true) }
         compose.onNodeWithTag("cast-play-pause").assertIsNotEnabled()
-        compose.onNodeWithTag("cast-stop").assertIsEnabled().performClick(); assertEquals(1, stops.get())
+        compose.onNodeWithTag("cast-stop").assertIsEnabled().performVerificationClick(compose); assertEquals(1, stops.get())
         compose.runOnIdle { state.value = state.value.copy(profileId = "another-profile") }
         compose.onNodeWithTag("cast-controls").assertDoesNotExist()
         compose.onNodeWithText("Synthetic video").assertDoesNotExist()

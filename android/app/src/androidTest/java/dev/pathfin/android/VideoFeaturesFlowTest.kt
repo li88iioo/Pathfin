@@ -2,7 +2,6 @@ package dev.pathfin.android
 
 import android.content.Context
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasClickAction
@@ -14,10 +13,8 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
-import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.util.UnstableApi
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -78,7 +75,7 @@ class VideoFeaturesFlowTest {
             state.home.error?.let { throw AssertionError("测试媒体库读取失败：$it") }
             state.session != null && state.home.loaded && !state.home.loading
         }
-        compose.onAllNodesWithText(MOVIE_NAME).onFirst().performScrollTo().performClick()
+        compose.onAllNodesWithText(MOVIE_NAME).onFirst().performScrollTo().performVerificationClick(compose)
         waitForDetail(app)
 
         // 允许 fixture 在其他用例之后复用；仅通过实际 UI 归一化这个合成影片的收藏状态。
@@ -89,18 +86,18 @@ class VideoFeaturesFlowTest {
 
         // 详情按参考不显示底部导航；先返回首页，再打开收藏，仍验证真实服务器写回。
         compose.onNodeWithContentDescription("收藏").assertDoesNotExist()
-        compose.onNodeWithContentDescription("返回").performClick()
+        compose.onNodeWithContentDescription("返回").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { app.state.value.route == Route.Home }
-        compose.onNodeWithContentDescription("收藏").performClick()
+        compose.onNodeWithContentDescription("收藏").performVerificationClick(compose)
         waitForFavorites(app, shouldContainMovie = true)
-        compose.onNodeWithText(MOVIE_NAME).assertIsDisplayed()
-        compose.onNodeWithTag("discovery-section/MOVIES").assertIsDisplayed()
+        compose.onNodeWithText(MOVIE_NAME).assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("discovery-section/MOVIES").assertVerificationDisplayed(compose)
         favoriteDiscoveryCategories.filterNot { it == DiscoveryCategory.MOVIES }.forEach {
             compose.onNodeWithTag("discovery-section/${it.name}").assertDoesNotExist()
         }
         compose.onNodeWithTag("browser-toolbar").assertDoesNotExist()
         compose.onNodeWithContentDescription("更多").assertDoesNotExist()
-        compose.onNodeWithTag("discovery-item/MOVIES/$ITEM_ID").performClick()
+        compose.onNodeWithTag("discovery-item/MOVIES/$ITEM_ID").performVerificationClick(compose)
         waitForDetail(app)
         setFavorite(app, false)
         assertFalse("取消收藏必须写回服务器", runBlocking { app.api.item(session, ITEM_ID).isFavorite })
@@ -108,19 +105,19 @@ class VideoFeaturesFlowTest {
             app.api.items(session, options = LibraryQuery(favorite = true, itemTypes = setOf("Movie")))
         }
         assertTrue("服务器收藏过滤结果必须同步移除影片", favoritesFromServer.items.none { it.id == ITEM_ID })
-        compose.onNodeWithContentDescription("返回").performClick()
+        compose.onNodeWithContentDescription("返回").performVerificationClick(compose)
         waitForFavorites(app, shouldContainMovie = false)
-        compose.onNodeWithText("还没有收藏").assertIsDisplayed()
+        compose.onNodeWithText("还没有收藏").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("discovery-section/MOVIES").assertDoesNotExist()
         compose.onAllNodesWithText(MOVIE_NAME).assertCountEquals(0)
 
-        compose.onNodeWithContentDescription("首页").performClick()
+        compose.onNodeWithContentDescription("首页").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { app.state.value.route == Route.Home }
-        compose.onNodeWithTag("home-more").performClick()
-        compose.onNodeWithText("设置", substring = false).performClick()
+        compose.onNodeWithTag("home-more").performVerificationClick(compose)
+        compose.onNodeWithText("设置", substring = false).performVerificationClick(compose)
         compose.onNodeWithTag("settings-list").performScrollToNode(hasText("播放") and hasClickAction())
-        compose.onNode(hasText("播放") and hasClickAction()).performClick()
-        compose.onNodeWithText(STRM_LABEL).performScrollTo().assertIsOff().performClick()
+        compose.onNode(hasText("播放") and hasClickAction()).performVerificationClick(compose)
+        compose.onNodeWithText(STRM_LABEL).performScrollTo().assertIsOff().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { app.state.value.preferences.originalPathEnabled }
         assertTrue("STRM 开关必须保存到独立 Store", AppPreferencesStore(compose.activity).load().originalPathEnabled)
 
@@ -128,7 +125,7 @@ class VideoFeaturesFlowTest {
         val recreated = compose.runOnIdle { ViewModelProvider(compose.activity)[AppViewModel::class.java] }
         assertTrue("重建后的界面必须读取已保存的开启值", recreated.state.value.preferences.originalPathEnabled)
         assertTrue("Activity 重建不应重置落盘偏好", AppPreferencesStore(compose.activity).load().originalPathEnabled)
-        compose.onNodeWithText(STRM_LABEL).performScrollTo().assertIsOn().performClick()
+        compose.onNodeWithText(STRM_LABEL).performScrollTo().assertIsOn().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { !recreated.state.value.preferences.originalPathEnabled }
         assertFalse("再次关闭也必须保存", AppPreferencesStore(compose.activity).load().originalPathEnabled)
     }
@@ -144,8 +141,7 @@ class VideoFeaturesFlowTest {
     private fun setFavorite(app: AppViewModel, favorite: Boolean) {
         val target = compose.onNodeWithContentDescription(if (favorite) "收藏媒体" else "取消收藏")
         VerificationDisplay.awaitWindowReady(compose, "favorite-action-$favorite", target)
-        target.performTouchInput {
-            compose.runOnUiThread { visibleSize }
+        target.performVerificationTouchInput(compose) {
             click()
         }
         compose.waitUntil(WAIT_MS) {

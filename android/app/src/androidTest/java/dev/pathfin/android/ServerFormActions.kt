@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.AnnotatedString
@@ -21,7 +20,7 @@ internal fun ComposeTestRule.setFieldText(tag: String, value: String) {
 /** 已有服务器时从媒体空间进入连接页；没有服务器时首次连接页即为当前页面。 */
 internal fun ComposeTestRule.openServerForm(timeoutMillis: Long = 10_000) {
     waitUntil(timeoutMillis) { exists("server-add") || exists("login-server") }
-    if (!exists("login-server")) onNodeWithTag("server-add").performClick()
+    if (!exists("login-server")) onNodeWithTag("server-add").performVerificationClick(this)
     waitUntil(timeoutMillis) { exists("login-server") }
 }
 
@@ -29,14 +28,14 @@ internal fun ComposeTestRule.openServerForm(timeoutMillis: Long = 10_000) {
 internal fun ComposeTestRule.enterServerAddress(url: String, allowHttp: Boolean) {
     openServerForm()
     setFieldText("login-server", url)
-    if (allowHttp) onNodeWithTag("login-http").performScrollTo().assertIsOff().performClick()
+    if (allowHttp) onNodeWithTag("login-http").performScrollTo().assertIsOff().performVerificationClick(this)
 }
 
 /** 提交地址并等待第二步；服务器公开了账号列表时切换到手动输入用户名。 */
 internal fun ComposeTestRule.continueToAccount(timeoutMillis: Long = 20_000) {
-    onNodeWithTag("login-submit").performClick()
+    onNodeWithTag("login-submit").performVerificationClick(this)
     waitUntil(timeoutMillis) { exists("server-display-name") }
-    if (!exists("login-username")) onNodeWithText("其他").performClick()
+    if (!exists("login-username")) onNodeWithText("其他").performVerificationClick(this)
 }
 
 internal fun ComposeTestRule.enterAccount(username: String, password: String) {
@@ -51,5 +50,5 @@ internal fun ComposeTestRule.connectServer(url: String, username: String, passwo
     enterAccount(username, password)
     if (displayName != null) setFieldText("server-display-name", displayName)
     // 提交按钮固定在连接页底部，不在滚动区域内。
-    onNodeWithTag("login-submit").performClick()
+    onNodeWithTag("login-submit").performVerificationClick(this)
 }

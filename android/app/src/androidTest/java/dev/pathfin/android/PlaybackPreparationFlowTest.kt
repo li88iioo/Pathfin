@@ -1,9 +1,7 @@
 package dev.pathfin.android
 
 import android.content.Context
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.util.UnstableApi
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -178,7 +176,7 @@ class PlaybackPreparationFlowTest {
             fixture.nextPlayback.awaitEntered()
             // 准备期间留在详情页，播放按钮转圈；不再切到过渡页。
             await(fixture) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("detail-play-spinner")).fetchSemanticsNodes().size == 1 }
-            compose.onNodeWithTag("detail-play-spinner").assertIsDisplayed()
+            compose.onNodeWithTag("detail-play-spinner").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("playback-preparation").assertDoesNotExist()
             val job = pendingJob(app)
             fixture.nextPlayback.expectCancellation.set(true)
@@ -228,7 +226,7 @@ class PlaybackPreparationFlowTest {
             fixture.playbackStatus.set(200)
             // 打开详情时会预取一次 PlaybackInfo，这里只核对重试本身发出了新请求。
             val requestsBeforeRetry = fixture.nextPlaybackRequests.get()
-            compose.onNodeWithTag("playback-preparation-retry").assertIsDisplayed().performClick()
+            compose.onNodeWithTag("playback-preparation-retry").assertVerificationDisplayed(compose).performVerificationClick(compose)
             await(fixture) { main {
                 app.state.value.playbackError?.let { throw AssertionError("重试准备失败：$it") }
                 playback.state.value.errorMessage?.let { throw AssertionError("真实 Exo 起播失败：$it") }

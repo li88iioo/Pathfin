@@ -99,7 +99,7 @@ class LibrarySearchFlowTest {
     @Test fun musicSearchFindsArtistsAndArtistAlbumsKeepTheirTrackPlaybackEntry() = withApp(supportedLibraries = true) { env ->
         val library = env.vm.state.value.home.libraries.single { it.id == MUSIC }
         openLibrary(env, library)
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         submit("music")
         val results = awaitBrowser(env, Route.LibrarySearch(library).key) { it.content.items.size == 3 }
         assertEquals(setOf("MusicAlbum", "MusicArtist", "Audio"), results.content.items.map { it.type }.toSet())
@@ -168,7 +168,7 @@ class LibrarySearchFlowTest {
         assertEquals(preserved, env.vm.state.value.browsers[MIXED_FOLDER])
         assertEquals("详情返回复用目录内容", 1, env.fixture.folderRequests(MIXED_FOLDER).size)
 
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         submit("nested-audio")
         val audio = awaitBrowser(env, Route.LibrarySearch(folder).key) { it.content.items.singleOrNull()?.id == TRACK }
         assertEquals("Audio", audio.content.items.single().type)
@@ -180,7 +180,7 @@ class LibrarySearchFlowTest {
         await(env, "目录内搜索的音频仍可打开详情") { it.route == Route.Detail(TRACK) && !it.detailLoading && it.details[TRACK]?.type == "Audio" }
         touchDiscovery("mixed-audio-return-to-search", compose.onNodeWithContentDescription("返回"))
         await(env, "音频详情返回目录内搜索") { it.route == Route.LibrarySearch(folder) }
-        compose.onNodeWithTag("library-search-cancel").performClick()
+        compose.onNodeWithTag("library-search-cancel").performVerificationClick(compose)
         await(env, "关闭目录内搜索恢复所在子目录") { it.route == Route.Folder(folder) }
         assertEquals(preserved, env.vm.state.value.browsers[MIXED_FOLDER])
 
@@ -189,7 +189,7 @@ class LibrarySearchFlowTest {
         assertEquals(root, env.vm.state.value.browsers[MIXED])
         assertEquals(1, env.fixture.folderRequests(MIXED).size)
 
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         submit("nested-movie")
         val result = awaitBrowser(env, Route.LibrarySearch(library).key) { it.content.items.singleOrNull()?.id == MIXED_MOVIE }
         assertEquals("Movie", result.content.items.single().type)
@@ -202,7 +202,7 @@ class LibrarySearchFlowTest {
         touchDiscovery("mixed-detail-return-to-search", compose.onNodeWithContentDescription("返回"))
         await(env, "搜索详情返回仍保留跨目录结果") { it.route == Route.LibrarySearch(library) }
         assertEquals(result, env.vm.state.value.browsers[Route.LibrarySearch(library).key])
-        compose.onNodeWithTag("library-search-cancel").performClick()
+        compose.onNodeWithTag("library-search-cancel").performVerificationClick(compose)
         await(env, "关闭搜索恢复原混合库目录") { it.route == Route.Folder(library) }
         assertEquals(root, env.vm.state.value.browsers[MIXED])
     }
@@ -224,10 +224,10 @@ class LibrarySearchFlowTest {
         val filterRequests = env.fixture.filterRequests()
         val open = compose.onNodeWithTag("library-search-open")
         VerificationDisplay.awaitWindowReady(compose, "library-search-open", open)
-        open.assertIsDisplayed().performClick()
+        open.assertVerificationDisplayed(compose).performVerificationClick(compose)
         val key = Route.LibrarySearch(library).key
         await(env, "只打开搜索输入页") { it.route == Route.LibrarySearch(library) }
-        compose.onNodeWithTag("library-search-input").assertIsDisplayed()
+        compose.onNodeWithTag("library-search-input").assertVerificationDisplayed(compose)
         assertEquals(0, env.fixture.searchRequests().size)
         assertEquals(filterRequests, env.fixture.filterRequests())
         compose.onNodeWithContentDescription("首页").assertDoesNotExist()
@@ -250,7 +250,7 @@ class LibrarySearchFlowTest {
             assertEquals("SortName", initialRequest.query["sortBy"])
             assertEquals("Ascending", initialRequest.query["sortOrder"])
             assertEquals(filterRequests, env.fixture.filterRequests())
-            repeat(3) { compose.onNodeWithTag("library-search-results").performTouchInput { swipeUp() } }
+            repeat(3) { compose.onNodeWithTag("library-search-results").performVerificationTouchInput(compose) { swipeUp() } }
             compose.runOnIdle {
                 assertEquals(40, env.vm.state.value.browsers.getValue(key).content.items.size)
                 assertEquals("重复触底不能重发同一游标", 2, env.fixture.searchRequests().size)
@@ -263,21 +263,21 @@ class LibrarySearchFlowTest {
         assertEquals(45, completed.content.items.map { it.id }.distinct().size)
         assertEquals(2, env.fixture.searchRequests().size)
         assertScoped(env.fixture.searchRequests().last(), MOVIES, "Movie", "paged", 40)
-        repeat(2) { compose.onNodeWithTag("library-search-results").performTouchInput { swipeUp() } }
+        repeat(2) { compose.onNodeWithTag("library-search-results").performVerificationTouchInput(compose) { swipeUp() } }
         compose.onNodeWithText("加载更多", substring = true).assertDoesNotExist()
         main { env.vm.loadBrowser(key, append = true); env.vm.submitLibrarySearch(library, " paged ") }
         compose.waitForIdle()
         assertEquals("终页与重复同词提交都不得发新请求", 2, env.fixture.searchRequests().size)
         assertEquals(originalRequests, env.fixture.browseRequests().size)
 
-        compose.onNodeWithTag("library-search-cancel").performClick()
+        compose.onNodeWithTag("library-search-cancel").performVerificationClick(compose)
         await(env, "搜索返回原库") { it.route == Route.Folder(library) }
         compose.runOnIdle { assertEquals("搜索不能覆盖原库查询、分页或结果", original, env.vm.state.value.browsers[MOVIES]) }
         assertEquals(scroll, compose.onNodeWithTag("browser-grid").fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange].value(), .01f)
         assertEquals(originalRequests, env.fixture.browseRequests().size)
         assertEquals(filterRequests, env.fixture.filterRequests())
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         assertInput("  paged  ")
         assertEquals(completed, env.vm.state.value.browsers[key])
         assertEquals(2, env.fixture.searchRequests().size)
@@ -286,7 +286,7 @@ class LibrarySearchFlowTest {
     @Test fun newerQueryWinsAndClearingCancelsLateResultsWithoutEmptyRequests() = withApp { env ->
         val library = env.vm.state.value.home.libraries.single { it.id == MOVIES }
         openLibrary(env, library)
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         val key = Route.LibrarySearch(library).key
         val filters = env.fixture.filterRequests()
         env.fixture.blockSearch("slow-old").use { old ->
@@ -298,13 +298,13 @@ class LibrarySearchFlowTest {
             old.release()
             await(env, "取消的旧响应已实际结束") { old.finished }
             compose.runOnIdle { assertEquals("迟到旧词不能覆盖新词的真实结果", latest, env.vm.state.value.browsers[key]) }
-            compose.onNodeWithText("Search fast-new 0").assertIsDisplayed()
+            compose.onNodeWithText("Search fast-new 0").assertVerificationDisplayed(compose)
             compose.onNodeWithText("Search slow-old 0").assertDoesNotExist()
         }
         env.fixture.blockSearch("slow-clear").use { old ->
             submit("slow-clear")
             await(env, "待清空查询已发到服务端") { old.requestArrived }
-            compose.onNodeWithTag("search-clear", true).assertIsDisplayed().performClick()
+            compose.onNodeWithTag("search-clear", true).assertVerificationDisplayed(compose).performVerificationClick(compose)
             val empty = await(env, "清空应立即取消并恢复输入态") {
                 it.browsers[key]?.let { browser -> browser.query.searchTerm.isEmpty() &&
                     browser.content.items.isEmpty() && !browser.content.loading } == true
@@ -321,7 +321,7 @@ class LibrarySearchFlowTest {
             assertEquals(filters, env.fixture.filterRequests())
             assertInput("")
             // 清空后回到输入态，显示库内推荐而不是结果网格。
-            compose.onNodeWithTag("library-search-suggestions").assertIsDisplayed()
+            compose.onNodeWithTag("library-search-suggestions").assertVerificationDisplayed(compose)
         }
     }
 
@@ -330,7 +330,7 @@ class LibrarySearchFlowTest {
         openLibrary(env, library)
         val original = env.vm.state.value.browsers.getValue(SHOWS)
         val filters = env.fixture.filterRequests()
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         submit("tv")
         val key = Route.LibrarySearch(library).key
         val result = awaitBrowser(env, key) { it.content.items.singleOrNull()?.id == "tv-0" }
@@ -345,23 +345,23 @@ class LibrarySearchFlowTest {
         pullSearchResultsToRefresh("television-library-search-refresh")
         await(env, "实际下拉重读同一词与媒体库") { env.fixture.searchRequests().size == 2 && !it.browsers.getValue(key).content.loading }
         env.fixture.searchRequests().forEach { assertScoped(it, SHOWS, "Series", "tv", 0) }
-        compose.onNodeWithTag("library-search-cancel").performClick()
+        compose.onNodeWithTag("library-search-cancel").performVerificationClick(compose)
         assertEquals(original, env.vm.state.value.browsers[SHOWS])
-        compose.onNodeWithContentDescription("返回").performClick()
+        compose.onNodeWithContentDescription("返回").performVerificationClick(compose)
         await(env, "返回首页恢复导航") { it.route == Route.Home }
-        compose.onNodeWithContentDescription("首页").assertIsDisplayed()
+        compose.onNodeWithContentDescription("首页").assertVerificationDisplayed(compose)
     }
 
     @Test fun searchBarShowsLibraryRecommendationsThenTitleMatchesAndOpensDetailDirectly() = withApp { env ->
         val library = env.vm.state.value.home.libraries.single { it.id == SHOWS }
         openLibrary(env, library)
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         await(env, "进入库内搜索") { it.route == Route.LibrarySearch(library) }
         // 顶栏即搜索框：不再显示“XX内搜索”标题。
         compose.onNodeWithText("${library.name}内搜索").assertDoesNotExist()
         val recommended = compose.onNodeWithTag("search-suggestion/$SERIES")
-        compose.waitUntil(5_000) { runCatching { recommended.assertIsDisplayed() }.isSuccess }
-        compose.onNodeWithText("推荐搜索").assertIsDisplayed()
+        compose.waitUntil(5_000) { runCatching { recommended.assertVerificationDisplayed(compose) }.isSuccess }
+        compose.onNodeWithText("推荐搜索").assertVerificationDisplayed(compose)
         val recommendation = env.fixture.suggestionRequests().single()
         assertEquals(SHOWS, recommendation.query["parentId"])
         assertEquals("Series", recommendation.query["includeItemTypes"])
@@ -369,16 +369,16 @@ class LibrarySearchFlowTest {
 
         compose.onNodeWithTag("library-search-input").performTextReplacement("match")
         val match = compose.onNodeWithTag("search-suggestion/match-0")
-        compose.waitUntil(5_000) { runCatching { match.assertIsDisplayed() }.isSuccess }
-        compose.onNodeWithText("相关条目").assertIsDisplayed()
+        compose.waitUntil(5_000) { runCatching { match.assertVerificationDisplayed(compose) }.isSuccess }
+        compose.onNodeWithText("相关条目").assertVerificationDisplayed(compose)
         val typed = env.fixture.suggestionRequests().last()
         assertEquals("match", typed.query["searchTerm"])
         assertEquals(SHOWS, typed.query["parentId"])
         assertEquals("输入建议不计入完整结果搜索", 0, env.fixture.searchRequests().size)
 
-        compose.onNodeWithTag("search-clear", true).performClick()
-        compose.waitUntil(5_000) { runCatching { recommended.assertIsDisplayed() }.isSuccess }
-        recommended.performClick()
+        compose.onNodeWithTag("search-clear", true).performVerificationClick(compose)
+        compose.waitUntil(5_000) { runCatching { recommended.assertVerificationDisplayed(compose) }.isSuccess }
+        recommended.performVerificationClick(compose)
         await(env, "点建议直接进入详情") { it.route == Route.Detail(SERIES) }
         assertEquals(0, env.fixture.searchRequests().size)
     }
@@ -387,17 +387,17 @@ class LibrarySearchFlowTest {
         main { env.vm.setPreferences(env.vm.state.value.preferences.copy(pullToRefreshEnabled = false)) }
         val library = env.vm.state.value.home.libraries.single { it.id == MOVIES }
         openLibrary(env, library)
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         submit("nothing")
         val key = Route.LibrarySearch(library).key
         awaitBrowser(env, key) { it.query.searchTerm == "nothing" && it.content.total == 0 && it.content.items.isEmpty() }
         assertEquals(1, env.fixture.searchRequests().size)
-        compose.onNodeWithText("没有找到内容").assertIsDisplayed()
+        compose.onNodeWithText("没有找到内容").assertVerificationDisplayed(compose)
         env.fixture.blockSearch("nothing").use { gate ->
-            compose.onNodeWithTag("library-search-cancel").performClick()
+            compose.onNodeWithTag("library-search-cancel").performVerificationClick(compose)
             await(env, "空结果返回原库") { it.route == Route.Folder(library) }
             VerificationDisplay.awaitWindowReady(compose, "empty-search-reentry", compose.onNodeWithTag("library-search-open"))
-            compose.onNodeWithTag("library-search-open").performClick()
+            compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
             await(env, "关闭下拉后，合法空结果再进入仍需自动重读") { gate.requestArrived && it.browsers[key]?.content?.loading == true }
             assertInput("nothing")
             assertEquals(2, env.fixture.searchRequests().size)
@@ -413,7 +413,7 @@ class LibrarySearchFlowTest {
     @Test fun automaticAppendFailureRetainsRowsStopsRequestsAndRecoversThroughRealPull() = withApp { env ->
         val library = env.vm.state.value.home.libraries.single { it.id == MOVIES }
         openLibrary(env, library)
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         val key = Route.LibrarySearch(library).key
         env.fixture.failNextItems("append-failure", 40)
         val first = env.fixture.blockItems("append-failure", 40).use { append ->
@@ -433,7 +433,7 @@ class LibrarySearchFlowTest {
         assertEquals(first, failed.items)
         assertEquals(40, failed.nextIndex)
         assertEquals(2, env.fixture.searchRequests().size)
-        repeat(3) { compose.onNodeWithTag("library-search-results").performTouchInput { swipeUp() } }
+        repeat(3) { compose.onNodeWithTag("library-search-results").performVerificationTouchInput(compose) { swipeUp() } }
         compose.waitForIdle()
         assertEquals("分页失败停留底部不得自动自旋", 2, env.fixture.searchRequests().size)
         compose.onNodeWithText("重试").assertDoesNotExist()
@@ -460,7 +460,7 @@ class LibrarySearchFlowTest {
     @Test fun aRealEmptyAppendEndsPaginationEvenWhenTheServerTotalIsLarger() = withApp { env ->
         val library = env.vm.state.value.home.libraries.single { it.id == MOVIES }
         openLibrary(env, library)
-        compose.onNodeWithTag("library-search-open").performClick()
+        compose.onNodeWithTag("library-search-open").performVerificationClick(compose)
         submit("empty-tail")
         val key = Route.LibrarySearch(library).key
         val first = await(env, "真实首屏及空追加完成前后均保留40条") {
@@ -473,7 +473,7 @@ class LibrarySearchFlowTest {
         assertEquals(first, complete.content.items)
         assertEquals(45, complete.content.total)
         assertEquals(2, env.fixture.searchRequests().size)
-        repeat(4) { compose.onNodeWithTag("library-search-results").performTouchInput { swipeUp() } }
+        repeat(4) { compose.onNodeWithTag("library-search-results").performVerificationTouchInput(compose) { swipeUp() } }
         compose.waitForIdle()
         assertEquals("空页必须结束，不可重复请求相同游标", 2, env.fixture.searchRequests().size)
         assertEquals(listOf("0", "40"), env.fixture.searchRequests().map { it.query["startIndex"] })
@@ -563,7 +563,7 @@ class LibrarySearchFlowTest {
         env.fixture.blockAuthentication().use { authentication ->
             var held = false
             try {
-                compose.onNodeWithTag("library-index/A").performTouchInput { down(center) }
+                compose.onNodeWithTag("library-index/A").performVerificationTouchInput(compose) { down(center) }
                 held = true
                 compose.runOnIdle {
                     assertEquals("真实 DOWN 本身不能提交字母", original.query, env.vm.state.value.browsers.getValue(MOVIES).query)
@@ -572,7 +572,7 @@ class LibrarySearchFlowTest {
                 compose.onNodeWithTag("library-index/A").assertIsNotSelected()
                 main { env.vm.login(env.fixture.baseUrl, USERNAME, PASSWORD, allowHttp = true, displayName = "Library search fixture") }
                 await(env, "认证网络保持阻塞且旧页请求门禁已生效") { authentication.requestArrived && it.loginBusy }
-                activation.performTouchInput { up() }
+                activation.performVerificationTouchInput(compose) { up() }
                 held = false
                 compose.runOnIdle {
                     assertEquals("认证期间到达的真实 UP 不能改变旧查询", original.query,
@@ -581,7 +581,7 @@ class LibrarySearchFlowTest {
                 }
                 compose.onNodeWithTag("library-index").assertDoesNotExist()
                 compose.onNodeWithTag("library-index-preview").assertDoesNotExist()
-            } finally { if (held) activation.performTouchInput { cancel() } }
+            } finally { if (held) activation.performVerificationTouchInput(compose) { cancel() } }
             authentication.release()
             await(env, "正常认证可完成且只读首页专用接口") { !it.loginBusy && it.home.loaded && !it.home.loading }
             assertEquals(requests, env.fixture.itemRequests().size)
@@ -603,15 +603,15 @@ class LibrarySearchFlowTest {
             gate.release()
             awaitBrowser(env, MOVIES) { it.query == queryA && it.content.items.singleOrNull()?.id == "initial-A-0" }
         }
-        compose.onNodeWithText("Search initial-A 0").assertIsDisplayed()
+        compose.onNodeWithText("Search initial-A 0").assertVerificationDisplayed(compose)
         val coldVisibleMs = SystemClock.elapsedRealtime() - coldStart
         main { env.vm.changeBrowserQuery(MOVIES, queryB) }
         awaitBrowser(env, MOVIES) { it.query == queryB && it.content.items.singleOrNull()?.id == "initial-B-0" }
-        compose.onNodeWithText("Search initial-B 0").assertIsDisplayed()
+        compose.onNodeWithText("Search initial-B 0").assertVerificationDisplayed(compose)
 
         val warmStart = SystemClock.elapsedRealtime()
         restoreCached(env, queryA, firstA.content)
-        compose.onNodeWithText("Search initial-A 0").assertIsDisplayed()
+        compose.onNodeWithText("Search initial-A 0").assertVerificationDisplayed(compose)
         compose.onNodeWithText("Search initial-B 0").assertDoesNotExist()
         val warmVisibleMs = SystemClock.elapsedRealtime() - warmStart
         assertEquals(listOf("A", "B"), env.fixture.browseRequests().drop(before).map { it.query["nameStartsWith"] })
@@ -807,7 +807,7 @@ class LibrarySearchFlowTest {
         VerificationDisplay.awaitWindowReady(compose, "global-search-preview-end",
             compose.onNodeWithTag("discovery-item/MOVIES/global-paged-5"))
         compose.onNodeWithTag("discovery-item/MOVIES/global-paged-6").assertDoesNotExist()
-        repeat(2) { preview.performTouchInput { compose.runOnUiThread { visibleSize }; swipeLeft() } }
+        repeat(2) { preview.performVerificationTouchInput(compose) { swipeLeft() } }
         compose.waitForIdle()
         assertEquals("6 项预览横向触底不能追加隐藏内容", 1, env.fixture.searchRequests().size)
         env.fixture.blockItems("global-paged", 24).use { append ->
@@ -821,8 +821,8 @@ class LibrarySearchFlowTest {
             assertEquals("打开更多不能重发首屏", 1, env.fixture.searchRequests().count { it.query["startIndex"] == "0" })
             scrollUntil(env, "discovery-grid/MOVIES", "完整电影列表真实纵向触底分页") { append.requestArrived }
             await(env, "全站电影追加在途") { it.search.results.sections[DiscoveryCategory.MOVIES]?.loadingMore == true }
-            repeat(2) { compose.onNodeWithTag("discovery-grid/MOVIES").performTouchInput {
-                compose.runOnUiThread { visibleSize }; swipeUp()
+            repeat(2) { compose.onNodeWithTag("discovery-grid/MOVIES").performVerificationTouchInput(compose) {
+                swipeUp()
             } }
             assertEquals(2, env.fixture.searchRequests().size)
             append.release()
@@ -832,8 +832,8 @@ class LibrarySearchFlowTest {
                 } == true
             }
         }
-        repeat(2) { compose.onNodeWithTag("discovery-grid/MOVIES").performTouchInput {
-            compose.runOnUiThread { visibleSize }; swipeUp()
+        repeat(2) { compose.onNodeWithTag("discovery-grid/MOVIES").performVerificationTouchInput(compose) {
+            swipeUp()
         } }
         main { env.vm.search(" global-paged "); env.vm.loadMoreDiscovery(DiscoveryCategory.MOVIES, favorite = false) }
         compose.waitForIdle()
@@ -889,12 +889,12 @@ class LibrarySearchFlowTest {
             env.fixture.blockItems(id, 40).use { append ->
                 scrollUntil(env, tag, "详情实际${if (type == "Season") "横向" else "纵向"}触底", horizontal = type == "Season") { append.requestArrived }
                 await(env, "详情追加在途") { it.folders[id]?.loadingMore == true }
-                repeat(2) { compose.onNodeWithTag(tag).performTouchInput { if (type == "Season") swipeLeft() else swipeUp() } }
+                repeat(2) { compose.onNodeWithTag(tag).performVerificationTouchInput(compose) { if (type == "Season") swipeLeft() else swipeUp() } }
                 assertEquals(2, env.fixture.folderRequests(id).size)
                 append.release()
                 await(env, "详情实际自动补齐") { it.folders[id]?.let { page -> !page.loadingMore && page.items.size == 45 && page.nextIndex == 45 } == true }
             }
-            repeat(2) { compose.onNodeWithTag(tag).performTouchInput { if (type == "Season") swipeLeft() else swipeUp() } }
+            repeat(2) { compose.onNodeWithTag(tag).performVerificationTouchInput(compose) { if (type == "Season") swipeLeft() else swipeUp() } }
             assertEquals(listOf("0", "40"), env.fixture.folderRequests(id).map { it.query["startIndex"] })
             assertEquals(45, env.vm.state.value.folders.getValue(id).items.map { it.id }.distinct().size)
             compose.onNodeWithText("加载更多", substring = true).assertDoesNotExist()
@@ -909,11 +909,11 @@ class LibrarySearchFlowTest {
         val originalRoutes = env.vm.state.value.routes
         val originalKey = env.vm.state.value.route.key
         compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-episode-count"))
-        compose.onNodeWithTag("detail-episode-count").performClick()
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
-        compose.onNodeWithTag("detail-episode-sheet-tabs/$SECOND_SEASON").performClick()
+        compose.onNodeWithTag("detail-episode-count").performVerificationClick(compose)
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("detail-episode-sheet-tabs/$SECOND_SEASON").performVerificationClick(compose)
         await(env, "切季刷新真实详情和单集") { (it.route as? Route.Detail)?.id == SECOND_SEASON && !it.detailLoading && it.folders[SECOND_SEASON]?.items?.size == 40 }
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
         assertEquals(originalRoutes.size, env.vm.state.value.routes.size)
         assertEquals(originalKey, env.vm.state.value.route.key)
         assertTrue(env.vm.state.value.folders.getValue(SECOND_SEASON).items.all { it.id.startsWith(SECOND_SEASON) })
@@ -923,7 +923,7 @@ class LibrarySearchFlowTest {
         androidx.test.espresso.Espresso.pressBack()
         compose.onNodeWithTag("detail-episode-sheet").assertDoesNotExist()
         assertEquals(SECOND_SEASON, (env.vm.state.value.route as Route.Detail).id)
-        compose.onNodeWithContentDescription("返回").performClick()
+        compose.onNodeWithContentDescription("返回").performVerificationClick(compose)
         await(env, "一次返回原页面") { it.route == Route.Home }
         assertEquals(originalRoutes.dropLast(1), env.vm.state.value.routes)
     }
@@ -931,7 +931,7 @@ class LibrarySearchFlowTest {
     private fun selectLetter(label: String, diagnostic: Environment? = null) {
         showLetterIndex()
         diagnostic?.let { recordLetterDiagnostic(it, "$label-before-touch") }
-        compose.onNodeWithTag("library-index/$label").assertIsDisplayed().performTouchInput { click() }
+        compose.onNodeWithTag("library-index/$label").assertVerificationDisplayed(compose).performVerificationClick(compose)
         diagnostic?.let { recordLetterDiagnostic(it, "$label-after-touch") }
     }
 
@@ -943,9 +943,11 @@ class LibrarySearchFlowTest {
             val bounds = listOf("library-index-activation", "library-index", "library-index/0", "library-index/#",
                 "library-index/A", "browser-toolbar", "browser-filter", "browser-grid").joinToString("\n") { tag ->
                 val node = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().singleOrNull()
-                if (node == null) "$tag absent" else "$tag root=${node.boundsInRoot} window=${node.boundsInWindow} " +
-                    "disabled=${node.config.contains(SemanticsProperties.Disabled)} " +
-                    "actions=${node.config.getOrNull(SemanticsActions.CustomActions)?.map { it.label }}"
+                if (node == null) "$tag absent" else compose.runOnUiThread {
+                    "$tag root=${node.boundsInRoot} window=${node.boundsInWindow} " +
+                        "disabled=${node.config.contains(SemanticsProperties.Disabled)} " +
+                        "actions=${node.config.getOrNull(SemanticsActions.CustomActions)?.map { it.label }}"
+                }
             }
             val requests = env.fixture.itemRequests().joinToString("\n") { "${it.method} ${it.path} ${it.query}" }
             val message = "$stage route=${state.route.key} loginBusy=${state.loginBusy} reauthentication=${state.reauthenticationProfile != null} " +
@@ -972,8 +974,8 @@ class LibrarySearchFlowTest {
         val results = compose.onNodeWithTag("library-search-results")
         val input = compose.onNodeWithTag("library-search-input")
         VerificationDisplay.awaitWindowReady(compose, stage, results, input)
-        val listBounds = results.fetchSemanticsNode().boundsInRoot
-        val inputBounds = input.fetchSemanticsNode().boundsInRoot
+        val nodes = listOf(results, input).map { it.fetchSemanticsNode() }
+        val (listBounds, inputBounds) = compose.runOnUiThread { nodes.map { it.boundsInRoot } }
         val clearance = 12f * compose.activity.resources.displayMetrics.density
         // 结果网格绘制在标题栏/输入卡片后面，不能再从全页固定 15%（可能是输入框）发 DOWN。
         val startY = maxOf(listBounds.height * .15f, inputBounds.bottom - listBounds.top + clearance)
@@ -981,7 +983,7 @@ class LibrarySearchFlowTest {
         assertTrue("真实下拉必须落在输入卡片下面且有可见拖动距离：$stage list=$listBounds input=$inputBounds start=$startY end=$endY",
             listBounds.top + startY > inputBounds.bottom && startY >= 0f && startY < endY && endY < listBounds.height)
         Log.i("PathfinVerificationWindow", "search-pull $stage list=$listBounds input=$inputBounds start=$startY end=$endY")
-        results.assertIsDisplayed().performTouchInput {
+        results.assertVerificationDisplayed(compose).performVerificationTouchInput(compose) {
             swipe(Offset(width * .5f, startY), Offset(width * .5f, endY), durationMillis = 750)
         }
         compose.waitForIdle()
@@ -1027,8 +1029,7 @@ class LibrarySearchFlowTest {
         repeat(24) {
             env.fixture.assertHealthy()
             if (predicate()) return
-            list.performTouchInput {
-                compose.runOnUiThread { visibleSize }
+            list.performVerificationTouchInput(compose) {
                 if (horizontal) swipeLeft() else swipeUp()
             }
             compose.waitForIdle()
@@ -1038,10 +1039,7 @@ class LibrarySearchFlowTest {
 
     private fun touchDiscovery(stage: String, target: SemanticsNodeInteraction) {
         VerificationDisplay.awaitWindowReady(compose, stage, target)
-        target.performTouchInput {
-            compose.runOnUiThread { visibleSize }
-            click()
-        }
+        target.performVerificationClick(compose)
     }
 
     private fun openLibrary(env: Environment, library: MediaItem) {
@@ -1057,7 +1055,7 @@ class LibrarySearchFlowTest {
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
         val title = compose.onNodeWithTag(tag, useUnmergedTree = true)
         VerificationDisplay.awaitWindowReady(compose, "open-library-item-$id", title)
-        title.assertIsDisplayed().performTouchInput { compose.runOnUiThread { visibleSize }; click() }
+        title.assertVerificationDisplayed(compose).performVerificationClick(compose)
     }
 
     /** PathfinApp 组件宿主不创建播放器；这里验证真实 UI 点击、HTTP 协商及可消费 PlaybackRequest。 */
@@ -1067,7 +1065,7 @@ class LibrarySearchFlowTest {
         }
         val play = compose.onNodeWithTag("detail-play")
         VerificationDisplay.awaitWindowReady(compose, "play-library-item-$id", play)
-        play.assertIsDisplayed().performClick()
+        play.assertVerificationDisplayed(compose).performVerificationClick(compose)
         val playing = await(env, "播放操作必须完成真实来源解析，不能停在无入口或不可播放错误") {
             it.playbackError?.let { error -> throw AssertionError(error) }
             it.activePlayback?.item?.id == id && !it.preparingPlay && it.pendingPlayback == null

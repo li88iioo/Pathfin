@@ -20,14 +20,12 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import dev.pathfin.android.createVerificationComposeRule
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isPopup
@@ -322,31 +320,31 @@ class UiPreviewTest {
         selectedFrames.forEach { next ->
             compose.runOnIdle { frame = next }
             when (next.action) {
-                "server-switcher" -> compose.onNodeWithContentDescription("切换服务器").performClick()
-                "home-menu" -> compose.onNodeWithTag("home-more").performClick()
-                "sort" -> compose.onNodeWithTag("browser-sort").performClick()
-                "filter" -> compose.onNodeWithTag("browser-filter").performClick()
-                "category" -> compose.onNodeWithTag("browser-category").performClick()
-                "detail-more" -> compose.onNodeWithContentDescription("更多操作").performClick()
+                "server-switcher" -> compose.onNodeWithContentDescription("切换服务器").performVerificationClick(compose)
+                "home-menu" -> compose.onNodeWithTag("home-more").performVerificationClick(compose)
+                "sort" -> compose.onNodeWithTag("browser-sort").performVerificationClick(compose)
+                "filter" -> compose.onNodeWithTag("browser-filter").performVerificationClick(compose)
+                "category" -> compose.onNodeWithTag("browser-category").performVerificationClick(compose)
+                "detail-more" -> compose.onNodeWithContentDescription("更多操作").performVerificationClick(compose)
                 "image-editor", "image-search", "image-provider", "image-search-end" -> {
-                    compose.onNodeWithTag("detail-more").performClick()
+                    compose.onNodeWithTag("detail-more").performVerificationClick(compose)
                     VerificationDisplay.awaitWindowReady(compose, "preview-more", compose.onNodeWithTag("detail-edit-images"))
-                    compose.onNodeWithTag("detail-edit-images").performClick()
+                    compose.onNodeWithTag("detail-edit-images").performVerificationClick(compose)
                     compose.waitUntil(10_000) { compose.onAllNodesWithTag("media-image-search/Primary").fetchSemanticsNodes().isNotEmpty() }
                     VerificationDisplay.awaitWindowReady(compose, "preview-image-editor", compose.onNodeWithTag("media-image-search/Primary"))
                     if (next.action != "image-editor") {
-                        compose.onNodeWithTag("media-image-search/Primary").performClick()
+                        compose.onNodeWithTag("media-image-search/Primary").performVerificationClick(compose)
                         compose.waitUntil(10_000) { compose.onAllNodesWithTag("remote-image-result").fetchSemanticsNodes().isNotEmpty() }
                         VerificationDisplay.awaitWindowReady(compose, "preview-image-search", compose.onNodeWithTag("remote-image-search"))
-                        if (next.action == "image-provider") compose.onNodeWithTag("remote-image-provider").performClick()
+                        if (next.action == "image-provider") compose.onNodeWithTag("remote-image-provider").performVerificationClick(compose)
                         if (next.action == "image-search-end") {
                             compose.onNodeWithTag("remote-image-results").performScrollToIndex(7)
-                            compose.onAllNodesWithText("420 × 630", substring = false).onLast().assertIsDisplayed()
+                            compose.onAllNodesWithText("420 × 630", substring = false).onLast().assertVerificationDisplayed(compose)
                         }
                     }
                 }
-                "synopsis" -> { compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-synopsis")); compose.onNodeWithTag("detail-synopsis").performClick() }
-                "media" -> { compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-media-info-open")); compose.onNodeWithTag("detail-media-info-open").performClick() }
+                "synopsis" -> { compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-synopsis")); compose.onNodeWithTag("detail-synopsis").performVerificationClick(compose) }
+                "media" -> { compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-media-info-open")); compose.onNodeWithTag("detail-media-info-open").performVerificationClick(compose) }
                 "detail-lower" -> compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-file-info"))
                 "index" -> {
                     val action = compose.onNodeWithTag("library-index-activation").fetchSemanticsNode()
@@ -356,14 +354,14 @@ class UiPreviewTest {
                 "metadata-scroll" -> {
                     compose.waitUntil(10_000) { compose.onAllNodesWithTag("metadata-form").fetchSemanticsNodes().isNotEmpty() }
                     compose.onNodeWithTag("metadata-form").performScrollToIndex(5)
-                    compose.onNodeWithTag("metadata-save").assertIsDisplayed()
+                    compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
                 }
                 "detail-scrolled" -> compose.onNodeWithTag("detail-content").performScrollToIndex(1)
                 "home-scroll" -> compose.onNodeWithTag("home-list").performScrollToIndex(2)
                 "servers-scroll" -> compose.onNodeWithTag("server-list").performScrollToIndex(5)
                 "grid-scroll" -> compose.onNodeWithTag("browser-grid").performScrollToIndex(6)
                 "search-scroll" -> compose.onNodeWithTag("search-results").performScrollToIndex(1)
-                "episodes" -> { compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-episode-count")); compose.onNodeWithTag("detail-episode-count").performClick() }
+                "episodes" -> { compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-episode-count")); compose.onNodeWithTag("detail-episode-count").performVerificationClick(compose) }
             }
             compose.waitForIdle()
             // 网络图片由 Coil 在 Compose 时钟外解码；仅截图工具等待其短暂完成。

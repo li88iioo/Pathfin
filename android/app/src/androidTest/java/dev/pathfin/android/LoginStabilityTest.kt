@@ -18,7 +18,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOn
@@ -29,7 +28,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.AnnotatedString
@@ -81,22 +79,22 @@ class LoginStabilityTest {
         setText("login-server", "192.168.1.20")
         // 推断结果先体现在连接预览里；端口在“高级选项”中，展开后可核对。
         compose.onNodeWithTag("server-endpoint").assertTextEquals("将连接 http://192.168.1.20:8096")
-        compose.onNodeWithTag("server-advanced").performScrollTo().performClick()
+        compose.onNodeWithTag("server-advanced").performScrollTo().performVerificationClick(compose)
         compose.onNodeWithTag("server-port").assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("8096")))
-        compose.onNodeWithTag("login-http").performScrollTo().performClick().assertIsOn()
+        compose.onNodeWithTag("login-http").performScrollTo().performVerificationClick(compose).assertIsOn()
         compose.onNodeWithTag("login-submit").performSemanticsAction(SemanticsActions.OnClick) { click -> repeat(8) { click() } }
         compose.runOnIdle { assertEquals("同一帧内的重复点击只能探测一次", listOf(fixtureServer), probes) }
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
         compose.onNodeWithTag("login-server").assertIsEnabled().assert(!hasSetTextAction())
-        compose.onNodeWithTag("login-http").performClick().assertIsOn()
+        compose.onNodeWithTag("login-http").performVerificationClick(compose).assertIsOn()
     }
 
     @Test
     fun httpAddressWithoutConsentShowsLocalErrorAndDoesNotProbe() {
         showLogin()
         setText("login-server", "http://media.example.com")
-        compose.onNodeWithTag("login-submit").performClick()
-        compose.onNodeWithText("请先确认允许 HTTP 明文连接").assertIsDisplayed()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
+        compose.onNodeWithText("请先确认允许 HTTP 明文连接").assertVerificationDisplayed(compose)
         compose.runOnIdle { assertTrue(probes.isEmpty()) }
         compose.onNodeWithTag("login-submit").assertIsEnabled()
     }
@@ -106,7 +104,7 @@ class LoginStabilityTest {
         showLogin()
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
         setText("login-server", "  ")
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.runOnIdle { assertTrue(probes.isEmpty()) }
     }
 
@@ -158,8 +156,8 @@ class LoginStabilityTest {
     fun largeFontErrorsRemainReadableWithoutMovingTheButton() {
         showLogin(fontScale = 2f)
         setText("login-server", "https://jellyfin.example.com")
-        compose.onNodeWithTag("server-form-error").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("login-submit").assertIsDisplayed()
+        compose.onNodeWithTag("server-form-error").performScrollTo().assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("login-submit").assertVerificationDisplayed(compose)
         val initial = captureBaseline(listOf("login-submit"))
         val message = "服务器返回了错误。请确认服务器地址后重新连接；如错误仍然存在，请检查服务器日志。"
         compose.runOnIdle { error = message }
@@ -167,7 +165,7 @@ class LoginStabilityTest {
         assertBounds(initial)
         compose.onNodeWithTag("server-form-error").performScrollTo()
         assertTrue("错误区域需跟随系统字号扩大", bounds("server-form-error").height > 100f * compose.density.density)
-        compose.onNodeWithTag("login-submit").assertIsDisplayed()
+        compose.onNodeWithTag("login-submit").assertVerificationDisplayed(compose)
     }
 
     // ── 第二步：账号 ──
@@ -176,7 +174,7 @@ class LoginStabilityTest {
     fun accountStepSubmitsOnceWithProbedConfigAndServerNameDefault() {
         showLogin()
         compose.runOnIdle { probe = probeOf() }
-        compose.onNode(hasText("家庭影院") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)).assertIsDisplayed()
+        compose.onNode(hasText("家庭影院") and SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading)).assertVerificationDisplayed(compose)
         compose.onNodeWithTag("server-display-name").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("家庭影院")))
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
@@ -191,8 +189,8 @@ class LoginStabilityTest {
             compose.onNodeWithTag(tag).assertIsEnabled().assert(!hasSetTextAction())
         }
         compose.runOnIdle { busy = false; error = "用户名或密码错误" }
-        compose.onNodeWithText("用户名或密码错误").assertIsDisplayed()
-        compose.onNodeWithTag("login-submit").assertIsEnabled().performClick()
+        compose.onNodeWithText("用户名或密码错误").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("login-submit").assertIsEnabled().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(2, logins.size) }
     }
 
@@ -202,14 +200,14 @@ class LoginStabilityTest {
         compose.runOnIdle { probe = probeOf(listOf(PublicUser("u1", "阿林"), PublicUser("u2", "yuki"))) }
         compose.onAllNodesWithTag("login-username").assertCountEquals(0)
         compose.onNodeWithText("阿林").assertIsSelected()
-        compose.onNodeWithText("yuki").performClick().assertIsSelected()
+        compose.onNodeWithText("yuki").performVerificationClick(compose).assertIsSelected()
         setText("login-password", "secret")
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.runOnIdle { assertEquals("yuki", logins.single().username) }
         compose.runOnIdle { busy = false }
-        compose.onNodeWithText("其他").performClick()
+        compose.onNodeWithText("其他").performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "public-account-to-manual", compose.onNodeWithTag("login-username"))
-        compose.onNodeWithTag("login-username").assertIsDisplayed()
+        compose.onNodeWithTag("login-username").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
     }
 
@@ -217,9 +215,9 @@ class LoginStabilityTest {
     fun changeServerReturnsToAddressStep() {
         showLogin()
         compose.runOnIdle { probe = probeOf() }
-        compose.onNodeWithText("更换服务器").performClick()
+        compose.onNodeWithText("更换服务器").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(1, resets) }
-        compose.onNodeWithTag("login-server").assertIsDisplayed()
+        compose.onNodeWithTag("login-server").assertVerificationDisplayed(compose)
     }
 
     @Test
@@ -227,13 +225,13 @@ class LoginStabilityTest {
         showLogin(fontScale = 2f)
         compose.runOnIdle { probe = probeOf() }
         setText("login-username", "pathfin-test")
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.runOnIdle { busy = false; error = "用户名或密码错误，请检查后重试。" }
         compose.waitUntil(timeoutMillis = 5_000) {
             bounds("server-form-error").height > 100f * compose.density.density
         }
-        compose.onNodeWithTag("login-submit").assertIsDisplayed().assertIsEnabled()
-        compose.onNodeWithText("用户名或密码错误，请检查后重试。").assertIsDisplayed()
+        compose.onNodeWithTag("login-submit").assertVerificationDisplayed(compose).assertIsEnabled()
+        compose.onNodeWithText("用户名或密码错误，请检查后重试。").assertVerificationDisplayed(compose)
     }
 
     private fun showLogin(fontScale: Float = 1f) {
@@ -299,8 +297,8 @@ class LoginStabilityTest {
 
     private fun assertBounds(expected: Map<String, Rect>) {
         val actual = snapshotBounds(expected.keys.toList())
-        val root = compose.onRoot(useUnmergedTree = true).fetchSemanticsNode()
-        val detail = "root=${root.boundsInRoot}; expected=$expected; actual=$actual"
+        val root = compose.onRoot(useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot }
+        val detail = "root=$root; expected=$expected; actual=$actual"
         expected.forEach { (tag, before) ->
             val after = actual.getValue(tag)
             assertEquals("$tag left; $detail", before.left, after.left, 0.5f)

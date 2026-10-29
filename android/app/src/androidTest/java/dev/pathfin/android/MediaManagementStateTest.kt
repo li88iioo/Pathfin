@@ -15,7 +15,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
@@ -28,11 +27,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -91,8 +88,8 @@ class MediaManagementStateTest {
         val formBounds = bounds("metadata-form")
         val saveBounds = bounds("metadata-save")
         compose.onNodeWithTag("metadata-title").performTextReplacement(SAVED_TITLE)
-        compose.onNodeWithTag("metadata-save").assertIsDisplayed()
-        compose.onNodeWithTag("metadata-save").assertIsEnabled().performClick()
+        compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("metadata-save").assertIsEnabled().performVerificationClick(compose)
 
         waitForText(COMMITTED_READ_FAILURE, fixture)
         assertEquals("错误反馈不能重新布局正文", formBounds, bounds("metadata-form"))
@@ -101,7 +98,7 @@ class MediaManagementStateTest {
         assertEquals(1, fixture.posts.get())
         assertEquals(SAVED_TITLE, fixture.savedTitle())
         assertTrue("提交后的 GET 必须确实失败", fixture.failedGets.get() > 0)
-        compose.onNodeWithTag("metadata-save").assertIsDisplayed()
+        compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("metadata-save").assertIsNotEnabled()
         scrollTo(hasTestTag("metadata-title"))
         compose.onNodeWithTag("metadata-title").assert(!hasSetTextAction())
@@ -115,7 +112,7 @@ class MediaManagementStateTest {
         }
         assertEquals("失败的重新加载不能重发已成功的 POST", 1, fixture.posts.get())
         assertEquals("重新加载也不能重复触发写入通知", 1, changed.get())
-        compose.onNodeWithTag("metadata-save").assertIsDisplayed()
+        compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("metadata-save").assertIsNotEnabled()
 
         val successfulReads = fixture.successfulGets.get()
@@ -133,7 +130,7 @@ class MediaManagementStateTest {
         }
         assertEquals("恢复读取后应显示服务器已经保存的值", SAVED_TITLE, titleText())
         compose.onNodeWithTag("metadata-title").assert(hasSetTextAction()).performTextReplacement("Editable after reload")
-        compose.onNodeWithTag("metadata-save").assertIsDisplayed()
+        compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("metadata-save").assertIsEnabled()
         assertEquals("恢复读取后仍不能偷偷重放写入", 1, fixture.posts.get())
         assertEquals(1, changed.get())
@@ -146,18 +143,18 @@ class MediaManagementStateTest {
             scrollTo(field)
             assertEquals("合成服务器的 $label 初始为空", "", fieldText(field))
             compose.onNode(field).performTextReplacement("invalid-number")
-            VerificationDisplay.assertDisplayed(compose, "invalid-draft-save-remains-visible", compose.onNodeWithTag("metadata-save"))
+            compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose, "invalid-draft-save-remains-visible")
             compose.onNodeWithTag("metadata-save").assertIsNotEnabled()
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-            compose.onNodeWithText("放弃未保存的修改？").assertIsDisplayed()
+            compose.onNodeWithText("放弃未保存的修改？").assertVerificationDisplayed(compose)
             assertTrue("无效数字也属于未保存草稿，不能直接退出", shown.value)
-            compose.onNodeWithText("继续编辑").performClick()
+            compose.onNodeWithText("继续编辑").performVerificationClick(compose)
             scrollTo(field)
             assertEquals("继续编辑应保留原始无效输入", "invalid-number", fieldText(field))
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-            compose.onNodeWithText("放弃修改", substring = false).performClick()
+            compose.onNodeWithText("放弃修改", substring = false).performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { !shown.value }
-            compose.onNodeWithTag("management-reopen").assertIsDisplayed().performClick()
+            compose.onNodeWithTag("management-reopen").assertVerificationDisplayed(compose).performVerificationClick(compose)
             waitForEditor(fixture)
             assertEquals("重新进入应使用服务器标题", ORIGINAL_TITLE, titleText())
             scrollTo(field)
@@ -169,7 +166,7 @@ class MediaManagementStateTest {
         // 干净表单返回不再弹出丢弃确认，父路由应正常接收到返回。
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntil(WAIT_MS) { !shown.value }
-        compose.onNodeWithTag("management-reopen").assertIsDisplayed()
+        compose.onNodeWithTag("management-reopen").assertVerificationDisplayed(compose)
         assertFalse("只操作无效草稿时不应进入读失败模式", fixture.failReads.get())
     }
 
@@ -188,8 +185,8 @@ class MediaManagementStateTest {
 
             compose.onNodeWithTag("metadata-title").assert(hasSetTextAction()).performTextReplacement(SAVED_TITLE)
             val readsBeforeSave = fixture.successfulGets.get()
-            compose.onNodeWithTag("metadata-save").assertIsDisplayed()
-            compose.onNodeWithTag("metadata-save").assertIsEnabled().performClick()
+            compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("metadata-save").assertIsEnabled().performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) {
                 fixture.assertHealthy()
                 fixture.posts.get() == 1 && changed.get() == 1 && fixture.successfulGets.get() > readsBeforeSave
@@ -214,14 +211,14 @@ class MediaManagementStateTest {
             compose.waitForIdle()
             assertEquals("旧 read 返回后不得覆盖已成功保存的新标题", SAVED_TITLE, titleText())
             assertEquals(SAVED_TITLE, fixture.savedTitle())
-            VerificationDisplay.assertDisplayed(compose, "invalid-draft-save-remains-visible", compose.onNodeWithTag("metadata-save"))
+            compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose, "invalid-draft-save-remains-visible")
             compose.onNodeWithTag("metadata-save").assertIsNotEnabled()
             assertEquals("旧读取完成不能重发写操作", 1, fixture.posts.get())
             assertEquals(1, changed.get())
             assertEquals("刷新和保存不能顺带读取图片", 0, fixture.imageLists.get())
             scrollTo(hasTestTag("metadata-title"))
             compose.onNodeWithTag("metadata-title").assert(hasSetTextAction()).performTextReplacement("Editable after stale read")
-            compose.onNodeWithTag("metadata-save").assertIsDisplayed()
+            compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("metadata-save").assertIsEnabled()
         }
     }
@@ -241,10 +238,10 @@ class MediaManagementStateTest {
             saveBounds.right <= headerBounds.right && headerBounds.right - saveBounds.right <= with(compose.density) { 16.dp.toPx() })
         assertEquals("保存按钮宽度应保持固定", with(compose.density) { 88.dp.toPx() }, saveBounds.width, 1f)
         compose.onNodeWithTag("metadata-title").performTextReplacement("Unsaved scrolling fixture")
-        compose.onNodeWithTag("metadata-save").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose).assertIsEnabled()
         compose.onNodeWithText("有未保存的修改", substring = false).assertDoesNotExist()
 
-        compose.onNodeWithTag("metadata-form").performTouchInput { swipeUp() }
+        compose.onNodeWithTag("metadata-form").performVerificationTouchInput(compose) { swipeUp() }
         compose.waitForIdle()
         assertTrue("必须通过真实手势滚动正文", compose.onNodeWithTag("metadata-form").fetchSemanticsNode()
             .config[SemanticsProperties.VerticalScrollAxisRange].value() > 0f)
@@ -253,7 +250,7 @@ class MediaManagementStateTest {
         assertEquals("返回按钮不能随正文滚走", backBounds, bounds("metadata-back"))
         assertEquals("页面标题不能随正文滚走", titleBounds, bounds("metadata-page-title"))
         assertEquals("保存按钮应保持固定位置", saveBounds, bounds("metadata-save"))
-        compose.onNodeWithTag("metadata-save").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("metadata-save").assertVerificationDisplayed(compose).assertIsEnabled()
         assertEquals("滚动和草稿不能触发服务器写入", 0, fixture.posts.get())
         assertEquals(0, changed.get())
         fixture.assertHealthy()
@@ -281,9 +278,9 @@ class MediaManagementStateTest {
             scrollTo(tmdb)
             assertEquals("新增编号草稿必须恢复", "85718", fieldText(tmdb))
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-            compose.onNodeWithText("放弃未保存的修改？").assertIsDisplayed()
-            compose.onNodeWithText("继续编辑").performClick()
-            compose.onNodeWithTag("metadata-save").assertIsEnabled().performClick()
+            compose.onNodeWithText("放弃未保存的修改？").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("继续编辑").performVerificationClick(compose)
+            compose.onNodeWithTag("metadata-save").assertIsEnabled().performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.posts.get() == 1 && changed.get() == 1 }
             val saved = fixture.savedProviderIds()
             assertEquals(setOf("Tmdb"), saved.keys().asSequence().toSet())
@@ -292,10 +289,8 @@ class MediaManagementStateTest {
         }
     }
 
-    private fun bounds(tag: String): androidx.compose.ui.geometry.Rect {
-        val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
-        return compose.runOnIdle { node.boundsInRoot }
-    }
+    private fun bounds(tag: String): androidx.compose.ui.geometry.Rect =
+        compose.onNodeWithTag(tag).readVerificationNode(compose) { it.boundsInRoot }
 
     @Suppress("DEPRECATION") // 与生产窗口一致，验证旧版系统上的 adjustResize 行为。
     private fun withScreen(topInset: Dp = 0.dp, restoration: StateRestorationTester? = null,
@@ -336,7 +331,7 @@ class MediaManagementStateTest {
             fixture.assertHealthy()
             compose.onAllNodesWithText("标题").fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithTag("metadata-title").assertIsDisplayed()
+        compose.onNodeWithTag("metadata-title").assertVerificationDisplayed(compose)
     }
 
     private fun waitForText(text: String, fixture: MetadataFixture) = compose.waitUntil(WAIT_MS) {

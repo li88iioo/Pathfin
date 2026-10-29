@@ -7,10 +7,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasScrollToIndexAction
-import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.C
 import androidx.media3.common.Format
@@ -105,9 +103,9 @@ class ContinuousTracksFlowTest {
             }
             pause(playback)
             ensureControls()
-            compose.onNodeWithTag("player-subtitles").performClick()
+            compose.onNodeWithTag("player-subtitles").performVerificationClick(compose)
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("player-track-auto"))
-            compose.onNodeWithTag("player-track-auto").performClick()
+            compose.onNodeWithTag("player-track-auto").performVerificationClick(compose)
             nextFromUi()
             awaitPlayback(playback)
             awaitSelected(playback, "English main", "English captions", "PATHFIN ENGLISH")
@@ -238,7 +236,7 @@ class ContinuousTracksFlowTest {
             onNext = { playback.play(fixture.request(if (playback.state.value.title == "Synthetic episode one") TWO else ONE), preferences) }) } }
     }
 
-    private fun nextFromUi() { ensureControls(); compose.onNodeWithTag("player-next").performClick() }
+    private fun nextFromUi() { ensureControls(); compose.onNodeWithTag("player-next").performVerificationClick(compose) }
     private fun pause(playback: PlaybackViewModel) {
         main { playback.player?.pause() }
         compose.waitUntil(WAIT) { main { playback.player?.playWhenReady == false } }
@@ -246,22 +244,22 @@ class ContinuousTracksFlowTest {
     }
     private fun chooseOff() {
         ensureControls()
-        compose.onNodeWithTag("player-subtitles").performClick()
+        compose.onNodeWithTag("player-subtitles").performVerificationClick(compose)
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("player-track-off"))
-        compose.onNodeWithTag("player-track-off").performClick()
+        compose.onNodeWithTag("player-track-off").performVerificationClick(compose)
     }
     private fun chooseTrack(playback: PlaybackViewModel, type: Int, label: String): TrackRef {
         ensureControls()
         val choice = main { tracks(checkNotNull(playback.player), type).single { it.format.label == label } }
-        compose.onNodeWithTag(if (type == C.TRACK_TYPE_AUDIO) "player-audio" else "player-subtitles").performClick()
+        compose.onNodeWithTag(if (type == C.TRACK_TYPE_AUDIO) "player-audio" else "player-subtitles").performVerificationClick(compose)
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag(choice.tag))
-        compose.onNodeWithTag(choice.tag).performClick()
+        compose.onNodeWithTag(choice.tag).performVerificationClick(compose)
         compose.waitUntil(WAIT) { main { tracks(checkNotNull(playback.player), type).any { it.format.label == label && it.selected } } }
         return choice
     }
     private fun ensureControls() {
         if (compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isEmpty()) {
-            compose.onNodeWithTag("player-video").performTouchInput { click(Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
             compose.waitUntil(WAIT) { compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isNotEmpty() }
         }
     }

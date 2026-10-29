@@ -3,21 +3,19 @@ package dev.pathfin.android
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.Surface
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
-import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.test.hasTestTag
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -72,14 +70,14 @@ class LiveTvUiTest {
         waitFor("live-tv-channel-seagull")
         compose.onNodeWithTag("live-tv-search").performTextInput("海鸥")
         compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
-        compose.onNodeWithTag("live-tv-play-seagull").performClick()
+        compose.onNodeWithTag("live-tv-play-seagull").performVerificationClick(compose)
         compose.runOnIdle { assertEquals("seagull", played.get()?.id); assertEquals("TvChannel", played.get()?.type) }
-        compose.onNodeWithTag("live-tv-guide-seagull").performClick()
+        compose.onNodeWithTag("live-tv-guide-seagull").performVerificationClick(compose)
         waitFor("live-tv-program-current")
         compose.onNodeWithTag("live-tv-watch-program-current").assertExists()
-        compose.onNodeWithTag("live-tv-program-future").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("live-tv-program-future").performScrollTo().assertVerificationDisplayed(compose)
         compose.onNodeWithTag("live-tv-watch-program-future").assertDoesNotExist()
-        compose.onNodeWithTag("live-tv-program-past").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("live-tv-program-past").performScrollTo().assertVerificationDisplayed(compose)
         compose.onNodeWithTag("live-tv-watch-program-past").assertDoesNotExist()
         assertTrue(fixture.paths.contains("/proxy/LiveTv/Programs"))
     }
@@ -91,13 +89,13 @@ class LiveTvUiTest {
             waitFor("live-tv-channel-harbour")
             val channels = compose.onNodeWithTag("live-tv-channel-list")
             channels.performScrollToIndex(0)
-            val before = compose.onNodeWithTag("live-tv-channel-harbour").getUnclippedBoundsInRoot()
+            val before = channelBounds()
             // 从频道网格的首列下拉，避免沿用旧单列页面的父容器中心坐标。
             pullPageToRefresh(compose, page = channels, stage = "live-tv-retained-channel-refresh", horizontalFraction = .25f)
             compose.onNodeWithTag("live-tv-refresh").assertDoesNotExist()
             compose.waitUntil(5_000) { fixture.refreshStarted.count == 0L }
-            compose.onNodeWithTag("live-tv-channel-harbour").assertIsDisplayed()
-            val during = compose.onNodeWithTag("live-tv-channel-harbour").getUnclippedBoundsInRoot()
+            compose.onNodeWithTag("live-tv-channel-harbour").assertVerificationDisplayed(compose)
+            val during = channelBounds()
             assertEquals(before.top.value, during.top.value, .5f)
             assertEquals((before.bottom - before.top).value, (during.bottom - during.top).value, .5f)
         } finally { fixture.releaseRefresh.countDown() }
@@ -107,7 +105,7 @@ class LiveTvUiTest {
         val fixture = Fixture(allowed = false)
         show(fixture)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("没有直播电视权限").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithText("没有直播电视权限").assertIsDisplayed()
+        compose.onNodeWithText("没有直播电视权限").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("live-tv-play-harbour").assertDoesNotExist()
         assertEquals(listOf("/proxy/Users/Me"), fixture.paths.toList())
     }
@@ -124,16 +122,16 @@ class LiveTvUiTest {
             waitFor("live-tv-channel-channel-0")
             assertEquals(listOf(0), fixture.channelPages.requests.map { it.startIndex })
             compose.onNodeWithTag("live-tv-search").performTextInput("远方频道")
-            compose.onNodeWithText("搜索已加载的", substring = true).assertIsDisplayed()
-            compose.onNodeWithText("没有匹配的频道").assertIsDisplayed()
-            repeat(3) { compose.onNodeWithTag("live-tv-channel-list").performTouchInput { swipeUp() }; compose.waitForIdle() }
+            compose.onNodeWithText("搜索已加载的", substring = true).assertVerificationDisplayed(compose)
+            compose.onNodeWithText("没有匹配的频道").assertVerificationDisplayed(compose)
+            repeat(3) { compose.onNodeWithTag("live-tv-channel-list").performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertNoNewRequests(fixture.channelPages, 1)
             // 搜索全部是用户明确触发的操作，不能被无匹配结果时的自动分页取代。
             val all = compose.onNodeWithTag("live-tv-more").performScrollTo()
             VerificationDisplay.awaitWindowReady(compose, "live-tv-search-all", all)
-            all.performClick()
+            all.performVerificationClick(compose)
             waitFor("live-tv-channel-channel-80")
-            compose.onNodeWithTag("live-tv-channel-channel-80").assertIsDisplayed()
+            compose.onNodeWithTag("live-tv-channel-channel-80").assertVerificationDisplayed(compose)
             assertEquals(listOf(0, 40, 80), fixture.channelPages.requests.map { it.startIndex })
             assertNoNewRequests(fixture.channelPages, 3)
         }
@@ -157,11 +155,11 @@ class LiveTvUiTest {
             waitFor("live-tv-channel-channel-0")
             fixture.channelPages.holdAt.set(40)
             compose.onNodeWithTag("live-tv-search").performTextInput("远方频道")
-            compose.onNodeWithTag("live-tv-more").performScrollTo().performClick()
+            compose.onNodeWithTag("live-tv-more").performScrollTo().performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.channelPages.heldStarted.count == 0L }
             val stop = compose.onNodeWithTag("live-tv-cancel-search").performScrollTo()
             VerificationDisplay.awaitWindowReady(compose, "live-tv-stop-search", stop)
-            stop.performClick()
+            stop.performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { runCatching { compose.onNodeWithTag("live-tv-more").assertIsEnabled(); true }.getOrDefault(false) }
             fixture.channelPages.releaseHeld.countDown()
             assertNoNewRequests(fixture.channelPages, 2)
@@ -177,7 +175,7 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             if (programs) {
-                compose.onNodeWithTag("live-tv-guide-channel-0").performClick()
+                compose.onNodeWithTag("live-tv-guide-channel-0").performVerificationClick(compose)
                 waitFor("live-tv-program-program-0")
             }
             val size = if (programs) 80 else 40
@@ -196,7 +194,7 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             if (programs) {
-                compose.onNodeWithTag("live-tv-guide-channel-0").performClick()
+                compose.onNodeWithTag("live-tv-guide-channel-0").performVerificationClick(compose)
                 waitFor("live-tv-program-program-0")
             }
             val probe = if (programs) fixture.programPages else fixture.channelPages
@@ -216,11 +214,11 @@ class LiveTvUiTest {
             pullPageToRefresh(compose, page = list, stage = "live-tv-failed-range-$programs")
             compose.waitUntil(WAIT_MS) { probe.requests.size == 5 }
             list.performScrollToNode(hasTestTag("$prefix${size * 2 - 1}"))
-            compose.onNodeWithTag("$prefix${size * 2 - 1}").assertIsDisplayed()
+            compose.onNodeWithTag("$prefix${size * 2 - 1}").assertVerificationDisplayed(compose)
             list.performScrollToNode(hasTestTag("${prefix}0"))
-            compose.onNodeWithText(fixture.originalName(programs, 0)).assertIsDisplayed()
+            compose.onNodeWithText(fixture.originalName(programs, 0)).assertVerificationDisplayed(compose)
             compose.onAllNodesWithText(fixture.refreshedName(programs, 0)).fetchSemanticsNodes().let { assertTrue(it.isEmpty()) }
-            repeat(2) { list.performTouchInput { swipeUp() }; compose.waitForIdle() }
+            repeat(2) { list.performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertNoNewRequests(probe, 5)
             assertEquals(listOf(0, size, size * 2, 0, size), probe.requests.map { it.startIndex })
         }
@@ -233,7 +231,7 @@ class LiveTvUiTest {
             if (programs) {
                 val guide = compose.onNodeWithTag("live-tv-guide-channel-0")
                 VerificationDisplay.awaitWindowReady(compose, "live-tv-open-guide", guide)
-                guide.performClick()
+                guide.performVerificationClick(compose)
                 waitFor("live-tv-program-program-0")
             }
             val probe = if (programs) fixture.programPages else fixture.channelPages
@@ -246,8 +244,8 @@ class LiveTvUiTest {
             compose.waitUntil(WAIT_MS) { probe.requests.any { it.startIndex == pageSize } }
             scrollEnd(listTag, "$prefix$lastRead")
             compose.waitUntil(WAIT_MS) { probe.requests.any { it.startIndex == pageSize * 2 } }
-            compose.onNodeWithTag("$prefix$lastRead").assertIsDisplayed()
-            repeat(3) { compose.onNodeWithTag(listTag).performTouchInput { swipeUp() }; compose.waitForIdle() }
+            compose.onNodeWithTag("$prefix$lastRead").assertVerificationDisplayed(compose)
+            repeat(3) { compose.onNodeWithTag(listTag).performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertNoNewRequests(probe, 3)
             assertEquals(listOf(0, pageSize, pageSize * 2), probe.requests.map { it.startIndex })
 
@@ -259,28 +257,28 @@ class LiveTvUiTest {
             pullPageToRefresh(compose, page = list, stage = "live-tv-$listTag-range-recovery")
             compose.waitUntil(WAIT_MS) { probe.refreshStarted.count == 0L }
             list.performScrollToNode(hasTestTag("$prefix$lastRead"))
-            compose.onNodeWithTag("$prefix$lastRead").assertIsDisplayed()
+            compose.onNodeWithTag("$prefix$lastRead").assertVerificationDisplayed(compose)
             probe.releaseRefresh.countDown()
             // 默认页长重读时会经过第二页；若合并为较大页长，则可直接完整发布。
             compose.waitUntil(WAIT_MS) { probe.remainderStarted.count == 0L ||
                 compose.onAllNodesWithText(fixture.refreshedName(programs, lastRead)).fetchSemanticsNodes().isNotEmpty() }
             if (probe.remainderStarted.count == 0L) {
                 list.performScrollToNode(hasTestTag("$prefix$lastRead"))
-                compose.onNodeWithTag("$prefix$lastRead").assertIsDisplayed()
+                compose.onNodeWithTag("$prefix$lastRead").assertVerificationDisplayed(compose)
             }
             probe.releaseRemainder.countDown()
             compose.waitUntil(WAIT_MS) { runCatching {
                 list.performScrollToNode(hasTestTag("$prefix$lastRead"))
-                compose.onNodeWithText(fixture.refreshedName(programs, lastRead)).assertIsDisplayed()
+                compose.onNodeWithText(fixture.refreshedName(programs, lastRead)).assertVerificationDisplayed(compose)
                 true
             }.getOrDefault(false) }
             scrollEnd(listTag, "$prefix$lastRead")
             compose.waitUntil(WAIT_MS) { runCatching {
                 list.performScrollToNode(hasTestTag("$prefix${pageSize * 2}")); true
             }.getOrDefault(false) }
-            compose.onNodeWithTag("$prefix${pageSize * 2}").assertIsDisplayed()
+            compose.onNodeWithTag("$prefix${pageSize * 2}").assertVerificationDisplayed(compose)
             val terminalRequests = probe.requests.size
-            repeat(3) { list.performTouchInput { swipeUp() }; compose.waitForIdle() }
+            repeat(3) { list.performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
             assertNoNewRequests(probe, terminalRequests)
             compose.onNodeWithTag(if (programs) "live-tv-program-more" else "live-tv-more").assertDoesNotExist()
         }
@@ -290,11 +288,11 @@ class LiveTvUiTest {
         val list = compose.onNodeWithTag(listTag)
         compose.waitUntil(WAIT_MS) { runCatching {
             list.performScrollToNode(hasTestTag(lastTag))
-            compose.onNodeWithTag(lastTag).assertIsDisplayed()
+            compose.onNodeWithTag(lastTag).assertVerificationDisplayed(compose)
             true
         }.getOrDefault(false) }
         VerificationDisplay.awaitWindowReady(compose, "live-tv-scroll-$lastTag", list)
-        list.performTouchInput { swipeUp() }
+        list.performVerificationTouchInput(compose) { swipeUp() }
         compose.waitForIdle()
     }
 
@@ -304,6 +302,14 @@ class LiveTvUiTest {
             compose.waitForIdle()
             assertEquals("停留/重复滚动不能重试失败页或越过总数：${probe.requests}", expected, probe.requests.size)
             SystemClock.sleep(25)
+        }
+    }
+
+    private fun channelBounds() = compose.onNodeWithTag("live-tv-channel-harbour").readVerificationNode(compose) { node ->
+        if (!node.layoutInfo.isPlaced) DpRect(Dp.Unspecified, Dp.Unspecified, Dp.Unspecified, Dp.Unspecified)
+        else with(node.layoutInfo.density) {
+            val position = node.positionInRoot
+            DpRect(position.x.toDp(), position.y.toDp(), (position.x + node.size.width).toDp(), (position.y + node.size.height).toDp())
         }
     }
 

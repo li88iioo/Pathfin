@@ -23,14 +23,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.core.app.ActivityOptionsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -97,7 +95,7 @@ class ImageUploadCancellationTest {
                 try {
                     val upload = compose.onNodeWithTag("media-image-upload/Primary")
                     VerificationDisplay.awaitWindowReady(compose, "image-upload-normal", upload)
-                    upload.performClick()
+                    upload.performVerificationClick(compose)
                     compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.uploads.get() == 1 && editor.busy.value }
                     upload.assertIsNotEnabled()
                     assertEquals("image/png", fixture.uploadedMime.get())
@@ -134,15 +132,15 @@ class ImageUploadCancellationTest {
                 try {
                     val upload = compose.onNodeWithTag("media-image-upload/Primary")
                     VerificationDisplay.awaitWindowReady(compose, "image-upload-rejected", upload)
-                    upload.performClick()
+                    upload.performVerificationClick(compose)
                     compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); compose.onAllNodesWithText(message).fetchSemanticsNodes().isNotEmpty() }
-                    compose.onNodeWithText(message).assertIsDisplayed()
+                    compose.onNodeWithText(message).assertVerificationDisplayed(compose)
                     upload.assertIsEnabled()
                     compose.runOnIdle { assertFalse(editor.busy.value); assertEquals(0, editor.changed.get()) }
                     assertEquals("未通过本地检查不能发送图片", 0, fixture.uploads.get())
                     compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
                     compose.waitUntil(2_000) { !editor.shown.value && !editor.busy.value }
-                    compose.onNodeWithTag("image-editor-closed").assertIsDisplayed()
+                    compose.onNodeWithTag("image-editor-closed").assertVerificationDisplayed(compose)
                     assertEquals(1, editor.backs.get())
                 } finally {
                     compose.runOnIdle { editor.shown.value = false }
@@ -161,7 +159,7 @@ class ImageUploadCancellationTest {
                     val returnsAfterCancellation = behavior == "DELAY_OPEN_IGNORE_CANCEL"
                     val upload = compose.onNodeWithTag("media-image-upload/Primary")
                     VerificationDisplay.awaitWindowReady(compose, "image-upload-$behavior", upload)
-                    upload.performClick()
+                    upload.performVerificationClick(compose)
                     await("必须真正进入受控 Provider，不能只切换 UI 忙态") {
                         val status = document.status()
                         if (delayedOpen) status.getBoolean("openStarted") && !status.getBoolean("opened")
@@ -179,7 +177,7 @@ class ImageUploadCancellationTest {
 
                     compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
                     compose.waitUntil(2_000) { !editor.shown.value && !editor.busy.value }
-                    compose.onNodeWithTag("image-editor-closed").assertIsDisplayed()
+                    compose.onNodeWithTag("image-editor-closed").assertVerificationDisplayed(compose)
                     assertEquals("一次返回只能离开图片编辑一次", 1, editor.backs.get())
                     assertEquals(0, editor.changed.get())
                     if (returnsAfterCancellation) {

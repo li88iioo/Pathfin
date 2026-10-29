@@ -63,7 +63,7 @@ class RefreshGestureTest {
         compose.waitUntil(5_000) { requests.get() == 1 }
         assertTrue(loading.value)
         assertPosition(before, position(0), "真实下拉读取期间")
-        compose.onNodeWithText("Synthetic row 0").assertIsDisplayed()
+        compose.onNodeWithText("Synthetic row 0").assertVerificationDisplayed(compose)
         pullPageToRefresh(compose, stage = "busy-pull-no-overlap")
         assertEquals(1, requests.get())
         compose.runOnIdle { loading.value = false }
@@ -104,7 +104,7 @@ class RefreshGestureTest {
             loading.value = false
         }
         assertPosition(before, position(12), "真实内容更新后")
-        compose.onNodeWithText("Synthetic row 12 updated").assertIsDisplayed()
+        compose.onNodeWithText("Synthetic row 12 updated").assertVerificationDisplayed(compose)
         resumeActivity()
         compose.waitUntil(5_000) { requests.get() == 2 }
         assertPosition(before, position(12), "下次独立前台读取")
@@ -137,7 +137,7 @@ class RefreshGestureTest {
             }
         }
         compose.waitUntil(5_000) { requests.get() == 1 }
-        compose.onNodeWithText("合成首页读取失败").assertIsDisplayed()
+        compose.onNodeWithText("合成首页读取失败").assertVerificationDisplayed(compose)
         assertTrue(loading.value)
         resumeActivity()
         assertEquals("自动重试未完成时不能重复请求", 1, requests.get())
@@ -177,7 +177,7 @@ class RefreshGestureTest {
     private data class Position(val index: Int, val offset: Int, val bounds: Rect)
     private fun position(index: Int): Position {
         compose.waitForIdle()
-        val node = compose.onNodeWithTag("refresh-row/$index").assertIsDisplayed().fetchSemanticsNode()
+        val node = compose.onNodeWithTag("refresh-row/$index").assertVerificationDisplayed(compose).fetchSemanticsNode()
         return compose.runOnIdle { Position(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset, node.boundsInRoot) }
     }
     private fun assertPosition(expected: Position, actual: Position, phase: String) {

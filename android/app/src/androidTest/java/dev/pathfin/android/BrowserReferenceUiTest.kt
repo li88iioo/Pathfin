@@ -11,13 +11,11 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasAnyDescendant
@@ -85,11 +83,11 @@ class BrowserReferenceUiTest {
         listOf(null, false, true).forEach { explicitFavorite ->
             compose.runOnIdle { state.value = state.value.copy(query = original.copy(favorite = explicitFavorite)) }
             openCategories()
-            compose.onNodeWithTag("browser-tab/FAVORITES").performScrollTo().performClick()
+            compose.onNodeWithTag("browser-tab/FAVORITES").performScrollTo().performVerificationClick(compose)
             compose.runOnIdle { assertEquals(original.copy(tab = LibraryTab.FAVORITES, favorite = explicitFavorite), state.value.query) }
             openCategories()
             compose.onNodeWithTag("browser-tab/FAVORITES").assertIsSelected()
-            compose.onNodeWithTag("browser-tab/ALL").performScrollTo().performClick()
+            compose.onNodeWithTag("browser-tab/ALL").performScrollTo().performVerificationClick(compose)
             compose.runOnIdle { assertEquals(original.copy(favorite = explicitFavorite), state.value.query) }
         }
     }
@@ -104,15 +102,15 @@ class BrowserReferenceUiTest {
         listOf("UPCOMING", "GENRES", "TAGS").forEach { category ->
             compose.onNodeWithTag("browser-tab/$category").assertDoesNotExist()
         }
-        compose.onNodeWithTag("browser-tab/RESUME").assertIsDisplayed()
-        compose.onNodeWithTag("browser-tab/MEDIA").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("browser-tab/RESUME").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("browser-tab/MEDIA").assertVerificationDisplayed(compose).performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(tab = LibraryTab.MEDIA), state.value.query) }
         openCategories()
         compose.onNodeWithTag("browser-tab/MEDIA").assertIsSelected()
-        compose.onNodeWithTag("browser-tab/FAVORITES").performScrollTo().performClick()
+        compose.onNodeWithTag("browser-tab/FAVORITES").performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(tab = LibraryTab.FAVORITES), state.value.query) }
         openCategories()
-        compose.onNodeWithTag("browser-tab/ALL").performScrollTo().performClick()
+        compose.onNodeWithTag("browser-tab/ALL").performScrollTo().performVerificationClick(compose)
         compose.runOnIdle { assertEquals("回到全部仍保留目录范围与既有筛选", original, state.value.query) }
     }
 
@@ -122,13 +120,13 @@ class BrowserReferenceUiTest {
         val state = mutableStateOf(BrowserUiState(query = original))
         showBrowser(state, libraryType = "tvshows")
         openCategories()
-        compose.onNodeWithTag("browser-tab/UPCOMING").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("browser-tab/UPCOMING").assertVerificationDisplayed(compose).performVerificationClick(compose)
         compose.runOnIdle { assertEquals(original.copy(tab = LibraryTab.UPCOMING), state.value.query) }
         openCategories()
         compose.onNodeWithTag("browser-tab/UPCOMING").assertIsSelected()
         compose.onNodeWithTag("browser-tab/MEDIA").assertDoesNotExist()
         compose.onNodeWithTag("browser-tab/TAGS").assertDoesNotExist()
-        compose.onNodeWithTag("browser-tab/GENRES").assertIsDisplayed()
+        compose.onNodeWithTag("browser-tab/GENRES").assertVerificationDisplayed(compose)
     }
 
     @Test
@@ -143,11 +141,11 @@ class BrowserReferenceUiTest {
             listOf("MEDIA", "RESUME", "UPCOMING", "COLLECTIONS", "GENRES", "TAGS").forEach { category ->
                 compose.onNodeWithTag("browser-tab/$category").assertDoesNotExist()
             }
-            compose.onNodeWithTag("browser-tab/FAVORITES").assertIsDisplayed().performClick()
+            compose.onNodeWithTag("browser-tab/FAVORITES").assertVerificationDisplayed(compose).performVerificationClick(compose)
             compose.runOnIdle { assertEquals("收藏必须保留人物/类型与原媒体范围", scope.copy(tab = LibraryTab.FAVORITES), state.value.query) }
             openCategories()
             compose.onNodeWithTag("browser-tab/FAVORITES").assertIsSelected()
-            compose.onNodeWithTag("browser-tab/ALL").performClick()
+            compose.onNodeWithTag("browser-tab/ALL").performVerificationClick(compose)
             compose.runOnIdle { assertEquals("回全部必须恢复同一人物/类型作品查询", scope, state.value.query) }
         }
     }
@@ -170,7 +168,7 @@ class BrowserReferenceUiTest {
         })
         openFilters()
         scrollTag("新标签")
-        compose.onNodeWithTag("browser-filter-value/标签/新标签").performClick().assertIsSelected()
+        compose.onNodeWithTag("browser-filter-value/标签/新标签").performVerificationClick(compose).assertIsSelected()
         compose.runOnIdle { assertEquals(original, state.value.query) }
         compose.onNodeWithTag("browser-filter-options").performScrollToIndex(0)
         val tagsPage = compose.onNode(hasTestTag("refreshable-page") and hasAnyDescendant(hasTestTag("browser-filter-options")))
@@ -192,8 +190,8 @@ class BrowserReferenceUiTest {
         // 放弃的草稿没有写入查询；重新进入可以选择新读取的选项。
         openFilters()
         scrollTag("重试后标签")
-        compose.onNodeWithTag("browser-filter-value/标签/重试后标签").assertIsNotSelected().performClick().assertIsSelected()
-        compose.onNodeWithTag("browser-filter-apply").performClick()
+        compose.onNodeWithTag("browser-filter-value/标签/重试后标签").assertIsNotSelected().performVerificationClick(compose).assertIsSelected()
+        compose.onNodeWithTag("browser-filter-apply").performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(original.copy(tags = setOf("已选标签", "重试后标签")), state.value.query)
             assertEquals(1, queryChanges)
@@ -211,7 +209,7 @@ class BrowserReferenceUiTest {
             onRetryFilters = { optionRequests++; state.value = state.value.copy(filtersLoading = true) })
         openFilters()
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasTestTag("browser-filter-all/标签"))
-        compose.onNodeWithTag("browser-filter-all/标签").assertIsDisplayed().assertIsSelected()
+        compose.onNodeWithTag("browser-filter-all/标签").assertVerificationDisplayed(compose).assertIsSelected()
         compose.onNodeWithTag("browser-filter-options").performScrollToIndex(0)
         val page = compose.onNode(hasTestTag("refreshable-page") and hasAnyDescendant(hasTestTag("browser-filter-options")))
         pullPageToRefresh(compose, page, "empty-tags-physical-pull")
@@ -240,10 +238,10 @@ class BrowserReferenceUiTest {
                 }
             }
         }
-        val before = compose.onNodeWithTag("poster-subtitle/poster", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val before = compose.onNodeWithTag("poster-subtitle/poster", useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot }
         compose.onNodeWithText("2021", useUnmergedTree = true).assertExists()
         compose.runOnIdle { item.value = item.value.copy(name = "这是一段需要两行并且最终会省略的中文电影长标题") }
-        val after = compose.onNodeWithTag("poster-subtitle/poster", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val after = compose.onNodeWithTag("poster-subtitle/poster", useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot }
         val layouts = mutableListOf<TextLayoutResult>()
         compose.onNodeWithTag("poster-title/poster", useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
         assertEquals("长标题应实际换为两行", 2, layouts.single().lineCount)
@@ -256,14 +254,14 @@ class BrowserReferenceUiTest {
     private fun openFilters() {
         val button = compose.onNodeWithTag("browser-filter")
         VerificationDisplay.awaitWindowReady(compose, "browser-filter-drawer", button)
-        button.performClick()
+        button.performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "browser-filter-dialog", compose.onNodeWithTag("browser-filter-sheet"))
     }
 
     private fun openCategories() {
         val button = compose.onNodeWithTag("browser-category")
         VerificationDisplay.awaitWindowReady(compose, "browser-category-drawer", button)
-        button.performClick()
+        button.performVerificationClick(compose)
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
     }

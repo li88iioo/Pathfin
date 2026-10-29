@@ -9,14 +9,12 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.AnnotatedString
@@ -170,7 +168,7 @@ class LocalNetworkPermissionPromptTest {
         }
         compose.waitUntil(HOME_WAIT_MS) { compose.onAllNodesWithTag("login-username").fetchSemanticsNodes().isNotEmpty() }
         compose.enterAccount("pathfin", "pathfin")
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.waitUntil(HOME_WAIT_MS) {
             val state = app.state.value
             state.loginError?.let { throw AssertionError("原生授权后登录失败：$it") }
@@ -181,7 +179,7 @@ class LocalNetworkPermissionPromptTest {
         assertEquals("只允许连接合成 fixture", "pathfin-fixture-server", state.session?.serverId)
         assertEquals("必须通过真实 LAN 地址登录", server.baseUrl, state.session?.server?.baseUrl)
         assertTrue("必须加载 fixture 媒体库", state.home.libraries.any { it.id == "fixture-library" })
-        compose.onAllNodesWithText("Pathfin · 原始路径播放测试").onFirst().performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("Pathfin · 原始路径播放测试").onFirst().performScrollTo().assertVerificationDisplayed(compose)
     }
 
     private fun isSystemPermissionController(context: Context, packageName: String): Boolean {

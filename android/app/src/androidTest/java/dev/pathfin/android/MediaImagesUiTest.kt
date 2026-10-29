@@ -56,21 +56,21 @@ class MediaImagesUiTest {
         compose.onNodeWithTag("remote-image-original").assertIsOff()
         assertEquals(0, fixture.originals.get())
         val searchesBeforeOriginal = fixture.searches.size
-        compose.onNodeWithTag("remote-image-original").performClick().assertIsOn()
+        compose.onNodeWithTag("remote-image-original").performVerificationClick(compose).assertIsOn()
         await(fixture) { fixture.originals.get() > 0 }
         assertEquals("原图开关应切换真实预览源，不重新查询提供商", searchesBeforeOriginal, fixture.searches.size)
         assertEquals("预览原图仍不能选用或写入服务器", 0, fixture.applied.size)
         selectProvider("Fixture B")
         await(fixture) { fixture.searches.size == 2 && results() == 1 }
-        compose.onNodeWithTag("remote-image-result").performClick()
+        compose.onNodeWithTag("remote-image-result").performVerificationClick(compose)
         await(fixture) { compose.onAllNodesWithTag("remote-image-apply").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("取消", substring = false).performClick()
+        compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "remote-image-selection-cancelled", compose.onNodeWithTag("remote-image-results"))
         assertEquals(0, fixture.applied.size)
         assertEquals(0, changed.get())
 
-        compose.onNodeWithTag("remote-image-result").performClick()
-        compose.onNodeWithTag("remote-image-apply").performClick()
+        compose.onNodeWithTag("remote-image-result").performVerificationClick(compose)
+        compose.onNodeWithTag("remote-image-apply").performVerificationClick(compose)
         await(fixture) { fixture.applied.size == 1 && changed.get() == 1 && fixture.imageLists.get() >= 2 &&
             compose.onAllNodesWithText("图片已更新").fetchSemanticsNodes().isNotEmpty() }
         assertEquals("Primary", fixture.applied.single().queryParameter("type"))
@@ -84,10 +84,10 @@ class MediaImagesUiTest {
         fixture.holdNextPrimary().use { old ->
             openSearch()
             await(fixture) { old.arrived.count == 0L }
-            compose.onNodeWithTag("remote-image-type").performClick()
+            compose.onNodeWithTag("remote-image-type").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("remote-image-type/Backdrop").fetchSemanticsNodes().isNotEmpty() }
             VerificationDisplay.awaitWindowReady(compose, "image-search-type-menu", compose.onNodeWithTag("remote-image-type/Backdrop"))
-            compose.onNodeWithTag("remote-image-type/Backdrop").performClick()
+            compose.onNodeWithTag("remote-image-type/Backdrop").performVerificationClick(compose)
             await(fixture) { fixture.searches.size == 2 && results() == 1 &&
                 compose.onAllNodesWithContentDescription("Fixture A 背景图", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             old.release()
@@ -98,7 +98,7 @@ class MediaImagesUiTest {
             assertEquals("Backdrop", fixture.searches.last().queryParameter("type"))
             assertEquals(1, results())
             VerificationDisplay.awaitWindowReady(compose, "image-search-new-type", compose.onNodeWithTag("remote-image-all-languages"))
-            compose.onNodeWithTag("remote-image-all-languages").assertIsOff().performClick()
+            compose.onNodeWithTag("remote-image-all-languages").assertIsOff().performVerificationClick(compose)
             await(fixture) { fixture.searches.size == 3 && results() == 1 }
             assertEquals("true", fixture.searches.last().queryParameter("includeAllLanguages"))
             assertEquals("Backdrop", fixture.searches.last().queryParameter("type"))
@@ -112,12 +112,12 @@ class MediaImagesUiTest {
         await(fixture) { fixture.searches.size == 1 && results() > 0 }
         repeat(12) {
             if (fixture.searches.size < 2) {
-                compose.onNodeWithTag("remote-image-results").performTouchInput { swipeUp() }
+                compose.onNodeWithTag("remote-image-results").performVerificationTouchInput(compose) { swipeUp() }
                 compose.waitForIdle()
             }
         }
         await(fixture) { fixture.searches.size == 2 }
-        repeat(3) { compose.onNodeWithTag("remote-image-results").performTouchInput { swipeUp() }; compose.waitForIdle() }
+        repeat(3) { compose.onNodeWithTag("remote-image-results").performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
         assertEquals(listOf("0", "24"), fixture.searches.map { it.queryParameter("startIndex") })
         assertTrue(fixture.searches.all { it.queryParameter("limit") == "24" && it.queryParameter("type") == "Primary" })
         assertEquals("终页不能在继续滚动时反复请求", 2, fixture.searches.size)
@@ -126,17 +126,17 @@ class MediaImagesUiTest {
 
     private fun openSearch() {
         VerificationDisplay.awaitWindowReady(compose, "image-search-inline", compose.onNodeWithTag("media-image-search/Primary"))
-        compose.onNodeWithTag("media-image-search/Primary").performClick()
+        compose.onNodeWithTag("media-image-search/Primary").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("remote-image-results").fetchSemanticsNodes().isNotEmpty() }
         VerificationDisplay.awaitWindowReady(compose, "image-search-results", compose.onNodeWithTag("remote-image-results"))
     }
 
     private fun selectProvider(name: String) {
-        compose.onNodeWithTag("remote-image-provider").performClick()
+        compose.onNodeWithTag("remote-image-provider").performVerificationClick(compose)
         val tag = "remote-image-provider/$name"
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
         VerificationDisplay.awaitWindowReady(compose, "image-search-provider-menu", compose.onNodeWithTag(tag))
-        compose.onNodeWithTag(tag).performClick()
+        compose.onNodeWithTag(tag).performVerificationClick(compose)
     }
 
     private fun results() = compose.onAllNodesWithTag("remote-image-result").fetchSemanticsNodes().size

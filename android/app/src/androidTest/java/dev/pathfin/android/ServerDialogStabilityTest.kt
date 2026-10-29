@@ -41,8 +41,8 @@ class ServerDialogStabilityTest {
                     onAddAddress = { _, _ -> }, onPassword = { _, _, _ -> }, onDismissError = { error = null })
             } }
         }
-        compose.onNodeWithContentDescription("服务器操作 ${existing.displayName}").performClick()
-        compose.onNodeWithText("编辑连接", substring = false).performClick()
+        compose.onNodeWithContentDescription("服务器操作 ${existing.displayName}").performVerificationClick(compose)
+        compose.onNodeWithText("编辑连接", substring = false).performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "edit-server-dialog", compose.onNodeWithTag("login-submit"),
             compose.onNodeWithTag("server-form-error"))
         compose.onNodeWithTag("login-server").assert(
@@ -61,8 +61,8 @@ class ServerDialogStabilityTest {
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
         compose.onNodeWithTag("login-server").assertIsEnabled().assert(!hasSetTextAction())
         compose.runOnIdle { error = "此地址不属于同一台 Jellyfin 服务器，请单独添加服务器。"; busy = false }
-        compose.onNodeWithText("此地址不属于同一台 Jellyfin 服务器，请单独添加服务器。").assertIsDisplayed()
-        compose.onNodeWithTag("login-submit").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithText("此地址不属于同一台 Jellyfin 服务器，请单独添加服务器。").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("login-submit").assertVerificationDisplayed(compose).assertIsEnabled()
         val afterNode = compose.onNodeWithTag("login-submit", useUnmergedTree = true).fetchSemanticsNode()
         val after = compose.runOnIdle { afterNode.boundsInRoot }
         assertEquals(before.left, after.left, .5f); assertEquals(before.top, after.top, .5f)
@@ -81,25 +81,25 @@ class ServerDialogStabilityTest {
             }
         }
         VerificationDisplay.awaitWindowReady(compose, "reauth-password-dialog", compose.onNodeWithTag("reauth-password"))
-        compose.onNodeWithText("重新登录", substring = false).assertIsDisplayed()
-        compose.onNodeWithText(profile.displayName, substring = false).assertIsDisplayed()
-        compose.onNodeWithText(profile.session.userName, substring = false).assertIsDisplayed()
-        compose.onNodeWithText(profile.session.server.baseUrl, substring = false).assertIsDisplayed()
+        compose.onNodeWithText("重新登录", substring = false).assertVerificationDisplayed(compose)
+        compose.onNodeWithText(profile.displayName, substring = false).assertVerificationDisplayed(compose)
+        compose.onNodeWithText(profile.session.userName, substring = false).assertVerificationDisplayed(compose)
+        compose.onNodeWithText(profile.session.server.baseUrl, substring = false).assertVerificationDisplayed(compose)
         compose.onNodeWithTag("reauth-password").performSemanticsAction(SemanticsActions.SetText) {
             assertTrue(it(AnnotatedString("synthetic-password-only-in-dialog")))
         }
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf("synthetic-password-only-in-dialog"), submitted) }
-        compose.onNodeWithText("取消", substring = false).performClick()
+        compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
         compose.onNodeWithTag("reauth-password").assertDoesNotExist()
 
         // 移除整个弹窗后重新组合，必须创建空密码；账号信息只来自明确的目标资料。
         compose.runOnIdle { visible = true }
         VerificationDisplay.awaitWindowReady(compose, "reauth-recreated-dialog", compose.onNodeWithTag("reauth-password"))
-        compose.onNodeWithText(profile.displayName, substring = false).assertIsDisplayed()
+        compose.onNodeWithText(profile.displayName, substring = false).assertVerificationDisplayed(compose)
         compose.onNodeWithTag("reauth-password").assert(
             SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString("")))
-        compose.onNodeWithTag("login-submit").performClick()
+        compose.onNodeWithTag("login-submit").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(listOf("synthetic-password-only-in-dialog", ""), submitted) }
     }
 
@@ -121,25 +121,29 @@ class ServerDialogStabilityTest {
         }
         VerificationDisplay.awaitWindowReady(compose, "reauth-layout-baseline",
             compose.onNodeWithTag("login-submit", useUnmergedTree = true), compose.onNodeWithTag("server-form-error"))
-        val beforeAction = compose.onNodeWithTag("login-submit", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val beforeFeedback = compose.onNodeWithTag("server-form-error").fetchSemanticsNode().boundsInRoot
+        val targets = listOf(compose.onNodeWithTag("login-submit", useUnmergedTree = true), compose.onNodeWithTag("server-form-error"))
+            .map { it.fetchSemanticsNode() }
+        val (beforeAction, beforeFeedback) = compose.runOnIdle { targets.map { it.boundsInRoot } }
         compose.onNodeWithTag("login-submit").performSemanticsAction(SemanticsActions.OnClick) { action ->
             repeat(8) { action() }
         }
         compose.runOnIdle { assertEquals(listOf("synthetic-retry-password"), submitted) }
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
         compose.onNodeWithTag("reauth-password").assertIsEnabled().assert(!hasSetTextAction())
-        compose.onNodeWithText("取消", substring = false).performClick()
+        compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
         compose.runOnIdle { assertEquals("请求期间不能关闭弹窗", 0, dismissals) }
-        assertSameBounds(beforeAction, compose.onNodeWithTag("login-submit", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot)
+        assertSameBounds(beforeAction, compose.onNodeWithTag("login-submit", useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot })
 
         val failure = "用户名或密码错误，请检查密码后重新登录。"
         compose.runOnIdle { error = failure; busy = false }
-        compose.onNodeWithText(failure, substring = false).assertIsDisplayed()
-        compose.onNodeWithTag("login-submit").assertIsEnabled().assertIsDisplayed()
+        compose.onNodeWithText(failure, substring = false).assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("login-submit").assertIsEnabled().assertVerificationDisplayed(compose)
         compose.onNodeWithTag("reauth-password").assert(hasSetTextAction())
-        assertSameBounds(beforeAction, compose.onNodeWithTag("login-submit", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot)
-        assertSameBounds(beforeFeedback, compose.onNodeWithTag("server-form-error").fetchSemanticsNode().boundsInRoot)
+        val failedTargets = listOf(compose.onNodeWithTag("login-submit", useUnmergedTree = true), compose.onNodeWithTag("server-form-error"))
+            .map { it.fetchSemanticsNode() }
+        val (failedAction, failedFeedback) = compose.runOnIdle { failedTargets.map { it.boundsInRoot } }
+        assertSameBounds(beforeAction, failedAction)
+        assertSameBounds(beforeFeedback, failedFeedback)
         compose.onNodeWithTag("login-submit").performSemanticsAction(SemanticsActions.OnClick) { action ->
             repeat(8) { action() }
         }
@@ -149,7 +153,7 @@ class ServerDialogStabilityTest {
         }
         compose.onNodeWithTag("login-submit").assertIsNotEnabled()
         compose.onNodeWithTag("reauth-password").assert(!hasSetTextAction())
-        assertSameBounds(beforeAction, compose.onNodeWithTag("login-submit", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot)
+        assertSameBounds(beforeAction, compose.onNodeWithTag("login-submit", useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot })
     }
 
     private fun assertSameBounds(before: androidx.compose.ui.geometry.Rect, after: androidx.compose.ui.geometry.Rect) {

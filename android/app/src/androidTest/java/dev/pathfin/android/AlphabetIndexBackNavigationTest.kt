@@ -20,11 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
@@ -88,7 +86,7 @@ class AlphabetIndexBackNavigationTest {
             assertTrue(fixture.backs.isEmpty())
         }
         compose.waitUntil(WAIT_MS) { fixture.page.value == Page.LANDING }
-        compose.onNodeWithTag("alphabet-back-landing").assertIsDisplayed()
+        compose.onNodeWithTag("alphabet-back-landing").assertVerificationDisplayed(compose)
         assertQuiet(fixture, expectedPage = Page.LANDING, expectedBacks = listOf(Page.BROWSER))
         compose.runOnIdle {
             assertEquals("完成一次系统手势只能导航一次", listOf(Page.BROWSER), fixture.backs)
@@ -100,7 +98,7 @@ class AlphabetIndexBackNavigationTest {
     @Test fun returningFromSyntheticDetailLeavesNoPendingAlphabetSelectionOnTheBrowser() {
         val fixture = showBrowser()
         // 打开只含合成文本的详情，不建立 AppViewModel 或读取任何账号存储。
-        compose.onNodeWithText(ITEM.name).performClick()
+        compose.onNodeWithText(ITEM.name).performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "alphabet-detail", compose.onNodeWithTag("alphabet-back-detail"))
         compose.runOnIdle { assertEquals(Page.DETAIL, fixture.page.value) }
 
@@ -208,7 +206,7 @@ class AlphabetIndexBackNavigationTest {
     private data class Edge(val startX: Float, val y: Float, val finishX: Float)
 
     private fun rightEdgeOverAlphabet(): Edge {
-        val rail = compose.onNodeWithTag("library-index-activation").fetchSemanticsNode().boundsInWindow
+        val rail = compose.onNodeWithTag("library-index-activation").readVerificationNode(compose) { it.boundsInWindow }
         return compose.runOnIdle {
             val activity = compose.activity
             val decor = activity.window.decorView
@@ -261,14 +259,14 @@ class AlphabetIndexBackNavigationTest {
         val action = compose.onNodeWithTag("library-index-activation").fetchSemanticsNode()
             .config[SemanticsActions.CustomActions].single { it.label == "显示字母索引" }
         compose.runOnIdle { assertTrue(action.action()) }
-        compose.onNodeWithTag("library-index").assertIsDisplayed()
+        compose.onNodeWithTag("library-index").assertVerificationDisplayed(compose)
     }
 
     private fun assertUnchangedBrowser(fixture: Fixture, expectedBacks: List<Page>) {
         assertQuiet(fixture, Page.BROWSER, expectedBacks)
         compose.onNodeWithTag("library-index-preview").assertDoesNotExist()
         compose.onNodeWithTag("library-index").assertDoesNotExist()
-        compose.onNodeWithTag("library-index-activation").assertIsDisplayed()
+        compose.onNodeWithTag("library-index-activation").assertVerificationDisplayed(compose)
         compose.runOnIdle { assertEquals("边缘返回不能改变原父库查询的类型、排序和筛选", fixture.original, fixture.browser.value.query) }
     }
 

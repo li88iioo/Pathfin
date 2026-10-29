@@ -27,7 +27,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.performScrollToNode
@@ -35,10 +34,8 @@ import androidx.compose.ui.test.hasTestTag
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.lifecycle.Lifecycle
@@ -123,7 +120,7 @@ class PlayerControlsFlowTest {
     @Test fun controlsChangeRealPlaybackWithoutReplacingSession() = withPlayback { active ->
         pauseWithControls(active)
         val pausedAt = main { active.player.currentPosition }
-        compose.onNodeWithTag("player-seek-slider").performTouchInput {
+        compose.onNodeWithTag("player-seek-slider").performVerificationTouchInput(compose) {
             swipe(Offset(width * .15f, centerY), Offset(width * .5f, centerY), durationMillis = 400)
         }
         compose.waitUntil(WAIT_MS) { main { active.player.currentPosition in 45_000..75_000 } }
@@ -132,35 +129,35 @@ class PlayerControlsFlowTest {
             assertTrue("必须实际改变 Media3 位置", active.player.currentPosition > pausedAt + 20_000)
         }
         val seekPosition = main { active.player.currentPosition }
-        compose.onNodeWithTag("player-seek-forward").performClick()
+        compose.onNodeWithTag("player-seek-forward").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { active.player.currentPosition >= seekPosition + 9_000 } }
-        compose.onNodeWithTag("player-seek-back").performClick()
+        compose.onNodeWithTag("player-seek-back").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { kotlin.math.abs(active.player.currentPosition - seekPosition) < 1_000 } }
-        compose.onNodeWithTag("player-speed-increase").performClick()
+        compose.onNodeWithTag("player-speed-increase").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { kotlin.math.abs(active.player.playbackParameters.speed - 1.1f) < .001f } }
-        compose.onNodeWithTag("player-speed-decrease").performClick()
+        compose.onNodeWithTag("player-speed-decrease").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { active.player.playbackParameters.speed == 1f } }
-        compose.onNodeWithTag("player-speed").performClick()
+        compose.onNodeWithTag("player-speed").performVerificationClick(compose)
         scrollDialogTo(3)
-        compose.onNodeWithTag("player-speed-1.25").performClick()
+        compose.onNodeWithTag("player-speed-1.25").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { active.player.playbackParameters.speed == 1.25f } }
-        compose.onNodeWithTag("player-aspect").performClick()
-        compose.onNodeWithTag("player-resize-zoom").performClick()
+        compose.onNodeWithTag("player-aspect").performVerificationClick(compose)
+        compose.onNodeWithTag("player-resize-zoom").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { findPlayerView(compose.activity.window.decorView)
             ?.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)?.let { it.scaleX > 1f && it.scaleY > 1f } == true } }
-        compose.onNodeWithTag("player-aspect").performClick()
-        compose.onNodeWithTag("player-resize-fit").performClick()
+        compose.onNodeWithTag("player-aspect").performVerificationClick(compose)
+        compose.onNodeWithTag("player-resize-fit").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { findPlayerView(compose.activity.window.decorView)
             ?.findViewById<View>(androidx.media3.ui.R.id.exo_content_frame)?.let { it.scaleX == 1f && it.scaleY == 1f } == true } }
         visitChaptersWithoutChangingPlayback(active)
-        compose.onNodeWithTag("player-play-pause").performClick()
+        compose.onNodeWithTag("player-play-pause").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { active.player.isPlaying } }
         assertContinuous(active)
     }
 
     @Test fun doubleTapSeekAndLongPressSpeedFeedbackCarryTheirOwnIcons() = withPlayback { active ->
         pauseWithControls(active)
-        compose.onNodeWithTag("player-video").performTouchInput { doubleClick(Offset(width * .85f, centerY)) }
+        compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { doubleClick(Offset(width * .85f, centerY)) }
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText("快进", substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("player-feedback-icon", useUnmergedTree = true).assertExists()
         // 临时倍速只在播放中生效；按住期间显示，松手后随倍速一起结束。
@@ -195,7 +192,7 @@ class PlayerControlsFlowTest {
         val targetAudio = main { tracks(active.player, C.TRACK_TYPE_AUDIO).first { !it.selected } }
         chooseTrack(active, C.TRACK_TYPE_AUDIO, targetAudio)
         compose.waitUntil(WAIT_MS) { main { tracks(active.player, C.TRACK_TYPE_AUDIO).any { it.tag == targetAudio.tag && it.selected } } }
-        compose.onNodeWithTag("player-play-pause").performClick()
+        compose.onNodeWithTag("player-play-pause").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { active.player.isPlaying && active.player.audioFormat?.language == targetAudio.language } }
 
         val cues = ConcurrentLinkedQueue<String>()
@@ -219,9 +216,9 @@ class PlayerControlsFlowTest {
                 }
             }
             ensureControls()
-            compose.onNodeWithTag("player-subtitles").performClick()
+            compose.onNodeWithTag("player-subtitles").performVerificationClick(compose)
             awaitTrackMenu("player-track-off")
-            compose.onNodeWithTag("player-track-off").performClick()
+            compose.onNodeWithTag("player-track-off").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { main { C.TRACK_TYPE_TEXT in active.player.trackSelectionParameters.disabledTrackTypes &&
                 active.player.currentCues.cues.isEmpty() && assGlyphPixels() == 0 } }
             val requests = fixtureStatus().getJSONArray("SubtitleRequests")
@@ -238,9 +235,9 @@ class PlayerControlsFlowTest {
     @Test fun lockedBackUnlocksAndRotationRetainsPlayerBeforeReturningToDetails() = withPlayback { active ->
         pauseWithControls(active)
         val position = main { active.player.currentPosition }
-        compose.onNodeWithTag("player-lock").performClick()
+        compose.onNodeWithTag("player-lock").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { active.playback.state.value.controlsLocked }
-        compose.onNodeWithTag("player-unlock").assertIsDisplayed()
+        compose.onNodeWithTag("player-unlock").assertVerificationDisplayed(compose)
         physicalBack()
         compose.waitUntil(WAIT_MS) { !active.playback.state.value.controlsLocked }
         main {
@@ -269,9 +266,9 @@ class PlayerControlsFlowTest {
         withPlayback(preferences = testPreferences().copy(serverIntroSkipEnabled = false)) { active ->
             pauseWithControls(active)
             ensureControls()
-            compose.onNodeWithTag("player-subtitles").performClick()
+            compose.onNodeWithTag("player-subtitles").performVerificationClick(compose)
             awaitTrackMenu("player-track-off")
-            compose.onNodeWithTag("player-track-off").performClick()
+            compose.onNodeWithTag("player-track-off").performVerificationClick(compose)
             val beforeSeek = active.presentedFrames.get()
             main { active.player.seekTo(16_000) }
             compose.waitUntil(WAIT_MS) {
@@ -322,7 +319,7 @@ class PlayerControlsFlowTest {
     private fun chooseAspect(mode: String) {
         ensureControls()
         VerificationDisplay.awaitWindowReady(compose, "aspect-menu-open/$mode", compose.onNodeWithTag("player-aspect"))
-        compose.onNodeWithTag("player-aspect").performClick()
+        compose.onNodeWithTag("player-aspect").performVerificationClick(compose)
         val choice = compose.onNodeWithTag("player-resize-$mode")
         compose.waitUntil(WAIT_MS) {
             compose.onAllNodes(hasTestTag("player-resize-$mode")).fetchSemanticsNodes().isNotEmpty()
@@ -330,7 +327,7 @@ class PlayerControlsFlowTest {
         // Popup has its own Android window. Compose idle alone does not establish its
         // first draw/focus, particularly when the previous same-mode menu just closed.
         VerificationDisplay.awaitWindowReady(compose, "aspect-menu-choice/$mode", choice)
-        VerificationDisplay.assertDisplayed(compose, "aspect-menu-choice/$mode", choice).performClick()
+        choice.assertVerificationDisplayed(compose, "aspect-menu-choice/$mode").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) {
             compose.onAllNodes(hasTestTag("player-popup-aspect")).fetchSemanticsNodes().isEmpty()
         }
@@ -339,7 +336,7 @@ class PlayerControlsFlowTest {
 
     private fun hideControls() {
         if (compose.onAllNodes(hasTestTag("player-controls")).fetchSemanticsNodes().isNotEmpty()) {
-            compose.onNodeWithTag("player-video").performTouchInput { click(Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
             compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag("player-controls")).fetchSemanticsNodes().isEmpty() }
         }
     }
@@ -465,11 +462,11 @@ class PlayerControlsFlowTest {
             rotateTo(Configuration.ORIENTATION_LANDSCAPE, active)
             ensureControls()
             assertControlsFit()
-            compose.onNodeWithTag("player-more").performClick()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
             VerificationDisplay.awaitWindowReady(compose, "large-font-settings", compose.onNodeWithTag("player-popup-more"))
             listOf("player-menu-information", "player-audio-gain", "player-tools", "player-sleep-timer").forEach { tag ->
                 compose.onNodeWithTag("player-popup-more").performScrollToNode(hasTestTag(tag))
-                compose.onNodeWithTag(tag).assertIsDisplayed().assertIsEnabled()
+                compose.onNodeWithTag(tag).assertVerificationDisplayed(compose).assertIsEnabled()
             }
             listOf("媒体信息", "音量增益", "播放质量", "定时关闭").forEach { label ->
                 val layouts = mutableListOf<TextLayoutResult>()
@@ -481,11 +478,11 @@ class PlayerControlsFlowTest {
                     }
                 })
             }
-            compose.onNodeWithTag("playback-panel-close").performClick()
-            compose.onNodeWithTag("player-audio").performClick()
+            compose.onNodeWithTag("playback-panel-close").performVerificationClick(compose)
+            compose.onNodeWithTag("player-audio").performVerificationClick(compose)
             scrollDialogTo(2)
             val other = main { tracks(active.player, C.TRACK_TYPE_AUDIO).last() }
-            compose.onNodeWithTag(other.tag).assertIsDisplayed().performClick()
+            compose.onNodeWithTag(other.tag).assertVerificationDisplayed(compose).performVerificationClick(compose)
             assertContinuous(active)
         }
     }
@@ -500,33 +497,33 @@ class PlayerControlsFlowTest {
             rotateTo(Configuration.ORIENTATION_LANDSCAPE, active)
             ensureControls()
             exportPlayerFrame("player-landscape-controls")
-            compose.onNodeWithTag("player-more").performClick()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
             exportPlayerFrame("player-landscape-more")
-            compose.onNodeWithTag("player-sleep-timer").performClick()
+            compose.onNodeWithTag("player-sleep-timer").performVerificationClick(compose)
             exportPlayerFrame("player-landscape-sleep")
-            compose.onNodeWithTag("player-sleep-off").performClick()
+            compose.onNodeWithTag("player-sleep-off").performVerificationClick(compose)
             visitChaptersWithoutChangingPlayback(active) { exportPlayerFrame("player-landscape-chapters") }
-            compose.onNodeWithTag("player-more").performClick()
-            compose.onNodeWithTag("player-menu-information").performClick()
-            compose.onNodeWithTag("player-popup-info").assertIsDisplayed()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
+            compose.onNodeWithTag("player-menu-information").performVerificationClick(compose)
+            compose.onNodeWithTag("player-popup-info").assertVerificationDisplayed(compose)
             val video = main { checkNotNull(active.player.videoFormat) }
-            compose.onNodeWithText("分辨率").assertIsDisplayed()
-            compose.onNodeWithText("${video.width} × ${video.height}").assertIsDisplayed()
+            compose.onNodeWithText("分辨率").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("${video.width} × ${video.height}").assertVerificationDisplayed(compose)
             exportPlayerFrame("player-landscape-information")
-            compose.onNodeWithTag("player-info-close").performClick()
-            compose.onNodeWithTag("player-audio").performClick()
+            compose.onNodeWithTag("player-info-close").performVerificationClick(compose)
+            compose.onNodeWithTag("player-audio").performVerificationClick(compose)
             exportPlayerFrame("player-landscape-audio")
-            compose.onNodeWithTag("player-track-auto").performClick()
-            compose.onNodeWithTag("player-subtitles").performClick()
+            compose.onNodeWithTag("player-track-auto").performVerificationClick(compose)
+            compose.onNodeWithTag("player-subtitles").performVerificationClick(compose)
             exportPlayerFrame("player-landscape-subtitles")
-            compose.onNodeWithTag("player-track-off").performClick()
+            compose.onNodeWithTag("player-track-off").performVerificationClick(compose)
             rotateTo(Configuration.ORIENTATION_PORTRAIT, active)
             ensureControls()
             exportPlayerFrame("player-portrait-controls")
-            compose.onNodeWithTag("player-more").performClick()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
             exportPlayerFrame("player-portrait-more")
-            compose.onNodeWithTag("player-sleep-timer").performClick()
-            compose.onNodeWithTag("player-sleep-off").performClick()
+            compose.onNodeWithTag("player-sleep-timer").performVerificationClick(compose)
+            compose.onNodeWithTag("player-sleep-off").performVerificationClick(compose)
             assertContinuous(active)
         }
     }
@@ -758,13 +755,13 @@ class PlayerControlsFlowTest {
 
     private fun pauseWithControls(active: ActiveFixture) {
         ensureControls()
-        compose.onNodeWithTag("player-play-pause").performClick()
+        compose.onNodeWithTag("player-play-pause").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { main { !active.player.playWhenReady && !active.player.isPlaying } }
     }
 
     private fun ensureControls() {
         if (compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isEmpty()) {
-            compose.onNodeWithTag("player-video").performTouchInput { click(Offset(width * .5f, height * .3f)) }
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
             compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isNotEmpty() }
         }
     }
@@ -772,13 +769,13 @@ class PlayerControlsFlowTest {
     private fun visitChaptersWithoutChangingPlayback(active: ActiveFixture, onVisible: () -> Unit = {}) {
         ensureControls()
         val position = main { active.player.currentPosition }
-        compose.onNodeWithTag("player-chapters").performClick()
+        compose.onNodeWithTag("player-chapters").performVerificationClick(compose)
         VerificationDisplay.awaitWindowReady(compose, "chapters-open", compose.onNodeWithTag("playback-chapters"))
         compose.onNodeWithTag("player-controls").assertDoesNotExist()
         onVisible()
-        compose.onNodeWithTag("playback-panel-close").performClick()
+        compose.onNodeWithTag("playback-panel-close").performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag("player-controls")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("player-play-pause").assertIsDisplayed()
+        compose.onNodeWithTag("player-play-pause").assertVerificationDisplayed(compose)
         main {
             assertSame("章节开关不能替换播放器", active.player, active.playback.player)
             assertFalse("浏览章节不能恢复暂停播放", active.player.playWhenReady)
@@ -788,11 +785,11 @@ class PlayerControlsFlowTest {
 
     private fun chooseTrack(active: ActiveFixture, type: Int, choice: TrackRef) {
         ensureControls()
-        compose.onNodeWithTag(if (type == C.TRACK_TYPE_AUDIO) "player-audio" else "player-subtitles").performClick()
+        compose.onNodeWithTag(if (type == C.TRACK_TYPE_AUDIO) "player-audio" else "player-subtitles").performVerificationClick(compose)
         awaitTrackMenu(if (type == C.TRACK_TYPE_AUDIO) "player-track-auto" else "player-track-off")
         check(main { tracks(active.player, type).any { it.tag == choice.tag } })
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag(choice.tag))
-        compose.onNodeWithTag(choice.tag).assertIsDisplayed().performClick()
+        compose.onNodeWithTag(choice.tag).assertVerificationDisplayed(compose).performVerificationClick(compose)
         main {
             val override = active.player.trackSelectionParameters.overrides.values.singleOrNull { it.type == type }
             assertNotNull("实际点选必须设置对应类型的轨道覆盖：${choice.label}", override)
@@ -807,7 +804,7 @@ class PlayerControlsFlowTest {
         compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag(anchorTag))
         compose.waitUntil(WAIT_MS) { compose.onAllNodes(hasTestTag(anchorTag)).fetchSemanticsNodes().isNotEmpty() }
         VerificationDisplay.awaitWindowReady(compose, "track-menu/$anchorTag", compose.onNodeWithTag(anchorTag))
-        compose.onNodeWithTag(anchorTag).assertIsDisplayed()
+        compose.onNodeWithTag(anchorTag).assertVerificationDisplayed(compose)
     }
 
     private fun scrollDialogTo(index: Int) = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollToIndex)).performScrollToIndex(index)
@@ -819,7 +816,7 @@ class PlayerControlsFlowTest {
         main { compose.activity.requestedOrientation = if (orientation == Configuration.ORIENTATION_LANDSCAPE) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
         compose.waitUntil(WAIT_MS) {
             assertHealthy(active)
-            val bounds = compose.onNodeWithTag("player-screen").fetchSemanticsNode().boundsInRoot
+            val bounds = compose.onNodeWithTag("player-screen").readVerificationNode(compose) { it.boundsInRoot }
             main { compose.activity.resources.configuration.orientation == orientation && compose.activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) } &&
                 if (orientation == Configuration.ORIENTATION_LANDSCAPE) bounds.width > bounds.height else bounds.height > bounds.width
         }

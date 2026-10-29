@@ -109,15 +109,15 @@ class PlaybackQualityFlowTest {
             preparePaused(playback, 8_000, 1.5f)
             val old = main { checkNotNull(playback.player) }
             fixture.infoStatus.set(503)
-            compose.onNodeWithTag("player-more").performClick()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("player-tools"))
-            compose.onNodeWithTag("player-tools").performClick()
+            compose.onNodeWithTag("player-tools").performVerificationClick(compose)
             VerificationDisplay.awaitWindowReady(compose, "quality-options",
                 compose.onNodeWithTag("player-quality-standard"))
             if (InstrumentationRegistry.getArguments().getString("pathfin.playerPreviews") == "true") {
                 ExternalScreenshotCheckpoint.capture("player-quality")
             }
-            compose.onNodeWithTag("player-quality-standard").performClick()
+            compose.onNodeWithTag("player-quality-standard").performVerificationClick(compose)
             compose.waitUntil(WAIT) { !playback.state.value.isChangingQuality && playback.state.value.qualityError != null }
             main {
                 assertSame(old, playback.player)
@@ -128,7 +128,7 @@ class PlaybackQualityFlowTest {
             assertEquals(0, fixture.transcodedMediaRequests.get())
             assertRequestedQuality(fixture.playbackRequests.single(), PlaybackQuality.STANDARD)
             fixture.infoStatus.set(200)
-            compose.onNodeWithTag("player-quality-standard").performClick()
+            compose.onNodeWithTag("player-quality-standard").performVerificationClick(compose)
             awaitReady(playback, PlaybackQuality.STANDARD)
             main { assertPausedAt(playback, 8_000, 1.5f); assertNull(playback.state.value.qualityError) }
             assertEquals("失败后必须允许重新协商同一个选项", 2, fixture.playbackRequests.size)
@@ -168,11 +168,11 @@ class PlaybackQualityFlowTest {
     @Test fun audioOnlySurvivesFailedQualityRollbackSuccessfulChangeAndExplicitRetryWithoutWaitingForVideo() {
         withFixture(assEnabled = false) { fixture, playback ->
             preparePaused(playback, 9_000, 1.5f)
-            compose.onNodeWithTag("player-more").performClick()
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("player-audio-only"))
             val audioOnly = compose.onNodeWithTag("player-audio-only")
             VerificationDisplay.awaitWindowReady(compose, "quality-audio-only", audioOnly)
-            audioOnly.assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+            audioOnly.assertVerificationDisplayed(compose).performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
             val original = main {
                 val owner = checkNotNull(playback.player)
                 assertTrue(C.TRACK_TYPE_VIDEO in owner.trackSelectionParameters.disabledTrackTypes)

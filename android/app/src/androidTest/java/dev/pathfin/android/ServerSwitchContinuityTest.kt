@@ -395,11 +395,11 @@ class ServerSwitchContinuityTest {
     private fun switchFromMenu(target: ServerProfile) {
         val button = compose.onNodeWithContentDescription("切换服务器")
         VerificationDisplay.awaitWindowReady(compose, "before-switch-${target.displayName}", button)
-        button.performClick()
+        button.performVerificationClick(compose)
         val choice = compose.onNode(hasText(target.displayName) and hasAnyAncestor(isPopup()))
         // Popup 有自己的窗口；语义节点出现时，首次绘制和真实触摸坐标仍可能未就绪。
         VerificationDisplay.awaitWindowReady(compose, "switch-popup-${target.displayName}", choice)
-        choice.assertIsDisplayed().assertIsEnabled().performClick()
+        choice.assertVerificationDisplayed(compose).assertIsEnabled().performVerificationClick(compose)
         // 等 DropdownMenu 的独立窗口退出，不能把随后触摸/位置检查送到残留 Popup。
         compose.waitUntil(10_000) { compose.onAllNodes(isPopup()).fetchSemanticsNodes().isEmpty() }
         VerificationDisplay.awaitWindowReady(compose, "after-popup-${target.displayName}", button)
@@ -475,7 +475,7 @@ class ServerSwitchContinuityTest {
         val heading = compose.onNodeWithText("最近入库 · ${fixture.libraryName(library, 1)}")
         compose.waitForIdle()
         VerificationDisplay.awaitWindowReady(compose, "scroll-${fixture.label}", card, heading)
-        card.assertIsDisplayed(); heading.assertIsDisplayed()
+        card.assertVerificationDisplayed(compose); heading.assertVerificationDisplayed(compose)
         val verticalNode = verticalList.fetchSemanticsNode()
         val horizontalNode = row(fixture, library, movie).fetchSemanticsNode()
         val cardNode = card.fetchSemanticsNode()

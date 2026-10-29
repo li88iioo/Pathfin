@@ -9,7 +9,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasTestTag
@@ -19,7 +18,6 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.printToString
@@ -106,46 +104,46 @@ class MediaMetadataPresentationTest {
                     compose.onAllNodesWithTag("metadata-title").fetchSemanticsNodes().isNotEmpty()
                 }
                 VerificationDisplay.awaitWindowReady(compose, "metadata-presentation", compose.onNodeWithTag("metadata-title"))
-                compose.onNodeWithTag("metadata-page-title").assertIsDisplayed()
-                compose.onNodeWithTag("metadata-back").assertIsDisplayed()
+                compose.onNodeWithTag("metadata-page-title").assertVerificationDisplayed(compose)
+                compose.onNodeWithTag("metadata-back").assertVerificationDisplayed(compose)
                 compose.onNodeWithTag("metadata-save").assertIsNotEnabled()
                 compose.onNodeWithText("有未保存的修改", substring = false).assertDoesNotExist()
                 compose.onNodeWithTag("media-image-strip").assertDoesNotExist()
                 compose.onNodeWithTag("media-tools-images-tab").assertDoesNotExist()
                 assertEquals("元数据页不能等待或读取图片列表", 0, fixture.imageLists.get())
                 compose.onNodeWithText("操作", substring = false).assertDoesNotExist()
-                compose.onNodeWithTag("metadata-path").assertIsDisplayed()
+                compose.onNodeWithTag("metadata-path").assertVerificationDisplayed(compose)
                 assertEquals("https://source.example/Film.strm", compose.onNodeWithTag("metadata-path")
                     .fetchSemanticsNode().config[SemanticsProperties.Text].single().text)
 
                 compose.onNodeWithTag("metadata-title").performTextReplacement(DRAFT)
                 compose.onNodeWithTag("metadata-save").assertIsEnabled()
                 compose.onNodeWithText("有未保存的修改", substring = false).assertDoesNotExist()
-                compose.onNodeWithTag("metadata-back").performClick()
+                compose.onNodeWithTag("metadata-back").performVerificationClick(compose)
                 waitForText("放弃未保存的修改？")
-                compose.onNodeWithText("继续编辑", substring = false).performClick()
+                compose.onNodeWithText("继续编辑", substring = false).performVerificationClick(compose)
                 VerificationDisplay.awaitWindowReady(compose, "metadata-draft-continued", compose.onNodeWithTag("metadata-title"))
                 assertEquals(DRAFT, compose.onNodeWithTag("metadata-title").fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
                 assertTrue("继续编辑必须保留草稿和当前编辑页", shown.value)
                 compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
                 waitForText("放弃未保存的修改？")
-                compose.onNodeWithText("放弃修改", substring = false).performClick()
+                compose.onNodeWithText("放弃修改", substring = false).performVerificationClick(compose)
                 compose.waitUntil(WAIT_MS) { !shown.value }
 
                 // 图片编辑是另一个明确入口，真正卸载文本编辑页后再挂载图片页。
                 compose.runOnIdle { page.value = "images"; shown.value = true }
                 compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.imageLists.get() == 1 && fixture.imageReads.get() > 0 }
-                compose.onNodeWithTag("media-image/Primary").assertIsDisplayed()
-                compose.onNodeWithTag("media-image/Logo").assertIsDisplayed()
-                val cover = compose.onNodeWithTag("media-image/Primary").fetchSemanticsNode().boundsInRoot
-                val logo = compose.onNodeWithTag("media-image/Logo").fetchSemanticsNode().boundsInRoot
+                compose.onNodeWithTag("media-image/Primary").assertVerificationDisplayed(compose)
+                compose.onNodeWithTag("media-image/Logo").assertVerificationDisplayed(compose)
+        val images = listOf("media-image/Primary", "media-image/Logo").map { compose.onNodeWithTag(it).fetchSemanticsNode() }
+        val (cover, logo) = compose.runOnIdle { images.map { it.boundsInRoot } }
                 assertEquals("两种图片应处于同一紧凑行", cover.top, logo.top, 1f)
                 assertTrue("图片卡应为两列", cover.right <= logo.left)
                 compose.onNodeWithTag("media-image-strip").assertDoesNotExist()
                 compose.onNodeWithTag("metadata-form").assertDoesNotExist()
                 for (type in listOf("Primary", "Logo", "Thumb", "Banner", "Disc", "Art")) {
                     compose.onNodeWithTag("media-images").performScrollToNode(hasTestTag("media-image/$type"))
-                    compose.onNodeWithTag("media-image/$type").assertIsDisplayed()
+                    compose.onNodeWithTag("media-image/$type").assertVerificationDisplayed(compose)
                     compose.onNodeWithTag("media-image-search/$type").assertIsEnabled()
                     compose.onNodeWithTag("media-image-upload/$type").assertIsEnabled()
                 }
@@ -153,7 +151,7 @@ class MediaMetadataPresentationTest {
                 compose.onNodeWithTag("media-image-upload/Backdrop").assertIsEnabled()
                 openBackdropDeletion()
                 waitForText("删除背景图？")
-                compose.onNodeWithText("取消", substring = false).performClick()
+                compose.onNodeWithText("取消", substring = false).performVerificationClick(compose)
                 VerificationDisplay.awaitWindowReady(compose, "metadata-image-delete-cancelled", compose.onNodeWithTag("media-image-delete/Backdrop/0"))
                 assertEquals(0, fixture.deletions.size)
                 assertEquals(0, changed.get())
@@ -163,7 +161,7 @@ class MediaMetadataPresentationTest {
                 fixture.backdropTag.set("replacement-backdrop")
                 openBackdropDeletion()
                 waitForText("删除背景图？")
-                compose.onNodeWithText("删除", substring = false).performClick()
+                compose.onNodeWithText("删除", substring = false).performVerificationClick(compose)
                 waitForText("图片列表已变化，请重新选择后删除")
                 compose.waitForIdle()
                 assertEquals("拒绝旧选择后必须发布本次校验的新列表", 2, fixture.imageLists.get())
@@ -174,7 +172,7 @@ class MediaMetadataPresentationTest {
                 // 对当前新图再次明确确认，才允许单次 DELETE 与成功后的列表重读。
                 openBackdropDeletion()
                 waitForText("删除背景图？")
-                compose.onNodeWithText("删除", substring = false).performClick()
+                compose.onNodeWithText("删除", substring = false).performVerificationClick(compose)
                 compose.waitUntil(WAIT_MS) {
                     fixture.assertHealthy()
                     fixture.deletions.size == 1 && fixture.imageLists.get() >= 4 && changed.get() == 1 &&
@@ -206,7 +204,7 @@ class MediaMetadataPresentationTest {
     private fun openBackdropDeletion() {
         compose.onNodeWithTag("media-images").performScrollToNode(hasTestTag("media-image-delete/Backdrop/0"))
         VerificationDisplay.awaitWindowReady(compose, "metadata-image-inline-delete", compose.onNodeWithTag("media-image-delete/Backdrop/0"))
-        compose.onNodeWithTag("media-image-delete/Backdrop/0").performClick()
+        compose.onNodeWithTag("media-image-delete/Backdrop/0").performVerificationClick(compose)
     }
 
     private fun waitForText(text: String) = compose.waitUntil(WAIT_MS) {
@@ -217,9 +215,9 @@ class MediaMetadataPresentationTest {
         runCatching {
             val roots = compose.onAllNodes(isRoot(), useUnmergedTree = true)
             val trees = roots.fetchSemanticsNodes().indices.joinToString("\n") { roots[it].printToString() }
-            val bounds = listOf("media-images", "media-image-delete/Backdrop/0").joinToString { tag ->
-                val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
-                "$tag root=${node.boundsInRoot} window=${node.boundsInWindow}"
+            val nodes = listOf("media-images", "media-image-delete/Backdrop/0").associateWith { compose.onNodeWithTag(it).fetchSemanticsNode() }
+            val bounds = compose.runOnUiThread {
+                nodes.entries.joinToString { (tag, node) -> "$tag root=${node.boundsInRoot} window=${node.boundsInWindow}" }
             }
             val window = compose.runOnUiThread {
                 val decor = compose.activity.window.decorView

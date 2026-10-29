@@ -2,7 +2,6 @@ package dev.pathfin.android
 
 import androidx.activity.BackEventCompat
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.util.UnstableApi
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -71,11 +70,11 @@ class PredictiveBackPlaybackTest {
             check(request.stream.uri == "http://127.0.0.1:8102/sample.mp4" && request.session.accessToken == "fixture-token")
             session = request.info.playSessionId
             val player = compose.runOnIdle { checkNotNull(playback.player) }
-            val initialBounds = compose.onNodeWithTag("playback-back-motion").fetchSemanticsNode().boundsInRoot
+            val initialBounds = compose.onNodeWithTag("playback-back-motion").readVerificationNode(compose) { it.boundsInRoot }
             startAndProgress(.7f)
             compose.waitUntil { progress() > .6f }
             assertEquals("系统返回过程中播放器图层不能缩放或位移", initialBounds,
-                compose.onNodeWithTag("playback-back-motion").fetchSemanticsNode().boundsInRoot)
+                compose.onNodeWithTag("playback-back-motion").readVerificationNode(compose) { it.boundsInRoot })
             assertSame(player, compose.runOnIdle { playback.player })
             assertSame(request, app.state.value.activePlayback)
             assertEquals(0, stopCount(session))
@@ -85,12 +84,12 @@ class PredictiveBackPlaybackTest {
             assertTrue(compose.runOnIdle { player.isPlaying })
             assertEquals(0, stopCount(session))
 
-            compose.onNodeWithTag("player-lock").performClick()
+            compose.onNodeWithTag("player-lock").performVerificationClick(compose)
             compose.waitUntil { playback.state.value.controlsLocked }
             startAndProgress(.8f)
             compose.waitUntil { progress() > .7f }
             assertEquals("锁定时系统手势仍不能改变播放器图层", initialBounds,
-                compose.onNodeWithTag("playback-back-motion").fetchSemanticsNode().boundsInRoot)
+                compose.onNodeWithTag("playback-back-motion").readVerificationNode(compose) { it.boundsInRoot })
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
             compose.waitUntil { !playback.state.value.controlsLocked }
             assertSame("首次完成仅解锁，仍保留原节目", request, app.state.value.activePlayback)

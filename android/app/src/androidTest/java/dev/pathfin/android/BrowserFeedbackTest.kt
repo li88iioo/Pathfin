@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
@@ -33,7 +32,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
@@ -102,13 +100,13 @@ class BrowserFeedbackTest {
             state.value = state.value.copy(filtersLoading = true)
         })
 
-        compose.onNodeWithTag("browser-filter").performClick()
+        compose.onNodeWithTag("browser-filter").performVerificationClick(compose)
         // 等底部面板完成入场再注入坐标点击，避免在仍移动的窗口上点到旧位置。
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasTestTag("browser-filter-group/类型"))
         compose.onNodeWithTag("browser-filter-values/类型").performScrollToNode(hasText("科幻"))
-        compose.onNodeWithTag("browser-filter-value/类型/科幻").performClick().assertIsSelected()
+        compose.onNodeWithTag("browser-filter-value/类型/科幻").performVerificationClick(compose).assertIsSelected()
         compose.runOnIdle { assertNull("确认前不应把筛选草稿应用到媒体查询", applied) }
         val filters = compose.onNode(hasTestTag("refreshable-page") and hasAnyDescendant(hasTestTag("browser-filter-options")))
         compose.onNodeWithTag("browser-filter-options").performScrollToIndex(0)
@@ -129,8 +127,8 @@ class BrowserFeedbackTest {
         compose.onNodeWithText(FILTER_ERROR).assertDoesNotExist()
         compose.onNodeWithTag("browser-filter-options").performScrollToNode(hasText("科幻"))
         compose.onNodeWithText("科幻").assertIsSelected()
-        compose.onNodeWithText("纪录片").assertIsDisplayed()
-        compose.onNodeWithTag("browser-filter-apply").performClick()
+        compose.onNodeWithText("纪录片").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("browser-filter-apply").performVerificationClick(compose)
         compose.runOnIdle {
             assertEquals(setOf("科幻"), applied?.genres)
             assertEquals(1, filterRetries)
@@ -146,7 +144,7 @@ class BrowserFeedbackTest {
             refreshes++
             state.value = state.value.copy(content = state.value.content.copy(loading = true))
         })
-        compose.onNodeWithText("没有找到内容").assertIsDisplayed()
+        compose.onNodeWithText("没有找到内容").assertVerificationDisplayed(compose)
         pullPageToRefresh(compose)
         compose.runOnIdle {
             assertEquals("下拉刷新应只触发一次请求", 1, refreshes)
@@ -155,7 +153,7 @@ class BrowserFeedbackTest {
         // 已确认空结果继续原位呈现，长刷新也不能退回整页加载面板。
         compose.mainClock.advanceTimeBy(500)
         compose.waitForIdle()
-        compose.onNodeWithText("没有找到内容").assertIsDisplayed()
+        compose.onNodeWithText("没有找到内容").assertVerificationDisplayed(compose)
         compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
         compose.onNodeWithTag("browser-empty-refresh").assertDoesNotExist()
         pullPageToRefresh(compose, stage = "empty-result-busy")
@@ -190,8 +188,8 @@ class BrowserFeedbackTest {
         }
         compose.onAllNodesWithText("24").assertCountEquals(0)
         compose.onAllNodesWithText("12").assertCountEquals(0)
-        compose.onNodeWithContentDescription("未观看 3 项", useUnmergedTree = true).assertIsDisplayed()
-        compose.onNodeWithText("3", useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription("未观看 3 项", useUnmergedTree = true).assertVerificationDisplayed(compose)
+        compose.onNodeWithText("3", useUnmergedTree = true).assertVerificationDisplayed(compose)
     }
 
     @Test
@@ -207,26 +205,26 @@ class BrowserFeedbackTest {
             state.value = state.value.copy(query = requested, content = state.value.content.copy(loading = true))
         }, onOpen = { opened = it })
         compose.onNodeWithTag("browser-grid").performScrollToIndex(60)
-        val previousBounds = compose.onNodeWithText("旧结果60").fetchSemanticsNode().boundsInRoot
-        compose.onNodeWithTag("browser-category").performClick()
+        val previousBounds = compose.onNodeWithText("旧结果60").readVerificationNode(compose) { it.boundsInRoot }
+        compose.onNodeWithTag("browser-category").performVerificationClick(compose)
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
-        compose.onNodeWithTag("browser-tab/MEDIA").performClick()
+        compose.onNodeWithTag("browser-tab/MEDIA").performVerificationClick(compose)
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
 
         compose.onNodeWithTag("browser-category").assertTextContains(LibraryTab.ALL.label)
         compose.onNodeWithTag("browser-count").assert(hasAnyDescendant(hasText("120")))
         assertEquals("等待分类回包时旧列表不能先回顶", previousBounds,
-            compose.onNodeWithText("旧结果60").fetchSemanticsNode().boundsInRoot)
-        compose.onNodeWithText("旧结果60").performClick()
+            compose.onNodeWithText("旧结果60").readVerificationNode(compose) { it.boundsInRoot })
+        compose.onNodeWithText("旧结果60").performVerificationClick(compose)
         compose.runOnIdle { assertEquals("等待期间点击仍打开当前可见媒体", previous[60], opened) }
 
         compose.mainClock.autoAdvance = false
         try {
             compose.mainClock.advanceTimeBy(2_600)
             compose.onNodeWithTag("browser-category").assertTextContains(LibraryTab.ALL.label)
-            assertEquals(previousBounds, compose.onNodeWithText("旧结果60").fetchSemanticsNode().boundsInRoot)
+            assertEquals(previousBounds, compose.onNodeWithText("旧结果60").readVerificationNode(compose) { it.boundsInRoot })
             compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
             compose.runOnIdle {
                 val next = List(90) { MediaItem("new-$it", "新结果$it", "Movie") }
@@ -235,7 +233,7 @@ class BrowserFeedbackTest {
             }
             compose.mainClock.advanceTimeByFrame()
             // 新集合仍有足够深的内容，显示第0项才能证明回顶属于新结果的首帧。
-            compose.onNodeWithText("新结果0").assertIsDisplayed()
+            compose.onNodeWithText("新结果0").assertVerificationDisplayed(compose)
             compose.onNodeWithText("旧结果60").assertDoesNotExist()
             compose.onNodeWithTag("browser-category").assertTextContains(LibraryTab.MEDIA.label)
             compose.onNodeWithTag("browser-count").assert(hasAnyDescendant(hasText("90")))
@@ -266,7 +264,7 @@ class BrowserFeedbackTest {
                     items = listOf(MediaItem("fast", "快速返回的电影", "Movie")), total = 1, nextIndex = 1))
             }
             compose.mainClock.advanceTimeByFrame()
-            compose.onNodeWithText("快速返回的电影").assertIsDisplayed()
+            compose.onNodeWithText("快速返回的电影").assertVerificationDisplayed(compose)
             compose.mainClock.advanceTimeBy(600)
             compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
             compose.onNodeWithText("没有找到内容").assertDoesNotExist()
@@ -284,7 +282,7 @@ class BrowserFeedbackTest {
             compose.mainClock.advanceTimeByFrame()
             compose.mainClock.advanceTimeBy(500)
             // 读盘本身较慢时也需要反馈，不能无限停留在空白页。
-            compose.onNodeWithText("正在读取媒体").assertIsDisplayed()
+            compose.onNodeWithText("正在读取媒体").assertVerificationDisplayed(compose)
             compose.onNodeWithText("没有找到内容").assertDoesNotExist()
             // 旧查询仍在等待，新的快速查询不能继承它已经可见的加载反馈。
             compose.runOnIdle {
@@ -299,15 +297,15 @@ class BrowserFeedbackTest {
                     items = listOf(MediaItem("cached", "缓存中的电影", "Movie")), total = 1, nextIndex = 1, loading = true))
             }
             compose.mainClock.advanceTimeByFrame()
-            compose.onNodeWithText("缓存中的电影").assertIsDisplayed()
+            compose.onNodeWithText("缓存中的电影").assertVerificationDisplayed(compose)
             compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
-            val titleBounds = compose.onNodeWithText("缓存中的电影").fetchSemanticsNode().boundsInRoot
+            val titleBounds = compose.onNodeWithText("缓存中的电影").readVerificationNode(compose) { it.boundsInRoot }
             compose.mainClock.advanceTimeBy(600)
-            compose.onNodeWithText("缓存中的电影").assertIsDisplayed()
+            compose.onNodeWithText("缓存中的电影").assertVerificationDisplayed(compose)
             compose.runOnIdle { state.value = state.value.copy(content = state.value.content.copy(loading = false)) }
             compose.mainClock.advanceTimeByFrame()
             assertEquals("网络校验结束不能替换卡片或移动其标题", titleBounds,
-                compose.onNodeWithText("缓存中的电影").fetchSemanticsNode().boundsInRoot)
+                compose.onNodeWithText("缓存中的电影").readVerificationNode(compose) { it.boundsInRoot })
 
             // 真正的空结果随回包呈现，不需要等反馈延时耗尽。
             compose.runOnIdle {
@@ -319,7 +317,7 @@ class BrowserFeedbackTest {
             compose.mainClock.advanceTimeBy(80)
             compose.runOnIdle { state.value = state.value.copy(content = ContentState()) }
             compose.mainClock.advanceTimeByFrame()
-            compose.onNodeWithText("没有找到内容").assertIsDisplayed()
+            compose.onNodeWithText("没有找到内容").assertVerificationDisplayed(compose)
             compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
         } finally {
             compose.mainClock.autoAdvance = true
@@ -337,16 +335,16 @@ class BrowserFeedbackTest {
         compose.runOnIdle {
             state.value = state.value.copy(content = ContentState(error = "媒体库读取失败"))
         }
-        compose.onNodeWithText("媒体库读取失败").assertIsDisplayed()
+        compose.onNodeWithText("媒体库读取失败").assertVerificationDisplayed(compose)
         compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
         compose.onNodeWithText("没有找到内容").assertDoesNotExist()
         pullPageToRefresh(compose, stage = "first-page-retry")
         compose.runOnIdle { assertEquals(1, retries) }
-        compose.onNodeWithText("媒体库读取失败").assertIsDisplayed()
+        compose.onNodeWithText("媒体库读取失败").assertVerificationDisplayed(compose)
         compose.onNodeWithText("正在读取媒体").assertDoesNotExist()
         compose.runOnIdle { state.value = state.value.copy(content = ContentState()) }
         compose.onNodeWithText("媒体库读取失败").assertDoesNotExist()
-        compose.onNodeWithText("没有找到内容").assertIsDisplayed()
+        compose.onNodeWithText("没有找到内容").assertVerificationDisplayed(compose)
     }
 
     @Test

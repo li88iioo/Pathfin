@@ -11,13 +11,11 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.ViewRootForTest
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
-import androidx.compose.ui.test.performTouchInput
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -115,8 +113,8 @@ class ImmersiveLayoutUiTest {
             assertEquals("模糊开关不能移动服务器列表末项", oldContent, bounds(lastTag))
         }
         // 用真实触摸打开末项操作，避免只验证被导航遮挡的语义节点仍然存在。
-        compose.onNodeWithContentDescription("服务器操作 ${profiles.last().displayName}").performTouchInput { click() }
-        compose.onNodeWithText("显示名称").assertIsDisplayed()
+        compose.onNodeWithContentDescription("服务器操作 ${profiles.last().displayName}").performVerificationClick(compose)
+        compose.onNodeWithText("显示名称").assertVerificationDisplayed(compose)
     }
 
     private fun showApp(initial: AppState): MutableState<AppState> {
@@ -154,8 +152,8 @@ class ImmersiveLayoutUiTest {
             val status = if (hideStatusBar) 0 else insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top
             assertTrue("字标应避开状态栏和屏幕缺口", wordmarkNode.boundsInRoot.top >= root.top + maxOf(cutout, status))
         }
-        compose.onNodeWithTag("login-server").assertIsDisplayed()
-        compose.onNodeWithTag("login-submit").assertIsDisplayed()
+        compose.onNodeWithTag("login-server").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("login-submit").assertVerificationDisplayed(compose)
     }
 
     private fun assertNavigationBounds(tag: String, tabDescription: String = "首页", checkHomeAction: Boolean = true) {
@@ -185,21 +183,16 @@ class ImmersiveLayoutUiTest {
             }
         }
         if (checkHomeAction) {
-            home.performTouchInput {
-                compose.runOnUiThread { visibleSize }
-                click()
-            }
+            home.performVerificationClick(compose)
             compose.runOnIdle { assertEquals("真实触摸必须能进入首页", Route.Home, viewModel.state.value.route) }
         }
     }
 
     private fun assertContentAboveNavigation(contentTag: String, navigationTag: String, useUnmergedTree: Boolean = false) {
-        compose.onNodeWithTag(contentTag, useUnmergedTree).assertIsDisplayed()
+        compose.onNodeWithTag(contentTag, useUnmergedTree).assertVerificationDisplayed(compose)
         assertTrue("列表末项必须完整露出在底栏上方", bounds(contentTag, useUnmergedTree).bottom <= bounds(navigationTag).top + 0.5f)
     }
 
-    private fun bounds(tag: String, useUnmergedTree: Boolean = false): Rect {
-        val node = compose.onNodeWithTag(tag, useUnmergedTree).fetchSemanticsNode()
-        return compose.runOnIdle { node.boundsInRoot }
-    }
+    private fun bounds(tag: String, useUnmergedTree: Boolean = false): Rect =
+        compose.onNodeWithTag(tag, useUnmergedTree).readVerificationNode(compose) { it.boundsInRoot }
 }

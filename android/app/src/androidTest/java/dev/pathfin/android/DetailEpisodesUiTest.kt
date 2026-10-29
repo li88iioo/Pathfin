@@ -72,7 +72,7 @@ class DetailEpisodesUiTest {
         } }
         assertEquals(first, bounds("detail-season-poster/season-1"))
         assertEquals(originalMetadataBounds, bounds("detail-season-count/season-2"))
-        compose.onNodeWithTag("detail-season/season-2").performClick()
+        compose.onNodeWithTag("detail-season/season-2").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(seasons.value[1], opened) }
     }
 
@@ -92,39 +92,39 @@ class DetailEpisodesUiTest {
         }, onOpen = { opened = it })
         openSheet()
         // 抽屉默认整页数字网格。
-        compose.onNodeWithTag("detail-episode-sheet-grid").assertIsDisplayed()
-        compose.onNodeWithTag("detail-episode-sheet-number/${firstEpisode.id}").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet-grid").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("detail-episode-sheet-number/${firstEpisode.id}").assertVerificationDisplayed(compose)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已观看"))
-        compose.onNodeWithTag("detail-episode-sheet-tabs/${secondSeason.id}").performClick()
+        compose.onNodeWithTag("detail-episode-sheet-tabs/${secondSeason.id}").performVerificationClick(compose)
         compose.runOnIdle { assertEquals(secondSeason, selectedCallback) }
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("detail-episode-sheet-tabs/${secondSeason.id}").assertIsSelected()
         compose.onNodeWithTag("detail-episode-sheet-number/${firstEpisode.id}").assertDoesNotExist()
         compose.onNodeWithTag("detail-episode-number/${firstEpisode.id}").assertDoesNotExist()
         compose.runOnIdle { page.value = ContentState(listOf(secondEpisode), total = 1, nextIndex = 1) }
-        compose.onNodeWithTag("detail-episode-sheet-number/${secondEpisode.id}").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet-number/${secondEpisode.id}").assertVerificationDisplayed(compose)
         // 原地切到缩略图列表，抽屉不关闭、季不变。
-        compose.onNodeWithTag("detail-episode-sheet-layout").performClick()
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet-layout").performVerificationClick(compose)
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("detail-episode-sheet-grid").assertDoesNotExist()
         compose.onNodeWithTag("detail-episode-sheet-tabs/${secondSeason.id}").assertIsSelected()
-        compose.onNodeWithTag("detail-episode-sheet-item/${secondEpisode.id}").assertIsDisplayed()
-        compose.onNode(hasText("观看至 1:30") and hasAnyAncestor(hasTestTag("detail-episode-sheet-list"))).assertIsDisplayed()
-        compose.onNodeWithTag("detail-episode-sheet-item/${secondEpisode.id}").performClick()
+        compose.onNodeWithTag("detail-episode-sheet-item/${secondEpisode.id}").assertVerificationDisplayed(compose)
+        compose.onNode(hasText("观看至 1:30") and hasAnyAncestor(hasTestTag("detail-episode-sheet-list"))).assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("detail-episode-sheet-item/${secondEpisode.id}").performVerificationClick(compose)
         compose.onNodeWithTag("detail-episode-sheet").assertDoesNotExist()
         compose.runOnIdle { assertSame(secondEpisode, opened); opened = null }
         // 正文与抽屉共用形态：抽屉选了列表，正文即为卡片。
-        compose.onNodeWithTag("detail-episode-cards").assertIsDisplayed()
-        compose.onNodeWithTag("detail-episode-card/${secondEpisode.id}").performClick()
+        compose.onNodeWithTag("detail-episode-cards").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("detail-episode-card/${secondEpisode.id}").performVerificationClick(compose)
         compose.runOnIdle { assertSame(secondEpisode, opened); opened = null }
         // 正文没有第二个切换入口，切回数字只能在抽屉里。
         compose.onNodeWithContentDescription("切换为数字选集").assertDoesNotExist()
         openSheet()
-        compose.onNodeWithTag("detail-episode-sheet-layout").performClick()
-        compose.onNodeWithTag("detail-episode-sheet-grid").assertIsDisplayed()
-        compose.onNodeWithTag("detail-episode-numbers").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet-layout").performVerificationClick(compose)
+        compose.onNodeWithTag("detail-episode-sheet-grid").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("detail-episode-numbers").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("detail-episode-cards").assertDoesNotExist()
-        compose.onNodeWithTag("detail-episode-sheet-number/${secondEpisode.id}").performClick()
+        compose.onNodeWithTag("detail-episode-sheet-number/${secondEpisode.id}").performVerificationClick(compose)
         compose.onNodeWithTag("detail-episode-sheet").assertDoesNotExist()
         compose.runOnIdle { assertSame(secondEpisode, opened) }
     }
@@ -145,11 +145,11 @@ class DetailEpisodesUiTest {
         compose.runOnIdle { page.value = page.value.copy(loadingMore = false, error = "合成续页失败") }
         compose.onNodeWithTag("detail-episode-sheet-grid").performScrollToIndex(0).performScrollToIndex(200)
         compose.onNode(hasTestTag("detail-episode-error") and hasAnyAncestor(hasTestTag("detail-episode-sheet-grid")))
-            .assertIsDisplayed().assertTextEquals("合成续页失败")
+            .assertVerificationDisplayed(compose).assertTextEquals("合成续页失败")
         compose.runOnIdle { assertEquals("失败时滚动不能循环重试", 1, requests.get()) }
         compose.runOnIdle { page.value = ContentState(episodes, total = 300, nextIndex = 300) }
         compose.onNodeWithTag("detail-episode-sheet-grid").performScrollToIndex(299)
-        compose.onNodeWithTag("detail-episode-sheet-number/${episodes.last().id}").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet-number/${episodes.last().id}").assertVerificationDisplayed(compose)
         compose.runOnIdle { assertEquals("已读到总数不再请求", 1, requests.get()) }
     }
 
@@ -193,7 +193,7 @@ class DetailEpisodesUiTest {
         compose.runOnIdle { page.value = ContentState(episodes, total = 45, nextIndex = 45) }
         compose.onNodeWithTag("detail-episode-numbers").performScrollToIndex(44)
         compose.runOnIdle { assertEquals("已读到服务器总数不再请求", 2, requests.get()) }
-        compose.onNodeWithTag("detail-episode-number/${episodes.last().id}").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-number/${episodes.last().id}").assertVerificationDisplayed(compose)
     }
 
     @Test fun sheetPagesSeasonsPastFortyAndDoesNotPageTheHiddenBackgroundTabs() {
@@ -220,9 +220,9 @@ class DetailEpisodesUiTest {
         compose.waitUntil(5_000) { requests.get() == 2 }
         compose.runOnIdle { seasonsPage.value = ContentState(allSeasons, total = 45, nextIndex = 45) }
         compose.onNodeWithTag("detail-episode-sheet-tabs").performScrollToIndex(44)
-        compose.onNodeWithTag("detail-episode-sheet-tabs/season-45").performClick().assertIsSelected()
+        compose.onNodeWithTag("detail-episode-sheet-tabs/season-45").performVerificationClick(compose).assertIsSelected()
         compose.runOnIdle { assertSame(allSeasons.last(), picked); assertEquals(2, requests.get()) }
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
     }
 
     @Test fun busyDisablesBothSeasonTabsAndEachResumesTheRealCallbackWhenReady() {
@@ -241,22 +241,22 @@ class DetailEpisodesUiTest {
         val inline = compose.onNodeWithTag("detail-episode-tabs/${secondSeason.id}")
         VerificationDisplay.awaitWindowReady(compose, "detail-season-busy-inline", inline)
         val inlineBounds = bounds("detail-episode-tabs/${secondSeason.id}")
-        inline.assertIsNotEnabled().performTouchInput { click() }
+        inline.assertIsNotEnabled().performVerificationTouchInput(compose) { click() }
         compose.runOnIdle { assertTrue(callbacks.isEmpty()); assertSame(firstSeason, selected.value) }
         compose.runOnIdle { busy.value = false }
         assertEquals("恢复可操作时标签不得跳位", inlineBounds, bounds("detail-episode-tabs/${secondSeason.id}"))
-        inline.assertIsEnabled().performClick().assertIsSelected()
+        inline.assertIsEnabled().performVerificationClick(compose).assertIsSelected()
         compose.runOnIdle { assertEquals(listOf(secondSeason), callbacks); busy.value = true }
 
         openSheet()
         val sheetTab = compose.onNodeWithTag("detail-episode-sheet-tabs/${firstSeason.id}")
-        sheetTab.assertIsNotEnabled().performTouchInput { click() }
+        sheetTab.assertIsNotEnabled().performVerificationTouchInput(compose) { click() }
         compose.runOnIdle { assertEquals(listOf(secondSeason), callbacks); assertSame(secondSeason, selected.value) }
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
         compose.runOnIdle { busy.value = false }
-        sheetTab.assertIsEnabled().performClick().assertIsSelected()
+        sheetTab.assertIsEnabled().performVerificationClick(compose).assertIsSelected()
         compose.runOnIdle { assertEquals(listOf(secondSeason, firstSeason), callbacks); assertSame(firstSeason, selected.value) }
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
     }
 
     private fun showPicker(
@@ -294,13 +294,13 @@ class DetailEpisodesUiTest {
     private fun openSheet() {
         val button = compose.onNodeWithTag("detail-episode-count")
         VerificationDisplay.awaitWindowReady(compose, "detail-episode-picker-open", button)
-        button.performClick()
+        button.performVerificationClick(compose)
         compose.mainClock.advanceTimeBy(600)
         compose.waitForIdle()
-        compose.onNodeWithTag("detail-episode-sheet").assertIsDisplayed()
+        compose.onNodeWithTag("detail-episode-sheet").assertVerificationDisplayed(compose)
     }
 
-    private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+    private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot }
     private fun season(number: Int) = MediaItem("season-$number", "第${number}季", "Season", indexNumber = number,
         seriesId = "synthetic-series", isFolder = true)
     private fun episode(number: Int, season: MediaItem) = MediaItem("${season.id}-episode-$number", "合成第${number}集", "Episode",

@@ -5,10 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -96,19 +93,19 @@ class PlaybackSegmentsFlowTest {
             awaitFrame(playback)
             main { playback.player?.pause() }
             compose.waitUntil(WAIT) { playback.state.value.introPrompt != null }
-            compose.onNodeWithTag("player-skip-intro").assertIsDisplayed()
+            compose.onNodeWithTag("player-skip-intro").assertVerificationDisplayed(compose)
             main { playback.setControlsLocked(true) }
             compose.onNodeWithTag("player-skip-intro").assertDoesNotExist()
             main { playback.setControlsLocked(false); pip.value = true }
             compose.onNodeWithTag("player-skip-intro").assertDoesNotExist()
             main { pip.value = false }
-            compose.onNodeWithTag("player-skip-intro").performClick()
+            compose.onNodeWithTag("player-skip-intro").performVerificationClick(compose)
             compose.waitUntil(WAIT) { main { playback.player?.currentPosition?.let { it >= 7_800 } == true } }
             compose.onNodeWithTag("player-skip-intro").assertDoesNotExist()
             main { playback.play(fixture.request(), preferences()) }
             awaitFrame(playback)
             compose.waitUntil(WAIT) { playback.state.value.introPrompt != null }
-            compose.onNodeWithTag("player-skip-intro").assertIsDisplayed()
+            compose.onNodeWithTag("player-skip-intro").assertVerificationDisplayed(compose)
         }
     }
 
@@ -126,7 +123,7 @@ class PlaybackSegmentsFlowTest {
             main { playback.seekToPosition(duration - 20_000) }
             awaitPausedPosition(playback, duration - 20_000)
             compose.waitUntil(WAIT) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("player-next-prompt")).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag("player-next-prompt-dismiss").performClick()
+            compose.onNodeWithTag("player-next-prompt-dismiss").performVerificationClick(compose)
             compose.onNodeWithTag("player-next-prompt").assertDoesNotExist()
             main { playback.setControlsLocked(true); playback.setControlsLocked(false) }
             compose.onNodeWithTag("player-next-prompt").assertDoesNotExist()
@@ -134,7 +131,7 @@ class PlaybackSegmentsFlowTest {
             awaitFrame(playback)
             main { playback.player?.pause(); playback.seekToPosition(checkNotNull(playback.player).duration - 10_000) }
             compose.waitUntil(WAIT) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("player-next-prompt-action")).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag("player-next-prompt-action").performClick()
+            compose.onNodeWithTag("player-next-prompt-action").performVerificationClick(compose)
             awaitFrame(playback)
             main { assertEquals("Synthetic next", playback.state.value.title); assertTrue(checkNotNull(playback.player).currentPosition < 5_000) }
             main { playback.play(fixture.request(), preferences.copy(nextEpisodePromptSeconds = 0)) }
@@ -184,13 +181,13 @@ class PlaybackSegmentsFlowTest {
                     }
                 }) }
                 val slider = compose.onNodeWithTag("player-seek-slider")
-                slider.performTouchInput {
+                slider.performVerificationTouchInput(compose) {
                     down(Offset(width * .1f, height / 2f))
                     moveTo(Offset(width * .3f, height / 2f))
                     moveTo(Offset(width * .5f, height / 2f))
                 }
                 if (rapid) compose.waitUntil(WAIT) { seeks.get() > 0 } else { compose.waitForIdle(); assertEquals(0, seeks.get()) }
-                slider.performTouchInput { moveTo(Offset(width * .8f, height / 2f)); up() }
+                slider.performVerificationTouchInput(compose) { moveTo(Offset(width * .8f, height / 2f)); up() }
                 compose.waitUntil(WAIT) { main { checkNotNull(playback.player).let { it.playbackState == Player.STATE_READY && it.currentPosition > it.duration * .65 } } }
                 if (!rapid) assertEquals("关闭拖动预览时应只在松手 seek 一次", 1, seeks.get())
                 main { assertFalse(checkNotNull(playback.player).isPlaying); assertNull(playback.state.value.errorMessage) }

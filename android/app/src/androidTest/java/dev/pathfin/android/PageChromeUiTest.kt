@@ -140,8 +140,8 @@ class PageChromeUiTest {
         }
         VerificationDisplay.awaitWindowReady(compose, "chrome-dark-theme", compose.onNodeWithTag("chrome-dark-header"),
             compose.onNodeWithTag("chrome-dark-title"), compose.onNodeWithTag("chrome-dark-icon"))
-        compose.onNodeWithText("默认浅色标题").assertIsDisplayed()
-        compose.onNodeWithContentDescription("默认浅色图标").assertIsDisplayed()
+        compose.onNodeWithText("默认浅色标题").assertVerificationDisplayed(compose)
+        compose.onNodeWithContentDescription("默认浅色图标").assertVerificationDisplayed(compose)
         val expected = expectedInk.get()
         assertTrue("深色主题应提供可见浅色前景", (expected shr 16 and 255) > 180 &&
             (expected shr 8 and 255) > 180 && (expected and 255) > 180)
@@ -240,9 +240,9 @@ class PageChromeUiTest {
     private fun click(tag: String) {
         val target = compose.onNodeWithTag(tag)
         VerificationDisplay.awaitWindowReady(compose, "chrome-touch-$tag", target)
-        target.performTouchInput {
+        target.performVerificationTouchInput(compose) {
             // 系统栏切换会重新布局 Dialog；只从 UI 线程取得当前触摸范围，再注入真实触摸。
-            compose.runOnUiThread { visibleSize }
+
             click()
         }
     }
@@ -289,15 +289,12 @@ class PageChromeUiTest {
     }
 
     private fun checkVerification() { check(InstrumentationRegistry.getInstrumentation().targetContext.packageName == "dev.pathfin.android.verification") }
-    private fun bounds(tag: String): androidx.compose.ui.geometry.Rect {
-        val node = compose.onNodeWithTag(tag, true).fetchSemanticsNode()
-        return compose.runOnIdle { node.boundsInRoot }
-    }
+    private fun bounds(tag: String): androidx.compose.ui.geometry.Rect =
+        compose.onNodeWithTag(tag, true).readVerificationNode(compose) { it.boundsInRoot }
 
     private fun pixels(tag: String): Pixels {
         compose.waitForIdle()
-        val node = compose.onNodeWithTag(tag, true).fetchSemanticsNode()
-        val area = compose.runOnIdle { node.boundsInWindow }.let {
+        val area = compose.onNodeWithTag(tag, true).readVerificationNode(compose) { it.boundsInWindow }.let {
             Rect(floor(it.left).toInt(), floor(it.top).toInt(), ceil(it.right).toInt(), ceil(it.bottom).toInt())
         }
         assertTrue("像素采样区域必须已实际测量：$tag $area", area.width() > 0 && area.height() > 0)
