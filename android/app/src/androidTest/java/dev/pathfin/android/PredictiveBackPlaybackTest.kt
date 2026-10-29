@@ -42,7 +42,7 @@ class PredictiveBackPlaybackTest {
             val previous = preferences.load()
             clearSyntheticSession()
             preferences.save(AppPreferences(
-                showClock = false, showBattery = false))
+                originalPathEnabled = true, showClock = false, showBattery = false))
             try { base.evaluate() }
             finally {
                 clearSyntheticSession(); preferences.save(previous)

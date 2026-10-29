@@ -744,7 +744,7 @@ class PlayerSystemFlowTest {
         const val ITEM = "fixture-movie"
         const val WAIT = 25_000L
         val SYSTEM_UI_PACKAGES = setOf("com.android.systemui", "com.android.wm.shell")
-        fun preferences() = AppPreferences(showClock = false, showBattery = false,
+        fun preferences() = AppPreferences(originalPathEnabled = true, showClock = false, showBattery = false,
             subtitlesEnabled = false, longPressSpeedEnabled = true, longPressSpeed = 2.5f)
     }
 }

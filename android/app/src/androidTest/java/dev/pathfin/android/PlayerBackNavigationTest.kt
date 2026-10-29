@@ -110,12 +110,12 @@ class PlayerBackNavigationTest {
         verifyReturn(ReturnPath.NATIVE_GESTURE)
     }
 
-    private fun verifyReturn(path: ReturnPath, preferences: AppPreferences = AppPreferences()) {
+    private fun verifyReturn(path: ReturnPath) {
         val app = compose.runOnIdle { ViewModelProvider(compose.activity)[AppViewModel::class.java] }
         val playback = compose.runOnIdle { ViewModelProvider(compose.activity)[PlaybackViewModel::class.java] }
         try {
             compose.runOnIdle {
-                app.setPreferences(preferences)
+                app.setPreferences(AppPreferences(originalPathEnabled = true))
                 app.login(fixture.baseUrl, "pathfin", "pathfin", true, "Playback return fixture")
             }
             compose.waitUntil(WAIT_MS) {

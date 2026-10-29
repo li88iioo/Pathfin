@@ -1043,7 +1043,7 @@ class PlayerControlsFlowTest {
         const val ITEM_ID = "fixture-movie"
         const val WAIT_MS = 25_000L
 
-        fun testPreferences() = AppPreferences(showClock = false, showBattery = false, subtitlesEnabled = false)
+        fun testPreferences() = AppPreferences(originalPathEnabled = true, showClock = false, showBattery = false, subtitlesEnabled = false)
 
         fun clearSyntheticSession(context: Context) {
             val store = SessionStore(context)
