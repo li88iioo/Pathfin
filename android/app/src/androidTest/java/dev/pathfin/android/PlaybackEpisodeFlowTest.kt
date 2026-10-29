@@ -35,8 +35,7 @@ class PlaybackEpisodeFlowTest {
         main { assertTrue(first.isReleased) }
         compose.onNodeWithTag("player-previous").performVerificationClick(compose)
         awaitEpisode(app, playback, episodes.first())
-        compose.onNodeWithTag("player-more").performVerificationClick(compose)
-        compose.onNodeWithText("选集").performVerificationClick(compose)
+        compose.onNodeWithTag("player-title").assertIsEnabled().performVerificationClick(compose)
         compose.waitUntil(WAIT) { app.state.value.playbackEpisodes.items.size == 3 }
         compose.onNodeWithTag("playback-episodes").performScrollToNode(hasText("S1E3 · Synthetic Episode 3"))
         compose.onNodeWithText("S1E3 · Synthetic Episode 3").performVerificationClick(compose)
