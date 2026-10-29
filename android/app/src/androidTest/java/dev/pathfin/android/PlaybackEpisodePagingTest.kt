@@ -355,6 +355,7 @@ class PlaybackEpisodePagingTest {
                     main { app.login(fixture.origin, USER_NAME, PASSWORD, true, "Episode paging fixture") }
                     await(app, fixture, "合成账号登录并完成首页读取") { it.session?.accessToken == TOKEN && !it.loginBusy && it.home.loaded && !it.home.loading }
                     block(app, fixture)
+                    awaitJobs(app, fixture, "业务断言完成后等待剩余读取和存储提交", activeJobs(app))
                     fixture.assertHealthy()
                 } finally {
                     fixture.allowCancellation()
