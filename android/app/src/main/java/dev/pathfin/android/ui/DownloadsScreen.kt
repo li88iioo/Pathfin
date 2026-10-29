@@ -143,7 +143,7 @@ fun DownloadsScreen(profileId: String?) {
                                 DownloadStatus.COMPLETED -> if (!MediaDownloads.open(context, task)) scope.launch {
                                     snackbar.showSnackbar(tr("无法打开文件，文件可能已移除或尚未安装对应播放器"))
                                 }
-                                DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING -> action(task.id) { MediaDownloads.cancel(context, task.id) }
+                                DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING -> action(task.id) { MediaDownloads.cancel(context, task.id, task.workId) }
                                 DownloadStatus.FAILED, DownloadStatus.CANCELLED -> action(task.id) { MediaDownloads.retry(context, task.id) }
                             }
                         },
@@ -188,7 +188,7 @@ private fun DownloadRow(task: DownloadTask, busy: Boolean, onPrimary: () -> Unit
             Column(Modifier.weight(1f).padding(start = 14.dp, end = 8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(task.displayName, fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold,
                     color = PathfinAppearance.textMain, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(downloadStatus(task), fontSize = 12.sp, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                Text(downloadStatus(task, LocalAppPreferences.current.downloadNetwork), fontSize = 12.sp, lineHeight = 17.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     color = if (failed) MaterialTheme.colorScheme.error else PathfinAppearance.textMuted)
             }
             // 进行中显示细线进度环，整格仍是“取消下载”按钮，与其他状态的图标同一位置。
@@ -217,8 +217,8 @@ private fun DownloadRow(task: DownloadTask, busy: Boolean, onPrimary: () -> Unit
     }
 }
 
-private fun downloadStatus(task: DownloadTask): String = when (task.status) {
-    DownloadStatus.QUEUED -> task.queueDescription
+private fun downloadStatus(task: DownloadTask, network: dev.pathfin.android.domain.DownloadNetwork): String = when (task.status) {
+    DownloadStatus.QUEUED -> task.queueDescription(network)
     DownloadStatus.DOWNLOADING -> if (task.downloadedBytes == 0L) tr("正在准备下载") else
         formatDownloadSize(task.downloadedBytes) + (task.totalBytes?.let { " / ${formatDownloadSize(it)}" } ?: "")
     DownloadStatus.COMPLETED -> formatDownloadSize(task.downloadedBytes) + tr(" · 可用本机播放器打开")

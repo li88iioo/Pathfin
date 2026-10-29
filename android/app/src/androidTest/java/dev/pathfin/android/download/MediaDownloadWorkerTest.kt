@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.Uri
@@ -25,6 +26,7 @@ import androidx.work.ListenableWorker
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.workDataOf
 import dev.pathfin.android.data.SessionStore
+import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.VerificationDisplay
 import dev.pathfin.android.VerificationSettingsDocumentsProvider
 import dev.pathfin.android.domain.ServerConfig
@@ -52,6 +54,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
@@ -68,6 +71,52 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = 29)
 class MediaDownloadWorkerTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Test fun coldWorkerRejectsOldAnyWorkBeforeRequestingSourceOrOpeningOutput() = runBlocking {
+        val prefix = "cold-download-${UUID.randomUUID()}-"
+        val isolated = object : ContextWrapper(context) {
+            override fun getApplicationContext(): Context = this
+            override fun getSharedPreferences(name: String, mode: Int) = context.getSharedPreferences(prefix + name, mode)
+        }
+        val preferences = AppPreferencesStore(isolated)
+        val original = preferences.load()
+        try {
+            preferences.save(original.copy(downloadNetwork = DownloadNetwork.ANY))
+            Fixture().use { fixture -> withTask(fixture, taskContext = isolated) { task ->
+                val request = androidx.work.OneTimeWorkRequestBuilder<MediaDownloadWorker>().setId(UUID.fromString(task.workId))
+                    .setInputData(workDataOf(MediaDownloadWorker.TASK_ID to task.id)).addTag(MediaDownloads.WORK_TAG)
+                    .setConstraints(downloadConstraints(DownloadNetwork.ANY)).setInitialDelay(1, TimeUnit.DAYS).build()
+                val manager = androidx.work.WorkManager.getInstance(context)
+                manager.enqueueUniqueWork("pathfin-download-${task.id}", androidx.work.ExistingWorkPolicy.REPLACE, request)
+                    .result.get(10, TimeUnit.SECONDS)
+                try {
+                    // 模拟偏好已提交、重排尚未执行就被系统冷启动；不创建 AppViewModel。
+                    preferences.save(original.copy(downloadNetwork = DownloadNetwork.UNMETERED))
+                    val foreground = AtomicReference<ForegroundInfo?>()
+                    worker(task, foreground, isolated).doWork()
+                    assertEquals("旧ANY代次不得先取得临时源", 0, fixture.detailRequests.get())
+                    assertEquals("旧ANY代次不得触达下载主机", 0, fixture.downloadRequests.get())
+                    assertEquals("旧Worker必须在前台与输出阶段之前返回", null, foreground.get())
+                    val content = try { context.contentResolver.openInputStream(Uri.parse(task.destinationUri))!!.use { it.readBytes() } }
+                        catch (_: java.io.FileNotFoundException) { byteArrayOf() } // 未打开的MediaStore目标可能尚无底层文件。
+                    assertTrue("目标不能含有任何下载数据", content.isEmpty())
+                    context.contentResolver.query(Uri.parse(task.destinationUri),
+                        arrayOf(MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.IS_PENDING), null, null, null)!!.use { cursor ->
+                        assertTrue(cursor.moveToFirst())
+                        assertEquals(0L, cursor.getLong(0))
+                        assertEquals("门禁不能把未写入目标发布为完成文件", 1, cursor.getInt(1))
+                    }
+                    val replacement = checkNotNull(DownloadStore(isolated).get(task.id))
+                    assertTrue(task.workId != replacement.workId)
+                    assertEquals(androidx.work.NetworkType.UNMETERED,
+                        manager.getWorkInfoById(UUID.fromString(replacement.workId)).get(10, TimeUnit.SECONDS)?.constraints?.requiredNetworkType)
+                } finally { manager.cancelUniqueWork("pathfin-download-${task.id}").result.get(10, TimeUnit.SECONDS) }
+            } }
+        } finally {
+            preferences.save(original)
+            listOf("pathfin_downloads_v1", "pathfin_preferences", "pathfin_session").forEach { context.deleteSharedPreferences(prefix + it) }
+        }
+    }
 
     @Test fun realFileIsSavedAndCompletionSurvivesStoreRecreation() = runBlocking {
         Fixture().use { fixture ->
@@ -91,6 +140,28 @@ class MediaDownloadWorkerTest {
                 assertFalse(stored.contains(fixture.baseUrl))
             }
         }
+    }
+
+    @Test fun oldNotificationCannotCancelAnAlreadyReplacedGeneration() = runBlocking {
+        Fixture().use { fixture -> withTask(fixture) { task ->
+            val oldCancellation = MediaDownloads.cancelIntent(context, task)
+            worker(task, AtomicReference()) // 只登记延迟WorkSpec，不执行传输。
+            val store = DownloadStore(context)
+            store.cancel(task.id, task.workId)
+            val replacement = requireNotNull(store.update(task.id, task.workId) { it.nextAttempt() })
+            worker(replacement, AtomicReference())
+            MediaDownloads.cancelIntent(context, replacement) // 新通知必须是另一枚代次绑定的PendingIntent。
+            val delivered = CompletableFuture<Unit>()
+            oldCancellation.send(context, 0, null, android.app.PendingIntent.OnFinished { _, _, _, _, _ -> delivered.complete(Unit) }, null)
+            withContext(Dispatchers.IO) { delivered.get(10, TimeUnit.SECONDS) }
+            assertEquals(DownloadStatus.QUEUED, store.get(task.id)?.status)
+            assertEquals(replacement.workId, store.get(task.id)?.workId)
+            assertEquals(androidx.work.WorkInfo.State.ENQUEUED,
+                androidx.work.WorkManager.getInstance(context).getWorkInfoById(UUID.fromString(replacement.workId))
+                    .get(10, TimeUnit.SECONDS)?.state)
+            assertEquals(0, fixture.detailRequests.get())
+            assertEquals(0, fixture.downloadRequests.get())
+        } }
     }
 
     @Test fun interruptionClearsThePartialFileAndTheNextAttemptFetchesAFreshSource() = runBlocking {
@@ -126,7 +197,7 @@ class MediaDownloadWorkerTest {
                         while ((DownloadStore(context).get(task.id)?.downloadedBytes ?: 0) == 0L) delay(30)
                     }
                     SessionStore(context).removeProfile(task.profileId)
-                    MediaDownloads.cancelProfile(context, task.profileId)
+                    MediaDownloads.recover(context)
                     withTimeout(5_000) { first.join() }
                     assertTrue("删除账号应取消实际媒体传输", first.isCancelled)
                     val cancelled = requireNotNull(DownloadStore(context).get(task.id))
@@ -152,8 +223,7 @@ class MediaDownloadWorkerTest {
         Fixture().use { fixture ->
             withTask(fixture) { task ->
                 SessionStore(context).removeProfile(task.profileId)
-                val failure = runCatching { worker(task, AtomicReference()).doWork() }.exceptionOrNull()
-                assertTrue("Worker 必须独立检测移除的账号", failure is CancellationException)
+                worker(task, AtomicReference()).doWork()
                 assertEquals(DownloadStatus.CANCELLED, DownloadStore(context).get(task.id)?.status)
                 assertEquals(0, fixture.detailRequests.get())
                 assertEquals(0, fixture.downloadRequests.get())
@@ -248,7 +318,7 @@ class MediaDownloadWorkerTest {
             val first = launch(Dispatchers.Default) { worker(task, AtomicReference()).doWork() }
             try {
                 awaitSaf { safStatus(uri).getBoolean("openStarted") }
-                val replacement = store.replaceNetwork(DownloadNetwork.UNMETERED).single().second
+                val replacement = requireNotNull(store.update(task.id, task.workId) { it.nextAttempt() })
                 withTimeout(3_000) { first.cancelAndJoin() }
                 awaitSaf { safStatus(uri).getBoolean("signalCancelled") }
                 val next = async(Dispatchers.Default) { worker(replacement, AtomicReference()).doWork() }
@@ -270,15 +340,27 @@ class MediaDownloadWorkerTest {
         } }
     }
 
-    private fun worker(task: DownloadTask, foreground: AtomicReference<ForegroundInfo?>): MediaDownloadWorker =
-        TestListenableWorkerBuilder<MediaDownloadWorker>(context)
+    private fun worker(task: DownloadTask, foreground: AtomicReference<ForegroundInfo?>, taskContext: Context = context): MediaDownloadWorker {
+        // 登记真实但延迟执行的 WorkSpec；本测试只手动执行 TestWorker，不能因恢复再启动第二个真实传输。
+        val manager = androidx.work.WorkManager.getInstance(context)
+        if (manager.getWorkInfoById(UUID.fromString(task.workId)).get(10, TimeUnit.SECONDS) == null) {
+            val request = androidx.work.OneTimeWorkRequestBuilder<MediaDownloadWorker>().setId(UUID.fromString(task.workId))
+                .setInputData(workDataOf(MediaDownloadWorker.TASK_ID to task.id)).addTag(MediaDownloads.WORK_TAG)
+                .setConstraints(downloadConstraints(AppPreferencesStore(taskContext).load().downloadNetwork))
+                .setInitialDelay(1, TimeUnit.DAYS).build()
+            manager.enqueueUniqueWork("pathfin-download-${task.id}", androidx.work.ExistingWorkPolicy.REPLACE, request)
+                .result.get(10, TimeUnit.SECONDS)
+        }
+        return TestListenableWorkerBuilder<MediaDownloadWorker>(taskContext)
             .setId(UUID.fromString(task.workId)).setInputData(workDataOf(MediaDownloadWorker.TASK_ID to task.id))
             .setForegroundUpdater { _, _, info ->
                 foreground.set(info)
                 CallbackToFutureAdapter.getFuture<Void> { completer -> completer.set(null); "download-foreground-test" }
             }.build()
+    }
 
-    private suspend fun withTask(fixture: Fixture, destination: Uri? = null, block: suspend (DownloadTask) -> Unit) {
+    private suspend fun withTask(fixture: Fixture, destination: Uri? = null, taskContext: Context = context, block: suspend (DownloadTask) -> Unit) {
+        val context = taskContext
         check(context.packageName == "dev.pathfin.android.verification") { "真实下载回归只允许 verification 独立测试包" }
         val id = UUID.randomUUID().toString()
         val uri = destination ?: context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, ContentValues().apply {
@@ -297,6 +379,7 @@ class MediaDownloadWorkerTest {
             DownloadStore(context).insert(task)
             block(task)
         } finally {
+            androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pathfin-download-$id").result.get(10, TimeUnit.SECONDS)
             DownloadStore(context).remove(id)
             SessionStore(context).removeProfile(profileId)
             if (destination == null && uri != null) context.contentResolver.delete(uri, null, null)

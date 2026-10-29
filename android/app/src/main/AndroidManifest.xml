@@ -27,6 +27,7 @@
             android:foregroundServiceType="dataSync" tools:node="merge" />
         <service android:name=".casting.DlnaCastService" android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+        <receiver android:name=".download.DownloadCancelReceiver" android:exported="false" />
         <provider android:name=".update.UpdateFileProvider" android:authorities="${applicationId}.updates"
             android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_paths" />

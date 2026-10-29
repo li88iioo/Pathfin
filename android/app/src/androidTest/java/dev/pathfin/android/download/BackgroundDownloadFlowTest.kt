@@ -103,6 +103,10 @@ class BackgroundDownloadFlowTest {
             val status = awaitStreamStopped(fixture.itemId)
             assertFalse(status.getJSONArray("Attempts").getJSONObject(0).getBoolean("Completed"))
             assertTrue("系统取消必须真正关闭慢流连接", status.getJSONArray("Attempts").getJSONObject(0).getBoolean("ClientDisconnected"))
+            runBlocking { MediaDownloads.recover(context) }
+            assertEquals("通知取消必须落为唯一持久状态，恢复不得复活", DownloadStatus.CANCELLED, DownloadStore(context).get(task.id)?.status)
+            assertEquals(WorkInfo.State.CANCELLED, work(task)?.state)
+            assertEquals("恢复不能获取另一条临时地址", status.getInt("PlaybackRequests"), status(fixture.itemId).getInt("PlaybackRequests"))
         }
     }
 
@@ -136,7 +140,7 @@ class BackgroundDownloadFlowTest {
             awaitProgress(task)
             awaitForegroundNotification(task)
             SessionStore(context).removeProfile(fixture.profileId)
-            runBlocking { MediaDownloads.cancelProfile(context, fixture.profileId) }
+            runBlocking { MediaDownloads.recover(context) }
             awaitCancelledAndCleared(task, fixture)
             val stopped = awaitStreamStopped(fixture.itemId)
             assertTrue(stopped.getJSONArray("Attempts").getJSONObject(0).getBoolean("ClientDisconnected"))
@@ -390,7 +394,7 @@ class BackgroundDownloadFlowTest {
     private fun cleanup(fixture: Fixture) {
         val tasks = store.all().filter { it.profileId == fixture.profileId && it.itemId == fixture.itemId }
         tasks.forEach { task ->
-            runCatching { runBlocking { MediaDownloads.cancel(context, task.id) } }
+            runCatching { runBlocking { MediaDownloads.cancel(context, task.id, task.workId) } }
             runCatching { workManager.cancelWorkById(UUID.fromString(task.workId)).result.get(5, TimeUnit.SECONDS) }
             store.remove(task.id)
             notifications.cancel(notificationId(task))

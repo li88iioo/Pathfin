@@ -1,10 +1,13 @@
 package dev.pathfin.android.download
 
 import android.content.ClipData
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.app.PendingIntent
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
@@ -19,17 +22,35 @@ import dev.pathfin.android.domain.DownloadNetwork
 import dev.pathfin.android.i18n.tr
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** UI 与持久下载任务之间的入口。网络地址及凭据只由执行中的 Worker 持有。 */
+/** DownloadStore 是任务真值；WorkManager 仅执行由已保存任务和网络偏好派生的计划。 */
 object MediaDownloads {
-    // 偏好先落盘再重排；入队读策略到系统排程之间必须与重排互斥。
     private val queueMutex = Mutex()
+    private val commands = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Application 冷启动与通知共用进程级命令，页面和旧 Worker 的取消不截断持久提交。 */
+    fun restore(context: Context): Job = launchCommand { recover(context.applicationContext) }
+    internal fun launchCommand(block: suspend () -> Unit): Job = commands.launch {
+        runCatching { block() }.onFailure { Log.w("PathfinDownload", "Download command incomplete; will reconcile on next entry") }
+    }
+
+    suspend fun recover(context: Context, taskId: String? = null): Unit = withContext(Dispatchers.IO) {
+        queueMutex.withLock { withContext(NonCancellable) { synchronize(context, taskId) } }
+    }
 
     suspend fun enqueue(
         context: Context,
@@ -47,16 +68,10 @@ object MediaDownloads {
                 id = UUID.randomUUID().toString(), workId = UUID.randomUUID().toString(),
                 profileId = profileId, itemId = itemId, displayName = downloadDisplayName(displayName),
                 destinationUri = destinationUri.toString(), sourceId = sourceId,
-                network = AppPreferencesStore(context).load().downloadNetwork,
             )
             val store = DownloadStore(context)
             store.insert(task)
-            try {
-                schedule(context, task)
-            } catch (error: Exception) {
-                store.update(task.id, task.workId) { it.copy(status = DownloadStatus.FAILED, error = tr("无法安排后台下载，请重试")) }
-                throw IllegalStateException(tr("无法安排后台下载，请重试"), error)
-            }
+            withContext(NonCancellable) { synchronize(context, task.id) }
             task.id
         }
     }
@@ -82,61 +97,19 @@ object MediaDownloads {
         }
     }
 
-    /** 偏好保存成功后调用；新约束立即作用于当前队列，已完成和手动取消的记录不变。 */
-    suspend fun reconfigureNetwork(context: Context, network: DownloadNetwork): Unit = withContext(Dispatchers.IO) {
-        queueMutex.withLock {
-            val store = DownloadStore(context)
-            val manager = WorkManager.getInstance(context)
-            val changed = try { store.replaceNetwork(network) }
-            catch (error: Exception) {
-                // 无法写盘时也先停止旧策略，避免“仅不计费”已选中却仍消耗计费流量。
-                store.all().filter { it.isActive && it.network != network }.forEach { task ->
-                    runCatching { manager.cancelWorkById(UUID.fromString(task.workId)).result.get() }
-                }
-                throw IllegalStateException(tr("无法更新下载队列，请检查本机存储空间后重试"), error)
-            }
-            var failure: Exception? = null
-            changed.forEach { (previous, next) ->
-                try {
-                    manager.cancelWorkById(UUID.fromString(previous.workId)).result.get()
-                    // 用户同时取消或移除账号时不能重新复活任务。
-                    if (store.get(next.id)?.let { it.workId == next.workId && it.isActive } == true) schedule(context, next)
-                } catch (error: Exception) {
-                    store.update(next.id, next.workId) {
-                        if (it.isActive) it.copy(status = DownloadStatus.FAILED, error = tr("网络规则已更改，任务重排失败，请重试")) else it
-                    }
-                    if (failure == null) failure = error
-                }
-            }
-            failure?.let { throw IllegalStateException(tr("下载网络规则已保存，部分任务未能重新排队，请在下载任务中重试"), it) }
-        }
+    fun observe(context: Context): Flow<List<DownloadTask>> {
+        val plans = WorkManager.getInstance(context).getWorkInfosByTagFlow(WORK_TAG)
+            .map { work -> work.map { Triple(it.id, it.state, it.constraints) }.toSet() }
+            .distinctUntilChanged().onEach { runCatching { recover(context) } }
+        // UI直接读取持久结果；字节进度不会触发解密账号/全队列重排，单项失败也不会中断列表。
+        return combine(DownloadStore(context).observe(), plans) { tasks, _ -> tasks.sortedByDescending { it.createdAt } }
+            .distinctUntilChanged().flowOn(Dispatchers.IO)
     }
 
-    fun observe(context: Context): Flow<List<DownloadTask>> = combine(
-        DownloadStore(context).observe(), WorkManager.getInstance(context).getWorkInfosByTagFlow(WORK_TAG),
-    ) { tasks, work ->
-        val states = work.associateBy { it.id.toString() }
-        tasks.map { task -> reconcile(task, states[task.workId]) }.sortedByDescending { it.createdAt }
-    }.flowOn(Dispatchers.IO)
-
-    suspend fun cancel(context: Context, taskId: String) = withContext(Dispatchers.IO) {
-        val task = DownloadStore(context).cancel(taskId) ?: return@withContext
-        WorkManager.getInstance(context).cancelWorkById(UUID.fromString(task.workId)).result.get()
-        Unit
-    }
-
-    /** 移除本机账号后调用。保留已完成文件及其他账号，先持久撤销再停止系统任务。 */
-    suspend fun cancelProfile(context: Context, profileId: String): Unit = withContext(Dispatchers.IO) {
-        require(profileId.isNotBlank()) { tr("账号标识无效") }
-        val cancelled = DownloadStore(context).cancelProfile(profileId)
-        if (cancelled.isEmpty()) return@withContext
-        val manager = WorkManager.getInstance(context)
-        var failure: Exception? = null
-        cancelled.forEach { task ->
-            try { manager.cancelWorkById(UUID.fromString(task.workId)).result.get() }
-            catch (error: Exception) { if (failure == null) failure = error }
-        }
-        failure?.let { throw IllegalStateException(tr("下载已标记停止，但系统任务取消未完成，请重新打开应用确认"), it) }
+    suspend fun cancel(context: Context, taskId: String, workId: String): Unit = withContext(Dispatchers.IO) {
+        val task = DownloadStore(context).cancel(taskId, workId) ?: return@withContext
+        if (task.status == DownloadStatus.CANCELLED)
+            WorkManager.getInstance(context).cancelWorkById(UUID.fromString(workId)).result.get()
     }
 
     suspend fun retry(context: Context, taskId: String, destinationUri: Uri? = null) = withContext(Dispatchers.IO) {
@@ -151,17 +124,9 @@ object MediaDownloads {
             DownloadDirectories.requireDestination(context, destination)
             check(store.all().none { it.id != task.id && it.destinationUri == destination.toString() && it.isActive }) { tr("该目标文件已有下载任务") }
             check(SessionStore(context).loadProfiles().any { it.id == task.profileId }) { tr("该账号已从本机移除，请重新登录后下载") }
-            val next = store.update(task.id, task.workId) {
-                it.copy(workId = UUID.randomUUID().toString(), destinationUri = destination.toString(), status = DownloadStatus.QUEUED,
-                    downloadedBytes = 0, totalBytes = null, error = null, network = AppPreferencesStore(context).load().downloadNetwork)
-            } ?: throw IllegalStateException(tr("下载记录已更新，请重试"))
-            try {
-                schedule(context, next)
-            } catch (error: Exception) {
-                store.update(next.id, next.workId) { it.copy(status = DownloadStatus.FAILED, error = tr("无法安排后台下载，请重试")) }
-                throw IllegalStateException(tr("无法安排后台下载，请重试"), error)
+            withContext(NonCancellable) {
+                startAttempt(context, task, downloadConstraints(AppPreferencesStore(context).load().downloadNetwork), destination.toString())
             }
-            Unit
         }
     }
 
@@ -188,27 +153,85 @@ object MediaDownloads {
             .apply { clipData = ClipData.newRawUri("media", uri) }
     }
 
-    private fun schedule(context: Context, task: DownloadTask) {
-        val request = OneTimeWorkRequestBuilder<MediaDownloadWorker>().setId(UUID.fromString(task.workId))
-            .setInputData(workDataOf(MediaDownloadWorker.TASK_ID to task.id))
-            .addTag(WORK_TAG)
-            .setConstraints(downloadConstraints(task.network))
-            .build()
-        WorkManager.getInstance(context).enqueueUniqueWork("pathfin-download-${task.id}", ExistingWorkPolicy.REPLACE, request).result.get()
+    private fun synchronize(context: Context, taskId: String? = null) {
+        val store = DownloadStore(context)
+        val tasks = if (taskId == null) store.all() else listOfNotNull(store.get(taskId))
+        if (tasks.isEmpty()) return
+        val manager = WorkManager.getInstance(context)
+        val work = manager.getWorkInfosByTag(WORK_TAG).get().associateBy { it.id.toString() }
+        val constraints = downloadConstraints(AppPreferencesStore(context).load().downloadNetwork)
+        val profiles = if (tasks.any { it.isActive }) SessionStore(context).loadProfiles().mapTo(mutableSetOf()) { it.id } else emptySet()
+        tasks.map { task ->
+            runCatching {
+                val info = work[task.workId]
+                if (task.isActive && task.profileId !in profiles) {
+                    try { store.cancel(task.id, task.workId, tr("账号已从本机移除，下载已停止")) }
+                    finally { manager.cancelUniqueWork(workName(task)).result.get() }
+                    return@runCatching
+                }
+                when {
+                    !task.isActive -> {
+                        // Worker 先提交 COMPLETED/FAILED 再返回 Result；这段窗口不能把正常收尾改成系统取消。
+                        if (task.status == DownloadStatus.CANCELLED && info?.state?.isFinished != true)
+                            manager.cancelUniqueWork(workName(task)).result.get()
+                    }
+                    info?.state?.isFinished == true -> store.update(task.id, task.workId) {
+                        if (!it.isActive) it else it.copy(status = if (info.state == WorkInfo.State.CANCELLED)
+                            DownloadStatus.CANCELLED else DownloadStatus.FAILED,
+                            error = tr("任务已停止；重试会从头重新下载"))
+                    }
+                    info == null || info.constraints != constraints -> startAttempt(context, task, constraints)
+                    info.state in listOf(WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED) && task.status == DownloadStatus.DOWNLOADING ->
+                        store.update(task.id, task.workId) { if (it.isActive) it.copy(status = DownloadStatus.QUEUED) else it }
+                }
+            }
+        }.firstOrNull { it.isFailure }?.getOrThrow()
     }
 
-    private fun reconcile(task: DownloadTask, info: WorkInfo?): DownloadTask {
-        if (!task.isActive) return task
-        return when (info?.state) {
-            WorkInfo.State.CANCELLED -> task.copy(status = DownloadStatus.CANCELLED, error = tr("任务已停止；重试会从头重新下载"))
-            WorkInfo.State.FAILED -> task.copy(status = DownloadStatus.FAILED, error = task.error ?: tr("下载未完成，请重试"))
-            WorkInfo.State.SUCCEEDED -> task.copy(status = DownloadStatus.FAILED, error = tr("文件未完整保存，请重新下载"))
-            WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> task.copy(status = DownloadStatus.QUEUED)
-            else -> task
-        }
+    /** 恢复与显式重试只提交一次最终代次；活动阶段可推进，但取消/完成后的快照不得被旧意图复活。 */
+    private fun startAttempt(context: Context, original: DownloadTask, constraints: Constraints, destination: String = original.destinationUri) {
+        val store = DownloadStore(context)
+        val manager = WorkManager.getInstance(context)
+        val eligible = if (original.isActive) setOf(DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING) else setOf(original.status)
+        var task = original
+        runCatching {
+            task = store.update(original.id, original.workId) {
+                if (it.status in eligible) it.nextAttempt(destination) else it
+            }?.takeIf { it.workId != original.workId } ?: return
+            val request = OneTimeWorkRequestBuilder<MediaDownloadWorker>().setId(UUID.fromString(task.workId))
+                .setInputData(workDataOf(MediaDownloadWorker.TASK_ID to task.id))
+                .addTag(WORK_TAG)
+                .setConstraints(constraints)
+                .build()
+            manager.enqueueUniqueWork(workName(task), ExistingWorkPolicy.REPLACE, request).result.get()
+        }.onFailure {
+            // 无法提交新代次时仍停止旧计划，不能沿旧ANY约束继续取流。
+            runCatching { manager.cancelUniqueWork(workName(task)).result.get() }
+            runCatching { store.update(task.id, task.workId) {
+                if (it.isActive) it.copy(status = DownloadStatus.FAILED, error = tr("无法安排后台下载，请重试")) else it
+            } }
+        }.getOrThrow()
     }
+
+    internal fun cancelIntent(context: Context, task: DownloadTask): PendingIntent = PendingIntent.getBroadcast(context, 0,
+        Intent(context, DownloadCancelReceiver::class.java).setData(Uri.parse("pathfin-download:${task.id}/${task.workId}"))
+            .putExtra(MediaDownloadWorker.TASK_ID, task.id).putExtra("workId", task.workId),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    private fun workName(task: DownloadTask) = "pathfin-download-${task.id}"
 
     internal const val WORK_TAG = "pathfin-media-download"
+}
+
+/** 先撤销持久任务，再停止系统计划；冷启动或迟到恢复均不能复活通知取消的任务。 */
+class DownloadCancelReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val taskId = intent.getStringExtra(MediaDownloadWorker.TASK_ID)?.takeIf(String::isNotBlank) ?: return
+        val workId = intent.getStringExtra("workId")?.takeIf(String::isNotBlank) ?: return
+        val pending = goAsync()
+        MediaDownloads.launchCommand { MediaDownloads.cancel(context.applicationContext, taskId, workId) }
+            .invokeOnCompletion { pending.finish() }
+    }
 }
 
 internal fun downloadConstraints(network: DownloadNetwork): Constraints = Constraints.Builder()

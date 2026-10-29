@@ -12,7 +12,7 @@ class DownloadTaskCodecTest {
         val task = DownloadTask("task", "work", "profile", "item", "Movie", "content://documents/file/42",
             sourceId = "source", status = DownloadStatus.DOWNLOADING, downloadedBytes = 5_000_000_000L,
             totalBytes = 9_000_000_000L, fileName = "Movie.mkv", mimeType = "video/x-matroska",
-            createdAt = 10, updatedAt = 20)
+            createdAt = 10)
         val encoded = DownloadTaskCodec.encode(listOf(task))
         assertEquals(task, DownloadTaskCodec.decode(encoded).single())
         val fields = JSONArray(encoded).getJSONObject(0).keys().asSequence().toSet()
@@ -28,13 +28,15 @@ class DownloadTaskCodecTest {
         assertEquals(listOf(cancelled, completed), DownloadTaskCodec.decode(DownloadTaskCodec.encode(listOf(cancelled, completed))))
     }
 
-    @Test fun unmeteredPolicyAndItsWaitingDescriptionSurviveReload() {
-        val task = DownloadTask("task", "work", "profile", "item", "Movie", "content://documents/file/42",
-            network = DownloadNetwork.UNMETERED)
-        val restored = DownloadTaskCodec.decode(DownloadTaskCodec.encode(listOf(task))).single()
-        assertEquals(DownloadNetwork.UNMETERED, restored.network)
-        assertTrue(restored.queueDescription.contains("不计费"))
-        assertFalse(restored.queueDescription.contains("Wi-Fi"))
+    @Test fun taskReloadDoesNotPreserveAnObsoleteNetworkPolicy() {
+        val task = DownloadTask("task", "work", "profile", "item", "Movie", "content://documents/file/42")
+        val legacy = JSONArray(DownloadTaskCodec.encode(listOf(task))).apply { getJSONObject(0).put("network", "ANY").put("updatedAt", 42) }
+        val restored = DownloadTaskCodec.decode(legacy.toString()).single()
+        assertEquals(task, restored)
+        assertFalse(JSONArray(DownloadTaskCodec.encode(listOf(restored))).getJSONObject(0).has("network"))
+        assertFalse(JSONArray(DownloadTaskCodec.encode(listOf(restored))).getJSONObject(0).has("updatedAt"))
+        assertTrue(restored.queueDescription(DownloadNetwork.UNMETERED).contains("不计费"))
+        assertFalse(restored.queueDescription(DownloadNetwork.UNMETERED).contains("Wi-Fi"))
     }
 
     @Test fun duplicateNamesKeepTheirExtensionAndNeverChooseAnOccupiedName() {

@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
 import android.os.Build
 import androidx.core.net.toUri
 import androidx.core.app.NotificationCompat
@@ -15,17 +16,17 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dev.pathfin.android.data.ApiException
+import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.data.LocalNetworkPermission
 import dev.pathfin.android.data.LocalNetworkPermissionDenied
 import dev.pathfin.android.data.NetworkErrorMessages
 import dev.pathfin.android.data.SafDocumentTransfer
 import dev.pathfin.android.data.SessionStore
+import dev.pathfin.android.domain.DownloadNetwork
 import dev.pathfin.android.i18n.tr
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -46,6 +47,10 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
     private val sessionStore by lazy { SessionStore(applicationContext) }
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val taskId = inputData.getString(TASK_ID) ?: return@withContext Result.failure()
+        // WorkManager 可在没有任何页面/ViewModel 时冷启动；先修复持久提交，再取得凭据或打开目标。
+        try { MediaDownloads.recover(applicationContext, taskId) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { return@withContext Result.retry() }
         val store = DownloadStore(applicationContext)
         val task = store.get(taskId) ?: return@withContext Result.failure()
         if (task.workId != id.toString() || !task.isActive) return@withContext Result.success()
@@ -92,6 +97,7 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                         }
                     }) { bytes, total ->
                         currentCoroutineContext().ensureActive()
+                        requirePermission(source.url)
                         ensureCurrent(store, task)
                         val updated = store.update(task.id, task.workId) {
                             if (!it.isActive) throw CancellationException("Download cancelled")
@@ -117,12 +123,9 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                 val accountRemoved = cancelled is ProfileRemoved || runCatching {
                     sessionStore.loadProfiles().none { it.id == task.profileId }
                 }.getOrDefault(false)
-                val cancelledByUser = runCatching {
-                    WorkManager.getInstance(applicationContext).getWorkInfoById(id).get()?.state == WorkInfo.State.CANCELLED
-                }.getOrDefault(false)
                 store.update(task.id, task.workId) {
                     if (it.status == DownloadStatus.COMPLETED) it else it.copy(
-                        status = if (it.status == DownloadStatus.CANCELLED || cancelledByUser || accountRemoved) DownloadStatus.CANCELLED else DownloadStatus.QUEUED,
+                        status = if (it.status == DownloadStatus.CANCELLED || accountRemoved) DownloadStatus.CANCELLED else DownloadStatus.QUEUED,
                         downloadedBytes = if (cleared) 0 else it.downloadedBytes,
                         error = when {
                             !cleared -> tr("任务已停止，目标中可能保留未完成文件")
@@ -133,7 +136,7 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                     )
                 }
             }
-            throw cancelled
+            if (cancelled is MeteredNetwork) Result.retry() else throw cancelled
         } catch (error: Exception) {
             val cleared = !outputOpened.get() || clearPartial(task, lease, writeFinished)
             store.update(task.id, task.workId) {
@@ -154,8 +157,14 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
     }
 
     private class ProfileRemoved : CancellationException("Download profile removed")
+    private class MeteredNetwork : CancellationException("Download requires unmetered network")
 
     private suspend fun requirePermission(url: String) {
+        if (AppPreferencesStore(applicationContext).load().downloadNetwork == DownloadNetwork.UNMETERED &&
+            applicationContext.getSystemService(ConnectivityManager::class.java).isActiveNetworkMetered) {
+            MediaDownloads.recover(applicationContext, inputData.getString(TASK_ID))
+            throw MeteredNetwork()
+        }
         if (!LocalNetworkPermission.isGranted(applicationContext) && LocalNetworkPermission.isRequired(url)) {
             throw LocalNetworkPermissionDenied()
         }
@@ -211,7 +220,7 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
             .setSubText(tr("Pathfin 下载"))
             .setProgress(100, percent ?: 0, percent == null)
             .setOnlyAlertOnce(true).setOngoing(true).setSilent(true).setCategory(NotificationCompat.CATEGORY_PROGRESS)
-            .addAction(R.drawable.ic_stat_close, tr("取消下载"), WorkManager.getInstance(applicationContext).createCancelPendingIntent(id))
+            .addAction(R.drawable.ic_stat_close, tr("取消下载"), MediaDownloads.cancelIntent(applicationContext, task))
             .apply { launchIntent()?.let(::setContentIntent) }.build()
         return if (Build.VERSION.SDK_INT >= 29) ForegroundInfo(notificationId, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
             else ForegroundInfo(notificationId, notification)

@@ -1272,7 +1272,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 读取速度	Read speed
 账号已从本机移除，下载已停止	The account was removed from this device; downloads stopped
 账号已移除，已撤销临时媒体地址	The account was removed; the temporary media address was revoked
-账号已移除；下载记录已取消，系统任务停止稍有延迟	The account was removed; download records were cancelled, and system tasks will stop shortly
+账号已移除；下载队列更新未完成，请重新打开下载任务确认	The account was removed; the download queue could not finish updating. Reopen Downloads to check its status
 账号或媒体已经变化，请重新搜索识别结果	The account or media changed. Search for identification results again
 账号或密码错误，请重试	Incorrect username or password. Please retry
 账号标识无效	Invalid account ID

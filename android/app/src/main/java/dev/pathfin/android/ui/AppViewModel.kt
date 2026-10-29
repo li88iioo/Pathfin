@@ -224,7 +224,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var themeRevision = 0L
     private var lastCommittedPreferences = AppPreferences()
     private var lastCommittedTheme = ThemePreference.SYSTEM
-    private var downloadNetworkNeedsReconfigure = false
 
     val state: StateFlow<AppState> = mutableState.asStateFlow()
     private var localNetworkRequestSequence = 0L
@@ -529,12 +528,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 current?.let(::invalidateHomeSnapshot)
                 if (current != null) dev.pathfin.android.casting.DlnaCasting.cancelProfile(getApplication(), current)
-                val cancelFailed = current != null && runCatching { MediaDownloads.cancelProfile(getApplication(), current) }.isFailure
+                val queueFailed = current != null && runCatching { MediaDownloads.recover(getApplication()) }.isFailure
                 if (epoch != generation) return@launch
                 removed?.let(::clearProfileImages)
                 mutableState.update { AppState(theme = it.theme, preferences = it.preferences, profiles = remaining,
                     showServers = true, loginError = reason,
-                    notice = accountRemovalNotice(cancelFailed)) }
+                    notice = accountRemovalNotice(queueFailed)) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -713,19 +712,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 val profiles = storeIo { sessionStore.removeProfile(profile.id); sessionStore.loadProfiles() }
                 invalidateHomeSnapshot(profile.id)
                 dev.pathfin.android.casting.DlnaCasting.cancelProfile(getApplication(), profile.id)
-                val cancelFailed = runCatching { MediaDownloads.cancelProfile(getApplication(), profile.id) }.isFailure
+                val queueFailed = runCatching { MediaDownloads.recover(getApplication()) }.isFailure
                 if (epoch == generation) {
                     clearProfileImages(profile)
                     mutableState.update { it.copy(profiles = profiles, loginBusy = false,
-                        notice = accountRemovalNotice(cancelFailed) ?: it.notice) }
+                        notice = accountRemovalNotice(queueFailed) ?: it.notice) }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { if (epoch == generation) mutableState.update { it.copy(loginBusy = false, loginError = tr("无法移除本机账号，请重试")) } }
         }
     }
 
-    private fun accountRemovalNotice(downloadFailed: Boolean): String? =
-        tr("账号已移除；下载记录已取消，系统任务停止稍有延迟").takeIf { downloadFailed }
+    private fun accountRemovalNotice(queueFailed: Boolean): String? =
+        tr("账号已移除；下载队列更新未完成，请重新打开下载任务确认").takeIf { queueFailed }
 
     private fun clearProfileImages(profile: ServerProfile) {
         // 先捕获当前缓存代次；迟到的 IO 清理不能关闭重新登录后创建的 loader。
@@ -2543,20 +2542,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         catch (_: Exception) { false }
     }
 
-    /** 保存与队列重排共用一把锁；后一次设置不能被先一次较慢的重排覆盖。 */
-    private suspend fun persistPreferences(value: AppPreferences, theme: ThemePreference? = null): String? = storeIo {
-        val changedNetwork = lastCommittedPreferences.downloadNetwork != value.downloadNetwork
-        if (theme == null) preferencesStore.save(value) else preferencesStore.saveWithTheme(value, theme)
-        lastCommittedPreferences = value
-        if (theme != null) lastCommittedTheme = theme
-        if (!changedNetwork && !downloadNetworkNeedsReconfigure) return@storeIo null
-        try {
-            MediaDownloads.reconfigureNetwork(getApplication(), value.downloadNetwork)
-            downloadNetworkNeedsReconfigure = false
+    /** 偏好提交只占用存储锁；下载协调始终读取最新持久规则，不依赖页面内的补偿标志。 */
+    private suspend fun persistPreferences(value: AppPreferences, theme: ThemePreference? = null): String? {
+        storeIo {
+            if (theme == null) preferencesStore.save(value) else preferencesStore.saveWithTheme(value, theme)
+            lastCommittedPreferences = value
+            if (theme != null) lastCommittedTheme = theme
+        }
+        return try {
+            MediaDownloads.recover(getApplication())
             null
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
-            downloadNetworkNeedsReconfigure = true
             tr("设置已保存，下载队列更新失败，请在下载任务中重试")
         }
     }

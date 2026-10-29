@@ -4,6 +4,7 @@ import dev.pathfin.android.domain.DownloadNetwork
 import dev.pathfin.android.i18n.tr
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 enum class DownloadStatus { QUEUED, DOWNLOADING, COMPLETED, FAILED, CANCELLED }
 
@@ -16,7 +17,6 @@ data class DownloadTask(
     val displayName: String,
     val destinationUri: String,
     val sourceId: String? = null,
-    val network: DownloadNetwork = DownloadNetwork.ANY,
     val status: DownloadStatus = DownloadStatus.QUEUED,
     val downloadedBytes: Long = 0,
     val totalBytes: Long? = null,
@@ -24,14 +24,17 @@ data class DownloadTask(
     val mimeType: String? = null,
     val error: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = createdAt,
 ) {
     val isActive: Boolean get() = status == DownloadStatus.QUEUED || status == DownloadStatus.DOWNLOADING
     val progress: Float? get() = totalBytes?.takeIf { it > 0 }?.let {
         (downloadedBytes.toDouble() / it).coerceIn(0.0, 1.0).toFloat()
     }
-    val queueDescription: String get() = if (network == DownloadNetwork.UNMETERED)
+    fun queueDescription(network: DownloadNetwork): String = if (network == DownloadNetwork.UNMETERED)
         tr("等待不计费网络或系统开始下载") else tr("等待网络或系统开始下载")
+
+    internal fun nextAttempt(destination: String = destinationUri): DownloadTask = copy(
+        workId = UUID.randomUUID().toString(), destinationUri = destination, status = DownloadStatus.QUEUED,
+        downloadedBytes = 0, totalBytes = null, error = null)
 }
 
 internal object DownloadTaskCodec {
@@ -41,10 +44,10 @@ internal object DownloadTaskCodec {
                 .put("id", task.id).put("workId", task.workId)
                 .put("profileId", task.profileId).put("itemId", task.itemId)
                 .put("displayName", task.displayName).put("destinationUri", task.destinationUri)
-                .put("sourceId", task.sourceId).put("network", task.network.name).put("status", task.status.name)
+                .put("sourceId", task.sourceId).put("status", task.status.name)
                 .put("downloadedBytes", task.downloadedBytes).put("totalBytes", task.totalBytes)
                 .put("fileName", task.fileName).put("mimeType", task.mimeType)
-                .put("error", task.error).put("createdAt", task.createdAt).put("updatedAt", task.updatedAt))
+                .put("error", task.error).put("createdAt", task.createdAt))
         }
     }.toString()
 
@@ -58,11 +61,10 @@ internal object DownloadTaskCodec {
                     profileId = json.getString("profileId"), itemId = json.getString("itemId"),
                     displayName = json.getString("displayName"), destinationUri = json.getString("destinationUri"),
                     sourceId = json.optionalString("sourceId"), status = DownloadStatus.valueOf(json.getString("status")),
-                    network = DownloadNetwork.entries.firstOrNull { it.name == json.optString("network") } ?: DownloadNetwork.ANY,
                     downloadedBytes = json.optLong("downloadedBytes").coerceAtLeast(0),
                     totalBytes = if (json.isNull("totalBytes")) null else json.optLong("totalBytes").takeIf { it >= 0 },
                     fileName = json.optString("fileName", json.getString("displayName")), mimeType = json.optionalString("mimeType"),
-                    error = json.optionalString("error"), createdAt = json.getLong("createdAt"), updatedAt = json.getLong("updatedAt"),
+                    error = json.optionalString("error"), createdAt = json.getLong("createdAt"),
                 )
             }.getOrNull()
         }

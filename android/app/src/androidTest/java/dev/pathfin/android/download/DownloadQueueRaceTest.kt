@@ -69,6 +69,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -83,6 +84,121 @@ import org.junit.runner.RunWith
 class DownloadQueueRaceTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val target: Context = instrumentation.targetContext
+
+    @Test fun orphanedCommitIsScheduledBeforeTheFirstObservedSnapshot() = withFixture { fixture ->
+        val task = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
+            "orphan", "Synthetic orphan", fixture.document().toString())
+        DownloadStore(fixture.context).insert(task)
+        AppPreferencesStore(fixture.context).save(AppPreferences(downloadNetwork = DownloadNetwork.UNMETERED))
+        runBlocking { withTimeout(15_000) { MediaDownloads.observe(fixture.context).first() } }
+        assertUnmetered(fixture, task.id)
+        val restored = checkNotNull(DownloadStore(fixture.context).get(task.id))
+        assertNotEquals(task.workId, restored.workId)
+        assertEquals(task.destinationUri, restored.destinationUri)
+        assertEquals(task.profileId, restored.profileId)
+    }
+
+    @Test fun cancelledCommitStopsItsSystemRequestBeforeTheFirstObservedSnapshot() = withFixture { fixture ->
+        runBlocking {
+            for (replaced in listOf(false, true)) {
+                val task = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
+                    "cancelled", "Synthetic cancelled", fixture.document().toString())
+                val store = DownloadStore(fixture.context)
+                store.insert(task)
+                defer(fixture, task)
+                val current = if (replaced) checkNotNull(store.update(task.id, task.workId) { it.nextAttempt() }) else task
+                store.cancel(task.id, current.workId)
+                withTimeout(15_000) { MediaDownloads.observe(fixture.context).first() }
+                assertEquals(androidx.work.WorkInfo.State.CANCELLED,
+                    fixture.manager.getWorkInfoById(UUID.fromString(task.workId)).get(10, TimeUnit.SECONDS)?.state)
+                assertEquals(DownloadStatus.CANCELLED, store.get(task.id)?.status)
+            }
+        }
+    }
+
+    @Test fun interruptedGenerationCommitReplacesTheOldPlanUsingTheSavedPolicy() = withFixture { fixture ->
+        runBlocking {
+            val store = DownloadStore(fixture.context)
+            val before = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
+                "generation", "Synthetic generation", fixture.document().toString())
+            store.insert(before)
+            defer(fixture, before)
+            val next = checkNotNull(store.update(before.id, before.workId) { it.copy(workId = UUID.randomUUID().toString()) })
+            AppPreferencesStore(fixture.context).save(AppPreferences(downloadNetwork = DownloadNetwork.UNMETERED))
+            withTimeout(15_000) { MediaDownloads.observe(fixture.context).first() }
+            assertUnmetered(fixture, before.id)
+            val restored = checkNotNull(store.get(before.id))
+            assertNotEquals(before.workId, restored.workId)
+            assertNotEquals(next.workId, restored.workId)
+            assertEquals(next.destinationUri, restored.destinationUri)
+            val previous = fixture.manager.getWorkInfoById(UUID.fromString(before.workId)).get(10, TimeUnit.SECONDS)
+            assertTrue("旧计划必须终结或已被REPLACE删除，不能继续执行", previous?.state?.isFinished != false)
+        }
+    }
+
+    @Test fun terminalBusinessResultDoesNotCancelItsUnfinishedSystemPlan() = withFixture { fixture ->
+        runBlocking {
+            for (status in listOf(DownloadStatus.COMPLETED, DownloadStatus.FAILED)) {
+                val task = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
+                    "finishing", "Synthetic finishing", fixture.document().toString())
+                val store = DownloadStore(fixture.context)
+                store.insert(task)
+                defer(fixture, task)
+                store.update(task.id, task.workId) { it.copy(status = status) }
+                withTimeout(15_000) { MediaDownloads.observe(fixture.context).first() }
+                assertEquals("正常结果已提交，尚未终结的WorkSpec不能被恢复逻辑取消", androidx.work.WorkInfo.State.ENQUEUED,
+                    fixture.manager.getWorkInfoById(UUID.fromString(task.workId)).get(10, TimeUnit.SECONDS)?.state)
+                assertEquals(status, store.get(task.id)?.status)
+            }
+        }
+    }
+
+    @Test fun explicitRetrySurvivesALateStopForItsRevokedGeneration() = withFixture { fixture ->
+        runBlocking {
+            val task = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
+                "late-stop", "Synthetic late stop", fixture.document().toString())
+            val store = DownloadStore(fixture.context)
+            store.insert(task)
+            defer(fixture, task)
+            val revoked = checkNotNull(store.cancel(task.id, task.workId))
+            MediaDownloads.retry(fixture.context, task.id)
+            val replacement = checkNotNull(store.get(task.id))
+            fixture.manager.cancelWorkById(UUID.fromString(revoked.workId)).result.get(10, TimeUnit.SECONDS)
+            assertNotEquals(task.workId, replacement.workId)
+            assertNotEquals(androidx.work.WorkInfo.State.CANCELLED,
+                fixture.manager.getWorkInfoById(UUID.fromString(replacement.workId)).get(10, TimeUnit.SECONDS)?.state)
+            assertNotEquals(DownloadStatus.CANCELLED, store.get(task.id)?.status)
+            // 与旧通知接收器完全相同的代次CAS入口，不能撤销重试之后的新任务。
+            MediaDownloads.cancel(fixture.context, task.id, task.workId)
+            assertNotEquals(DownloadStatus.CANCELLED, store.get(task.id)?.status)
+        }
+    }
+
+    @Test fun unrelatedBrokenPlanCannotFailANewEnqueueOrEscapeTheObservedList() = withFixture { fixture ->
+        runBlocking {
+            // 已落盘标识超过WorkManager Data的10KiB上限，fresh workId也不能修复真实排程失败。
+            val broken = DownloadTask("oversized-${"x".repeat(11_000)}", UUID.randomUUID().toString(), fixture.profileId,
+                "broken", "Synthetic broken plan", fixture.document().toString())
+            val store = DownloadStore(fixture.context)
+            store.insert(broken)
+            val id = MediaDownloads.enqueue(fixture.context, fixture.profileId, "new", "Synthetic new plan", fixture.document())
+            val requested = checkNotNull(store.get(id))
+            assertNotNull(fixture.manager.getWorkInfoById(UUID.fromString(requested.workId)).get(10, TimeUnit.SECONDS))
+            val observed = withTimeout(15_000) { MediaDownloads.observe(fixture.context).first { rows ->
+                rows.any { it.id == broken.id && it.status == DownloadStatus.FAILED }
+            } }
+            assertTrue(observed.any { it.id == id })
+            assertEquals(requested.workId, store.get(id)?.workId)
+        }
+    }
+
+    private fun defer(fixture: Fixture, task: DownloadTask) {
+        val request = androidx.work.OneTimeWorkRequestBuilder<MediaDownloadWorker>().setId(UUID.fromString(task.workId))
+            .setInputData(androidx.work.workDataOf(MediaDownloadWorker.TASK_ID to task.id)).addTag(MediaDownloads.WORK_TAG)
+            .setConstraints(downloadConstraints(DownloadNetwork.ANY)).setInitialDelay(1, TimeUnit.DAYS).build()
+        fixture.manager.enqueueUniqueWork("pathfin-download-${task.id}", androidx.work.ExistingWorkPolicy.REPLACE, request)
+            .result.get(10, TimeUnit.SECONDS)
+    }
 
     @Test fun savingANewNetworkRuleWhileEnqueueHoldsTheOldValueCannotMissTheNewlyInsertedTask() = withFixture { fixture ->
         val context = fixture.context
@@ -99,7 +215,7 @@ class DownloadQueueRaceTest {
                     read.awaitEntered()
                     preferences.save(AppPreferences(downloadNetwork = DownloadNetwork.UNMETERED))
                     val reconfigure = async(start = CoroutineStart.UNDISPATCHED) {
-                        MediaDownloads.reconfigureNetwork(context, DownloadNetwork.UNMETERED)
+                        MediaDownloads.recover(context)
                     }
                     // 同为 IO 上下文，UNDISPATCHED 会运行到真实 Mutex 挂起点；不靠固定延时猜时序。
                     assertFalse("重排不能先于持旧策略的入队完成，否则会漏过该任务", reconfigure.isCompleted)
@@ -121,11 +237,11 @@ class DownloadQueueRaceTest {
         val destination = fixture.document()
         val store = DownloadStore(fixture.context)
         val task = DownloadTask(UUID.randomUUID().toString(), UUID.randomUUID().toString(), fixture.profileId,
-            "retry", "Synthetic retry", destination.toString(), status = DownloadStatus.FAILED, network = DownloadNetwork.ANY)
+            "retry", "Synthetic retry", destination.toString(), status = DownloadStatus.FAILED)
         store.insert(task)
         AppPreferencesStore(fixture.context).save(AppPreferences(downloadNetwork = DownloadNetwork.UNMETERED))
         runBlocking {
-            MediaDownloads.reconfigureNetwork(fixture.context, DownloadNetwork.UNMETERED)
+            MediaDownloads.recover(fixture.context)
             MediaDownloads.retry(fixture.context, task.id)
         }
         val retried = checkNotNull(store.get(task.id))
@@ -415,7 +531,6 @@ class DownloadQueueRaceTest {
 
     private fun assertUnmetered(fixture: Fixture, id: String) {
         val task = checkNotNull(DownloadStore(fixture.context).get(id))
-        assertEquals(DownloadNetwork.UNMETERED, task.network)
         val work = checkNotNull(fixture.manager.getWorkInfoById(UUID.fromString(task.workId)).get(10, TimeUnit.SECONDS))
         assertEquals(NetworkType.UNMETERED, work.constraints.requiredNetworkType)
     }
