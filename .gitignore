@@ -1,0 +1,53 @@
+# 内部工作区和发布产物
+/.superpowers/
+/releases/
+/AGENTS.md
+/AGENTS.override.md
+
+# Gradle / Kotlin / Android / 原生构建输出
+**/.gradle/
+**/.kotlin/
+**/build/
+**/build-native/
+**/.cxx/
+**/jniLibs/
+*.apk
+*.aab
+*.apks
+*.idsig
+*.hprof
+
+# 本机配置与签名材料
+**/local.properties
+**/release.properties
+**/signing.properties
+**/keystore.properties
+*.jks
+*.keystore
+*.key
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+
+# 编辑器、Python 缓存和临时文件
+.idea/
+.vscode/
+*.iml
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 保留 Wrapper JAR、测试媒体/公开证书、原生锁文件及随包许可资产。

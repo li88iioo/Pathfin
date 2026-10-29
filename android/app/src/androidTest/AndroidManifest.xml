@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- 只在 instrumentation APK 中存在；生产 APK 没有该 Provider 或文件目录。 -->
+        <provider
+            android:name="dev.pathfin.android.download.VerificationDownloadDocumentsProvider"
+            android:authorities="${applicationId}.download.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+        <activity
+            android:name="dev.pathfin.android.download.VerificationDownloadDocumentsProvider$GrantActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+        <provider
+            android:name="dev.pathfin.android.VerificationSettingsDocumentsProvider"
+            android:authorities="${applicationId}.settings.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+        <activity
+            android:name="dev.pathfin.android.VerificationSettingsDocumentsProvider$GrantActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
+    </application>
+</manifest>

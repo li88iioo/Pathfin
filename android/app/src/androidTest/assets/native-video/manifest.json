@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 1,
+  "generator": "android/tools/prepare_native_video_fixture.py",
+  "ffmpeg": "ffmpeg version 8.0.1-3ubuntu2+esm5 Copyright (c) 2000-2025 the FFmpeg developers",
+  "fixtures": [
+    {
+      "id": "hi10p-bframes",
+      "mime": "video/avc",
+      "codecs": "avc1.6e000a",
+      "profile": "High 10",
+      "pixelFormat": "yuv420p10le",
+      "width": 192,
+      "height": 128,
+      "frameRate": 12,
+      "bitDepth": 10,
+      "durationMs": 2000,
+      "hostDecodedFrames": 24,
+      "packetCount": 24,
+      "bFrames": 17,
+      "tailFrameTypes": [
+        "P",
+        "B",
+        "B",
+        "P"
+      ],
+      "packetTimesUs": [
+        0,
+        333333,
+        83333,
+        166667,
+        250000,
+        666667,
+        416667,
+        500000,
+        583333,
+        1000000,
+        750000,
+        833333,
+        916667,
+        1333333,
+        1083333,
+        1166667,
+        1250000,
+        1666667,
+        1416667,
+        1500000,
+        1583333,
+        1916667,
+        1750000,
+        1833333
+      ],
+      "frameTimesUs": [
+        0,
+        83333,
+        166667,
+        250000,
+        333333,
+        416667,
+        500000,
+        583333,
+        666667,
+        750000,
+        833333,
+        916667,
+        1000000,
+        1083333,
+        1166667,
+        1250000,
+        1333333,
+        1416667,
+        1500000,
+        1583333,
+        1666667,
+        1750000,
+        1833333,
+        1916667
+      ],
+      "cpuReference": {
+        "model": "CPU YUV420P10 limited BT709 matrix -> display BT1886 (gamma 2.4) -> sRGB OETF -> RGBA8",
+        "format": "rgba",
+        "range": "full",
+        "transfer": "sRGB",
+        "sourceTransferTag": "bt709",
+        "sourceDisplayTransfer": "BT1886",
+        "decodedYuvSha256": "7443221c40d5da5e5f64d6d4063d670e1ab91096e83a7f6b8a6c4203f94d49ec",
+        "sampleRadius": 2,
+        "bytes": 2359296,
+        "sha256": "0275795f02f2dabd6b59a333730be477f7d7ee05619072a7476de2c1d02f816c"
+      },
+      "files": {
+        "hi10p-bframes.mp4": {
+          "bytes": 6553,
+          "sha256": "c2cf3ff1f820b5cf955209b260ec4879c1256ba21a429da714fa5611f11022d9"
+        },
+        "hi10p-bframes.packets": {
+          "bytes": 5838,
+          "sha256": "096b0649d352af3b808888bbf4e8f0acdeae436bb9f7f471d36a2d69f3a12546"
+        },
+        "hi10p-bframes.init": {
+          "bytes": 42,
+          "sha256": "e4a3582541e591bb615dab0212340211c07bb3319a913f01f9655cc58faffd7e"
+        },
+        "hi10p-bframes.reference.json": {
+          "bytes": 29568,
+          "sha256": "3ba490794e51fb0bca78b16a4d64be5ea287211332280ec86468d64dab127d37"
+        }
+      }
+    },
+    {
+      "id": "hi10p-color-grid",
+      "mime": "video/avc",
+      "codecs": "avc1.6e000a",
+      "profile": "High 10",
+      "pixelFormat": "yuv420p10le",
+      "width": 192,
+      "height": 128,
+      "frameRate": 12,
+      "bitDepth": 10,
+      "durationMs": 2000,
+      "hostDecodedFrames": 24,
+      "packetCount": 24,
+      "bFrames": 17,
+      "tailFrameTypes": [
+        "P",
+        "B",
+        "B",
+        "P"
+      ],
+      "packetTimesUs": [
+        0,
+        333333,
+        83333,
+        166667,
+        250000,
+        666667,
+        416667,
+        500000,
+        583333,
+        1000000,
+        750000,
+        833333,
+        916667,
+        1333333,
+        1083333,
+        1166667,
+        1250000,
+        1666667,
+        1416667,
+        1500000,
+        1583333,
+        1916667,
+        1750000,
+        1833333
+      ],
+      "frameTimesUs": [
+        0,
+        83333,
+        166667,
+        250000,
+        333333,
+        416667,
+        500000,
+        583333,
+        666667,
+        750000,
+        833333,
+        916667,
+        1000000,
+        1083333,
+        1166667,
+        1250000,
+        1333333,
+        1416667,
+        1500000,
+        1583333,
+        1666667,
+        1750000,
+        1833333,
+        1916667
+      ],
+      "cpuReference": {
+        "model": "CPU YUV420P10 limited BT709 matrix -> display BT1886 (gamma 2.4) -> sRGB OETF -> RGBA8",
+        "format": "rgba",
+        "range": "full",
+        "transfer": "sRGB",
+        "sourceTransferTag": "bt709",
+        "sourceDisplayTransfer": "BT1886",
+        "decodedYuvSha256": "735ccea456c10fc57657ceb0308c9c18349a10427aa92efe972b01e45154e389",
+        "sampleRadius": 2,
+        "bytes": 2359296,
+        "sha256": "1a8b2d1f823281448e8d3a5b716203085c3875fe3f36a863f675f078d32fbc90"
+      },
+      "files": {
+        "hi10p-color-grid.mp4": {
+          "bytes": 4172,
+          "sha256": "356d27e364882580741d19c5d6091415ca6a3889003d480e2a01e9505bb58995"
+        },
+        "hi10p-color-grid.packets": {
+          "bytes": 3457,
+          "sha256": "c1dc0aa2050f4725228ee8a4dadc970924474ed078815d0848d755325c6ef874"
+        },
+        "hi10p-color-grid.init": {
+          "bytes": 42,
+          "sha256": "e4a3582541e591bb615dab0212340211c07bb3319a913f01f9655cc58faffd7e"
+        },
+        "hi10p-color-grid.reference.json": {
+          "bytes": 29567,
+          "sha256": "f49afc1764cb9222837381eff292bda7842e49be0852cce3bed32ec4b3aefdfe"
+        }
+      }
+    }
+  ],
+  "notCovered": [
+    "4K 播放性能",
+    "Dolby Vision Profile 5 色彩正确性",
+    "HDR tone mapping"
+  ]
+}

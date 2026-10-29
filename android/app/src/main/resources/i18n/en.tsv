@@ -1,0 +1,1509 @@
+ · 可用本机播放器打开	 · Can be opened with an on-device player
+ · 耗时 %1$s	 · Took %1$s
+ · 设备不支持	 · Not supported by this device
+$1[已隐藏]	$1[hidden]
+%+.1f 秒	%+.1f s
+%1$s · %2$s 个结果	%1$s · %2$s results
+%1$s · 直接串流（不转码）	%1$s · Direct stream (no transcoding)
+%1$s · 直接播放	%1$s · Direct play
+%1$s · 转码	%1$s · Transcoding
+%1$s 个	%1$s
+%1$s 个任务	%1$s tasks
+%1$s 个任务 · %2$s 个进行中	%1$s tasks · %2$s running
+%1$s 个日志文件	%1$s log files
+%1$s 个组件	%1$s components
+%1$s 出生	Born %1$s
+%1$s 分	%1$s min
+%1$s 分钟	%1$s min
+%1$s 分钟前	%1$s min ago
+%1$s 分钟后	In %1$s min
+%1$s 分钟后关闭	Closes in %1$s min
+%1$s 去世	Died %1$s
+%1$s 声道	%1$s ch
+%1$s 天前	%1$s days ago
+%1$s 字幕	%1$s subtitles
+%1$s 小时	%1$s h
+%1$s 小时 %2$s 分	%1$s h %2$s min
+%1$s 小时前	%1$s hours ago
+%1$s 岁	Age %1$s
+%1$s 次下载	%1$s downloads
+%1$s 的密码	Password for %1$s
+%1$s 秒	%1$s s
+%1$s 秒 · %2$s MB	%1$s s · %2$s MB
+%1$s 节目单	%1$s guide
+%1$s 项	%1$s items
+%1$s 项完成，%2$s 项失败：%3$s	%1$s done, %2$s failed: %3$s
+%1$s\n将由 Jellyfin 下载并保存到服务器。	%1$s\nJellyfin will download it and save it to the server.
+%1$s× 倍速播放	Playing at %1$s×
+%1$s内搜索	Search in %1$s
+%1$s分%2$s秒	%1$s min %2$s s
+%1$s年%2$s月%3$s日	%2$s/%3$s/%1$s
+%1$s年份无效	Invalid %1$s year
+%1$s格式应为 YYYY-MM-DD	%1$s must be in YYYY-MM-DD format
+%1$s第 %2$s 集	%1$sEpisode %2$s
+%1$s（设备不支持）	%1$s (not supported by this device)
+%1$s，但重新读取失败；可重试加载，请勿重复提交。	%1$s, but reloading failed. You can retry loading; do not submit again.
+%1$s：%2$s	%1$s: %2$s
++%1$s 秒	+%1$s s
+100% 为原音量，增强后可能失真	100% is the original volume; boosting may distort
+16–65536 MB，每个账号独立计算	16–65536 MB, counted separately for each account
+18禁	Adult
+ARM64 使用 libass，其他架构使用基础字幕	libass on ARM64; basic subtitles on other architectures
+ASS 字幕扩展	ASS subtitle extension
+ASS 样式扩展初始化失败，已回退基础字幕	The ASS style extension failed to initialize; using basic subtitles
+ASS 样式扩展挂载失败，已回退基础字幕	The ASS style extension failed to attach; using basic subtitles
+ASS 样式扩展运行失败，已回退基础字幕	The ASS style extension stopped working; using basic subtitles
+Auto · 跟随系统	Auto · Follow system
+DLNA 投屏	DLNA casting
+DLNA 暂不支持 HLS/DASH 清单或 STRM 文本，请选择直接媒体文件	DLNA does not support HLS/DASH manifests or STRM text yet. Choose a direct media file
+DLNA 设备	DLNA device
+DLNA 设备响应过大，已停止读取	The DLNA device response is too large; stopped reading
+DLNA 设备地址无效	Invalid DLNA device address
+DLNA 设备拒绝了请求，请刷新设备状态	The DLNA device rejected the request. Refresh the device status
+HTTPS 连接失败，请确认服务器启用了 HTTPS，并核对协议和端口。	HTTPS connection failed. Make sure the server has HTTPS enabled and check the protocol and port.
+ISO 639-2，如 ita	ISO 639-2, e.g. ita
+JPG、PNG、WebP · 单张不超过 10 MB	JPG, PNG, WebP · Up to 10 MB each
+Jellyfin 服务器	Jellyfin server
+Jellyfin 用户名	Jellyfin username
+Jellyfin 直播	Jellyfin Live
+MediaFlux 云盘未登录	Not signed in to the MediaFlux cloud drive
+Pathfin 下载	Pathfin downloads
+STRM 原始地址	STRM original address
+STRM 播放签名无效，请检查 MediaFlux 地址	Invalid STRM playback signature. Check the MediaFlux address
+STRM 默认画质	STRM default quality
+[已隐藏凭据]	[credentials hidden]
+\n任务将在此服务器执行，可能影响正在进行的播放。	\nThe task will run on this server and may affect ongoing playback.
+\n服务器可能需要一些时间结束当前任务。	\nThe server may need some time to finish the current task.
+yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
+… 更多	… More
+、	, 
+。	.
+「%1$s」· %2$s 个结果	“%1$s” · %2$s results
+上一集	Previous episode
+上传%1$s	Upload %1$s
+上传和在线搜索会将字幕保存到 Jellyfin。	Uploaded and online subtitles are saved to Jellyfin.
+上传字幕	Upload subtitles
+上次播放 %1$s	Last played %1$s
+上限 %1$s MB · 每个账号独立缓存	Limit %1$s MB · Cached separately for each account
+下一集	Next episode
+下一集提示	Next episode prompt
+下拉刷新	Pull to refresh
+下次播放生效	Takes effect next playback
+下载	Download
+下载任务	Downloads
+下载位置	Download location
+下载地址从 HTTPS 降级到 HTTP，已阻止不安全重定向	The download address was downgraded from HTTPS to HTTP; blocked the insecure redirect
+下载地址包含服务器凭据，已阻止发送至外部站点	The download address contains server credentials; blocked sending it to an external site
+下载地址存在循环重定向，请检查片源	The download address has a redirect loop. Check the source
+下载地址重定向次数过多	Too many redirects for the download address
+下载失败，可以重试	Download failed. You can retry
+下载失败，可在下载页重试	Download failed. Retry from Downloads
+下载失败，请重试	Download failed. Please retry
+下载失败：%1$s	Download failed: %1$s
+下载媒体	Download media
+下载媒体标识无效	Invalid download media ID
+下载完成 · %1$s，点击用本机播放器打开	Download complete · %1$s. Tap to open with an on-device player
+下载已标记停止，但系统任务取消未完成，请重新打开应用确认	The download was marked as stopped, but the system task was not cancelled. Reopen the app to check
+下载操作	Download actions
+下载未完成，请打开 Pathfin 后重试	Download incomplete. Open Pathfin and retry
+下载未完成，请重试	Download incomplete. Please retry
+下载目录不可用，请重新选择保存位置	The download folder is unavailable. Choose a save location again
+下载目录不可用，请重新选择目录或使用系统另存为	The download folder is unavailable. Choose a folder again or use the system Save As
+下载网络规则已保存，部分任务未能重新排队，请在下载任务中重试	Download network rules saved, but some tasks could not be requeued. Retry them in Downloads
+下载记录已更新，请重试	Download record updated. Please retry
+下载记录已移除	Download record removed
+不允许读取此媒体地址	Reading this media address is not allowed
+不到 1 分	Under 1 min
+不刷新	Don't refresh
+不包含账号和凭据	Does not include accounts or credentials
+不支持的字幕格式	Unsupported subtitle format
+不支持的请求方法	Unsupported request method
+不是有效的 Pathfin 设置备份	Not a valid Pathfin settings backup
+不能把 STRM 地址文件作为影片下载	An STRM address file can't be downloaded as a video
+不计费属性由系统判断。更改规则会重新排队，未完成的下载从头开始。	The system decides whether a network is unmetered. Changing the rule requeues tasks; unfinished downloads restart.
+专辑	Albums
+中文	Chinese
+中止	Abort
+临时媒体地址已撤销；设备未确认停止，请在电视端检查状态	The temporary media address was revoked; the device didn't confirm stopping. Check the TV
+临时媒体地址无效	Invalid temporary media address
+为 %1$s 设置新密码	Set a new password for %1$s
+为服务器起个名字	Give the server a name
+主题	Theme
+主题保存失败，请重试	Couldn't save the theme. Please retry
+主题色	Accent color
+乘以当前速度，最高 4×；松手恢复	Multiplies the current speed, up to 4×; release to restore
+云盘画质	Cloud quality
+云盘画质列表不完整	Incomplete cloud quality list
+云盘画质列表无效	Invalid cloud quality list
+云盘画质协议不匹配	Cloud quality protocol mismatch
+云盘画质响应无法识别	Unrecognized cloud quality response
+云盘画质响应过大	Cloud quality response is too large
+云盘画质条目不完整	Incomplete cloud quality entry
+云盘画质格式无效	Invalid cloud quality format
+云盘画质缺少资源标识	Cloud quality is missing a resource ID
+云盘画质解析不可用	Cloud quality parsing is unavailable
+云盘画质请求失败（HTTP %1$s），请重试	Cloud quality request failed (HTTP %1$s). Please retry
+云盘直连	Cloud direct
+云盘返回的播放地址无效	The cloud drive returned an invalid playback address
+云盘返回的画质与选择不一致	The cloud drive returned a different quality than selected
+享年 %1$s 岁	Died at %1$s
+亮度	Brightness
+人物	Person
+人物姓名	Person name
+仅不计费网络	Unmetered networks only
+仅从头播放时生效	Only when playing from the start
+仅在开启 STRM 原始地址时生效；本地媒体和直播不受影响。	Only applies when STRM original address is on; local media and Live TV are not affected.
+仅展示包含预览图的章节标记	Show only chapter markers with previews
+仅播放音频	Audio only
+仅支持 SRT、VTT、ASS 或 SSA 文本字幕	Only SRT, VTT, ASS or SSA text subtitles are supported
+仅支持下载 HTTP(S) 实际媒体文件	Only actual HTTP(S) media files can be downloaded
+仅清理当前账号的本机封面	Clears only this account's covers on this device
+仅精准匹配	Exact matches only
+仅验证	Verify only
+今天	Today
+从备份文件恢复偏好设置	Restore preferences from a backup file
+从头播放	Play from start
+从本机移除	Remove from this device
+从本机移除“%1$s”的账号与地址，服务器上的媒体和观看记录会保留。	Removes the account and addresses of “%1$s” from this device. Media and watch history on the server are kept.
+任务仍在下载中	The task is still downloading
+任务已中断，恢复或重试后会从头下载	The task was interrupted; resuming or retrying downloads from the start
+任务已停止，目标中可能保留未完成文件	The task stopped; the destination may contain an unfinished file
+任务已停止；重试会从头重新下载	The task stopped; retrying downloads again from the start
+任务已安排执行	Task scheduled
+任意网络	Any network
+优先使用 Jellyfin 提供的片段	Prefer segments provided by Jellyfin
+优先使用服务端片段	Prefer server segments
+优先硬件解码	Prefer hardware decoding
+会话密钥不可用	Session key unavailable
+位深	Bit depth
+位深度	Bit depth
+使用云盘已有画质，不经过 Jellyfin 转码	Uses the cloud drive's existing quality without Jellyfin transcoding
+使用同分辨率最高刷新率，可能增加耗电	Uses the highest refresh rate at the same resolution; may use more battery
+使用系统解码器，下次播放生效。	Uses the system decoder; takes effect next playback.
+使用自定义提示时长	Use custom prompt timing
+俄语	Russian
+保存	Save
+保存中…	Saving…
+保存截图	Save screenshot
+保存视频截图	Save video screenshot
+保持原始媒体质量	Keep original media quality
+修改	Change
+修改密码	Change password
+倍速	Speed
+偏移	Offset
+停止加载 · 已读取 %1$s 个频道	Stop loading · %1$s channels loaded
+停止投屏	Stop casting
+像素格式	Pixel format
+允许 HTTP 明文连接与播放	Allow plain HTTP connections and playback
+允许使用的网络	Allowed networks
+允许局域网访问	Allow local network access
+允许局域网访问后才能发现和连接设备	Allow local network access to discover and connect to devices
+元数据已保存	Metadata saved
+元数据文本过长	Metadata text is too long
+光盘	Disc
+全部	All
+全部来源	All sources
+全部标签	All tags
+全部语言	All languages
+共 %1$s 条记录	%1$s records
+共 %1$s 集	%1$s episodes
+共%1$s季	%1$s seasons
+共%1$s集	%1$s episodes
+关于	About
+关闭	Close
+关闭%1$s	Close %1$s
+关闭下一集提示	Dismiss next episode prompt
+关闭后优先使用系统软件解码器	When off, prefers the system software decoder
+关闭后使用 Jellyfin 播放地址	When off, uses the Jellyfin playback address
+关闭后定位到邻近关键帧	When off, seeks to the nearest keyframe
+关闭后显示跳过按钮	When off, shows a skip button
+关闭后松手跳转	When off, seeks on release
+关闭后首页“更多”里不再显示直播电视	When off, Live TV no longer appears in More on Home
+关闭后，进入页面或返回应用自动刷新	When off, pages refresh automatically when opened or when you return to the app
+关闭后，重新启动进入服务器列表	When off, the app opens the server list on launch
+关闭图片编辑	Close image editor
+关闭在线搜索	Close online search
+关闭媒体信息	Close media info
+关闭字幕	Subtitles off
+关闭字幕管理	Close subtitle management
+关闭定时	Cancel timer
+关闭提示	Dismiss
+关闭播放质量	Close playback quality
+关闭更多操作	Close more actions
+关闭片头提示	Dismiss intro prompt
+关闭片头错误提示	Dismiss intro error
+关闭画中画	Close picture-in-picture
+关闭简介	Close synopsis
+关闭解码提示	Dismiss decoding notice
+关闭错误提示	Dismiss error
+关闭音轨	Audio off
+其他	Other
+其他信息	Other info
+其他服务器	Other servers
+其他语言	Other languages
+内容	Content
+内置	Embedded
+再次输入新密码	Enter the new password again
+准确跳转	Accurate seeking
+减慢播放速度	Slow down
+出生地	Place of birth
+出生地无效	Invalid place of birth
+出生日期（YYYY-MM-DD）	Date of birth (YYYY-MM-DD)
+分类	Category
+分级无效	Invalid rating
+分辨率	Resolution
+分集标题	Episode titles
+分页位置	Page position
+分页范围	Page range
+切换为剧集列表	Switch to episode list
+切换为数字选集	Switch to episode numbers
+切换到横屏	Switch to landscape
+切换到竖屏	Switch to portrait
+切换协议	Switch protocol
+切换失败，原播放源也暂时无法恢复，请重试	Switch failed, and the original source can't be restored right now. Please retry
+切换失败，已重新请求%1$s	Switch failed; requested %1$s again
+切换服务器	Switch server
+切换服务器失败：%1$s	Couldn't switch server: %1$s
+列表	List
+列表总数	Total count
+列表条目	List entries
+刚刚	Just now
+创建日期	Date added
+删除	Delete
+删除%1$s	Delete %1$s
+删除%1$s？	Delete %1$s?
+删除媒体	Delete media
+删除字幕	Delete subtitles
+删除服务器？	Delete server?
+制片人	Producer
+刷新	Refresh
+刷新以重新读取日志列表。	Refresh to reload the log list.
+刷新以重新读取服务器任务。	Refresh to reload server tasks.
+刷新元数据	Refresh metadata
+刷新内容	Refresh content
+剧集	Episodes
+剧集 %1$s 部	%1$s episodes
+剧集状态	Series status
+剧集状态无效	Invalid series status
+剩 %1$s	%1$s left
+剩 %1$s 分	%1$s min left
+剩余时间低于此值时显示	Shown when the remaining time drops below this
+加快播放速度	Speed up playback
+加速倍率	Speed multiplier
+动态范围	Dynamic range
+升序排序	Sort ascending
+单声道	Mono
+单集播放完毕后自动连播下一集	Automatically play the next episode when one finishes
+单集详情优先采用当前集画面作为背景	Episode details prefer the episode's own image as the background
+即将上映	Upcoming
+即将播出	Airing soon
+原图预览	Original image preview
+原始HTTP播放地址已不可用，请重新选择片源	The original HTTP playback address is no longer available. Choose another source
+原始名称	Original name
+原始文件	Original file
+原始标题	Original title
+原始比例	Original aspect ratio
+原画	Original
+去世日期	Date of death
+去世日期（YYYY-MM-DD）	Date of death (YYYY-MM-DD)
+双击快进 / 快退	Double-tap to seek forward / back
+发行年份	Release year
+取消	Cancel
+取消%1$s	Cancel %1$s
+取消下载	Cancel download
+取消收藏	Remove from favorites
+取消正在运行的任务？	Cancel the running task?
+取消连接	Disconnect
+取消选择	Cancel selection
+只改本机服务器列表里的名字，不影响服务器	Only changes the name in this device's server list; the server is not affected
+只有服务器管理员可以管理服务器	Only server administrators can manage the server
+只有服务器管理员可以识别媒体	Only server administrators can identify media
+只有管理员可以删除服务器字幕	Only administrators can delete server subtitles
+只能删除当前媒体的外部字幕	Only external subtitles of the current media can be deleted
+可在媒体库设置中关闭隐藏无缩略图章节。	You can turn off hiding chapters without thumbnails in library settings.
+可填写外部编号以缩小匹配范围	Fill in external IDs to narrow the match
+可更换类型、提供商或语言后查询；结果来自此媒体的 Jellyfin 图片提供商。	Change the type, provider or language and search again; results come from this media's Jellyfin image providers.
+可留空	Optional
+可继续载入全部频道，或换个频道名称、频道号或节目名称。	Load all channels, or try another channel name, number or program title.
+可选	Optional
+可选，如 /jellyfin	Optional, e.g. /jellyfin
+合集	Collections
+同一台服务器的其他访问地址，例如外网域名	Other addresses for the same server, such as a public domain
+同季剧集	Episodes in this season
+同时替换全部图片	Replace all images
+同账号、同剧集沿用手动选择	Keep manual choices for the same account and series
+名称	Name
+名称、年份	Name, year
+名称不能超过 512 个字符或包含控制字符	Name can't exceed 512 characters or contain control characters
+向下滚动列表时自动收起导航栏	Hide the navigation bar when scrolling down
+听障	Hearing impaired
+听障辅助	Hearing impaired
+听障辅助字幕	SDH subtitles
+启动时打开上次的服务器	Open the last server on launch
+启用字幕	Enable subtitles
+启用直播电视	Enable Live TV
+图书	Books
+图片 loader 已经释放	The image loader has been released
+图片不能超过10 MB	Images can't exceed 10 MB
+图片分页范围无效	Invalid image page range
+图片地址无效，请重新搜索	Invalid image address. Search again
+图片已删除	Image deleted
+图片列表已变化，请重新选择后删除	The image list has changed. Select the image again before deleting it.
+图片标识无效，请刷新图片列表	The image identifier is invalid. Refresh the image list.
+图片已更新	Image updated
+图片序号无效	Invalid image index
+图片提供商无效	Invalid image provider
+图片结果与当前媒体或服务器账号不一致，请重新搜索	The image result doesn't match the current media or server account. Search again
+图片缓存会话已变更	The image cache session changed
+在%1$s中搜索	Search in %1$s
+在“更多”里可恢复画面	Restore video from More
+在媒体详情页列出章节与缩略图	List chapters and thumbnails on the media details page
+在播放控制栏显示实时读取速率	Show live read speed on the playback controls
+在播放控制栏显示电量百分比	Show battery percentage on the playback controls
+在播放控制栏显示章节入口	Show a chapters button on the playback controls
+在播放控制栏显示系统时间	Show the system time on the playback controls
+在服务器列表中替代账号头像	Replaces the account avatar in the server list
+在本机显示为	Shown on this device as
+在浏览与详情页加载海报与背景图	Load posters and backdrops on browse and details pages
+在浏览器打开%1$s	Open %1$s in browser
+在电影或单集详情中选择下载，再选择文件保存位置。	Choose Download on a movie or episode, then choose where to save the file.
+在画面中部左右滑动，松手后跳转	Swipe left or right in the middle of the screen; seeks on release
+在线搜索	Search online
+垂直位置 %1$s%%	Vertical position %1$s%%
+基本信息	Basic info
+壁纸取色	Wallpaper colors
+壁纸取色需要 Android 12，已使用默认蓝	Wallpaper colors require Android 12; using the default blue
+声道	Channels
+声道布局	Channel layout
+复制文件位置	Copy file location
+外挂	External
+外挂字幕 %1$s	External subtitles %1$s
+外观	Appearance
+外部字幕	External subtitles
+外部编号	External IDs
+外部编号无效	Invalid external ID
+外部编号清单读取失败，下拉刷新可重试。已有编号仍可编辑。	Couldn't read the external ID list. Pull down to retry. Existing IDs can still be edited.
+外部编号清单读取失败，仍可使用名称搜索。	Couldn't read the external ID list. You can still search by name.
+大	Large
+失败	Failed
+头像	Avatar
+姓名	Name
+媒体下载	Media downloads
+媒体不存在或片源已失效	The media doesn't exist or the source is no longer valid
+媒体与播放	Media & playback
+媒体信息	Media info
+媒体信息缺少标识	Media info is missing an ID
+媒体列表已变化，请重新刷新	The media list changed. Please refresh
+媒体地址不安全	Insecure media address
+媒体	Media
+媒体地址已失效或拒绝访问，点击重试以重新获取地址。	The media address expired or was refused. Tap Retry to get a new address.
+媒体地址无效	Invalid media address
+媒体已删除	Media deleted
+媒体库	Libraries
+媒体库控制台	Library console
+媒体文件	Media files
+媒体文件不存在或下载地址已失效	The media file doesn't exist or the download address expired
+媒体文件不存在或地址已失效。	The media file doesn't exist or the address expired.
+媒体服务器返回错误（HTTP %1$s），请稍后重试。	The media server returned an error (HTTP %1$s). Please try again later.
+媒体来源已变化，请重新打开播放	The media source changed. Reopen to play
+媒体标识无效	Invalid media ID
+媒体流	Media streams
+媒体源	Media source
+媒体片段标识无效	Invalid media segment ID
+媒体版本	Media version
+媒体版本 %1$s	Media version %1$s
+媒体类型无效	Invalid media type
+媒体路径	Media path
+媒体重定向无效	Invalid media redirect
+媒体重定向过多	Too many media redirects
+媒体重定向过多或无效	Too many or invalid media redirects
+字幕	Subtitles
+字幕 %1$s	Subtitles %1$s
+字幕信息无效，请重新选择	Invalid subtitle info. Choose again
+字幕列表已变化，请重新打开后操作	The subtitle list changed. Reopen and try again
+字幕已上传	Subtitles uploaded
+字幕已删除	Subtitles deleted
+字幕已添加	Subtitles added
+字幕提供商	Subtitle providers
+字幕搜索结果过多，请使用精准匹配	Too many subtitle results. Use exact matches
+字幕操作失败，请重试	Subtitle action failed. Please retry
+字幕文件不能超过 8 MB	Subtitle files can't exceed 8 MB
+字幕文件为空或超过 8 MB	The subtitle file is empty or exceeds 8 MB
+字幕文件超过安全大小限制，未加载该字幕	The subtitle file exceeds the safe size limit and wasn't loaded
+字幕时间偏移	Subtitle offset
+字幕标识无效，请重新搜索	Invalid subtitle ID. Search again
+字幕结果与当前媒体或服务器账号不一致，请重新搜索	The subtitle result doesn't match the current media or server account. Search again
+字幕编码无法识别，请选择 UTF-8 或 UTF-16 文本字幕	Unrecognized subtitle encoding. Choose UTF-8 or UTF-16 text subtitles
+字幕缩放与位置	Subtitle size & position
+字幕语言	Subtitle language
+字幕轨索引无效	Invalid subtitle track index
+字幕轨道	Subtitle tracks
+字母索引，长按显示	Alphabet index, long-press to show
+存储与备份	Storage & backup
+季	Season
+完成	Done
+完整刷新	Full refresh
+官方分级	Official rating
+定时关闭	Sleep timer
+定时关闭 · 剩余 %1$s	Sleep timer · %1$s left
+客串	Guest star
+容量上限	Size limit
+容量（MB）	Size (MB)
+宽度	Width
+密码	Password
+密码已修改	Password changed
+导入设置	Import settings
+导出失败，请检查目标文件	Export failed. Check the destination file
+导出设置	Export settings
+导演	Director
+导航	Navigation
+封底	Back cover
+封装容器	Container
+封装格式	Container format
+封面	Cover
+封面样式：横幅	Cover style: landscape
+封面样式：竖幅	Cover style: portrait
+封面盒	Box
+封面缓存	Cover cache
+封面缓存管理、设置导入与导出	Cover cache, settings import & export
+封面角标	Cover badges
+将中断此服务器上所有用户的播放和连接。服务器重启后需要一些时间恢复。\n\n%1$s	This interrupts playback and connections for all users on this server. The server needs some time to recover after restarting.\n\n%1$s
+将从服务器删除“%1$s”的外部字幕文件，无法撤销。	The external subtitle file of “%1$s” will be deleted from the server. This can't be undone.
+将删除服务器上的这张图片，媒体文件不会受影响。	This image will be deleted from the server. Media files are not affected.
+将替换已有的同类型图片。	Replaces the existing image of the same type.
+将添加为一张背景图。	Will be added as a backdrop.
+将连接 %1$s	Will connect to %1$s
+尚未确认服务器字幕更新	Server subtitle update not confirmed yet
+尝试刷新，或调整搜索条件。	Try refreshing, or adjust the search.
+尝试调整分类或筛选条件。	Try adjusting the category or filters.
+局域网连接已断开，临时媒体地址已撤销	The local network connection dropped; the temporary media address was revoked
+已下载 %1$s	Downloaded %1$s
+已关闭字幕 · 音量增益 %1$s%%	Subtitles off · Volume boost %1$s%%
+已删除 %1$s 项	Deleted %1$s items
+已加入下载任务	Added to downloads
+已加载	Loaded
+已取消；重试会从头重新下载	Cancelled; retrying downloads again from the start
+已启用字幕 · 音量增益 %1$s%%	Subtitles on · Volume boost %1$s%%
+已复制文件位置	File location copied
+已完结	Ended
+已将 %1$s 项标记为已播放	Marked %1$s items as played
+已将 %1$s 项标记为未播放	Marked %1$s items as unplayed
+已展开	Expanded
+已提交 %1$s 项元数据刷新	Metadata refresh requested for %1$s items
+已提交元数据刷新	Metadata refresh requested
+已收藏	Favorited
+已收起	Collapsed
+已显示全部频道	All channels shown
+已暂停	Paused
+已用 %1$s · 	Used %1$s · 
+已看 %1$s	Watched %1$s
+已结束	Ended
+已结束等待，服务器可能仍在处理该请求	Stopped waiting; the server may still be processing the request
+已观看	Watched
+已请求取消任务	Task cancellation requested
+已读取本地文件 · 上传到 Jellyfin	Local file read · Upload to Jellyfin
+已跟随系统主题色	Following the system theme color
+已连接	Connected
+已选择	Selected
+已选择 %1$s 项	%1$s selected
+已选择的目录	Selected folder
+已遮盖	Masked
+已阻止媒体连接降级	Blocked a media connection downgrade
+已阻止未经允许的 HTTP 连接或 HTTPS 降级跳转	Blocked an unallowed HTTP connection or HTTPS downgrade redirect
+已阻止片源从 HTTPS 降级到 HTTP	Blocked the source from downgrading from HTTPS to HTTP
+布局保存失败，请重试	Couldn't save the layout. Please retry
+帧率	Frame rate
+常规	Preferences
+年份	Year
+年份应为 1 到 9999	Year must be between 1 and 9999
+年份无效	Invalid year
+应用识别结果？	Apply this identification?
+延后0.5秒	Delay 0.5 s
+开源许可	Open source licenses
+强制	Forced
+强制字幕	Forced subtitles
+当前为其他媒体版本；服务器字幕操作用于条目的默认版本。	Another media version is playing; server subtitle actions apply to the item's default version.
+当前升序	Ascending
+当前地址	Current address
+当前媒体未提供云盘画质	This media has no cloud quality options
+当前媒体版本已不存在	The current media version no longer exists
+当前密码	Current password
+当前服务器	Current server
+当前没有可切换的字幕轨道	No subtitle tracks to switch to
+当前没有可用音轨	No audio tracks available
+当前版本已不可用，请重新选择媒体源	The current version is unavailable. Choose a media source again
+当前视频轨（%1$s）本机无法解码，仅能播放声音。	This device can't decode the current video track (%1$s); audio only.
+当前设备不支持 ASS 样式扩展，使用基础字幕	This device doesn't support the ASS style extension; using basic subtitles
+当前设备暂时无法进入画中画	This device can't enter picture-in-picture right now
+当前账号不能下载所选媒体版本	This account can't download the selected media version
+当前账号不能下载该媒体	This account can't download this media
+当前账号不能删除该媒体	This account can't delete this media
+当前账号可见的媒体库中没有这位人物的作品。	No works by this person in the libraries visible to this account.
+当前账号无权播放此媒体	This account isn't allowed to play this media
+当前账号没有下载媒体的权限	This account doesn't have permission to download media
+当前账号没有删除媒体的权限	This account doesn't have permission to delete media
+当前账号没有直播电视访问权限	This account doesn't have Live TV access
+当前账号没有管理服务器字幕的权限	This account doesn't have permission to manage server subtitles
+当前账号没有编辑权限	This account doesn't have edit permission
+当前账号没有访问该内容的权限	This account doesn't have access to this content
+当前账号需要管理员权限才能执行此操作	This account needs administrator rights for this action
+当前降序	Descending
+当前音轨%1$s无法解码，可选择其他音轨或使用服务器转码。	The current audio track %1$s can't be decoded. Choose another audio track or use server transcoding.
+当前：%1$s	Current: %1$s
+当前：%1$s。更改仅影响新下载，已有文件和任务保持原位置。	Current: %1$s. Changes only affect new downloads; existing files and tasks stay where they are.
+影评人评分	Critic rating
+影评人评分应为 0 到 100	Critic rating must be between 0 and 100
+影评人评分（0–100）	Critic rating (0–100)
+待观看	Unwatched
+德语	German
+快进 %1$s 秒	Forward %1$s seconds
+快退 %1$s 秒	Back %1$s seconds
+恢复100%	Reset to 100%
+恢复画面	Restore video
+恢复默认	Reset to default
+成人	Adult
+成人分级封面模糊	Blur covers with adult ratings
+成人及 18+ 分级	Adult and 18+ ratings
+成人及 18+ 分级使用遮盖	Mask adult and 18+ ratings
+截图	Screenshot
+截图保存失败，请重试	Couldn't save the screenshot. Please retry
+截图尺寸不可用	Screenshot size unavailable
+截图已保存	Screenshot saved
+截图已保存到 Pictures/Pathfin	Screenshot saved to Pictures/Pathfin
+所选云盘画质已不可用，请重新打开媒体	The selected cloud quality is no longer available. Reopen the media
+所选媒体版本不存在，请重新选择	The selected media version doesn't exist. Choose again
+所选媒体版本已不存在	The selected media version no longer exists
+所选媒体版本已不存在，请重新打开字幕管理	The selected media version no longer exists. Reopen subtitle management
+所选媒体版本已不存在，请重新选择	The selected media version no longer exists. Choose again
+所选设备或账号已失效，请重新发现设备	The selected device or account is no longer valid. Discover devices again
+手势与控制	Gestures & controls
+打开	Open
+打开 %1$s	Open %1$s
+打开%1$s详情	Open %1$s details
+打开应用设置	Open app settings
+打开文件	Open file
+扫描新的和有修改的文件	Scan for new and updated files
+投屏	Cast
+投屏失败，请检查设备状态后重试	Casting failed. Check the device and retry
+投屏已暂停	Casting paused
+投屏服务已停止，临时媒体地址已撤销	The casting service stopped; the temporary media address was revoked
+投屏进度	Casting progress
+投屏进度无效	Invalid casting progress
+拉伸填满	Stretch to fill
+拖动时即时跳转	Seek while dragging
+按%1$s	By %1$s
+按发行日期	By release date
+按字母 %1$s 筛选	Filter by letter %1$s
+按标题	By title
+按添加日期	By date added
+按评分	By rating
+换个组件名称、版本或许可再试。	Try another component name, version or license.
+排序	Sort
+排序名称	Sort name
+排序标题	Sort title
+接下来	Up next
+接口路径无效	Invalid API path
+控制栏	Control bar
+推荐	Recommended
+推荐搜索	Suggested searches
+提前0.5秒	Advance 0.5 s
+搜索	Search
+搜索%1$s	Search %1$s
+搜索全部频道	Search all channels
+搜索媒体或人物	Search media or people
+搜索字幕	Search subtitles
+搜索已加载的 %1$s 个频道，可继续搜索全部频道	Searching %1$s loaded channels; you can search all channels
+搜索当前媒体库	Search this library
+搜索直播频道或当前节目	Search live channels or current programs
+搜索组件、版本或许可	Search components, versions or licenses
+搜索缺少的元数据	Search for missing metadata
+搜索背景图	Search backdrops
+播出中	On air
+播出时间无法显示	Air time can't be shown
+播出时间未提供	Air time not provided
+播放	Play
+播放 %1$s	Play %1$s
+播放会话与当前账号不一致	The playback session doesn't match the current account
+播放信息	Playback info
+播放参数	Playback parameters
+播放器	Player
+播放器已关闭	Player closed
+播放器默认方向	Default player orientation
+播放失败，请重试或返回后选择其他媒体版本。	Playback failed. Retry or go back and choose another media version.
+播放已切换，未添加字幕	Playback switched; no subtitles added
+播放日期	Date played
+播放时恢复上次手势调整的亮度；关闭则跟随系统亮度	Restore the brightness last set by gesture during playback; when off, follows the system brightness
+播放时默认开启字幕轨	Turn on a subtitle track by default during playback
+播放画面长按时临时倍速播放	Long-press the video for temporary speed-up
+播放行为	Playback behavior
+播放质量	Playback quality
+播放进度	Playback progress
+播放选项	Playback options
+播放速度	Playback speed
+播放速度 %1$s	Playback speed %1$s
+操作失败，请检查连接或文件权限后重试	Action failed. Check the connection or file permissions and retry
+操作失败，请重试	Action failed. Please retry
+操作已接受，但重新读取失败。请刷新状态，不要重复提交。	The action was accepted, but reloading failed. Refresh the status; don't submit again.
+操作未完成，请检查账号与保存位置的访问权限后重试	Action incomplete. Check access to the account and save location, then retry
+支持域名、IP 或完整地址，端口自动识别	Domain, IP or full address; the port is detected automatically
+收藏	Favorites
+收藏 · %1$s	Favorites · %1$s
+收藏人物	Favorite person
+收藏媒体	Favorite media
+放弃修改	Discard changes
+放弃未保存的修改？	Discard unsaved changes?
+数字开头	Starts with a number
+数据与关于	Data & about
+文件传输不完整，请重新下载	File transfer incomplete. Download again
+文件传输已取消	File transfer cancelled
+文件位置	File location
+文件保存到你选择的位置，可在后台继续；中断后重试会从头下载。	Files are saved to the location you choose and can continue in the background; retrying after an interruption starts from the beginning.
+文件信息	File info
+文件大小	File size
+文件媒体信息	File media info
+文件已保存，无需重新下载	The file is saved; no need to download again
+文件服务不可用	File service unavailable
+文件服务未返回可读写文件	The file service didn't return a readable and writable file
+文件服务正忙，请稍后重试	The file service is busy. Please try again later
+文件未完整保存，请重新下载	The file wasn't saved completely. Download again
+新密码	New password
+无效的播放上报事件	Invalid playback report event
+无效的服务器接口路径	Invalid server API path
+无法使用此目录，请选择支持写入的文件夹	Can't use this folder. Choose a writable folder
+无法保存下载任务，请检查本机存储空间	Couldn't save the download task. Check the device's storage space
+无法保存主题	Couldn't save the theme
+无法保存导入设置	Couldn't save imported settings
+无法保存布局	Couldn't save the layout
+无法保存排序	Couldn't save the sort order
+无法保存文件，请检查目标位置与剩余空间	Couldn't save the file. Check the destination and free space
+无法保存服务器列表，请检查设备存储空间。	Couldn't save the server list. Check the device's storage space.
+无法保存本地字幕	Couldn't save local subtitles
+无法保存视频截图，请稍后重试	Couldn't save the video screenshot. Please try again later
+无法保存设备标识，请检查设备存储空间。	Couldn't save the device ID. Check the device's storage space.
+无法保存设置	Couldn't save settings
+无法保存首页设置	Couldn't save Home settings
+无法写入保存位置，请重新选择文件并检查系统授权	Couldn't write to the save location. Choose the file again and check system permissions
+无法准备图片缓存目录	Couldn't prepare the image cache folder
+无法切换云盘画质；当前播放保持不变	Couldn't switch cloud quality; current playback is unchanged
+无法切换服务器，请检查设备存储空间。	Couldn't switch server. Check the device's storage space.
+无法创建下载	Couldn't create the download
+无法创建下载，请重新选择保存位置	Couldn't create the download. Choose a save location again
+无法创建下载，请重试	Couldn't create the download. Please retry
+无法创建截图文件	Couldn't create the screenshot file
+无法初始化播放器，请返回后重试。	Couldn't initialize the player. Go back and retry.
+无法取得可下载的实际媒体文件，请检查该媒体是否支持下载	Couldn't get a downloadable media file. Check whether this media supports downloading
+无法启动后台投屏，请回到应用后重新选择设备	Couldn't start background casting. Return to the app and choose the device again
+无法安排后台下载，请重试	Couldn't schedule the background download. Please retry
+无法完成文件保存，请检查目标位置与剩余空间	Couldn't finish saving the file. Check the destination and free space
+无法建立局域网临时媒体转发	Couldn't set up the temporary local media relay
+无法恢复播放，请检查服务器转码权限或网络后重试。	Couldn't resume playback. Check server transcoding permission or the network and retry.
+无法打开保存位置，请检查目标文件与剩余空间	Couldn't open the save location. Check the destination file and free space
+无法打开保存位置，请重新选择文件	Couldn't open the save location. Choose the file again
+无法打开文件，文件可能已移除或尚未安装对应播放器	Couldn't open the file. It may have been removed, or no matching player is installed
+无法更新下载队列，请检查本机存储空间后重试	Couldn't update the download queue. Check the device's storage space and retry
+无法更新播放源，请检查服务器转码权限或网络；当前播放保持不变	Couldn't update the playback source. Check server transcoding permission or the network; current playback is unchanged
+无法清除损坏的服务器列表。	Couldn't clear the corrupted server list.
+无法清除损坏的登录会话。	Couldn't clear the corrupted sign-in session.
+无法清除登录会话。	Couldn't clear the sign-in session.
+无法确定此片源的直接媒体格式，请更换可直接播放的媒体文件	Couldn't determine this source's direct media format. Use a media file that can be played directly
+无法确认重启结果，请先刷新服务器状态；不要重复发送重启请求。	Couldn't confirm the restart. Refresh the server status first; don't send another restart request.
+无法移除本机账号，请重试	Couldn't remove the account from this device. Please retry
+无法编码截图	Couldn't encode the screenshot
+无法解析服务器地址，请检查 IP 或域名。	Couldn't resolve the server address. Check the IP or domain.
+无法识别此媒体	Couldn't identify this media
+无法读取下载任务	Couldn't read download tasks
+无法读取云盘画质，请检查网络后重试	Couldn't read cloud quality. Check the network and retry
+无法读取元数据	Couldn't read metadata
+无法读取媒体版本，请稍后重试	Couldn't read media versions. Please try again later
+无法读取字幕，请选择不超过 8 MB 的 SRT、VTT、ASS 或 SSA 文件	Couldn't read the subtitles. Choose an SRT, VTT, ASS or SSA file up to 8 MB
+无法读取有效的 Pathfin 设置备份，请检查文件与访问权限	Couldn't read a valid Pathfin settings backup. Check the file and access permissions
+无法读取服务器播放信息，请稍后重试	Couldn't read server playback info. Please try again later
+无法读取服务器，请重试	Couldn't read the server. Please retry
+无法读取离线许可	Couldn't read offline licenses
+无法读取设备 XML，请重试发现	Couldn't read the device XML. Retry discovery
+无法读取详情	Couldn't read details
+无法迁移布局设置	Couldn't migrate layout settings
+无法连接 DLNA 设备，请检查局域网及设备支持的媒体格式	Couldn't connect to the DLNA device. Check the local network and the media formats the device supports
+无法连接 DLNA 设备，请检查设备和局域网	Couldn't connect to the DLNA device. Check the device and local network
+无法连接媒体服务器，请检查网络后重试。	Couldn't connect to the media server. Check the network and retry.
+无法连接服务器，请检查地址和网络。	Couldn't connect to the server. Check the address and network.
+无法连接此地址和端口，请确认服务已启动且手机能够访问。	Couldn't connect to this address and port. Make sure the service is running and reachable from your phone.
+无法重新获取播放地址，请检查网络后重试。	Couldn't get the playback address again. Check the network and retry.
+无法重新获取直连播放地址，请检查网络或重新选择片源。	Couldn't get the direct playback address again. Check the network or choose another source.
+日志为空	The log is empty
+日志已截断，可在服务器查看完整内容。	The log was truncated; view the full content on the server.
+日语	Japanese
+时长未知	Unknown duration
+时间	Time
+时间偏移	Time offset
+时间未知	Unknown time
+明天	Tomorrow
+是	Yes
+显示上次播放时间	Show last played time
+显示与同步	Display & sync
+显示名称	Display name
+显示字母索引	Show alphabet index
+显示密码	Show password
+显示用户名	Show username
+显示章节	Show chapters
+显示艺术图	Show art
+暂停	Pause
+暂停播放	Pause playback
+暂停视频	Pause video
+暂无%1$s	No %1$s
+暂无参演作品	No credits
+暂无可用标签	No tags available
+暂无可见剧集	No visible episodes
+暂无可见媒体	No visible media
+暂无可见媒体库	No visible libraries
+暂无可见季	No visible seasons
+暂无媒体库	No libraries
+暂无活动	No activity
+暂无直播频道	No live channels
+暂无简介	No overview
+暂无系统日志	No system logs
+暂无背景图	No backdrops
+暂无节目信息	No program info
+暂无观看记录	No watch history
+暂无计划任务	No scheduled tasks
+曲目 %1$s	Track %1$s
+更多	More
+更多操作	More actions
+更换服务器	Change server
+更新日期	Date modified
+替换全部元数据需要选择完整刷新	Replacing all metadata requires a full refresh
+替换全部图片需要选择完整刷新	Replacing all images requires a full refresh
+替换现有图片	Replace existing images
+替换现有的进度条预览图	Replace existing trickplay images
+最后执行 %1$s · %2$s	Last run %1$s · %2$s
+最多显示前 512 KiB / 10000 行；账号凭据已隐藏	Shows at most the first 512 KiB / 10000 lines; account credentials are hidden
+最新上线	Latest
+最近入库	Recently added
+最近入库 · %1$s	Recently added · %1$s
+服务器	Server
+服务器仅支持 HTTP 或 HTTPS	The server only supports HTTP or HTTPS
+服务器使用 HTTP，请先在服务器设置中明确允许	The server uses HTTP. Allow it explicitly in server settings first
+服务器信息缺少版本，请重试	Server info is missing a version. Please retry
+服务器只返回了部分文件，请重试下载	The server returned only part of the file. Retry the download
+服务器地址	Server address
+服务器地址不能包含查询参数或片段	The server address can't contain query parameters or fragments
+服务器地址不能包含账号、查询参数或片段	The server address can't contain an account, query parameters or fragments
+服务器地址包含无效的路径	The server address contains an invalid path
+服务器地址或媒体不存在，请检查地址与服务版本	The server address or media doesn't exist. Check the address and server version
+服务器字幕	Server subtitles
+服务器将重新获取并替换此条目的元数据，包括已有的手动编辑内容。	The server will fetch and replace this item's metadata again, including existing manual edits.
+服务器尚未启用直播电视	Live TV isn't enabled on the server
+服务器已接受请求，正在等待字幕更新	The server accepted the request; waiting for the subtitle update
+服务器已移除	Server removed
+服务器或当前账号无法提供此播放质量，请使用原画	The server or current account can't provide this quality. Use Original
+服务器操作 %1$s	Server action %1$s
+服务器无法为该媒体提供播放信息	The server can't provide playback info for this media
+服务器无法处理此请求（HTTP 400），请检查服务器地址或重试	The server can't handle this request (HTTP 400). Check the server address or retry
+服务器无法提供该媒体的下载来源	The server can't provide a download source for this media
+服务器暂时无法准备播放，请检查权限或媒体源	The server can't prepare playback right now. Check permissions or the media source
+服务器暂时无法处理请求，请稍后重试	The server can't handle the request right now. Please try again later
+服务器未提供可投屏的媒体版本	The server didn't provide a media version that can be cast
+服务器未提供可播放的媒体版本	The server didn't provide a playable media version
+服务器未提供路径	The server didn't provide a path
+服务器未提供轨道信息	The server didn't provide track info
+服务器未能提供完整文件（HTTP %1$s），请稍后重试	The server couldn't provide the complete file (HTTP %1$s). Please try again later
+服务器未返回提供商支持的图片类型	The server didn't return the image types supported by the provider
+服务器未返回有效下载地址	The server didn't return a valid download address
+服务器没有提供这一天的节目，仍可直接观看直播。	The server has no programs for this day; you can still watch live.
+服务器没有返回可访问频道，请检查直播源及账号的频道访问范围。	The server returned no accessible channels. Check the live source and the account's channel access.
+服务器活动	Server activity
+服务器活动记录	Server activity log
+服务器要求重定向，请填写重定向后的正确服务器地址	The server requires a redirect. Enter the correct server address after the redirect
+服务器证书校验失败，请检查域名和证书配置。	Server certificate verification failed. Check the domain and certificate setup.
+服务器请求失败，请稍后重试	Server request failed. Please try again later
+服务器请求失败，请重试	Server request failed. Please retry
+服务器请求未完成，请检查连接后重试	Server request incomplete. Check the connection and retry
+服务器账号已切换，请重新打开字幕管理	The server account changed. Reopen subtitle management
+服务器返回了压缩传输内容，无法确认实际媒体文件	The server returned compressed content; couldn't confirm the actual media file
+服务器返回了播放清单或网页，未获得实际媒体文件	The server returned a playlist or web page instead of the actual media file
+服务器返回了无法识别的数据	The server returned unrecognized data
+服务器返回了空文件，未完成下载	The server returned an empty file; download incomplete
+服务器返回的下载地址无效	The download address returned by the server is invalid
+服务器返回的内容不是实际媒体文件，未完成下载	The server didn't return the actual media file; download incomplete
+服务器返回的列表格式不正确	The list returned by the server is malformed
+服务器返回的列表过大，请缩小查询范围	The list returned by the server is too large. Narrow the query
+服务器返回的图片列表格式不正确	The image list returned by the server is malformed
+服务器返回的图片序号无效	The server returned an invalid image index
+服务器返回的图片提供商名称无效	The server returned an invalid image provider name
+服务器返回的图片提供商格式不正确	The image provider list returned by the server is malformed
+服务器返回的图片提供商过多	The server returned too many image providers
+服务器返回的外部编号格式不正确	The external ID list returned by the server is malformed
+服务器返回的媒体标识不一致	The media ID returned by the server doesn't match
+服务器返回的字幕列表格式不正确	The subtitle list returned by the server is malformed
+服务器返回的字幕标识无效	The server returned an invalid subtitle ID
+服务器返回的数据不完整，请稍后重试	The server returned incomplete data. Please try again later
+服务器返回的数据过大，请缩小查询范围	The server returned too much data. Narrow the query
+服务器返回的活动日志总数无效	The server returned an invalid activity log count
+服务器返回的活动日志格式不正确	The activity log returned by the server is malformed
+服务器返回的片头片段格式不正确	The intro segments returned by the server are malformed
+服务器返回的直播%1$s 格式不正确，请刷新重试	The live %1$s returned by the server is malformed. Refresh and retry
+服务器返回的识别结果格式不正确	The identification results returned by the server are malformed
+服务器返回的识别结果缺少名称	An identification result returned by the server is missing a name
+服务器返回的账号与原资料不一致，请取消后单独添加服务器。	The account returned by the server doesn't match the original. Cancel and add the server separately.
+服务器返回的远程图片列表格式不正确	The remote image list returned by the server is malformed
+服务器返回的远程图片地址无效	The server returned an invalid remote image address
+服务器返回的远程图片总数无效	The server returned an invalid remote image count
+服务器返回的远程图片数量超过请求范围	The server returned more remote images than requested
+服务器返回的远程图片格式不正确	The remote images returned by the server are malformed
+服务器返回的远程图片类型与请求不一致	The remote image type returned by the server doesn't match the request
+服务器返回的首页媒体列表格式不正确	The Home media list returned by the server is malformed
+服务器返回的首页媒体数量超过请求范围	The server returned more Home media than requested
+服务器还没有可显示的活动记录。	The server has no activity to show yet.
+未允许局域网访问权限。请在系统应用权限中允许 Pathfin 访问附近设备/局域网，然后重新连接。	Local network access isn't allowed. Allow Pathfin to access nearby devices / local network in the system app permissions, then reconnect.
+未发现 DLNA 设备	No DLNA devices found
+未命名	Untitled
+未命名任务	Untitled task
+未命名媒体	Untitled media
+未命名字幕	Untitled subtitles
+未命名节目	Untitled program
+未填写	Not set
+未开启	Off
+未找到字幕，可更换语言或关闭精准匹配	No subtitles found. Try another language or turn off exact matches
+未指定	Unspecified
+未收藏	Not favorited
+未知	Unknown
+未知状态	Unknown status
+未知编码	Unknown codec
+未获播放权限	Not authorized to play
+未观看	Unwatched
+未观看 %1$s 项	%1$s unwatched
+未记录时间	No time recorded
+未运行	Not running
+本地字幕	Local subtitles
+本机下载	On-device downloads
+本机不支持此原画，网盘也没有兼容画质。请更换片源。	This device doesn't support this original quality, and the cloud drive has no compatible quality. Choose another source.
+本机不支持此原画，请更换片源或关闭原始路径后选择服务器画质。	This device doesn't support this original quality. Choose another source, or turn off the original path and choose a server quality.
+本机导入	Import from device
+本机局域网地址已改变，请重新发现设备	This device's local network address changed. Discover devices again
+本机局域网地址无效	Invalid local network address for this device
+本机账号读取失败，请重试或重新添加服务器	Couldn't read the account on this device. Retry or add the server again
+本次播放最多添加 8 个本地字幕	Up to 8 local subtitles can be added per playback
+本集剩余 %1$s 秒	%1$s s left in this episode
+杜比视界	Dolby Vision
+杜比视界配置	Dolby Vision profile
+来自第 %1$s 季	From season %1$s
+松绿	Pine
+查看 %1$s 个匹配结果	View %1$s matches
+查看与管理本机下载队列	View and manage this device's download queue
+查看全部	View all
+查看完整简介	View full overview
+查看随应用打包的第三方组件与许可证	View third-party components and licenses bundled with the app
+标准	Standard
+标志	Logo
+标签	Tags
+标签（逗号分隔）	Tags (comma-separated)
+标记为已播放	Mark as played
+标记为未播放	Mark as unplayed
+标记已观看	Mark as watched
+标记未观看	Mark as unwatched
+标题	Title
+标题不能为空或超过 512 个字符	Title can't be empty or exceed 512 characters
+检查更新	Check for updates
+横向滑动调整进度	Swipe horizontally to seek
+横屏	Landscape
+横屏跟随传感器	Landscape (sensor)
+横幅	Banner
+歌手	Artist
+正在上传…	Uploading…
+正在从服务器同步内容，请稍候…	Syncing content from the server, please wait…
+正在传输设置…	Transferring settings…
+正在使用	In use
+正在关闭	Closing
+正在准备	Preparing
+正在准备下载	Preparing download
+正在准备播放	Preparing playback
+正在切换播放质量	Switching playback quality
+正在加载	Loading
+正在加载本地字幕	Loading local subtitles
+正在发现局域网设备…	Discovering local network devices…
+正在取消	Cancelling
+正在处理	Processing
+正在投屏至 %1$s	Casting to %1$s
+正在搜索…	Searching…
+正在播出	On air
+正在播放	Now playing
+正在更新服务器字幕…	Updating server subtitles…
+正在清理	Cleaning up
+正在等待音频会话以启用音量增益…	Waiting for the audio session to enable volume boost…
+正在读取…	Loading…
+正在读取媒体	Loading media
+正在读取媒体轨道…	Loading media tracks…
+正在读取字幕轨道…	Loading subtitle tracks…
+正在读取服务器信息	Loading server info
+正在读取服务器字幕…	Loading server subtitles…
+正在读取标签	Loading tags
+正在读取直播频道	Loading live channels
+正在读取离线许可…	Loading offline licenses…
+正在读取节目单	Loading guide
+正在读取许可全文…	Loading full license text…
+正在读取详情	Loading details
+正在连接 DLNA 设备	Connecting to DLNA device
+正在连接并等待设备读取媒体…	Connecting and waiting for the device to read the media…
+此分级封面已模糊	Cover blurred for this rating
+此分级封面已遮盖，当前系统不支持模糊	Cover masked for this rating; blur isn't supported on this system
+此地址不属于同一台 Jellyfin 服务器，请单独添加服务器。	This address doesn't belong to the same Jellyfin server. Add it as a separate server.
+此媒体不支持字幕管理	This media doesn't support subtitle management
+此媒体没有可用的直接播放源，请更换片源	This media has no direct playback source. Choose another source
+此日志文件还没有内容。	This log file has no content yet.
+此片源格式不能用于 DLNA	This source format can't be used with DLNA
+此类型没有可用的远程识别接口。	No remote identification is available for this type.
+此类媒体由服务器决定播放质量	The server decides the playback quality for this kind of media
+此结果没有外部编号，无法可靠识别；请选择其他结果	This result has no external IDs and can't be identified reliably; choose another result
+此视频输出不支持截图	This video output doesn't support screenshots
+此设备或片源不支持跳转进度	This device or source doesn't support seeking
+此设备无法启用音量增益，已恢复 100% 原音量	This device can't enable volume boost; restored the original 100% volume
+此设备未提供可用的 AVTransport 控制服务	This device doesn't provide a usable AVTransport control service
+此账号已移除，临时媒体地址已撤销	This account was removed; the temporary media address was revoked
+此账号已移除，请重新登录后投屏	This account was removed. Sign in again to cast
+此账号没有服务器字幕管理权限。	This account doesn't have permission to manage server subtitles.
+此账号登录已失效，请重新登录	This account's sign-in expired. Please sign in again
+此账号的下载	This account's downloads
+每次询问	Ask every time
+毛玻璃效果	Frosted glass
+没有匹配的组件	No matching components
+没有匹配的频道	No matching channels
+没有可播放的剧集	No playable episodes
+没有可用剧集	No episodes available
+没有可用的云盘档位	No cloud quality options available
+没有可用的浏览器；下方许可全文仍可离线查阅。	No browser available; the license text below is still available offline.
+没有可用章节	No chapters available
+没有字幕轨道	No subtitle tracks
+没有带缩略图的章节	No chapters with thumbnails
+没有找到内容	Nothing found
+没有找到匹配结果	No matches found
+没有找到图片	No images found
+没有找到相关内容	Nothing related found
+没有服务端片段时使用	Used when the server has no segments
+没有直播电视权限	No Live TV permission
+法语	French
+活动日志	Activity log
+活动日志分页无效	Invalid activity log page
+活动日志已变化，请下拉刷新重试	The activity log changed. Pull down to refresh and retry
+活动日志缺少标识	An activity log entry is missing an ID
+流媒体清单不能作为单个影片下载	A streaming manifest can't be downloaded as a single video
+流畅	Smooth
+浅色	Light
+浏览与详情页面隐藏系统状态栏	Hide the system status bar on browse and details pages
+浏览媒体库	Browse libraries
+海报	Poster
+深色	Dark
+深色模式	Dark mode
+深色模式、主题色、毛玻璃效果	Dark mode, accent color, frosted glass
+添加	Add
+添加一台 Jellyfin 服务器	Add a Jellyfin server
+添加到服务器	Add to server
+添加备用地址	Add alternate address
+添加媒体库或调整账号权限后，可以重新读取。	Add libraries or adjust account permissions, then reload.
+添加字幕	Add subtitles
+添加服务器	Add server
+添加背景图	Add backdrop
+清空	Clear
+清空名称	Clear name
+清空搜索	Clear search
+清除失败，请重试	Couldn't clear. Please retry
+清除缓存	Clear cache
+湖青	Lagoon
+滑动调整倍速	Swipe to adjust speed
+滚动时隐藏导航栏	Hide navigation bar on scroll
+演员	Actor
+演员查询不使用分页游标	Person queries don't use page cursors
+演职人员	Cast & crew
+点击库标题浏览，或检查账号的访问权限。	Tap a library title to browse, or check the account's access permissions.
+片名或剧名	Movie or series title
+片头	Intro
+片头与片尾	Intro & outro
+片头信息暂不可用，可重试	Intro info is unavailable right now. You can retry
+片头信息获取超时，可重试	Timed out getting intro info. You can retry
+片头提示时长	Intro prompt duration
+片尾	Outro
+片源地址包含服务器凭据	The source address contains server credentials
+片源地址包含服务器凭据，已阻止发送至外部站点	The source address contains server credentials; blocked sending it to an external site
+版本 %1$s	Version %1$s
+特大	Extra large
+状态栏、标题栏、导航栏、菜单与弹窗透出背后内容	Status bar, title bar, navigation bar, menus and dialogs show the content behind them
+珊瑚	Coral
+琥珀	Amber
+用户名	Username
+由 Jellyfin 从 %1$s 下载。	Downloaded by Jellyfin from %1$s.
+电影	Movies
+电影 %1$s 部	%1$s movies
+电量	Battery
+画中画	Picture-in-picture
+画面尺寸	Video size
+画面比例	Aspect ratio
+登录	Sign in
+登录信息无效，请重新登录	Invalid sign-in info. Please sign in again
+登录已失效，请重新登录	Sign-in expired. Please sign in again
+登录已失效，请重新登录后重试下载	Sign-in expired. Sign in again and retry the download
+登录状态已失效，请输入密码继续	Sign-in expired. Enter the password to continue
+目前提供简体中文和英语。	Simplified Chinese and English are available.
+目录不可用，请重新选择	The folder is unavailable. Choose again
+目标文件不可用，请重新选择本地保存位置	The destination file is unavailable. Choose a local save location again
+直接播放频道的直播源地址，不经服务器转码；设备不支持其编码时可能无法播放	Play the channel's live source directly without server transcoding; may not play if the device doesn't support its codec
+直播中	Live
+直播列表分页范围无效	Invalid live list page range
+直播源直连	Direct live source
+直播电视	Live TV
+直播电视 · %1$s 个频道	Live TV · %1$s channels
+直播电视 · 已载入 %1$s / %2$s 个频道	Live TV · %1$s / %2$s channels loaded
+直播频道	Live channels
+直连直播源	Direct live source
+相关条目	Related items
+码率	Bitrate
+码率上限 1.5 Mbps	Max bitrate 1.5 Mbps
+码率上限 12 Mbps	Max bitrate 12 Mbps
+码率上限 4 Mbps	Max bitrate 4 Mbps
+硬件优先	Prefer hardware
+确定	OK
+确认	Confirm
+确认删除	Confirm delete
+确认删除“%1$s”？此操作会删除服务器中的媒体及对应文件，无法撤销。	Delete “%1$s”? This deletes the media and its files on the server and can't be undone.
+确认删除已选的 %1$s 项？此操作会删除服务器中的媒体及对应文件，无法撤销。	Delete the %1$s selected items? This deletes the media and their files on the server and can't be undone.
+确认取消	Confirm cancel
+确认应用	Apply
+确认新密码	Confirm new password
+确认重启	Restart
+碟片	Disc
+社区评分	Community rating
+社区评分应为 0 到 10	Community rating must be between 0 and 10
+社区评分（0–10）	Community rating (0–10)
+移除记录，保留文件	Remove record, keep file
+稍后	Later
+空分页	Empty page
+窗口	Window
+立体声	Stereo
+竖屏	Portrait
+竖屏跟随传感器	Portrait (sensor)
+章节	Chapters
+章节 %1$s	Chapter %1$s
+端口	Port
+端口应为 1 到 65535	Port must be between 1 and 65535
+第 %1$s 季	Season %1$s
+第 %1$s 季 · 	Season %1$s · 
+第 %1$s 集	Episode %1$s
+第%1$s季	Season %1$s
+第%1$s集	Episode %1$s
+第%1$s集 · %2$s	Episode %1$s · %2$s
+等待不计费网络或系统开始下载	Waiting for an unmetered network or the system to start the download
+等待服务器更新字幕列表	Waiting for the server to update the subtitle list
+等待网络或系统开始下载	Waiting for the network or the system to start the download
+等待重启	Waiting for restart
+等级	Level
+筛选	Filter
+筛选条件无效	Invalid filter
+简介	Overview
+类型	Genres
+类型或标签无效	Invalid genre or tag
+类型（逗号分隔）	Genres (comma-separated)
+精准匹配	Exact match
+系统主题色为黑白，已沿用默认蓝	The system theme color is monochrome; using the default blue
+系统日志	System logs
+系统日志名称无效	Invalid system log name
+系统日志缺少名称	A system log is missing a name
+系统未允许启动投屏服务，请回到应用重试	The system didn't allow starting the casting service. Return to the app and retry
+系统语言、启动连接、下拉刷新	System language, startup connection, pull to refresh
+系统默认	System default
+结束等待	Stop waiting
+继续播放	Resume
+继续编辑	Keep editing
+继续观看	Continue watching
+继续观看优先显示单集画面	Continue watching prefers episode images
+续播卡片使用集截图	Resume cards use episode screenshots
+缓冲	Buffering
+缓冲时长	Buffer duration
+缓存容量	Cache size
+缓存已清除	Cache cleared
+编剧	Writer
+编码器	Encoder
+编解码器	Codec
+编辑元数据	Edit metadata
+编辑内容与当前服务器账号不一致，请重新打开编辑页	The edits don't match the current server account. Reopen the editor
+编辑内容的媒体标识不一致，请重新打开编辑页	The media ID of the edits doesn't match. Reopen the editor
+编辑图片	Edit images
+编辑字幕	Edit subtitles
+编辑连接	Edit connection
+缩放 %1$s%%	Scale %1$s%%
+缩放与位置	Scale & position
+缩略图	Thumbnail
+缺少外部编号，无法应用此结果	Missing external IDs; can't apply this result
+缺少局域网访问权限，请回到服务器页面允许后重试下载	Local network access is missing. Go back to the server page, allow it and retry the download
+网络规则已更改，任务重排失败，请重试	Network rules changed but requeuing tasks failed. Please retry
+背景优先使用集截图	Backdrops prefer episode screenshots
+背景图	Backdrop
+背景模糊	Background blur
+胭脂	Rouge
+自动	Auto
+自动播放下一集	Autoplay next episode
+自动跳过片头	Auto-skip intros
+自动选择	Auto select
+自定义分级	Custom rating
+自定义图标	Custom icon
+色彩原色	Color primaries
+色彩空间	Color space
+色彩范围	Color range
+色彩转换	Color transfer
+艺术图	Art
+艺术图、续播截图、封面角标与推荐	Art, resume screenshots, cover badges & recommendations
+节目	Program
+节目单	Guide
+节目单已变化，请下拉刷新重试	The guide changed. Pull down to refresh and retry
+节目单时间范围应在两天以内	The guide time range must be within two days
+节目所属频道	Program channel
+节目时间格式	Program time format
+节目标识	Program ID
+节目起止时间	Program start and end time
+英语	English
+菜单	Menu
+补充缺失	Fill missing
+裁切填满	Crop to fill
+西班牙语	Spanish
+覆盖所有元数据	Replace all metadata
+观看直播	Watch live
+观看至 %1$s:%2$s	Watched to %1$s:%2$s
+视频	Video
+视频信息	Video info
+视频动态范围	Video dynamic range
+视频截图失败，请稍后再试	Video screenshot failed. Please try again later
+视频画面尚未就绪	The video isn't ready yet
+视频画面已关闭	Video turned off
+解码与字幕渲染	Decoding & subtitle rendering
+解除屏幕锁定	Unlock screen
+计划任务	Scheduled tasks
+计划任务标识无效	Invalid scheduled task ID
+计划任务缺少标识，请重试	A scheduled task is missing an ID. Please retry
+记忆亮度	Remember brightness
+许可全文读取失败	Couldn't read the full license text
+许可全文随应用保存，可离线查阅	Full license texts ship with the app and are available offline
+许可全文随应用保存，无需联网。	Full license texts ship with the app; no internet needed.
+设备 XML 描述不安全或过大	The device XML description is unsafe or too large
+设备不支持此媒体格式或无法读取临时媒体地址	The device doesn't support this media format or can't read the temporary media address
+设备尚未开始读取媒体；请检查电视支持的格式及与手机的网络连通性	The device hasn't started reading the media. Check the formats the TV supports and its network connection to the phone
+设备尚未确认操作，请稍后重试	The device hasn't confirmed the action yet. Please try again later
+设备已失效，请重新发现后连接	The device is no longer valid. Discover it again and connect
+设备当前不能执行此操作，请刷新播放状态	The device can't do this right now. Refresh the playback status
+设备控制地址无效，请重新发现	Invalid device control address. Discover again
+设备描述包含其他主机地址	The device description contains another host address
+设备描述地址无效	Invalid device description address
+设备暂不支持此媒体的编码或封装，可返回后选择其他版本。	The device doesn't support this media's codec or container yet. Go back and choose another version.
+设备未确认此控制操作	The device didn't confirm this control action
+设备标识无效	Invalid device ID
+设备返回控制错误，请重试或更换片源	The device returned a control error. Retry or choose another source
+设备通过本机的临时地址读取媒体。关闭此页面后，可从通知暂停或停止。	The device reads the media through a temporary address on this phone. After closing this page, you can pause or stop from the notification.
+设置	Settings
+设置保存失败，请重试	Couldn't save settings. Please retry
+设置备份	Settings backup
+设置备份不能超过 64 KiB	Settings backups can't exceed 64 KiB
+设置已保存，下载队列更新失败，请在下载任务中重试	Settings saved, but updating the download queue failed. Retry in Downloads
+设置已导入	Settings imported
+设置已导出	Settings exported
+评分 %1$s	Rating %1$s
+评分与观看状态	Ratings & watch status
+识别人物	Identify person
+识别媒体	Identify media
+识别结果已应用，信息已更新。	Identification applied; info updated.
+识别结果过多，请填写年份或外部编号缩小搜索范围	Too many identification results. Enter a year or external ID to narrow the search
+识别请求未完成，请检查连接后重试	Identification request incomplete. Check the connection and retry
+试试其他片名。	Try another title.
+试试频道名称、频道号或当前节目名称。	Try a channel name, channel number or current program title.
+该 STRM 媒体没有可下载的 HTTP 原始地址	This STRM media has no downloadable HTTP original address
+该位置未授予长期写入权限，请重新选择本地保存位置	This location wasn't granted persistent write access. Choose a local save location again
+该媒体不存在或没有访问权限	This media doesn't exist or you don't have access
+该媒体没有可播放的媒体源	This media has no playable media source
+该媒体没有可用的%1$s云盘档位，请选择其他画质	This media has no %1$s cloud quality. Choose another quality
+该媒体源没有可播放的 HTTP 地址	This media source has no playable HTTP address
+该媒体类型不支持远程识别	This media type doesn't support remote identification
+该字幕操作只适用于当前条目的默认媒体版本	This subtitle action only applies to the item's default media version
+该服务器已从本机移除，请重新添加。	This server was removed from this device. Add it again.
+该来源是 STRM 或流媒体清单，不能作为单个影片下载	This source is STRM or a streaming manifest and can't be downloaded as a single video
+该片源是快捷文件或流媒体清单，暂不支持离线下载	This source is a shortcut file or streaming manifest; offline download isn't supported yet
+该目标文件已有下载任务	A download task already exists for this destination file
+该账号已从本机移除，请重新登录后下载	This account was removed from this device. Sign in again to download
+该账号没有下载此媒体的权限	This account doesn't have permission to download this media
+详情	Details
+语言	Language
+语言代码	Language code
+语言代码应为 3 个英文字母	The language code must be 3 letters
+语言名称或代码	Language name or code
+请使用服务器管理员账号管理服务器。	Use a server administrator account to manage the server.
+请先取消正在进行的下载	Cancel the ongoing download first
+请先确认允许 HTTP 明文连接	Confirm allowing plain HTTP connections first
+请先读取文档	Load the document first
+请先选择可播放的影片或剧集	Choose a playable movie or series first
+请在 Jellyfin 中为账号授予所需权限。	Grant the account the required permissions in Jellyfin.
+请在 Jellyfin 服务端配置直播源及节目指南，然后刷新频道。	Configure live sources and the program guide on the Jellyfin server, then refresh channels.
+请在系统的 Pathfin 应用权限中允许访问附近设备/局域网。允许后返回，再次点击连接；填写的地址和账号会保留。	Allow access to nearby devices / local network in the system's Pathfin app permissions. Come back and tap Connect again; the address and account you entered are kept.
+请打开电视的 DLNA 功能，并关闭路由器的设备隔离。	Turn on DLNA on the TV and turn off device isolation on the router.
+请检查 Jellyfin 中的媒体与访问权限。	Check the media and access permissions in Jellyfin.
+请检查搜索内容	Check your search
+请检查服务器地址	Check the server address
+请检查输入或媒体源	Check the input or media source
+请检查连接或当前账号权限。	Check the connection or the current account's permissions.
+请求参数无效	Invalid request parameters
+请稍候…	Please wait…
+请联系服务器管理员为当前账号启用直播电视访问权限，再刷新此页。	Ask the server administrator to enable Live TV access for this account, then refresh this page.
+请输入名称或至少一个外部编号	Enter a name or at least one external ID
+请输入完整的 HTTP 或 HTTPS 服务器地址	Enter a full HTTP or HTTPS server address
+请输入新密码	Enter a new password
+请输入有效的服务器地址	Enter a valid server address
+请输入有效的服务器地址，IPv6 端口请写成 [地址]:端口	Enter a valid server address. Write IPv6 ports as [address]:port
+请输入用户名	Enter a username
+请连接与电视相同的 Wi-Fi 或有线局域网；目前仅支持 IPv4 发现	Connect to the same Wi-Fi or wired network as the TV; only IPv4 discovery is supported for now
+请选择不超过 10 MB 的图片	Choose an image up to 10 MB
+请选择截图保存位置	Choose where to save the screenshot
+请选择搜索字幕的语言	Choose a language to search subtitles
+请选择文档中的字幕文件	Choose a subtitle file from documents
+请选择有效的 JPEG、PNG、WebP 或 GIF 图片	Choose a valid JPEG, PNG, WebP or GIF image
+请选择有效的文本字幕	Choose valid text subtitles
+请选择系统文件管理器提供的本地保存位置	Choose a local save location from the system file manager
+请通过系统文件选择器选择图片	Choose an image with the system file picker
+请通过系统文件选择器选择字幕	Choose subtitles with the system file picker
+请通过系统文件选择器选择导出位置	Choose an export location with the system file picker
+请通过系统文件选择器选择设置备份	Choose a settings backup with the system file picker
+读取 DLNA 设备响应失败	Couldn't read the DLNA device response
+读取所选频道的当日节目。	Loads today's programs for the selected channel.
+读取服务器响应失败，请稍后重试	Couldn't read the server response. Please try again later
+读取服务端片头	Read server intros
+读取直播电视失败，请刷新重试	Couldn't load Live TV. Refresh and retry
+读取速度	Read speed
+账号已从本机移除，下载已停止	The account was removed from this device; downloads stopped
+账号已移除，已撤销临时媒体地址	The account was removed; the temporary media address was revoked
+账号已移除；下载记录已取消，系统任务停止稍有延迟	The account was removed; download records were cancelled, and system tasks will stop shortly
+账号或媒体已经变化，请重新搜索识别结果	The account or media changed. Search for identification results again
+账号或密码错误，请重试	Incorrect username or password. Please retry
+账号标识无效	Invalid account ID
+起播跳过	Skip at start
+超过100%可能造成失真	Above 100% may distort
+跟随传感器	Sensor
+跟随系统	Follow system
+跟随系统 · Android 13 起可单独设置	Follow system · Set per app on Android 13+
+路径	Path
+路径 · 端口 %1$s	Path · Port %1$s
+跳转	Seek
+跳过片头	Skip intro
+跳过片尾	Skip outro
+轨道	Track
+轨道序号	Track number
+转换后的字幕不能超过 8 MB	Converted subtitles can't exceed 8 MB
+软件优先	Prefer software
+输入当前密码	Enter current password
+输入新密码	Enter new password
+运行	Run
+运行%1$s	Run %1$s
+运行中	Running
+运行计划任务？	Run scheduled task?
+返回	Back
+返回修改%1$s或外部编号，并检查服务器是否配置了可用的元数据提供程序。	Go back to change the %1$s or external IDs, and check that the server has a working metadata provider.
+返回字幕	Back to subtitles
+返回搜索条件	Back to search
+返回桌面时	When going home
+返回组件列表	Back to components
+返回详情	Back to details
+还没有下载	No downloads yet
+还没有收藏	No favorites yet
+这是 STRM 快捷文件，无法当作影片下载	This is an STRM shortcut file and can't be downloaded as a video
+进入媒体库	Open library
+进入播放器时的屏幕方向；跟随传感器时随手机旋转	Screen orientation when entering the player; with sensor, it rotates with the phone
+进入画中画	Enter picture-in-picture
+连接	Connect
+连接你的 Jellyfin 媒体库	Connect your Jellyfin library
+连接地址	Connection address
+连接当前服务器并读取频道与节目单。	Connects to the current server and loads channels and the guide.
+连接或读取失败，请检查网络与服务器后重试	Couldn't connect or load. Check the network and server and retry
+连接服务器后可清理	Available after connecting to a server
+连接服务器超时，请确认手机与服务器网络互通。	Timed out connecting to the server. Make sure your phone can reach the server.
+连接被系统权限阻止，请检查 Pathfin 的局域网访问权限。	The connection was blocked by a system permission. Check Pathfin's local network access.
+连播保留音轨和字幕	Keep audio and subtitle tracks for the next episode
+选择%1$s	Choose %1$s
+选择与手机在同一局域网的电视或播放器	Choose a TV or player on the same local network as your phone
+选择匹配结果	Choose a match
+选择媒体版本	Choose media version
+选择播放版本	Choose playback version
+选择文件夹…	Choose folder…
+选择本次连接使用的地址	Choose the address for this connection
+选择标签	Choose tags
+选择账号	Choose account
+选用图片	Use image
+选用这张%1$s？	Use this %1$s?
+选集	Episodes
+通用	General
+通过 Jellyfin 已安装的字幕提供商搜索	Search with the subtitle providers installed in Jellyfin
+配置	Configuration
+采样率	Sample rate
+重启服务器	Restart server
+重启此 Jellyfin 服务器？	Restart this Jellyfin server?
+重启请求已接受，请稍后刷新服务器状态。	Restart request accepted. Refresh the server status later.
+重复节目	Duplicate program
+重复频道	Duplicate channel
+重新下载	Download again
+重新登录	Sign in again
+重新获取地址已暂停，请重试。	Getting the address again was paused. Please retry.
+重新选择保存位置	Choose save location again
+重置	Reset
+重置偏移	Reset offset
+重试	Retry
+重试读取	Retry loading
+锁定全部元数据，防止自动更新覆盖	Lock all metadata to prevent automatic updates from overwriting it
+锁定屏幕	Lock screen
+长按	Long press
+长按倍速、双击快进快退、控制栏状态	Long-press speed, double-tap seek, control bar status
+长按加速	Long-press to speed up
+长按期间横向滑动动态调节倍速	Swipe horizontally while holding to adjust speed
+降低质量可节省流量，需要服务器支持视频转码	Lower quality saves data; requires server video transcoding
+降序排序	Sort descending
+限制级	Restricted
+隐藏字母索引	Hide alphabet index
+隐藏密码	Hide password
+隐藏无缩略图的章节	Hide chapters without thumbnails
+隐藏系统状态栏	Hide system status bar
+集	Episodes
+需要 Android 12	Requires Android 12
+需要局域网访问权限	Local network access required
+需要服务器管理员权限。	Server administrator rights required.
+需要管理员权限	Administrator rights required
+非字母开头	Starts with a non-letter
+韩语	Korean
+音乐	Music
+音乐专辑	Music albums
+音乐人	Musicians
+音乐视频	Music videos
+音轨	Audio
+音轨 %1$s	Audio %1$s
+音轨与字幕	Audio & subtitles
+音轨字幕、片头片尾与缓冲	Audio & subtitles, intros & outros, buffering
+音轨索引无效	Invalid audio track index
+音轨语言	Audio language
+音量	Volume
+音量增强已停止	Volume boost stopped
+音量增益	Volume boost
+音频	Audio
+音频解码	Audio decoding
+音频解码、硬件解码与 ASS 字幕扩展	Audio decoding, hardware decoding & ASS subtitle extension
+预告片	Trailers
+频道 %1$s	Channel %1$s
+频道 %1$s · 节目单	Channel %1$s · Guide
+频道与节目单来自当前 Jellyfin 服务器	Channels and guide come from the current Jellyfin server
+频道列表已变化，请下拉刷新重试	The channel list changed. Pull down to refresh and retry
+频道标识	Channel ID
+频道标识无效	Invalid channel ID
+首字母筛选无效	Invalid first-letter filter
+首映日期	Premiere date
+首映日期（YYYY-MM-DD）	Premiere date (YYYY-MM-DD)
+首选字幕语言	Preferred subtitle language
+首选音轨语言	Preferred audio language
+首页	Home
+首页显示的媒体库	Libraries shown on Home
+首页显示设置保存失败，请重试	Couldn't save Home display settings. Please retry
+高刷新率	High refresh rate
+高度	Height
+高级选项	Advanced options
+高质量	High quality
+鸢尾	Iris
+默认	Default
+默认使用服务器名称	Uses the server name by default
+默认图标	Default icon
+默认蓝	Default blue
+（	 (
+（%1$s）	 (%1$s)
+）	)
+，	, 
+：	: 
+；目标中可能保留未完成文件	; the destination may contain an unfinished file
+目标文件仍在关闭，请稍后重试	The destination file is still closing. Please try again shortly.
+文件夹	Folder
+常见问题	FAQ
+崩溃日志	Crash log
+隐私协议	Privacy policy
+免责声明	Disclaimer
+自动检查更新	Check for updates automatically
+项目主页	Project page
+帮助与反馈	Help & feedback
+只保存在本机，可复制或提交反馈	Stored only on this device; copy it or send feedback
+协议与许可	Policies & licenses
+当前版本 %1$s	Current version %1$s
+正在检查…	Checking…
+已是最新版本	You're on the latest version
+发现新版本 %1$s	New version %1$s available
+正在下载 %1$s%%	Downloading %1$s%%
+%1$s 已下载，点击安装	%1$s downloaded. Tap to install
+更完整的说明见项目主页的帮助文档。	See the help docs on the project page for more details.
+生效日期：2026 年 10 月 29 日	Effective date: October 29, 2026
+崩溃记录只保存在本机，不会自动上传。提交反馈前已隐藏令牌、密码和服务器地址，仍请检查后再公开。	Crash records stay on this device and are never uploaded automatically. Tokens, passwords and server addresses are hidden before you send feedback, but please review the log before posting it publicly.
+正在读取崩溃记录…	Loading crash records…
+暂无崩溃记录	No crash records
+复制	Copy
+已复制崩溃日志	Crash log copied
+已清空崩溃日志	Crash log cleared
+清空失败，请重试	Couldn't clear. Please retry
+提交反馈	Send feedback
+（暂无崩溃记录）	(No crash records)
+## 问题描述\n\n\n## 复现步骤\n\n\n## 设备与日志\n	## Description\n\n\n## Steps to reproduce\n\n\n## Device and log\n
+无法连接服务器？	Can't connect to the server?
+确认手机与服务器网络互通，并填写最终的服务器地址，不要带 ? 或 # 之后的内容。局域网内的 http:// 服务器，需要在该服务器设置中开启“允许 HTTP 明文连接与播放”。	Make sure the phone can reach the server, and enter the final server address without anything after ? or #. For an http:// server on your LAN, turn on "Allow plain HTTP connections and playback" in that server's settings.
+STRM 无法直连或不能切换画质？	STRM won't play directly or switch quality?
+在“设置 → 播放 → 媒体源”开启“STRM 原始地址”。STRM 直连播放与画质切换目前仅在 MediaFlux 生成的 STRM 和光鸭云盘上测试通过；画质切换还需要服务端提供 mediaflux.playback.v1。	Turn on "STRM original address" in Settings → Play → Media source. STRM direct playback and quality switching have only been tested with STRM generated by MediaFlux and with Guangya Cloud Drive. Quality switching also needs the server to provide mediaflux.playback.v1.
+提示本机不支持此原画？	"This device doesn't support this original quality"?
+Pathfin 不会把 STRM 悄悄改成 Jellyfin 转码。请更换片源、选择较低的云盘画质，或关闭“STRM 原始地址”后选择服务器画质。	Pathfin never silently switches STRM to Jellyfin transcoding. Choose another source or a lower cloud quality, or turn off "STRM original address" and choose a server quality.
+视频无法播放或只有声音？	Video won't play, or only audio plays?
+Pathfin 优先使用系统解码器；ARM64 设备上 H.264/HEVC 可回退到软件解码，上限 4096×2304，是否流畅取决于设备。可在“设置 → 播放 → 解码与字幕渲染”中调整。	Pathfin prefers the system decoder. On ARM64 devices, H.264/HEVC can fall back to software decoding up to 4096×2304; whether it's smooth depends on the device. Adjust it in Settings → Play → Decoding & subtitle rendering.
+如何批量操作媒体？	How do I act on several items at once?
+在媒体库长按封面进入多选，点选更多封面后，用标题栏的“更多”批量标记播放状态、刷新元数据或删除。删除和刷新需要服务器上的相应权限。	Long-press a cover in a library to start selecting, tap more covers, then use More in the title bar to mark them played or unplayed, refresh metadata or delete them. Delete and refresh need the matching permissions on the server.
+如何切换语言？	How do I change the language?
+在“设置 → 常规 → 语言”中选择，默认跟随系统，支持简体中文和英文。	Choose it in Settings → Preferences → Language. It follows the system by default and supports English and Simplified Chinese.
+如何更新应用？	How do I update the app?
+在“关于 → 检查更新”下载 GitHub 正式版，Pathfin 会校验包名、签名和版本后交给系统安装，安装完成后自动删除安装包。首次安装需要允许 Pathfin 安装未知应用。	Download the stable GitHub release from About → Check for updates. Pathfin verifies the package name, signature and version before handing it to the system installer, and deletes the package after installation. The first time, you need to allow Pathfin to install unknown apps.
+遇到问题如何反馈？	How do I report a problem?
+打开“关于 → 崩溃日志”，点“提交反馈”会在 GitHub 新建 Issue 并附上设备信息和最近的崩溃记录。请补充复现步骤，不要贴出服务器地址、令牌或密码。	Open About → Crash log and tap Send feedback to create a GitHub issue with your device info and the latest crash record. Add the steps to reproduce, and don't post server addresses, tokens or passwords.
+1. 不收集个人信息	1. No personal data collection
+Pathfin 没有自己的服务器，不包含统计、广告或第三方追踪 SDK，不收集、出售或上传你的个人信息。	Pathfin has no servers of its own and includes no analytics, advertising or third-party tracking SDKs. It doesn't collect, sell or upload your personal information.
+2. 本机保存的数据	2. Data stored on your device
+服务器地址、账号令牌、偏好设置、封面缓存、下载记录和崩溃日志都保存在应用私有目录，并且不参与系统云备份或设备迁移。导出的设置备份不包含账号和凭据。	Server addresses, account tokens, preferences, the cover cache, download records and crash logs are kept in the app's private storage and are excluded from system cloud backup and device transfer. Exported settings backups don't include accounts or credentials.
+3. 网络访问	3. Network access
+Pathfin 只连接你主动配置的地址：Jellyfin 服务器、STRM 与直播源地址、局域网内的 DLNA 设备，以及用于检查和下载更新的 GitHub。访问 GitHub 时只发送带版本号的常规请求，不包含账号信息；在线字幕搜索由你的 Jellyfin 服务器完成。	Pathfin only connects to addresses you set up: your Jellyfin servers, STRM and live source addresses, DLNA devices on your LAN, and GitHub for checking and downloading updates. Requests to GitHub only carry the app version and no account information. Online subtitle search is done by your Jellyfin server.
+4. 设备权限	4. Device permissions
+网络与局域网访问用于连接服务器和投屏；通知用于下载与投屏进度；安装未知应用仅在你确认安装更新时使用。	Network and local network access are used to connect to servers and cast. Notifications show download and casting progress. Installing unknown apps is only used when you confirm installing an update.
+5. 崩溃日志	5. Crash logs
+崩溃记录只保存在本机，不会自动上传。只有你主动复制或提交反馈时才会离开设备，提交前会隐藏令牌、密码和服务器地址。	Crash records stay on this device and are never uploaded automatically. They only leave the device when you copy them or send feedback, and tokens, passwords and server addresses are hidden first.
+6. 删除数据	6. Deleting data
+可以在应用内移除账号、清除缓存和崩溃日志；卸载 Pathfin 会删除全部本机数据。服务器上的数据由服务器管理员管理。	You can remove accounts and clear the cache and crash log in the app. Uninstalling Pathfin deletes all local data. Data on your servers is managed by their administrators.
+7. 协议变更	7. Changes to this policy
+本协议可能随版本更新而调整，更新后的内容会随新版本一同发布。	This policy may change with app updates, and the updated text ships with the new version.
+1. 项目性质	1. About the project
+Pathfin 是开源的第三方 Jellyfin 客户端，与 Jellyfin 项目、MediaFlux 或任何网盘服务商没有隶属或合作关系，按“现状”提供，不附带任何明示或暗示的担保。	Pathfin is an open-source, third-party Jellyfin client. It isn't affiliated with or endorsed by the Jellyfin project, MediaFlux or any cloud drive provider, and it is provided "as is" without warranty of any kind, express or implied.
+2. 不提供任何内容	2. No content provided
+Pathfin 不提供、托管或分发任何影视内容，所有媒体都来自你自己配置的服务器或地址。你需要确保对访问、播放、下载的内容拥有合法权利。	Pathfin doesn't provide, host or distribute any media. All media comes from servers or addresses you configure yourself, and you are responsible for having the rights to access, play and download it.
+3. 使用风险	3. Use at your own risk
+因使用本软件导致的数据丢失、设备异常、服务中断或其他损失，开发者不承担责任。批量删除、覆盖元数据等管理操作会直接修改服务器数据，请谨慎使用。	The developers aren't liable for data loss, device problems, service interruptions or other damage caused by using this software. Management actions such as batch delete or replacing metadata change server data directly, so use them with care.
+4. 第三方服务	4. Third-party services
+Jellyfin 服务器、网盘、直播源和 GitHub 等第三方服务的可用性与条款由其提供方负责，请同时遵守相应的服务条款与当地法律法规。	The availability and terms of third-party services such as Jellyfin servers, cloud drives, live sources and GitHub are the responsibility of their providers. Follow their terms of service and your local laws.
+5. 官方渠道	5. Official channel
+请只从项目的 GitHub Releases 获取安装包。来自其他渠道、签名不一致的安装包可能被篡改，应用内更新会拒绝安装这类安装包。	Only get installation packages from the project's GitHub Releases. Packages from other channels or with a different signature may have been tampered with, and the in-app updater refuses to install them.
+无法打开系统安装器，请重试	Couldn't open the system installer. Please retry
+尚未允许安装未知应用，授权后可再次安装	Installing unknown apps isn't allowed yet. Allow it, then install again
+当前版本 %1$s · 安装包 %2$s	Current version %1$s · Package %2$s
+后台下载	Download in background
+安装	Install
+下载更新	Download update
+此版本没有更新说明	No release notes for this version
+已下载 %1$s / %2$s	Downloaded %1$s / %2$s
+GitHub 请求过于频繁，请稍后重试	Too many requests to GitHub. Please try again later
+检查更新失败（HTTP %1$s）	Update check failed (HTTP %1$s)
+无法创建更新目录	Couldn't create the update folder
+下载失败（HTTP %1$s）	Download failed (HTTP %1$s)
+安装包大小异常，请重新下载	Unexpected package size. Please download again
+安装包下载不完整，请重新下载	The package download is incomplete. Please download again
+安装包校验失败，请重新下载	Package verification failed. Please download again
+无法保存安装包	Couldn't save the package
+安装包与当前应用不是同一个包，已拒绝安装	The package isn't this app; installation refused
+安装包签名与当前应用不一致，已拒绝安装	The package signature doesn't match this app; installation refused
+安装包版本不高于当前版本，已拒绝安装	The package isn't newer than the current version; installation refused
+安装包不存在，请重新下载	The package is missing. Please download again
+安装包损坏或无法解析，请重新下载	The package is damaged or can't be read. Please download again
+更新失败，请重试	Update failed. Please retry
+无法连接 GitHub，请检查网络后重试	Couldn't reach GitHub. Check your network and retry
+无法读取崩溃记录，点击重试	Couldn't read the crash log. Tap to retry
+无法打开安装权限设置，请在系统设置中允许安装未知应用	Couldn't open installation permissions. Allow installing unknown apps in system settings

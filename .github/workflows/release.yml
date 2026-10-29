@@ -1,0 +1,151 @@
+# 推送 vX.Y.Z 标签后构建正式签名 APK 并发布 GitHub Release。
+# 应用内更新只认本仓库正式 Release 中唯一的 .apk 资产，并要求签名与已安装版本一致。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  # 生产签名证书的公开指纹；产物签名不符时拒绝发布。
+  RELEASE_CERT_SHA256: 9AE9364A61C4D6F4D8335DAFD9350355C41F70954BB101C70869C81715FB0BC0
+  BUILD_TOOLS: '37.0.0'
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Check tag, version and signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PATHFIN_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.PATHFIN_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PATHFIN_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PATHFIN_KEY_PASSWORD }}
+        run: |
+          version=$(sed -nE 's/^ *versionName = "([^"]+)".*/\1/p' android/app/build.gradle.kts)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::versionName '$version' must be X.Y.Z"; exit 1; }
+          [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::Tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; }
+          missing=()
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do [[ -n "${!name}" ]] || missing+=("PATHFIN_$name"); done
+          (( ${#missing[@]} == 0 )) || { echo "::error::Missing secrets: ${missing[*]}"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install native build tools
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends autoconf automake libtool make pkg-config
+
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-37.0' "build-tools;$BUILD_TOOLS" 'ndk;30.0.16248370' 'cmake;3.22.1'
+
+      # 上游源码压缩包由构建脚本按锁定的字节数与 SHA-256 校验，缓存只省下载时间。
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .superpowers/tmp/ffmpeg-native/downloads
+            .superpowers/tmp/ass-native/downloads
+          key: native-sources-${{ hashFiles('android/ffmpeg/sources.lock.json', 'android/ass/sources.lock.json') }}
+
+      - name: Build native modules
+        run: |
+          python3 android/ffmpeg/build_native.py --jobs 4
+          python3 android/ass/build_native.py --jobs 4
+
+      - name: Package corresponding sources
+        run: |
+          mkdir -p dist
+          python3 android/tools/package_source.py --native ffmpeg --output "dist/pathfin-$VERSION-ffmpeg-source.tar"
+          python3 android/tools/package_source.py --native ass --output "dist/pathfin-$VERSION-ass-source.tar"
+
+      - name: Unit tests
+        working-directory: android
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PATHFIN_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.PATHFIN_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PATHFIN_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.PATHFIN_KEY_PASSWORD }}
+        run: |
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.p12"
+          [[ -s "$RUNNER_TEMP/release.p12" ]] || { echo "::error::PATHFIN_KEYSTORE_BASE64 decoded to an empty file"; exit 1; }
+          # Properties.store 负责反斜杠、空格与 Unicode 转义，不把密钥内容写进命令或日志。
+          cat > "$RUNNER_TEMP/WriteSigning.java" <<'JAVA'
+          import java.nio.file.*;
+          import java.util.Properties;
+          class WriteSigning {
+            public static void main(String[] args) throws Exception {
+              var directory = Path.of(System.getenv("RUNNER_TEMP"));
+              var properties = new Properties();
+              properties.setProperty("storeFile", directory.resolve("release.p12").toString());
+              properties.setProperty("storePassword", System.getenv("KEYSTORE_PASSWORD"));
+              properties.setProperty("keyAlias", System.getenv("KEY_ALIAS"));
+              properties.setProperty("keyPassword", System.getenv("KEY_PASSWORD"));
+              try (var output = Files.newOutputStream(directory.resolve("release.properties"))) {
+                properties.store(output, null);
+              }
+            }
+          }
+          JAVA
+          java "$RUNNER_TEMP/WriteSigning.java"
+          (cd android && ./gradlew --no-daemon :app:assembleRelease "-Ppathfin.signingFile=$RUNNER_TEMP/release.properties")
+          cp android/app/build/outputs/apk/release/app-release.apk "dist/Pathfin-$VERSION.apk"
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/release.p12" "$RUNNER_TEMP/release.properties" "$RUNNER_TEMP/WriteSigning.java"
+
+      - name: Verify APK
+        run: |
+          mkdir -p reports
+          python3 android/tools/verify_release.py "dist/Pathfin-$VERSION.apk" \
+            --build-tools "$ANDROID_HOME/build-tools/$BUILD_TOOLS" \
+            --expected-certificate-sha256 "$RELEASE_CERT_SHA256" --output reports/release.json
+          python3 android/tools/verify_native_pairing.py "dist/Pathfin-$VERSION.apk" \
+            --ffmpeg-source "dist/pathfin-$VERSION-ffmpeg-source.tar" \
+            --ass-source "dist/pathfin-$VERSION-ass-source.tar" --output reports/native-pairing.json
+          (cd dist && sha256sum "Pathfin-$VERSION.apk" > "Pathfin-$VERSION.apk.sha256")
+
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: release-reports
+          path: reports/
+          if-no-files-found: ignore
+
+      # 附注标签的说明作为 Release 正文；轻量标签则由 GitHub 生成提交摘要。
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+          notes=()
+          if [[ "$(git cat-file -t "$GITHUB_REF_NAME")" == tag ]]; then
+            git tag -l --format='%(contents:body)' "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+            grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md" || git tag -l --format='%(contents:subject)' "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+            notes=(--notes-file "$RUNNER_TEMP/notes.md")
+          else
+            notes=(--generate-notes)
+          fi
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "Pathfin $VERSION" "${notes[@]}"

@@ -1,0 +1,303 @@
+{
+  "buildPolicy": {
+    "gpl": false,
+    "nonfree": false,
+    "projectLicenseSelected": false
+  },
+  "componentCount": 7,
+  "components": [
+    {
+      "artifact": "libc++_shared.so",
+      "group": "native",
+      "id": "native:android-ndk-libcxx:30.0.16248370",
+      "kind": "native-runtime",
+      "licenseIds": [
+        "Apache-2.0 WITH LLVM-exception",
+        "NCSA",
+        "MIT"
+      ],
+      "links": [
+        {
+          "label": "LLVM 基础提交",
+          "url": "https://github.com/llvm/llvm-project/tree/2d287f51eff2a5fbf84458a33f7fb2493cf67965"
+        },
+        {
+          "label": "Android LLVM 构建与补丁",
+          "url": "https://android.googlesource.com/toolchain/llvm_android/+/9e20ac0b949feedcfe3da791189310f6ebcbc7a8"
+        }
+      ],
+      "modifications": [],
+      "name": "Android NDK libc++ shared runtime",
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/6b8633011d874b75629180e60de13ebfd546a10e56dc7d0380a35f6609f30617.txt",
+          "sha256": "6b8633011d874b75629180e60de13ebfd546a10e56dc7d0380a35f6609f30617",
+          "source": "Android NDK 30.0.16248370/NOTICE.toolchain",
+          "title": "NDK 原始 LLVM 许可与归属集合（含构建工具补充条款）"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/50f8283fa70fe63736cf031db7ebba878de94c8c43f02a40fea0d87ba1f6c4f5.txt",
+          "sha256": "50f8283fa70fe63736cf031db7ebba878de94c8c43f02a40fea0d87ba1f6c4f5",
+          "source": "Android NDK/AndroidVersion.txt",
+          "title": "NDK LLVM 版本"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/22a60039318372c44c09b6bbb5aa5acb770a006ed3a2efaa372434e5ba4be0b2.txt",
+          "sha256": "22a60039318372c44c09b6bbb5aa5acb770a006ed3a2efaa372434e5ba4be0b2",
+          "source": "Android NDK/clang_source_info.md",
+          "title": "NDK 对应 LLVM 提交和补丁来源"
+        }
+      ],
+      "version": "30.0.16248370"
+    },
+    {
+      "artifact": "freetype",
+      "group": "native",
+      "id": "native:freetype:37515cf56ba3349656049edbed89ffc6f6466f2d",
+      "kind": "native",
+      "licenseIds": [
+        "FTL"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/freetype/freetype/tree/37515cf56ba3349656049edbed89ffc6f6466f2d"
+        }
+      ],
+      "modifications": [],
+      "name": "FreeType",
+      "sourceArchive": {
+        "archive": "freetype-37515cf56ba3349656049edbed89ffc6f6466f2d.tar.gz",
+        "commit": "37515cf56ba3349656049edbed89ffc6f6466f2d",
+        "sha256": "9efee8b0508e142f38d1c7e2e192d3e5041aa4bbf6c2ab1a901518211f76a914",
+        "url": "https://codeload.github.com/freetype/freetype/tar.gz/37515cf56ba3349656049edbed89ffc6f6466f2d"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/bd36c8b474855fa294c2ec5c184544478ef3720aad37d65a6296a4f264fd2d3b.txt",
+          "sha256": "bd36c8b474855fa294c2ec5c184544478ef3720aad37d65a6296a4f264fd2d3b",
+          "source": "https://github.com/freetype/freetype/blob/37515cf56ba3349656049edbed89ffc6f6466f2d/LICENSE.TXT",
+          "title": "LICENSE.TXT"
+        },
+        {
+          "kind": "license",
+          "path": "texts/5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f.txt",
+          "sha256": "5a5ee54c5001bbad1cdc1a57cc3dd4c42199b2da09d39c7ee41fab002d02967f",
+          "source": "https://github.com/freetype/freetype/blob/37515cf56ba3349656049edbed89ffc6f6466f2d/docs/FTL.TXT",
+          "title": "docs/FTL.TXT"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/7b4f180435165600c7afeade01de12d3c18af45f66ef5424b2233faa83067521.txt",
+          "sha256": "7b4f180435165600c7afeade01de12d3c18af45f66ef5424b2233faa83067521",
+          "source": "https://github.com/freetype/freetype/tree/37515cf56ba3349656049edbed89ffc6f6466f2d",
+          "title": "实编译输入原始版权声明"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/412dc7f4f61030b2a477dd470e350e6810acd6193684b8d312924482cd5b9d28.txt",
+          "sha256": "412dc7f4f61030b2a477dd470e350e6810acd6193684b8d312924482cd5b9d28",
+          "source": "https://github.com/freetype/freetype/blob/37515cf56ba3349656049edbed89ffc6f6466f2d/docs/FTL.TXT",
+          "title": "FreeType 归属声明"
+        }
+      ],
+      "version": "VER-2-15-0"
+    },
+    {
+      "artifact": "fribidi",
+      "group": "native",
+      "id": "native:fribidi:b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+      "kind": "native",
+      "licenseIds": [
+        "LGPL-2.1-or-later"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/fribidi/fribidi/tree/b93119f5fdc7ea47672cc304c1455ffa6dfe7536"
+        }
+      ],
+      "modifications": [],
+      "name": "GNU FriBidi",
+      "sourceArchive": {
+        "archive": "fribidi-b93119f5fdc7ea47672cc304c1455ffa6dfe7536.tar.gz",
+        "commit": "b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+        "sha256": "f309091695b3b0f2fd5f9caa7941d906ab08df9ab8f9931bf5ee674bc00b489b",
+        "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/b93119f5fdc7ea47672cc304c1455ffa6dfe7536"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95.txt",
+          "sha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95",
+          "source": "https://github.com/fribidi/fribidi/blob/b93119f5fdc7ea47672cc304c1455ffa6dfe7536/COPYING",
+          "title": "COPYING"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/48d93d1267fec40c949dc138538242e781cd8624d8b17355ee2d49142c487232.txt",
+          "sha256": "48d93d1267fec40c949dc138538242e781cd8624d8b17355ee2d49142c487232",
+          "source": "https://github.com/fribidi/fribidi/tree/b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "v1.0.17"
+    },
+    {
+      "artifact": "harfbuzz",
+      "group": "native",
+      "id": "native:harfbuzz:c7a7457b7385f33178e8cf87615ca077a810bbe7",
+      "kind": "native",
+      "licenseIds": [
+        "MIT-Modern-Variant"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/harfbuzz/harfbuzz/tree/c7a7457b7385f33178e8cf87615ca077a810bbe7"
+        }
+      ],
+      "modifications": [],
+      "name": "HarfBuzz",
+      "sourceArchive": {
+        "archive": "harfbuzz-c7a7457b7385f33178e8cf87615ca077a810bbe7.tar.gz",
+        "commit": "c7a7457b7385f33178e8cf87615ca077a810bbe7",
+        "sha256": "10dcea60bd85ff219490d55525630650ac8c57044c4efdc878162f286451775b",
+        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/c7a7457b7385f33178e8cf87615ca077a810bbe7"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64.txt",
+          "sha256": "ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64",
+          "source": "https://github.com/harfbuzz/harfbuzz/blob/c7a7457b7385f33178e8cf87615ca077a810bbe7/COPYING",
+          "title": "COPYING"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/ae00b71f01caccddac8f3200471f3ef76c2d6a4b55058db027f2294e33b4a1bb.txt",
+          "sha256": "ae00b71f01caccddac8f3200471f3ef76c2d6a4b55058db027f2294e33b4a1bb",
+          "source": "https://github.com/harfbuzz/harfbuzz/tree/c7a7457b7385f33178e8cf87615ca077a810bbe7",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "14.6.0"
+    },
+    {
+      "artifact": "libass",
+      "group": "native",
+      "id": "native:libass:4a05d8127f525943ebf45fdc6497c9e665947f0d",
+      "kind": "native",
+      "licenseIds": [
+        "ISC"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/libass/libass/tree/4a05d8127f525943ebf45fdc6497c9e665947f0d"
+        }
+      ],
+      "modifications": [],
+      "name": "libass",
+      "sourceArchive": {
+        "archive": "libass-4a05d8127f525943ebf45fdc6497c9e665947f0d.tar.gz",
+        "commit": "4a05d8127f525943ebf45fdc6497c9e665947f0d",
+        "sha256": "3546ecc8748c62e100a9dd18e52ea2d17d7facedf89cfcad97000ad60b1bce2b",
+        "url": "https://codeload.github.com/libass/libass/tar.gz/4a05d8127f525943ebf45fdc6497c9e665947f0d"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/f7e30699d02798351e7f839e3d3bfeb29ce65e44efa7735c225464c4fd7dfe9c.txt",
+          "sha256": "f7e30699d02798351e7f839e3d3bfeb29ce65e44efa7735c225464c4fd7dfe9c",
+          "source": "https://github.com/libass/libass/blob/4a05d8127f525943ebf45fdc6497c9e665947f0d/COPYING",
+          "title": "COPYING"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/96d904da68a050a58936d7846dbc6466448ede41047c517fe6902abd138b3adb.txt",
+          "sha256": "96d904da68a050a58936d7846dbc6466448ede41047c517fe6902abd138b3adb",
+          "source": "https://github.com/libass/libass/tree/4a05d8127f525943ebf45fdc6497c9e665947f0d",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "0.17.5"
+    },
+    {
+      "artifact": "unibreak",
+      "group": "native",
+      "id": "native:unibreak:28a2756b864c343f438cd22537d49d394d4666a5",
+      "kind": "native",
+      "licenseIds": [
+        "Zlib"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/adah1972/libunibreak/tree/28a2756b864c343f438cd22537d49d394d4666a5"
+        }
+      ],
+      "modifications": [],
+      "name": "libunibreak",
+      "sourceArchive": {
+        "archive": "unibreak-28a2756b864c343f438cd22537d49d394d4666a5.tar.gz",
+        "commit": "28a2756b864c343f438cd22537d49d394d4666a5",
+        "sha256": "4d0714d29207bfcaabe2a9376f83330bfb477673ecfb53994e47bd6d07738581",
+        "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/28a2756b864c343f438cd22537d49d394d4666a5"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/0c57e2ec42ece17791a75d2f9b2f8e0663181be008667a507f765b3ef22522db.txt",
+          "sha256": "0c57e2ec42ece17791a75d2f9b2f8e0663181be008667a507f765b3ef22522db",
+          "source": "https://github.com/adah1972/libunibreak/blob/28a2756b864c343f438cd22537d49d394d4666a5/LICENCE",
+          "title": "LICENCE"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/93c1562cf2e67eb63709a5ab773e1a1d1c8c123e602f600aa41647f45a12c4e4.txt",
+          "sha256": "93c1562cf2e67eb63709a5ab773e1a1d1c8c123e602f600aa41647f45a12c4e4",
+          "source": "https://github.com/adah1972/libunibreak/tree/28a2756b864c343f438cd22537d49d394d4666a5",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "libunibreak_8_0"
+    },
+    {
+      "artifact": "pathfin-ass-overlay",
+      "group": "source-adaptation",
+      "id": "wrapper:libass-android:504f64a325059ab5188c4c9d0eddc99c9356a23a",
+      "kind": "source-adaptation",
+      "licenseIds": [
+        "MIT"
+      ],
+      "links": [
+        {
+          "label": "固定上游源码",
+          "url": "https://github.com/peerless2012/libass-android/tree/504f64a325059ab5188c4c9d0eddc99c9356a23a"
+        }
+      ],
+      "modifications": [
+        "公开 Media3 raw TrackOutput、附件限额、独立 Canvas 和真实时钟；libass 与字体依赖直接静态链接入本模块 JNI。"
+      ],
+      "name": "libass-android MKV attachment discovery (adapted)",
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/eede2bf250a8d39c3d25f1af6cabd310ca0322c4fb160bc0cd8538682dba49de.txt",
+          "sha256": "eede2bf250a8d39c3d25f1af6cabd310ca0322c4fb160bc0cd8538682dba49de",
+          "source": "https://github.com/peerless2012/libass-android/blob/504f64a325059ab5188c4c9d0eddc99c9356a23a/LICENSE",
+          "title": "MIT License"
+        }
+      ],
+      "version": "v0.5.1 / 504f64a32505"
+    }
+  ],
+  "correspondingSource": "pathfin-ass-corresponding-source.tar",
+  "schemaVersion": 1,
+  "unresolved": []
+}

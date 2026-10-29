@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "ndkVersion": "30.0.16248370",
+  "abi": "arm64-v8a",
+  "androidApi": 26,
+  "sourceDateEpoch": 1792972800,
+  "libraries": [
+    {
+      "file": "libpathfin_ass_jni.so",
+      "bytes": 1931280,
+      "sha256": "abfe333e1dc3e767cfa5b9e95c5e008d0c68789c1465242c9b6974dbeee602b6",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libjnigraphics.so",
+        "libm.so",
+        "libc++_shared.so",
+        "libdl.so",
+        "libc.so"
+      ]
+    },
+    {
+      "file": "libc++_shared.so",
+      "bytes": 1423696,
+      "sha256": "b5d97c38a728afe28d341cda3369f512d35eaf9c680c1b0563cd6a63e395230f",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libc.so",
+        "libm.so",
+        "libdl.so"
+      ]
+    }
+  ],
+  "sourceInputs": {
+    "build.gradle.kts": "1fe8ef2834566629ba00098d027a03948a3f9f344223b6414af4de65950b443f",
+    "sources.lock.json": "79206b7db2c8e179102a510d5d90abcc40718a35bcc9899deba44760429caaca",
+    "build_native.py": "e196e4245a48ebd701490d2d44e377911e7c515827483aad13427aaeee75a9d1",
+    "CMakeLists.txt": "b4b24b4ec45e50955d2938e8032a85b19aecc08bece46deb6b80df790ab2d15b",
+    "requirements-build.txt": "ffc2a85fd561703674a66f94e7e7ed1f2e47015edef8a4b86fec281dc1dbd861",
+    "vendor/libass/ass_types.h": "b3ac4ad4d655f4d90e5e8d05cc2868ce17e5ff89ef1fe76cabcc8f3093e6134b",
+    "vendor/libass/ass.h": "04582aa925d4ed2d1206f21915d382584e8b49c50a6b88419d4112f4f88d24da",
+    "src/main/cpp/ass_jni.cpp": "e761cb282048305b1649aa765efcd15e34d91c5116e093a86210d1d6b668654b",
+    "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt": "f8b14ec7a616d5aa56108b748ca4e2e6d6013bc19851807dabe98ada49f615db",
+    "src/main/java/dev/pathfin/ass/AssSubtitleDataSource.kt": "b803c18c69b4ff30fe84d024ce8dce67815211493695ff49f65ffacf9caf32d5",
+    "src/main/java/dev/pathfin/ass/ExoAssExtension.kt": "7c8243a0f690cc9ddfde33b9415d1f52378dba8a2bbf0240980c569d587f37f8",
+    "src/main/java/dev/pathfin/ass/AssOverlayView.kt": "013bea46f3844dce511fefc095fd7978237107de9cfc9eb94e6b2fc7184cb7aa",
+    "src/main/java/dev/pathfin/ass/AssPacket.kt": "c14f33d2dd9750ef1cf5c7bc382a3eba8df58fb93212fba4b5d29349a5eb73f8",
+    "src/main/java/dev/pathfin/ass/AssMediaSource.kt": "2a3e78796d9e90a21ac08bf5fa9653a7d6f03de6316be81a56934611dc2f5a4d",
+    "src/main/java/dev/pathfin/ass/AssController.kt": "a71bbbd0dc8a86426dd3be01946579655b4ca05cda26e1ee76e165c84ece7a9d",
+    "src/main/java/dev/pathfin/ass/AssNative.kt": "d9b1892f49ca748ae1770a895c80b53966ae7cad98d1911493823c09a1cb2029",
+    "src/main/assets/open-source-ass/sources.lock.json": "79206b7db2c8e179102a510d5d90abcc40718a35bcc9899deba44760429caaca",
+    "src/test/java/dev/pathfin/ass/AssPacketTest.kt": "f434aa06cc4d114a79106cebb4fadc562c8c139771aa6bb252032f8e6364c28d"
+  },
+  "staticArchives": {
+    "libass.a": "259a85993cdb371316a2f9ccec79ae7e8d692cb69107d0e923966a6674b43f3c",
+    "libfreetype.a": "8155519c3ae1a85a131f49fd9ed4ee73982f9a7673684e82a4b43ed6b13f69d9",
+    "libfribidi.a": "159aafa8846f418fc6725d653b10f8b35c95c6816974cf27aa014518dadad9c9",
+    "libharfbuzz.a": "23e8101eb23435246fdc396c7e06cf4837ef55834c96278f8a630a9215f206e7",
+    "liblinebreak.a": "8cc2b923e31801f336178de5dbff26e50711d0d95bde5cfa9fc8e95e2a75a86f",
+    "libunibreak.a": "8cc2b923e31801f336178de5dbff26e50711d0d95bde5cfa9fc8e95e2a75a86f"
+  },
+  "recipeSha256": "e196e4245a48ebd701490d2d44e377911e7c515827483aad13427aaeee75a9d1",
+  "sourceLockSha256": "79206b7db2c8e179102a510d5d90abcc40718a35bcc9899deba44760429caaca"
+}

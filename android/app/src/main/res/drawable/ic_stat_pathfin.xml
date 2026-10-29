@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知栏品牌小图标：与桌面图标同一枚鳍与航迹，单色剪影。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M30,14 C55,13 77,28 86,51 C68,52 51,61 39,77 C35,78.5 30,76 30,71 Z" android:fillColor="#FFFFFFFF"
+        android:strokeColor="#FFFFFFFF" android:strokeWidth="6" android:strokeLineJoin="round" />
+    <path android:pathData="M18,93 C36,85 56,99 82,90" android:strokeColor="#FFFFFFFF" android:strokeWidth="9" android:strokeLineCap="round" />
+</vector>

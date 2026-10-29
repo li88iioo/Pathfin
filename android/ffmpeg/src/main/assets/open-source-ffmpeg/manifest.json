@@ -1,0 +1,264 @@
+{
+  "buildPolicy": {
+    "gpl": false,
+    "nonfree": false,
+    "projectLicenseSelected": false
+  },
+  "componentCount": 6,
+  "components": [
+    {
+      "artifact": "libc++_static.a",
+      "group": "native",
+      "id": "native:android-ndk-libcxx-static:30.0.16248370",
+      "kind": "native-runtime",
+      "licenseIds": [
+        "Apache-2.0 WITH LLVM-exception",
+        "NCSA",
+        "MIT"
+      ],
+      "links": [
+        {
+          "label": "LLVM 基础提交",
+          "url": "https://github.com/llvm/llvm-project/tree/2d287f51eff2a5fbf84458a33f7fb2493cf67965"
+        },
+        {
+          "label": "Android LLVM 构建与补丁",
+          "url": "https://android.googlesource.com/toolchain/llvm_android/+/9e20ac0b949feedcfe3da791189310f6ebcbc7a8"
+        }
+      ],
+      "modifications": [],
+      "name": "Android NDK libc++ static runtime",
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/6b8633011d874b75629180e60de13ebfd546a10e56dc7d0380a35f6609f30617.txt",
+          "sha256": "6b8633011d874b75629180e60de13ebfd546a10e56dc7d0380a35f6609f30617",
+          "source": "Android NDK 30.0.16248370/NOTICE.toolchain",
+          "title": "NDK 原始 LLVM 许可与归属集合（含构建工具补充条款）"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/50f8283fa70fe63736cf031db7ebba878de94c8c43f02a40fea0d87ba1f6c4f5.txt",
+          "sha256": "50f8283fa70fe63736cf031db7ebba878de94c8c43f02a40fea0d87ba1f6c4f5",
+          "source": "Android NDK/AndroidVersion.txt",
+          "title": "NDK LLVM 版本"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/22a60039318372c44c09b6bbb5aa5acb770a006ed3a2efaa372434e5ba4be0b2.txt",
+          "sha256": "22a60039318372c44c09b6bbb5aa5acb770a006ed3a2efaa372434e5ba4be0b2",
+          "source": "Android NDK/clang_source_info.md",
+          "title": "NDK 对应 LLVM 提交和补丁来源"
+        }
+      ],
+      "version": "30.0.16248370"
+    },
+    {
+      "artifact": "fast_float",
+      "group": "native",
+      "id": "native:fast_float:97b54ca9e75f5303507699d27c6b4f4efe4641a1",
+      "kind": "native",
+      "licenseIds": [
+        "MIT"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/fastfloat/fast_float/tree/97b54ca9e75f5303507699d27c6b4f4efe4641a1"
+        }
+      ],
+      "modifications": [],
+      "name": "fast_float",
+      "sourceArchive": {
+        "archive": "fast_float-97b54ca9e75f5303507699d27c6b4f4efe4641a1.tar.gz",
+        "commit": "97b54ca9e75f5303507699d27c6b4f4efe4641a1",
+        "sha256": "2b132274539286e41f37857cac22aa8441d21bd86d55de825a3342b149f66801",
+        "url": "https://codeload.github.com/fastfloat/fast_float/tar.gz/97b54ca9e75f5303507699d27c6b4f4efe4641a1"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/e562f3f974ced7e69dd1db77b820b36bcf8f30377f1aa105723fba449c53c4e6.txt",
+          "sha256": "e562f3f974ced7e69dd1db77b820b36bcf8f30377f1aa105723fba449c53c4e6",
+          "source": "https://github.com/fastfloat/fast_float/blob/97b54ca9e75f5303507699d27c6b4f4efe4641a1/LICENSE-MIT",
+          "title": "LICENSE-MIT"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/04266686fbcd19266ca43929fb1fef044d6c8b008a665c5338d326fe56dc586c.txt",
+          "sha256": "04266686fbcd19266ca43929fb1fef044d6c8b008a665c5338d326fe56dc586c",
+          "source": "https://github.com/fastfloat/fast_float/tree/97b54ca9e75f5303507699d27c6b4f4efe4641a1",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4"
+    },
+    {
+      "artifact": "ffmpeg",
+      "group": "native",
+      "id": "native:ffmpeg:946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+      "kind": "native",
+      "licenseIds": [
+        "LGPL-2.1-or-later"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/FFmpeg/FFmpeg/tree/946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+        }
+      ],
+      "modifications": [],
+      "name": "FFmpeg audio/video decoders",
+      "sourceArchive": {
+        "archive": "ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz",
+        "commit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+        "sha256": "0aa2b1de2a5698b20a23e93d539a9a8e82ca0117496c5bdf05d198805f42bb3b",
+        "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af.txt",
+          "sha256": "2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af",
+          "source": "https://github.com/FFmpeg/FFmpeg/blob/946fcce07b6dcd0331c8cc609192aeff5e1924f8/LICENSE.md",
+          "title": "LICENSE.md"
+        },
+        {
+          "kind": "license",
+          "path": "texts/246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30.txt",
+          "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30",
+          "source": "https://github.com/FFmpeg/FFmpeg/blob/946fcce07b6dcd0331c8cc609192aeff5e1924f8/COPYING.LGPLv2.1",
+          "title": "COPYING.LGPLv2.1"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/188078ec9d83b0e1055e9465761aa940ffed7401099e5125a06ad00a828db449.txt",
+          "sha256": "188078ec9d83b0e1055e9465761aa940ffed7401099e5125a06ad00a828db449",
+          "source": "https://github.com/FFmpeg/FFmpeg/tree/946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "n9.0.2"
+    },
+    {
+      "artifact": "glad",
+      "group": "native",
+      "id": "native:glad:73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+      "kind": "native",
+      "licenseIds": [
+        "MIT",
+        "Apache-2.0"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/Dav1dde/glad/tree/73db193f853e2ee079bf3ca8a64aa2eaf6459043"
+        }
+      ],
+      "modifications": [],
+      "name": "glad and Khronos OpenGL/EGL specifications",
+      "sourceArchive": {
+        "archive": "glad-73db193f853e2ee079bf3ca8a64aa2eaf6459043.tar.gz",
+        "commit": "73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+        "sha256": "33dbeae44d8315ece57e14eba4b1b4a02ac5406d1c4f49cd20048c91522a6b9a",
+        "url": "https://codeload.github.com/Dav1dde/glad/tar.gz/73db193f853e2ee079bf3ca8a64aa2eaf6459043"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/cbb325cd4ac5bd06717ffa34a322b984f9d285e4c67c8ca1b7380d6ef08c2a77.txt",
+          "sha256": "cbb325cd4ac5bd06717ffa34a322b984f9d285e4c67c8ca1b7380d6ef08c2a77",
+          "source": "https://github.com/Dav1dde/glad/blob/73db193f853e2ee079bf3ca8a64aa2eaf6459043/LICENSE",
+          "title": "LICENSE"
+        },
+        {
+          "kind": "license",
+          "path": "texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source": "https://www.apache.org/licenses/LICENSE-2.0",
+          "title": "Apache License 2.0 (Khronos specifications)"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/41fe01429c7edddb49c9dd1e4dfcdd015a638e57b754b88ffcad83581fe0558c.txt",
+          "sha256": "41fe01429c7edddb49c9dd1e4dfcdd015a638e57b754b88ffcad83581fe0558c",
+          "source": "https://github.com/Dav1dde/glad/tree/73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4"
+    },
+    {
+      "artifact": "libplacebo",
+      "group": "native",
+      "id": "native:libplacebo:cee9b076f2c63104ccfd497fa79c39a867293ec4",
+      "kind": "native",
+      "licenseIds": [
+        "LGPL-2.1-or-later"
+      ],
+      "links": [
+        {
+          "label": "固定源码提交",
+          "url": "https://github.com/haasn/libplacebo/tree/cee9b076f2c63104ccfd497fa79c39a867293ec4"
+        }
+      ],
+      "modifications": [],
+      "name": "libplacebo GLES renderer",
+      "sourceArchive": {
+        "archive": "libplacebo-cee9b076f2c63104ccfd497fa79c39a867293ec4.tar.gz",
+        "commit": "cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "sha256": "6f8fa218cbafd8e5f50b8a82d918e1d8bbb92f9f980820bc0b34d92e9b79e484",
+        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/cee9b076f2c63104ccfd497fa79c39a867293ec4"
+      },
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/b3aa400aca6d2ba1f0bd03bd98d03d1fe7489a3bbb26969d72016360af8a5c9d.txt",
+          "sha256": "b3aa400aca6d2ba1f0bd03bd98d03d1fe7489a3bbb26969d72016360af8a5c9d",
+          "source": "https://github.com/haasn/libplacebo/blob/cee9b076f2c63104ccfd497fa79c39a867293ec4/LICENSE",
+          "title": "LICENSE"
+        },
+        {
+          "kind": "notice",
+          "path": "texts/5b389f25d72764882f19a1288ba4fd267ddcfa31d1bb16d435767d2147260061.txt",
+          "sha256": "5b389f25d72764882f19a1288ba4fd267ddcfa31d1bb16d435767d2147260061",
+          "source": "https://github.com/haasn/libplacebo/tree/cee9b076f2c63104ccfd497fa79c39a867293ec4",
+          "title": "实编译输入原始版权声明"
+        }
+      ],
+      "version": "v7.360.1"
+    },
+    {
+      "artifact": "media3-decoder-ffmpeg",
+      "group": "source-vendored",
+      "id": "source:androidx-media3-ffmpeg:8c6678b657ede1e7883fc164ef73ed483c7796c3",
+      "kind": "source-vendored",
+      "licenseIds": [
+        "Apache-2.0"
+      ],
+      "links": [
+        {
+          "label": "固定上游源码",
+          "url": "https://github.com/androidx/media/tree/8c6678b657ede1e7883fc164ef73ed483c7796c3/libraries/decoder_ffmpeg"
+        }
+      ],
+      "modifications": [
+        "Media3 音频 Java 保持原样；音频 JNI 修复 PCM 扩容追加、实际样本计数、初始化数据零填充和多声道平面输入。Pathfin 增加独立视频 decoder/JNI 和 libplacebo GLES 输出，保留 MediaCodec 优先。FFmpeg 启用固定音视频 decoder，不包含网络、容器、GPL/nonfree 或 version3 功能。"
+      ],
+      "name": "AndroidX Media3 FFmpeg Audio Decoder",
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source": "https://github.com/androidx/media/blob/8c6678b657ede1e7883fc164ef73ed483c7796c3/LICENSE",
+          "title": "Apache License 2.0"
+        }
+      ],
+      "version": "1.11.1 / 8c6678b657ed"
+    }
+  ],
+  "correspondingSource": "pathfin-ffmpeg-corresponding-source.tar",
+  "schemaVersion": 1,
+  "unresolved": []
+}

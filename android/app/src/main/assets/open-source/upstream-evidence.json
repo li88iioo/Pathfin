@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "texts": [
+    {
+      "canonicalLicense": "Apache-2.0",
+      "components": [],
+      "kind": "license",
+      "path": "evidence/upstream/apache2.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "title": "Apache License 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    },
+    {
+      "components": [
+        "org.jetbrains.kotlin:kotlin-stdlib:2.4.21"
+      ],
+      "kind": "license",
+      "path": "evidence/upstream/kotlin-license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "title": "Kotlin LICENSE（v2.4.21）",
+      "url": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.4.21/license/LICENSE.txt"
+    },
+    {
+      "components": [
+        "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.11.0"
+      ],
+      "kind": "license",
+      "path": "evidence/upstream/coroutines-license.txt",
+      "sha256": "b1febe6399dffb10d19d35e7663ab16300c93cb0476a94115df1cc0097a8ffd8",
+      "title": "kotlinx.coroutines LICENSE（1.11.0）",
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.11.0/LICENSE.txt"
+    },
+    {
+      "components": [
+        "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.7.3"
+      ],
+      "kind": "license",
+      "path": "evidence/upstream/serialization-license.txt",
+      "sha256": "c5accbbd8546e94c34aed24afe689a617627d18eed5a6c48277e48db57c23851",
+      "title": "kotlinx.serialization LICENSE（v1.7.3）",
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.serialization/v1.7.3/LICENSE.txt"
+    },
+    {
+      "components": [
+        "com.google.guava:guava:33.3.1-android"
+      ],
+      "kind": "license",
+      "path": "evidence/upstream/guava-license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "title": "Guava LICENSE（v33.3.1）",
+      "url": "https://raw.githubusercontent.com/google/guava/v33.3.1/LICENSE"
+    },
+    {
+      "components": [
+        "androidx.media3:media3-common:1.11.1",
+        "androidx.media3:media3-container:1.11.1",
+        "androidx.media3:media3-database:1.11.1",
+        "androidx.media3:media3-datasource-okhttp:1.11.1",
+        "androidx.media3:media3-datasource:1.11.1",
+        "androidx.media3:media3-decoder:1.11.1",
+        "androidx.media3:media3-effect:1.11.1",
+        "androidx.media3:media3-exoplayer-dash:1.11.1",
+        "androidx.media3:media3-exoplayer-hls:1.11.1",
+        "androidx.media3:media3-exoplayer:1.11.1",
+        "androidx.media3:media3-extractor:1.11.1",
+        "androidx.media3:media3-ui:1.11.1"
+      ],
+      "kind": "license",
+      "path": "evidence/upstream/media3-license.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "title": "AndroidX Media3 LICENSE（1.11.1）",
+      "url": "https://raw.githubusercontent.com/androidx/media/1.11.1/LICENSE"
+    }
+  ]
+}

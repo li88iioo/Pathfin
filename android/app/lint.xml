@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- localeConfig 仅供 API 33+ 的系统应用语言菜单使用；更早系统按 AppLocaleSettings 跟随系统语言。 -->
+    <issue id="UnusedAttribute">
+        <ignore regexp="Attribute `localeConfig` is only used in API level 33 and higher .*" />
+    </issue>
+</lint>

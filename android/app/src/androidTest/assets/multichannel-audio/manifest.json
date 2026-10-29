@@ -1,0 +1,519 @@
+{
+  "schemaVersion": 1,
+  "generator": "android/tools/prepare_multichannel_audio_fixture.py",
+  "ffmpeg": "ffmpeg version 8.0.1-3ubuntu2+esm5 Copyright (c) 2000-2025 the FFmpeg developers",
+  "fixtures": [
+    {
+      "id": "ac3-5_1-48k",
+      "decoder": "ac3",
+      "mime": "audio/ac3",
+      "sampleRate": 48000,
+      "channels": 6,
+      "channelLayout": "5.1(side)",
+      "sourceDurationMs": 2000,
+      "packets": 63,
+      "hostDecodedFrames": 96768,
+      "hostDecodedPcmBytes": 1161216,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3933,
+          "rmsS16": 2769.4034,
+          "frequencyCoherence": 0.70993
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3933,
+          "rmsS16": 2769.395,
+          "frequencyCoherence": 0.70993
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3934,
+          "rmsS16": 2769.423,
+          "frequencyCoherence": 0.709929
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 3933,
+          "rmsS16": 2769.4077,
+          "frequencyCoherence": 0.70993
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 550,
+          "peakS16": 3935,
+          "rmsS16": 2769.4179,
+          "frequencyCoherence": 0.709929
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 660,
+          "peakS16": 3933,
+          "rmsS16": 2769.4012,
+          "frequencyCoherence": 0.709929
+        }
+      ],
+      "initialization": null,
+      "files": {
+        "ac3-5_1-48k.packets": {
+          "bytes": 162036,
+          "sha256": "144d7d8c12f2d151b6eee3a698e7239f2c80206dbe9e44149912cea810aba554"
+        },
+        "ac3-5_1-48k.mka": {
+          "bytes": 162173,
+          "sha256": "9947172bfec2552392a0a3bc9dfb55dc794c7c42e6e4828ec38c179ed9b76c11"
+        }
+      }
+    },
+    {
+      "id": "eac3-5_1-48k",
+      "decoder": "eac3",
+      "mime": "audio/eac3",
+      "sampleRate": 48000,
+      "channels": 6,
+      "channelLayout": "5.1(side)",
+      "sourceDurationMs": 2000,
+      "packets": 63,
+      "hostDecodedFrames": 96768,
+      "hostDecodedPcmBytes": 1161216,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3933,
+          "rmsS16": 2769.4031,
+          "frequencyCoherence": 0.70993
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3933,
+          "rmsS16": 2769.3971,
+          "frequencyCoherence": 0.70993
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3934,
+          "rmsS16": 2769.4288,
+          "frequencyCoherence": 0.709929
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 3934,
+          "rmsS16": 2769.4127,
+          "frequencyCoherence": 0.709929
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 550,
+          "peakS16": 3935,
+          "rmsS16": 2769.4205,
+          "frequencyCoherence": 0.70993
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 660,
+          "peakS16": 3933,
+          "rmsS16": 2769.3961,
+          "frequencyCoherence": 0.709929
+        }
+      ],
+      "initialization": null,
+      "files": {
+        "eac3-5_1-48k.packets": {
+          "bytes": 162036,
+          "sha256": "fe6dc62b0233c5ba577305a84d3dd87d1f2080dc3d7080eceea1561d5bb74483"
+        },
+        "eac3-5_1-48k.mka": {
+          "bytes": 162166,
+          "sha256": "cc787dcfce1067b09b7d4c719ee52c312e265d43bd31c7f2d9700316cab31a31"
+        }
+      }
+    },
+    {
+      "id": "dts-5_1-48k",
+      "decoder": "dca",
+      "mime": "audio/vnd.dts",
+      "sampleRate": 48000,
+      "channels": 6,
+      "channelLayout": "5.1(side)",
+      "sourceDurationMs": 2000,
+      "packets": 188,
+      "hostDecodedFrames": 96256,
+      "hostDecodedPcmBytes": 1155072,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3933,
+          "rmsS16": 2773.2514,
+          "frequencyCoherence": 0.708945
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3935,
+          "rmsS16": 2773.0546,
+          "frequencyCoherence": 0.709004
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3933,
+          "rmsS16": 2773.3745,
+          "frequencyCoherence": 0.709027
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 2804,
+          "rmsS16": 1221.4445,
+          "frequencyCoherence": 0.543793
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 550,
+          "peakS16": 3933,
+          "rmsS16": 2772.9977,
+          "frequencyCoherence": 0.709014
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 660,
+          "peakS16": 3932,
+          "rmsS16": 2773.0668,
+          "frequencyCoherence": 0.70899
+        }
+      ],
+      "initialization": null,
+      "files": {
+        "dts-5_1-48k.packets": {
+          "bytes": 387280,
+          "sha256": "f722ba32e728dab0375ae64a3398163eb2a0c2b0c4bb205e6d92516a57421476"
+        },
+        "dts-5_1-48k.mka": {
+          "bytes": 386784,
+          "sha256": "f034c23662dcee6f89b5d2854ecfc04a916327c0e51959d4e60e5ce998c17f63"
+        }
+      }
+    },
+    {
+      "id": "truehd-5_1-48k",
+      "decoder": "truehd",
+      "mime": "audio/true-hd",
+      "sampleRate": 48000,
+      "channels": 6,
+      "channelLayout": "5.1(side)",
+      "sourceDurationMs": 2000,
+      "packets": 2400,
+      "hostDecodedFrames": 96000,
+      "hostDecodedPcmBytes": 1152000,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3932,
+          "rmsS16": 2780.4611,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3932,
+          "rmsS16": 2780.4498,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3932,
+          "rmsS16": 2780.4839,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 3932,
+          "rmsS16": 2780.4597,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 550,
+          "peakS16": 3932,
+          "rmsS16": 2780.4786,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 660,
+          "peakS16": 3932,
+          "rmsS16": 2780.4513,
+          "frequencyCoherence": 0.707107
+        }
+      ],
+      "initialization": null,
+      "files": {
+        "truehd-5_1-48k.packets": {
+          "bytes": 300140,
+          "sha256": "e151948e931b03ac88b1cde9f68924784f114e253e36bb6a7ab9b4acd2ac7691"
+        },
+        "truehd-5_1-48k.mka": {
+          "bytes": 286337,
+          "sha256": "c2b4c8f062e095ffec2df68ed5e2707536b9207187abfd350ed95047342905ca"
+        }
+      }
+    },
+    {
+      "id": "truehd-5_1-96k",
+      "decoder": "truehd",
+      "mime": "audio/true-hd",
+      "sampleRate": 96000,
+      "channels": 6,
+      "channelLayout": "5.1(side)",
+      "sourceDurationMs": 2000,
+      "packets": 2400,
+      "hostDecodedFrames": 192000,
+      "hostDecodedPcmBytes": 2304000,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3932,
+          "rmsS16": 2780.4581,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3932,
+          "rmsS16": 2780.4592,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3932,
+          "rmsS16": 2780.4611,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 3932,
+          "rmsS16": 2780.454,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 550,
+          "peakS16": 3932,
+          "rmsS16": 2780.4799,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 660,
+          "peakS16": 3932,
+          "rmsS16": 2780.4498,
+          "frequencyCoherence": 0.707107
+        }
+      ],
+      "initialization": null,
+      "files": {
+        "truehd-5_1-96k.packets": {
+          "bytes": 473260,
+          "sha256": "66f2393b672582d54cba602a84efd73ae28b18d1ebc9400a5e827e3260bf7dab"
+        },
+        "truehd-5_1-96k.mka": {
+          "bytes": 461707,
+          "sha256": "0465c2b91945c88657b5b9c55d7993abd469a8b5a90b1da1605541f6e488372f"
+        }
+      }
+    },
+    {
+      "id": "flac-7_1-48k",
+      "decoder": "flac",
+      "mime": "audio/flac",
+      "sampleRate": 48000,
+      "channels": 8,
+      "channelLayout": "7.1",
+      "sourceDurationMs": 2000,
+      "packets": 21,
+      "hostDecodedFrames": 96000,
+      "hostDecodedPcmBytes": 1536000,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3932,
+          "rmsS16": 2780.4611,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3932,
+          "rmsS16": 2780.4498,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3932,
+          "rmsS16": 2780.4839,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 3932,
+          "rmsS16": 2780.4597,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "BL",
+          "frequencyHz": 550,
+          "peakS16": 3932,
+          "rmsS16": 2780.4786,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "BR",
+          "frequencyHz": 660,
+          "peakS16": 3932,
+          "rmsS16": 2780.4513,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 770,
+          "peakS16": 3932,
+          "rmsS16": 2780.4581,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 880,
+          "peakS16": 3932,
+          "rmsS16": 2780.4525,
+          "frequencyCoherence": 0.707107
+        }
+      ],
+      "initialization": "flac-7_1-48k.init",
+      "files": {
+        "flac-7_1-48k.packets": {
+          "bytes": 204532,
+          "sha256": "9ca23fd1563f848bb6a97f14824fc69db95ef8c9bdc32a8095dcadaaca23a147"
+        },
+        "flac-7_1-48k.mka": {
+          "bytes": 204917,
+          "sha256": "7fee4d6a197ab853c87160dc6ea5b847a5c3e8b41a7f7bf1fe84ee4fd1dabb70"
+        },
+        "flac-7_1-48k.init": {
+          "bytes": 42,
+          "sha256": "762a5ec8e32347eda2924f7c1098dbedbb1ef0abd0e1e0a7fba61948db985253"
+        }
+      }
+    },
+    {
+      "id": "flac-7_1-96k",
+      "decoder": "flac",
+      "mime": "audio/flac",
+      "sampleRate": 96000,
+      "channels": 8,
+      "channelLayout": "7.1",
+      "sourceDurationMs": 2000,
+      "packets": 24,
+      "hostDecodedFrames": 192000,
+      "hostDecodedPcmBytes": 3072000,
+      "channelSignals": [
+        {
+          "label": "FL",
+          "frequencyHz": 220,
+          "peakS16": 3932,
+          "rmsS16": 2780.4581,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FR",
+          "frequencyHz": 330,
+          "peakS16": 3932,
+          "rmsS16": 2780.4592,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "FC",
+          "frequencyHz": 440,
+          "peakS16": 3932,
+          "rmsS16": 2780.4611,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "LFE",
+          "frequencyHz": 55,
+          "peakS16": 3932,
+          "rmsS16": 2780.454,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "BL",
+          "frequencyHz": 550,
+          "peakS16": 3932,
+          "rmsS16": 2780.4799,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "BR",
+          "frequencyHz": 660,
+          "peakS16": 3932,
+          "rmsS16": 2780.4498,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SL",
+          "frequencyHz": 770,
+          "peakS16": 3932,
+          "rmsS16": 2780.4597,
+          "frequencyCoherence": 0.707107
+        },
+        {
+          "label": "SR",
+          "frequencyHz": 880,
+          "peakS16": 3932,
+          "rmsS16": 2780.4839,
+          "frequencyCoherence": 0.707107
+        }
+      ],
+      "initialization": "flac-7_1-96k.init",
+      "files": {
+        "flac-7_1-96k.packets": {
+          "bytes": 397293,
+          "sha256": "00c0b387cd98aa3fd5aef33d3de5e2677e45a3871578f59c70e6e0eddecfbdea"
+        },
+        "flac-7_1-96k.mka": {
+          "bytes": 397686,
+          "sha256": "346e1f9bb074a0d7311ff68f57c5a3ed6cfda668ab82674ed3b3c1e633f8e9be"
+        },
+        "flac-7_1-96k.init": {
+          "bytes": 42,
+          "sha256": "107751e79e07240c335e6d702539c40204ce1a372fcfcef433d35c2c65296b39"
+        }
+      }
+    }
+  ],
+  "notCovered": [
+    {
+      "codec": "truehd",
+      "channels": 8,
+      "reason": "本机 FFmpeg TrueHD 编码器最多支持 5.1(side)，无自有 7.1 编码源；未下载媒体或伪造声道。"
+    }
+  ]
+}

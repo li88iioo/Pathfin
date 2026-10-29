@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 主题图标单色层：系统只取透明度，航迹保留较低不透明度以维持层次。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.74" android:scaleY="0.74" android:translateY="-1.88">
+        <path android:pathData="M44,33 C58.5,32.5 71,41 76,54 C65.5,54.5 55.5,60 49,69 C46.5,69.8 44,68.5 44,65.5 Z" android:fillColor="#FFFFFFFF"
+            android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:strokeLineJoin="round" />
+        <path android:pathData="M38,76.5 C47,72.8 57,79.2 70,74.8" android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.62"
+            android:strokeWidth="3.2" android:strokeLineCap="round" />
+    </group>
+</vector>

@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "media3": "1.11.1",
+  "wrapper": {
+    "repository": "https://github.com/peerless2012/libass-android",
+    "commit": "504f64a325059ab5188c4c9d0eddc99c9356a23a",
+    "license": "MIT",
+    "filesUsed": [
+      "lib_ass_media/src/main/java/io/github/peerless2012/ass/media/extractor/AssMatroskaExtractor.kt"
+    ],
+    "adaptation": "Rewritten public raw TrackOutput + SubtitleTranscodingExtractorOutput, bounded attachments; no private reflection/effects replacement/hardcoded timestamp offset/native URL loading. Original MIT license preserved.",
+    "vendoredSource": {
+      "path": "vendor/libass-android/AssMatroskaExtractor.kt.txt",
+      "sha256": "e4d1d570aa605921fff09ac65fedfa843401555457fd5ad61fc2905b9597f7d1"
+    },
+    "adaptationPatch": {
+      "path": "vendor/libass-android/pathfin-media3-1.11.1.patch",
+      "sha256": "76adfb201d37abb1c15a7f87c9821058246dc339f98e837025c4138027ce048b"
+    }
+  },
+  "libass": {
+    "repository": "https://github.com/libass/libass",
+    "commit": "4a05d8127f525943ebf45fdc6497c9e665947f0d",
+    "license": "ISC"
+  },
+  "copiedHeaders": [
+    {
+      "path": "vendor/libass/COPYING",
+      "sha256": "f7e30699d02798351e7f839e3d3bfeb29ce65e44efa7735c225464c4fd7dfe9c",
+      "upstream": "https://github.com/libass/libass/blob/4a05d8127f525943ebf45fdc6497c9e665947f0d/COPYING"
+    },
+    {
+      "path": "vendor/libass/ass.h",
+      "sha256": "04582aa925d4ed2d1206f21915d382584e8b49c50a6b88419d4112f4f88d24da",
+      "upstream": "https://github.com/libass/libass/blob/4a05d8127f525943ebf45fdc6497c9e665947f0d/libass/ass.h"
+    },
+    {
+      "path": "vendor/libass/ass_types.h",
+      "sha256": "b3ac4ad4d655f4d90e5e8d05cc2868ce17e5ff89ef1fe76cabcc8f3093e6134b",
+      "upstream": "https://github.com/libass/libass/blob/4a05d8127f525943ebf45fdc6497c9e665947f0d/libass/ass_types.h"
+    }
+  ],
+  "implementationFiles": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "b4b24b4ec45e50955d2938e8032a85b19aecc08bece46deb6b80df790ab2d15b"
+    },
+    {
+      "path": "build.gradle.kts",
+      "sha256": "1fe8ef2834566629ba00098d027a03948a3f9f344223b6414af4de65950b443f"
+    },
+    {
+      "path": "build_native.py",
+      "sha256": "e196e4245a48ebd701490d2d44e377911e7c515827483aad13427aaeee75a9d1"
+    },
+    {
+      "path": "consumer-rules.pro",
+      "sha256": "08f7b951cd845470b8f6525fd500e0e53f4b8025441504bf05f969732d348b20"
+    },
+    {
+      "path": "src/main/cpp/ass_jni.cpp",
+      "sha256": "e761cb282048305b1649aa765efcd15e34d91c5116e093a86210d1d6b668654b"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/AssController.kt",
+      "sha256": "a71bbbd0dc8a86426dd3be01946579655b4ca05cda26e1ee76e165c84ece7a9d"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/AssMediaSource.kt",
+      "sha256": "2a3e78796d9e90a21ac08bf5fa9653a7d6f03de6316be81a56934611dc2f5a4d"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/AssNative.kt",
+      "sha256": "d9b1892f49ca748ae1770a895c80b53966ae7cad98d1911493823c09a1cb2029"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/AssOverlayView.kt",
+      "sha256": "013bea46f3844dce511fefc095fd7978237107de9cfc9eb94e6b2fc7184cb7aa"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/AssPacket.kt",
+      "sha256": "c14f33d2dd9750ef1cf5c7bc382a3eba8df58fb93212fba4b5d29349a5eb73f8"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/AssSubtitleDataSource.kt",
+      "sha256": "b803c18c69b4ff30fe84d024ce8dce67815211493695ff49f65ffacf9caf32d5"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/ExoAssExtension.kt",
+      "sha256": "7c8243a0f690cc9ddfde33b9415d1f52378dba8a2bbf0240980c569d587f37f8"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt",
+      "sha256": "f8b14ec7a616d5aa56108b748ca4e2e6d6013bc19851807dabe98ada49f615db"
+    },
+    {
+      "path": "requirements-build.txt",
+      "sha256": "ffc2a85fd561703674a66f94e7e7ed1f2e47015edef8a4b86fec281dc1dbd861"
+    }
+  ],
+  "native": {
+    "abi": "arm64-v8a",
+    "androidApi": 26,
+    "ndkVersion": "30.0.16248370",
+    "sources": [
+      {
+        "name": "libass",
+        "repository": "https://github.com/libass/libass",
+        "ref": "0.17.5",
+        "commit": "4a05d8127f525943ebf45fdc6497c9e665947f0d",
+        "url": "https://codeload.github.com/libass/libass/tar.gz/4a05d8127f525943ebf45fdc6497c9e665947f0d",
+        "sha256": "3546ecc8748c62e100a9dd18e52ea2d17d7facedf89cfcad97000ad60b1bce2b",
+        "archive": "libass-4a05d8127f525943ebf45fdc6497c9e665947f0d.tar.gz",
+        "bytes": 351823
+      },
+      {
+        "name": "freetype",
+        "repository": "https://github.com/freetype/freetype",
+        "ref": "VER-2-15-0",
+        "commit": "37515cf56ba3349656049edbed89ffc6f6466f2d",
+        "url": "https://codeload.github.com/freetype/freetype/tar.gz/37515cf56ba3349656049edbed89ffc6f6466f2d",
+        "sha256": "9efee8b0508e142f38d1c7e2e192d3e5041aa4bbf6c2ab1a901518211f76a914",
+        "archive": "freetype-37515cf56ba3349656049edbed89ffc6f6466f2d.tar.gz",
+        "bytes": 2594500
+      },
+      {
+        "name": "fribidi",
+        "repository": "https://github.com/fribidi/fribidi",
+        "ref": "v1.0.17",
+        "commit": "b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+        "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+        "sha256": "f309091695b3b0f2fd5f9caa7941d906ab08df9ab8f9931bf5ee674bc00b489b",
+        "archive": "fribidi-b93119f5fdc7ea47672cc304c1455ffa6dfe7536.tar.gz",
+        "bytes": 2161272
+      },
+      {
+        "name": "harfbuzz",
+        "repository": "https://github.com/harfbuzz/harfbuzz",
+        "ref": "14.6.0",
+        "commit": "c7a7457b7385f33178e8cf87615ca077a810bbe7",
+        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/c7a7457b7385f33178e8cf87615ca077a810bbe7",
+        "sha256": "10dcea60bd85ff219490d55525630650ac8c57044c4efdc878162f286451775b",
+        "archive": "harfbuzz-c7a7457b7385f33178e8cf87615ca077a810bbe7.tar.gz",
+        "bytes": 38888629
+      },
+      {
+        "name": "unibreak",
+        "repository": "https://github.com/adah1972/libunibreak",
+        "ref": "libunibreak_8_0",
+        "commit": "28a2756b864c343f438cd22537d49d394d4666a5",
+        "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/28a2756b864c343f438cd22537d49d394d4666a5",
+        "sha256": "4d0714d29207bfcaabe2a9376f83330bfb477673ecfb53994e47bd6d07738581",
+        "archive": "unibreak-28a2756b864c343f438cd22537d49d394d4666a5.tar.gz",
+        "bytes": 348048
+      }
+    ]
+  }
+}

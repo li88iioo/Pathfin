@@ -1,0 +1,105 @@
+{
+  "results": [
+    {
+      "key": "apache2",
+      "length": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "status": 200,
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    },
+    {
+      "key": "guava-parent-26",
+      "length": 10180,
+      "sha256": "f8698ab46ca996ce889c1afc8ca4f25eb8ac6b034dc898d4583742360016cc04",
+      "status": 200,
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava-parent/26.0-android/guava-parent-26.0-android.pom"
+    },
+    {
+      "key": "guava-parent-33",
+      "length": 20632,
+      "sha256": "6e11986ea7250b51f847157e2dc937f32a306804dfce0007a5e81ddb9b95c579",
+      "status": 200,
+      "url": "https://repo.maven.apache.org/maven2/com/google/guava/guava-parent/33.3.1-android/guava-parent-33.3.1-android.pom"
+    },
+    {
+      "key": "guava-notice",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/google/guava/v33.3.1/NOTICE"
+    },
+    {
+      "key": "guava-copying",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/google/guava/v33.3.1/COPYING"
+    },
+    {
+      "key": "coroutines-notice",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.11.0/NOTICE.txt"
+    },
+    {
+      "key": "coroutines-license",
+      "length": 11398,
+      "sha256": "b1febe6399dffb10d19d35e7663ab16300c93cb0476a94115df1cc0097a8ffd8",
+      "status": 200,
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.11.0/LICENSE.txt"
+    },
+    {
+      "key": "serialization-notice",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.serialization/v1.7.3/NOTICE.txt"
+    },
+    {
+      "key": "kotlin-notice",
+      "length": 482,
+      "sha256": "0b09a83d3ef7795c7dec65e815866597c066c53898f2852a76599b8f5552941a",
+      "status": 200,
+      "url": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.4.21/license/NOTICE.txt"
+    },
+    {
+      "key": "media3-notice",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/androidx/media/1.11.1/NOTICE"
+    },
+    {
+      "key": "media3-license",
+      "length": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "status": 200,
+      "url": "https://raw.githubusercontent.com/androidx/media/1.11.1/LICENSE"
+    },
+    {
+      "key": "guava-license",
+      "length": 11358,
+      "status": 200,
+      "url": "https://raw.githubusercontent.com/google/guava/v33.3.1/LICENSE"
+    },
+    {
+      "key": "guava-annotations-license",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/google/guava/v26.0/LICENSE"
+    },
+    {
+      "key": "coroutines-notice-root",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.coroutines/1.11.0/NOTICE"
+    },
+    {
+      "key": "serialization-license",
+      "length": 11356,
+      "status": 200,
+      "url": "https://raw.githubusercontent.com/Kotlin/kotlinx.serialization/v1.7.3/LICENSE.txt"
+    },
+    {
+      "key": "kotlin-license",
+      "length": 11358,
+      "status": 200,
+      "url": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.4.21/license/LICENSE.txt"
+    },
+    {
+      "key": "kotlin-thirdparty",
+      "status": "HTTP Error 404: Not Found",
+      "url": "https://raw.githubusercontent.com/JetBrains/kotlin/v2.4.21/license/third_party/README.md"
+    }
+  ],
+  "scope": "Exact-version upstream supplemental license/NOTICE paths checked. A 404 is an absent path, not proof that a whole repository contains no other legal notices."
+}

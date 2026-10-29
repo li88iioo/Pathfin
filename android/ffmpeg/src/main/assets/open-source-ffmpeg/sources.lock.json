@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "media3Version": "1.11.1",
+  "repository": "https://github.com/androidx/media",
+  "commit": "8c6678b657ede1e7883fc164ef73ed483c7796c3",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "path": "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioDecoder.java",
+      "upstreamPath": "libraries/decoder_ffmpeg/src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioDecoder.java",
+      "sha256": "64b5ff45fd9f60b6775d542bda141698e5d32cacdd04ddd96141e86f2c0a51f8"
+    },
+    {
+      "path": "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioRenderer.java",
+      "upstreamPath": "libraries/decoder_ffmpeg/src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioRenderer.java",
+      "sha256": "230bcaef26ddd233f7f2ac0cdd7a5896d98e7d8dd8d4c9b2ea1942c483b05c48"
+    },
+    {
+      "path": "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegDecoderException.java",
+      "upstreamPath": "libraries/decoder_ffmpeg/src/main/java/androidx/media3/decoder/ffmpeg/FfmpegDecoderException.java",
+      "sha256": "9e73968d0802b2d7f8add911ec4dc5a6e621777e997eca74332e173c5463ad7a"
+    },
+    {
+      "path": "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegLibrary.java",
+      "upstreamPath": "libraries/decoder_ffmpeg/src/main/java/androidx/media3/decoder/ffmpeg/FfmpegLibrary.java",
+      "sha256": "a0843232be53210aefe97d8bc0a0268ac781cc7ce72e2d47bf42cd07f8048880"
+    },
+    {
+      "path": "src/main/java/androidx/media3/decoder/ffmpeg/package-info.java",
+      "upstreamPath": "libraries/decoder_ffmpeg/src/main/java/androidx/media3/decoder/ffmpeg/package-info.java",
+      "sha256": "1d75d02151fcec7a1c0036ee4a216e885ae91e1f85e8c9ddfbd72b4def6709be"
+    },
+    {
+      "path": "src/main/cpp/ffmpeg_jni.cc",
+      "upstreamPath": "libraries/decoder_ffmpeg/src/main/jni/ffmpeg_jni.cc",
+      "sha256": "7bd4a3d09cf1828543848a1abf271f984f665d25092c81c61a4fe4735879d3f0"
+    },
+    {
+      "path": "consumer-rules.pro",
+      "upstreamPath": "libraries/decoder_ffmpeg/proguard-rules.txt",
+      "sha256": "49b9ae90e4409e8cf12ee555ef308c92cb56516bb767e13b34cd051e3c9cd982"
+    },
+    {
+      "path": "LICENSE",
+      "upstreamPath": "LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ],
+  "native": {
+    "abi": "arm64-v8a",
+    "androidApi": 26,
+    "ndkVersion": "30.0.16248370",
+    "license": "LGPL-2.1-or-later",
+    "audioOnly": false,
+    "decoders": [
+      "aac",
+      "ac3",
+      "eac3",
+      "truehd",
+      "dca",
+      "vorbis",
+      "opus",
+      "amrnb",
+      "amrwb",
+      "flac",
+      "alac",
+      "pcm_mulaw",
+      "pcm_alaw",
+      "mp1",
+      "mp2",
+      "mp3",
+      "h264",
+      "hevc"
+    ],
+    "sources": [
+      {
+        "name": "ffmpeg",
+        "repository": "https://github.com/FFmpeg/FFmpeg",
+        "ref": "n9.0.2",
+        "commit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+        "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+        "sha256": "0aa2b1de2a5698b20a23e93d539a9a8e82ca0117496c5bdf05d198805f42bb3b",
+        "archive": "ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz",
+        "bytes": 17333895
+      },
+      {
+        "name": "libplacebo",
+        "repository": "https://github.com/haasn/libplacebo",
+        "ref": "v7.360.1",
+        "commit": "cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "sha256": "6f8fa218cbafd8e5f50b8a82d918e1d8bbb92f9f980820bc0b34d92e9b79e484",
+        "archive": "libplacebo-cee9b076f2c63104ccfd497fa79c39a867293ec4.tar.gz",
+        "bytes": 863019
+      },
+      {
+        "name": "fast_float",
+        "repository": "https://github.com/fastfloat/fast_float",
+        "ref": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "commit": "97b54ca9e75f5303507699d27c6b4f4efe4641a1",
+        "url": "https://codeload.github.com/fastfloat/fast_float/tar.gz/97b54ca9e75f5303507699d27c6b4f4efe4641a1",
+        "sha256": "2b132274539286e41f37857cac22aa8441d21bd86d55de825a3342b149f66801",
+        "archive": "fast_float-97b54ca9e75f5303507699d27c6b4f4efe4641a1.tar.gz",
+        "bytes": 120200,
+        "destination": "libplacebo/3rdparty/fast_float"
+      },
+      {
+        "name": "glad",
+        "repository": "https://github.com/Dav1dde/glad",
+        "ref": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "commit": "73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+        "url": "https://codeload.github.com/Dav1dde/glad/tar.gz/73db193f853e2ee079bf3ca8a64aa2eaf6459043",
+        "sha256": "33dbeae44d8315ece57e14eba4b1b4a02ac5406d1c4f49cd20048c91522a6b9a",
+        "archive": "glad-73db193f853e2ee079bf3ca8a64aa2eaf6459043.tar.gz",
+        "bytes": 645779,
+        "destination": "libplacebo/3rdparty/glad"
+      }
+    ],
+    "videoDecoders": [
+      "h264",
+      "hevc"
+    ],
+    "hostTools": {
+      "meson": "1.9.2",
+      "ninja": "1.13.0",
+      "Jinja2": "3.1.6",
+      "MarkupSafe": "3.0.4"
+    },
+    "cxxRuntime": "c++_static",
+    "renderer": {
+      "name": "libplacebo",
+      "backend": "OpenGL ES",
+      "dovi": true,
+      "libdovi": false,
+      "vulkan": false,
+      "shaderc": false,
+      "glslang": false,
+      "lcms": false
+    }
+  },
+  "implementationFiles": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759"
+    },
+    {
+      "path": "build.gradle.kts",
+      "sha256": "f268bd7095c1c5d4bc8dad087623de5ece9ccaea79737d9888d3edb9d043b43e"
+    },
+    {
+      "path": "src/main/cpp/pathfin_video_jni.cc",
+      "sha256": "daa7fd1180924aef879b89bc0b0a7ffc8a433a201e722cb2aa7285c05ae6ca1c"
+    },
+    {
+      "path": "src/main/cpp/pathfin_video_render.c",
+      "sha256": "0e0e7ec8a290d1fe1808d2ae5ea48e13c6ea7c3e5a46dc4def38be4c0f895632"
+    },
+    {
+      "path": "src/main/cpp/pathfin_video_render.h",
+      "sha256": "d1bfe7e3107e01a70cd87fcd5f5db3456b235d01b19e21dc8c33effbbcd99dc5"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java",
+      "sha256": "a3f968642c15725b28b71d543f11a350dc86ec257770d174d50c4f9efbe645fb"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java",
+      "sha256": "e9663135c8d8fb3c647cb5df67c78a3e97be8eb6de488299eb9e9e2660c87045"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java",
+      "sha256": "505eb0ba257d44c3bfcdf81e41c3f452914975e686fc1146e30c2c67f6de2ca7"
+    },
+    {
+      "path": "video-consumer-rules.pro",
+      "sha256": "d3726d0b9c258ecf14c2b234a2569dcee3718685aeb953d2664b23ad678d5774"
+    }
+  ]
+}

@@ -1,0 +1,386 @@
+Original copyright/license comments from actual build inputs.
+The matching source archive retains the full files.
+
+Files: src/eastasianwidthdef.c
+/*
+ * Implements East Asian Width lookup.
+ *
+ * Copyright (C) 2024 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
+
+Files: src/eastasianwidthdef.h, src/indicconjunctbreakdef.h
+/*
+ * Definitions of internal data types for Indic Conjunct Break.
+ *
+ * Copyright (C) 2024 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
+
+Files: src/emojidef.c, src/emojidef.h
+/*
+ * Emoji-related routine and data.
+ *
+ * Copyright (C) 2018 Andreas Röver <roever at users dot sf dot net>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
+
+Files: src/graphemebreak.c
+/*
+ * Grapheme breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2016-2019 Andreas Röver <roever at users dot sf dot net>
+ * Copyright (C) 2024-2026 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ * The main reference is Unicode Standard Annex 29 (UAX #29):
+ *      <URL:http://unicode.org/reports/tr29>
+ *
+ * When this library was designed, this annex was at Revision 29, for
+ * Unicode 9.0.0:
+ *      <URL:http://www.unicode.org/reports/tr29/tr29-29.html>
+ *
+ * This library has been updated according to Revision 47, for
+ * Unicode 17.0.0:
+ *      <URL:https://www.unicode.org/reports/tr29/tr29-47.html>
+ *
+ * The Unicode Terms of Use are available at
+ *      <URL:http://www.unicode.org/copyright.html>
+ */
+
+Files: src/graphemebreak.h
+/*
+ * Grapheme breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2016-2026 Andreas Röver <roever at users dot sf dot net>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ * The main reference is Unicode Standard Annex 29 (UAX #29):
+ *      <URL:http://unicode.org/reports/tr29>
+ *
+ * When this library was designed, this annex was at Revision 29, for
+ * Unicode 9.0.0:
+ *      <URL:http://www.unicode.org/reports/tr29/tr29-29.html>
+ *
+ * This library has been updated according to Revision 47, for
+ * Unicode 17.0.0:
+ *      <URL:https://www.unicode.org/reports/tr29/tr29-47.html>
+ *
+ * The Unicode Terms of Use are available at
+ *      <URL:http://www.unicode.org/copyright.html>
+ */
+
+Files: src/graphemebreakdef.h
+/*
+ * Grapheme breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2016-2026 Andreas Röver <roever at users dot sf dot net>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ * The main reference is Unicode Standard Annex 29 (UAX #29):
+ *      <URL:http://unicode.org/reports/tr29>
+ *
+ * When this library was designed, this annex was at Revision 29, for
+ * Unicode 9.0.0:
+ *      <URL:http://www.unicode.org/reports/tr29/tr29-29.html>
+ *
+ * This library has been updated according to Revision 47, for
+ * Unicode 17.0.0:
+ *      <URL:http://www.unicode.org/reports/tr29/tr29-47.html>
+ *
+ * The Unicode Terms of Use are available at
+ *      <URL:http://www.unicode.org/copyright.html>
+ */
+
+Files: src/linebreak.c, src/linebreakdef.h
+/*
+ * Line breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2008-2026 Wu Yongwei <wuyongwei at gmail dot com>
+ * Copyright (C) 2013 Petr Filipsky <philodej at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ * The main reference is Unicode Standard Annex 14 (UAX #14):
+ *      <URL:http://www.unicode.org/reports/tr14/>
+ *
+ * When this library was designed, this annex was at Revision 19, for
+ * Unicode 5.0.0:
+ *      <URL:http://www.unicode.org/reports/tr14/tr14-19.html>
+ *
+ * This library has been updated according to Revision 55, for
+ * Unicode 17.0.0:
+ *      <URL:http://www.unicode.org/reports/tr14/tr14-55.html>
+ *
+ * The Unicode Terms of Use are available at
+ *      <URL:http://www.unicode.org/copyright.html>
+ */
+
+Files: src/linebreak.h
+/*
+ * Line breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2008-2026 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ * The main reference is Unicode Standard Annex 14 (UAX #14):
+ *      <URL:http://www.unicode.org/reports/tr14/>
+ *
+ * When this library was designed, this annex was at Revision 19, for
+ * Unicode 5.0.0:
+ *      <URL:http://www.unicode.org/reports/tr14/tr14-19.html>
+ *
+ * This library has been updated according to Revision 55, for
+ * Unicode 17.0.0:
+ *      <URL:http://www.unicode.org/reports/tr14/tr14-55.html>
+ *
+ * The Unicode Terms of Use are available at
+ *      <URL:http://www.unicode.org/copyright.html>
+ */
+
+Files: src/linebreakdef.c
+/*
+ * Line breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2008-2026 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
+
+Files: src/unibreakbase.c
+/*
+ * Break processing in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2015-2018 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
+
+Files: src/unibreakbase.h, src/unibreakdef.c, src/unibreakdef.h
+/*
+ * Break processing in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2015-2026 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ */
+
+Files: src/wordbreak.c, src/wordbreak.h, src/wordbreakdef.h
+/*
+ * Word breaking in a Unicode sequence.  Designed to be used in a
+ * generic text renderer.
+ *
+ * Copyright (C) 2013-2019 Tom Hacohen <tom at stosb dot com>
+ * Copyright (C) 2018-2026 Wu Yongwei <wuyongwei at gmail dot com>
+ *
+ * This software is provided 'as-is', without any express or implied
+ * warranty.  In no event will the author be held liable for any damages
+ * arising from the use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute
+ * it freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must
+ *    not claim that you wrote the original software.  If you use this
+ *    software in a product, an acknowledgement in the product
+ *    documentation would be appreciated but is not required.
+ * 2. Altered source versions must be plainly marked as such, and must
+ *    not be misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source
+ *    distribution.
+ *
+ * The main reference is Unicode Standard Annex 29 (UAX #29):
+ *      <URL:http://unicode.org/reports/tr29>
+ *
+ * When this library was designed, this annex was at Revision 17, for
+ * Unicode 6.0.0:
+ *      <URL:http://www.unicode.org/reports/tr29/tr29-17.html>
+ *
+ * This library has been updated according to Revision 47, for
+ * Unicode 17.0.0:
+ *      <URL:http://www.unicode.org/reports/tr29/tr29-47.html>
+ *
+ * The Unicode Terms of Use are available at
+ *      <URL:http://www.unicode.org/copyright.html>
+ */

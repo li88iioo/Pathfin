@@ -1,0 +1,70 @@
+{
+  "ac3": {
+    "mime": "audio/ac3",
+    "sampleRate": 48000,
+    "channels": 2,
+    "packets": 63,
+    "hostDecodedPcmBytes": 387072,
+    "files": {
+      "ac3.packets": {
+        "bytes": 49140,
+        "sha256": "6dfc1273bf99603dc90357aca6616568c31054d4df03a29a858772441cf178cd"
+      },
+      "ac3.mka": {
+        "bytes": 49277,
+        "sha256": "bdfcd720201afc3bbef6c5dbd1b37b6144874906f96a8ba9421b66c90bf343f0"
+      }
+    }
+  },
+  "eac3": {
+    "mime": "audio/eac3",
+    "sampleRate": 48000,
+    "channels": 2,
+    "packets": 63,
+    "hostDecodedPcmBytes": 387072,
+    "files": {
+      "eac3.packets": {
+        "bytes": 49140,
+        "sha256": "e44c8124fe55b7414f3dfd3768aef57f5cffe2c87973b3cc6fd5533e3f686f8f"
+      },
+      "eac3.mka": {
+        "bytes": 49270,
+        "sha256": "0ccbd3c4bee9cf57d3acef91e4f0865ad13d4025427012a1238762f277927ab8"
+      }
+    }
+  },
+  "dca": {
+    "mime": "audio/vnd.dts",
+    "sampleRate": 48000,
+    "channels": 2,
+    "packets": 188,
+    "hostDecodedPcmBytes": 385024,
+    "files": {
+      "dca.packets": {
+        "bytes": 356448,
+        "sha256": "3a4d78b50a4392adfd63b570edfadd9c9b9c7fa7031b9d8a8fef6a008bb9f919"
+      },
+      "dca.mka": {
+        "bytes": 355952,
+        "sha256": "9619be4427cd7a26848f613a169623448055210ffd6c4b9a6601ba94c543029c"
+      }
+    }
+  },
+  "truehd": {
+    "mime": "audio/true-hd",
+    "sampleRate": 48000,
+    "channels": 2,
+    "packets": 2400,
+    "hostDecodedPcmBytes": 384000,
+    "files": {
+      "truehd.packets": {
+        "bytes": 98920,
+        "sha256": "7d405b2b2e5579a7e36d004b8a35f9a73376e648b4a3cf340f3cd92691bb3fd9"
+      },
+      "truehd.mka": {
+        "bytes": 84967,
+        "sha256": "8310cb3d29fa18863583cbcccf699ad5a1833c15f655654eb5ecdb987ab3b385"
+      }
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "durationMs": 24000,
+  "firstAssStartMs": 1000,
+  "origin": "Original geometric test data; no third-party media or font outlines; this manifest does not select a project license.",
+  "files": {
+    "PathfinAssFixture.ttf": {
+      "bytes": 20836,
+      "sha256": "40b76e3bcc28274f0f4d6477078f5df3383af061f5873120b6f3df59570fccec"
+    },
+    "animated-inline-font.ass": {
+      "bytes": 29108,
+      "sha256": "8819dd7b414dfcfcc70f90e631d19129a2b937179d24d1dbf05fad4e1bef961c"
+    },
+    "animated.ass": {
+      "bytes": 936,
+      "sha256": "5346428ac3338be8b99dbf54d467c61a7f58dfed81e5fea06bc97f79c11ea187"
+    },
+    "cjk-fallback.ass": {
+      "bytes": 634,
+      "sha256": "c78d89d426f6094f571e4eedb5881d7c7984921a19f36a0710444563ec59578d"
+    },
+    "embedded-font.mkv": {
+      "bytes": 98290,
+      "sha256": "623867593e8f455ff0127f2f8818cb707c9b55f0830fa123833e9c932c86570c"
+    },
+    "pattern.png": {
+      "bytes": 1453,
+      "sha256": "502e4e52b4fa6003156dd4e5a877297351ccd997016ef928807f48f0522087e9"
+    },
+    "plain.mp4": {
+      "bytes": 77654,
+      "sha256": "7e22531ddef22fb604ddb14cc514157d13055368fcde40d87b7b2a77dab23523"
+    }
+  }
+}

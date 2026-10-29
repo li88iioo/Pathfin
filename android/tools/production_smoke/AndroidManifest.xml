@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="dev.pathfin.android.production.smoke">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application android:label="Pathfin production smoke" android:testOnly="true"
+        android:allowBackup="false" android:usesCleartextTraffic="true" />
+    <instrumentation
+        android:name="dev.pathfin.smoke.ProductionSmokeInstrumentation"
+        android:targetPackage="dev.pathfin.android"
+        android:functionalTest="true"
+        android:handleProfiling="false"
+        android:label="Pathfin production smoke" />
+</manifest>

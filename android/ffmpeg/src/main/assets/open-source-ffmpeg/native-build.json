@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "media3Version": "1.11.1",
+  "commit": "8c6678b657ede1e7883fc164ef73ed483c7796c3",
+  "abi": "arm64-v8a",
+  "androidApi": 26,
+  "ndkVersion": "30.0.16248370",
+  "ffmpegCommit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+  "ffmpegLicense": "LGPL-2.1-or-later",
+  "gpl": false,
+  "nonfree": false,
+  "audioOnly": false,
+  "sourceDateEpoch": 1792972800,
+  "videoDecoders": [
+    "h264",
+    "hevc"
+  ],
+  "cxxRuntime": "c++_static",
+  "renderer": {
+    "name": "libplacebo",
+    "backend": "OpenGL ES",
+    "dovi": true,
+    "libdovi": false,
+    "vulkan": false,
+    "shaderc": false,
+    "glslang": false,
+    "lcms": false
+  },
+  "hostTools": {
+    "meson": "1.9.2",
+    "ninja": "1.13.0",
+    "Jinja2": "3.1.6",
+    "MarkupSafe": "3.0.4"
+  },
+  "staticArchives": {
+    "libplacebo.a": "2f0762316984c98063ecf1405ef3f579a49e77072a2c5cc57f41224af7f81518"
+  },
+  "sourceInputs": {
+    "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
+    "build.gradle.kts": "f268bd7095c1c5d4bc8dad087623de5ece9ccaea79737d9888d3edb9d043b43e",
+    "src/main/cpp/ffmpeg_jni.cc": "7bd4a3d09cf1828543848a1abf271f984f665d25092c81c61a4fe4735879d3f0",
+    "src/main/cpp/pathfin_video_jni.cc": "daa7fd1180924aef879b89bc0b0a7ffc8a433a201e722cb2aa7285c05ae6ca1c",
+    "src/main/cpp/pathfin_video_render.c": "0e0e7ec8a290d1fe1808d2ae5ea48e13c6ea7c3e5a46dc4def38be4c0f895632",
+    "src/main/cpp/pathfin_video_render.h": "d1bfe7e3107e01a70cd87fcd5f5db3456b235d01b19e21dc8c33effbbcd99dc5",
+    "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioDecoder.java": "64b5ff45fd9f60b6775d542bda141698e5d32cacdd04ddd96141e86f2c0a51f8",
+    "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioRenderer.java": "230bcaef26ddd233f7f2ac0cdd7a5896d98e7d8dd8d4c9b2ea1942c483b05c48",
+    "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegDecoderException.java": "9e73968d0802b2d7f8add911ec4dc5a6e621777e997eca74332e173c5463ad7a",
+    "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegLibrary.java": "a0843232be53210aefe97d8bc0a0268ac781cc7ce72e2d47bf42cd07f8048880",
+    "src/main/java/androidx/media3/decoder/ffmpeg/package-info.java": "1d75d02151fcec7a1c0036ee4a216e885ae91e1f85e8c9ddfbd72b4def6709be",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "a3f968642c15725b28b71d543f11a350dc86ec257770d174d50c4f9efbe645fb",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java": "e9663135c8d8fb3c647cb5df67c78a3e97be8eb6de488299eb9e9e2660c87045",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "505eb0ba257d44c3bfcdf81e41c3f452914975e686fc1146e30c2c67f6de2ca7",
+    "video-consumer-rules.pro": "d3726d0b9c258ecf14c2b234a2569dcee3718685aeb953d2664b23ad678d5774"
+  },
+  "copiedAvformatHeaders": {
+    "avformat.h": "694da025f30497481f4703e06de106bd417a5718f8fdcdf5e09e34f4b5f21114",
+    "avio.h": "30312971fc299e65bc69cf1beddb76f50394e044d9c71fe32fec3ae9c13bd1af",
+    "version.h": "6e75a8cd7772f334958ffce859e3e23987963e3b406f12d9ec71650ca437fb92",
+    "version_major.h": "436db6c1b56db87e83682639fd0285e8b0138acc4fb572868c70a690eda7bb5e"
+  },
+  "libplaceboConfigSha256": "12a3e0c92d498616d0899c55dc2ad5eef6f0f2617df6d144edef9513510cc445",
+  "crossFileSha256": "307efa2779f2b5244b14754dac1294ea1304d04688064b9a3b9b90df1e72007b",
+  "decoders": [
+    "aac",
+    "ac3",
+    "eac3",
+    "truehd",
+    "dca",
+    "vorbis",
+    "opus",
+    "amrnb",
+    "amrwb",
+    "flac",
+    "alac",
+    "pcm_mulaw",
+    "pcm_alaw",
+    "mp1",
+    "mp2",
+    "mp3",
+    "h264",
+    "hevc"
+  ],
+  "libraries": [
+    {
+      "file": "libavcodec.so",
+      "bytes": 3200768,
+      "sha256": "8d277c2e7eee3ec9e73f89884a20e0eac6bc2f4af77e8fb212eaf8e13a94e476",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libswresample.so",
+        "libavutil.so",
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "file": "libavutil.so",
+      "bytes": 729960,
+      "sha256": "4ea338c578bbcd48dd3de07645c220d4c8d46f978aab4e20212bd5c12509d9cc",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "file": "libswresample.so",
+      "bytes": 96376,
+      "sha256": "17dc578b930b4aceb3a91ca9de8448e89a99b3a5e631937ce1d21f3ee022e4d7",
+      "loadAlignments": [
+        16384,
+        16384
+      ],
+      "needed": [
+        "libavutil.so",
+        "libm.so",
+        "libc.so"
+      ]
+    },
+    {
+      "file": "libffmpegJNI.so",
+      "bytes": 743152,
+      "sha256": "8e73336984e559dbe1ff0878c2b064589fdb1165a3c354484b95e36d64c493f7",
+      "loadAlignments": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libavcodec.so",
+        "libavutil.so",
+        "libswresample.so",
+        "libEGL.so",
+        "libGLESv3.so",
+        "libandroid.so",
+        "liblog.so",
+        "libdl.so",
+        "libm.so",
+        "libc.so"
+      ]
+    }
+  ],
+  "configSha256": "234d2c104880e4af2d7dc6c8594e0ee2fb483ccd17b2594f14562d8b79c4a70e",
+  "componentConfigSha256": "3ed0240b1c7a87006c7bb9e9d4bbbd1fde57adb898ed0d71f24d3ad311818239",
+  "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
+  "sourceLockSha256": "e437cf18a64a61c3525a8d22bbaf1f502d11989a5baf38e30cb116ed3c8d9d37"
+}

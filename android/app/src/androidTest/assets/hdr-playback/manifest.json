@@ -1,0 +1,35 @@
+[
+  {
+    "file": "sdr.mp4",
+    "codec": "hevc",
+    "profile": "Main",
+    "pixelFormat": "yuv420p",
+    "transfer": "bt709",
+    "primaries": "bt709",
+    "matrix": "bt709",
+    "frames": 72,
+    "bytes": 214131
+  },
+  {
+    "file": "hdr10.mp4",
+    "codec": "hevc",
+    "profile": "Main 10",
+    "pixelFormat": "yuv420p10le",
+    "transfer": "smpte2084",
+    "primaries": "bt2020",
+    "matrix": "bt2020nc",
+    "frames": 72,
+    "bytes": 51976
+  },
+  {
+    "file": "hlg.mp4",
+    "codec": "hevc",
+    "profile": "Main 10",
+    "pixelFormat": "yuv420p10le",
+    "transfer": "arib-std-b67",
+    "primaries": "bt2020",
+    "matrix": "bt2020nc",
+    "frames": 72,
+    "bytes": 73355
+  }
+]

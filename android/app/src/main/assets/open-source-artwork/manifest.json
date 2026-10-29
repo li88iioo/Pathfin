@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "unresolved": [],
+  "components": [
+    {
+      "id": "jellyfin:logo",
+      "name": "Jellyfin logo",
+      "artifact": "icon-transparent",
+      "group": "jellyfin",
+      "version": "9e27258e873f",
+      "kind": "artwork",
+      "licenseIds": [
+        "CC-BY-SA-4.0"
+      ],
+      "links": [
+        {
+          "label": "Project",
+          "url": "https://github.com/jellyfin/jellyfin-ux"
+        },
+        {
+          "label": "Source",
+          "url": "https://github.com/jellyfin/jellyfin-ux/blob/9e27258e873f64edaa9c5955e753978975ed5589/branding/SVG/icon-transparent.svg"
+        },
+        {
+          "label": "License",
+          "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+        }
+      ],
+      "modifications": "Converted SVG to Android VectorDrawable; original paths and gradient colors retained.",
+      "originalSourceSha256": "817c25b47442b192250448fe48cd5f265fe9183bc75aa12030bbe335495255d1",
+      "convertedSource": "res/drawable/ic_jellyfin.xml",
+      "versionCommit": "9e27258e873f64edaa9c5955e753978975ed5589",
+      "texts": [
+        {
+          "path": "texts/5efb47314feef488eceb2209809a41492dac3d5ba5371dc78b00453deed34858.txt",
+          "sha256": "5efb47314feef488eceb2209809a41492dac3d5ba5371dc78b00453deed34858",
+          "title": "Jellyfin logo attribution and CC BY-SA 4.0 license"
+        }
+      ]
+    }
+  ],
+  "componentCount": 1
+}

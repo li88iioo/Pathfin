@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 品牌图标：与桌面图标、README logo 同一枚鳍与航迹，品牌蓝、无底块；画布只裁到图形外框。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="21dp" android:height="25dp" android:viewportWidth="42" android:viewportHeight="50">
+    <group android:translateX="-36" android:translateY="-31">
+        <path android:pathData="M44,33 C58.5,32.5 71,41 76,54 C65.5,54.5 55.5,60 49,69 C46.5,69.8 44,68.5 44,65.5 Z" android:fillColor="#FF5B89FA"
+            android:strokeColor="#FF5B89FA" android:strokeWidth="3" android:strokeLineJoin="round" />
+        <path android:pathData="M38,76.5 C47,72.8 57,79.2 70,74.8" android:strokeColor="#FF5B89FA" android:strokeAlpha="0.62"
+            android:strokeWidth="3.2" android:strokeLineCap="round" />
+    </group>
+</vector>

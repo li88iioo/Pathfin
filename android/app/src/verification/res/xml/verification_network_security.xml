@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <!-- 与正式包保持一致：用户可明确允许任意 HTTP 服务器；仅本节点豁免策略提示。
+         改为 false 会使 XML 覆盖 Manifest 的 HTTP 许可，破坏局域网连接回归。 -->
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors><certificates src="system" /></trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/pathfin_fixture_ca" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

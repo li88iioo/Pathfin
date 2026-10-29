@@ -1,0 +1,2 @@
+Original copyright/license comments from actual build inputs.
+The matching source archive retains the full files.
