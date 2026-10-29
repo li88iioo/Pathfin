@@ -180,7 +180,8 @@ class PlayerControlsLayoutTest {
             awaitOrientation(android.content.res.Configuration.ORIENTATION_PORTRAIT)
             showControls(player, clock = "21:30", battery = "80%")
             compose.onNodeWithTag("player-media-logo").assertDoesNotExist()
-            compose.onNodeWithTag("player-media-title").assertIsDisplayed().assertTextEquals("Synthetic fixture")
+            compose.onNodeWithTag("player-media-title").assertDoesNotExist()
+            compose.onNodeWithTag("player-title").assertIsDisplayed().assertTextEquals("Synthetic fixture")
             assertStatusUnderToolbar()
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
