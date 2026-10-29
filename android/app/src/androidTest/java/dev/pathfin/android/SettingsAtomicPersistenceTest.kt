@@ -8,7 +8,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.ui.theme.ThemePreference
-import dev.pathfin.android.ui.theme.ThemeStore
 import java.lang.reflect.Proxy
 import org.junit.Assert.*
 import org.junit.Test
@@ -42,7 +41,7 @@ class SettingsAtomicPersistenceTest {
             downloadDirectoryUri = "content://com.android.externalstorage.documents/tree/primary%3AMovies")
         preferences.saveWithTheme(expected, ThemePreference.DARK)
         assertEquals(expected, AppPreferencesStore(context).load())
-        assertEquals(ThemePreference.DARK, ThemeStore(context).load())
+        assertEquals(ThemePreference.DARK, AppPreferencesStore(context).loadTheme())
         assertEquals("BACKDROP", AppPreferencesStore(context).browserStyle("atomic-fixture"))
     }
 
@@ -63,7 +62,7 @@ class SettingsAtomicPersistenceTest {
         assertFalse(raw.contains("columns/other-profile-layout"))
         assertEquals(setOf("keep-library"), restored.hiddenLibraries("synthetic-other-account"))
         assertEquals("keep", raw.getString("unrelated-fixture", null))
-        assertEquals(ThemePreference.DARK, ThemeStore(context).load())
+        assertEquals(ThemePreference.DARK, AppPreferencesStore(context).loadTheme())
         restored.saveBrowserStyle("legacy-layout", "BACKDROP")
         assertEquals("BACKDROP", AppPreferencesStore(context).browserStyle("legacy-layout"))
         assertEquals(expected, AppPreferencesStore(context).load())
@@ -72,40 +71,61 @@ class SettingsAtomicPersistenceTest {
     @Test fun failedAtomicCommitCannotApplyOnlyHalfOfImport() = isolated { context ->
         val previous = AppPreferences(imageCacheSizeMb = 512, subtitlesEnabled = false)
         AppPreferencesStore(context).saveWithTheme(previous, ThemePreference.LIGHT)
-        val failing = object : ContextWrapper(context) {
-            override fun getApplicationContext(): Context = this
-            override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
-                val delegate = context.getSharedPreferences(name, mode)
-                return Proxy.newProxyInstance(SharedPreferences::class.java.classLoader, arrayOf(SharedPreferences::class.java)) { _, method, args ->
-                    if (method.name != "edit") method.invoke(delegate, *(args ?: emptyArray()))
-                    else {
-                        val editor = delegate.edit()
-                        lateinit var proxy: SharedPreferences.Editor
-                        proxy = Proxy.newProxyInstance(SharedPreferences.Editor::class.java.classLoader, arrayOf(SharedPreferences.Editor::class.java)) { _, editMethod, values ->
-                            when (editMethod.name) {
-                                "commit" -> false
-                                "apply" -> error("本测试禁止异步绕过失败")
-                                else -> editMethod.invoke(editor, *(values ?: emptyArray())).let { result -> if (result is SharedPreferences.Editor) proxy else result }
-                            }
-                        } as SharedPreferences.Editor
-                        proxy
-                    }
-                } as SharedPreferences
-            }
-        }
-        assertTrue(runCatching { AppPreferencesStore(failing).saveWithTheme(AppPreferences(), ThemePreference.DARK) }.isFailure)
+        val failing = AppPreferencesStore(failingCommits(context))
+        assertTrue(runCatching { failing.saveWithTheme(AppPreferences(), ThemePreference.DARK) }.isFailure)
+        assertTrue("显式主题写入失败仍须向调用方报告", runCatching { failing.saveTheme(ThemePreference.DARK) }.isFailure)
         assertEquals(previous, AppPreferencesStore(context).load())
-        assertEquals(ThemePreference.LIGHT, ThemeStore(context).load())
+        assertEquals(ThemePreference.LIGHT, AppPreferencesStore(context).loadTheme())
     }
 
-    @Test fun oldThemeLoadsUntilAnAtomicImportOrExplicitThemeChange() = isolated { context ->
+    @Test fun oldThemeMigratesOnceAndCurrentValueAlwaysWins() = isolated { context ->
         val current = context.getSharedPreferences("pathfin_preferences", Context.MODE_PRIVATE)
-        current.edit().remove("theme").commit()
-        context.getSharedPreferences("pathfin_appearance", Context.MODE_PRIVATE).edit().putString("mode", "DARK").commit()
-        assertEquals(ThemePreference.DARK, ThemeStore(context).load())
-        ThemeStore(context).save(ThemePreference.LIGHT)
-        assertEquals(ThemePreference.LIGHT, ThemeStore(context).load())
-        assertEquals("DARK", context.getSharedPreferences("pathfin_appearance", Context.MODE_PRIVATE).getString("mode", null))
+        val legacy = context.getSharedPreferences("pathfin_appearance", Context.MODE_PRIVATE)
+        check(current.edit().remove("theme").commit())
+        check(legacy.edit().putString("mode", "DARK").commit())
+        val preferences = AppPreferencesStore(context)
+        assertEquals(ThemePreference.DARK, preferences.loadTheme())
+        assertEquals("DARK", current.getString("theme", null))
+        check(legacy.edit().putString("mode", "LIGHT").commit())
+        assertEquals("主值存在后旧文件不再参与主题选择", ThemePreference.DARK, AppPreferencesStore(context).loadTheme())
+        preferences.saveTheme(ThemePreference.SYSTEM)
+        assertEquals(ThemePreference.SYSTEM, AppPreferencesStore(context).loadTheme())
+        assertEquals("旧值保持只读，不为清理再做一次文件提交", "LIGHT", legacy.getString("mode", null))
+    }
+
+    @Test fun failedThemeMigrationPreservesLegacyValueAndCanRetry() = isolated { context ->
+        val current = context.getSharedPreferences("pathfin_preferences", Context.MODE_PRIVATE)
+        val legacy = context.getSharedPreferences("pathfin_appearance", Context.MODE_PRIVATE)
+        check(current.edit().remove("theme").commit())
+        check(legacy.edit().putString("mode", "DARK").commit())
+        assertEquals(ThemePreference.DARK, AppPreferencesStore(failingCommits(context)).loadTheme())
+        assertFalse("失败的迁移不能假装已落盘", current.contains("theme"))
+        assertEquals("DARK", legacy.getString("mode", null))
+        assertEquals(ThemePreference.DARK, AppPreferencesStore(context).loadTheme())
+        assertEquals("DARK", current.getString("theme", null))
+        assertEquals("DARK", legacy.getString("mode", null))
+    }
+
+    private fun failingCommits(context: Context) = object : ContextWrapper(context) {
+        override fun getApplicationContext(): Context = this
+        override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+            val delegate = context.getSharedPreferences(name, mode)
+            return Proxy.newProxyInstance(SharedPreferences::class.java.classLoader, arrayOf(SharedPreferences::class.java)) { _, method, args ->
+                if (method.name != "edit") method.invoke(delegate, *(args ?: emptyArray()))
+                else {
+                    val editor = delegate.edit()
+                    lateinit var proxy: SharedPreferences.Editor
+                    proxy = Proxy.newProxyInstance(SharedPreferences.Editor::class.java.classLoader, arrayOf(SharedPreferences.Editor::class.java)) { _, editMethod, values ->
+                        when (editMethod.name) {
+                            "commit" -> false
+                            "apply" -> error("本测试禁止异步绕过失败")
+                            else -> editMethod.invoke(editor, *(values ?: emptyArray())).let { result -> if (result is SharedPreferences.Editor) proxy else result }
+                        }
+                    } as SharedPreferences.Editor
+                    proxy
+                }
+            } as SharedPreferences
+        }
     }
 
     private fun isolated(block: (Context) -> Unit) {

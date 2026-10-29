@@ -9,10 +9,17 @@ import android.content.Context
 import android.content.SharedPreferences
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.i18n.tr
+import dev.pathfin.android.ui.theme.ThemePreference
 import org.json.JSONObject
 
-class AppPreferencesStore internal constructor(private val store: SharedPreferences) {
-    constructor(context: Context) : this(context.applicationContext.getSharedPreferences("pathfin_preferences", Context.MODE_PRIVATE))
+class AppPreferencesStore internal constructor(
+    private val store: SharedPreferences,
+    private val legacyTheme: SharedPreferences? = null,
+) {
+    constructor(context: Context) : this(
+        context.applicationContext.getSharedPreferences("pathfin_preferences", Context.MODE_PRIVATE),
+        context.applicationContext.getSharedPreferences("pathfin_appearance", Context.MODE_PRIVATE),
+    )
 
     fun load(): AppPreferences {
         // load 由启动存储 IO 调用；旧布局清理不能在首次打开网格时同步写盘。
@@ -25,8 +32,20 @@ class AppPreferencesStore internal constructor(private val store: SharedPreferen
     }
     /** 导入包含主题和普通偏好，一次 SharedPreferences commit，避免两个文件之间的部分成功。 */
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
-    fun saveWithTheme(value: AppPreferences, theme: dev.pathfin.android.ui.theme.ThemePreference) {
+    fun saveWithTheme(value: AppPreferences, theme: ThemePreference) {
         check(store.edit().putString("settings", encode(value).toString()).putString("theme", theme.name).commit()) { tr("无法保存导入设置") }
+    }
+    /** 旧值只在主键缺失时迁入；迁移提交失败仍返回旧主题，不影响账号恢复。 */
+    fun loadTheme(): ThemePreference {
+        val current = store.getString("theme", null)
+        val legacy = if (current == null) legacyTheme?.getString("mode", null) else null
+        val theme = ThemePreference.entries.firstOrNull { it.name == (current ?: legacy) } ?: ThemePreference.SYSTEM
+        if (legacy != null) runCatching { saveTheme(theme) }
+        return theme
+    }
+    @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
+    fun saveTheme(mode: ThemePreference) {
+        check(store.edit().putString("theme", mode.name).commit()) { tr("无法保存主题") }
     }
     fun hiddenLibraries(serverKey: String): Set<String> = store.getStringSet("hidden/$serverKey", emptySet())?.toSet().orEmpty()
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。

@@ -19,7 +19,6 @@ import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.AppState
 import dev.pathfin.android.ui.AppViewModel
 import dev.pathfin.android.ui.theme.ThemePreference
-import dev.pathfin.android.ui.theme.ThemeStore
 import java.io.Closeable
 import java.io.IOException
 import java.util.UUID
@@ -206,6 +205,43 @@ class AppStorageRecoveryTest {
     }
 
     @Test
+    fun failedThemeMigrationKeepsTheSavedAccountAndCanRetryAfterRestart() = isolated { fixture ->
+        val session = fixture.seedSession()
+        val profileId = SessionStore(fixture.app).activeProfileId()
+        val current = fixture.app.getSharedPreferences(PREFERENCES_STORE, Context.MODE_PRIVATE)
+        val legacy = fixture.app.getSharedPreferences("pathfin_appearance", Context.MODE_PRIVATE)
+        check(current.edit().remove("theme").commit())
+        check(legacy.edit().putString("mode", "DARK").commit())
+        val attempts = AtomicInteger()
+        fixture.app.beforeCommit = { attempt ->
+            assertOffMain()
+            if (attempt.name == PREFERENCES_STORE && attempt.written == setOf("theme")) {
+                attempts.incrementAndGet()
+                false
+            } else true
+        }
+        val restored = fixture.start().state.value
+        assertEquals("主题迁移失败不能使已保存账号变成读取失败", session, restored.session)
+        assertEquals(profileId, restored.currentProfileId)
+        assertEquals(fixture.original, restored.preferences)
+        assertEquals(ThemePreference.DARK, restored.theme)
+        assertFalse(restored.restoringSession)
+        assertFalse(restored.loginBusy)
+        assertNull(restored.loginError)
+        assertEquals(1, attempts.get())
+        assertFalse(current.contains("theme"))
+        assertEquals("DARK", legacy.getString("mode", null))
+        val retried = fixture.restart().state.value
+        assertEquals(session, retried.session)
+        assertEquals(profileId, retried.currentProfileId)
+        assertEquals(fixture.original, retried.preferences)
+        assertEquals(ThemePreference.DARK, retried.theme)
+        assertNull(retried.loginError)
+        assertEquals("DARK", current.getString("theme", null))
+        assertEquals("DARK", legacy.getString("mode", null))
+    }
+
+    @Test
     fun cancellingAnAlreadyCommittingImportStillPublishesItsAtomicPreferencesAndTheme() = isolated { fixture ->
         val model = fixture.start()
         val gate = fixture.gate()
@@ -225,7 +261,7 @@ class AppStorageRecoveryTest {
             it.preferences == imported && it.theme == ThemePreference.DARK
         }
         assertEquals(imported, AppPreferencesStore(fixture.app).load())
-        assertEquals(ThemePreference.DARK, ThemeStore(fixture.app).load())
+        assertEquals(ThemePreference.DARK, AppPreferencesStore(fixture.app).loadTheme())
     }
 
     @Test
@@ -252,7 +288,7 @@ class AppStorageRecoveryTest {
             it.preferences == later && it.theme == ThemePreference.SYSTEM
         }
         awaitCondition("后续设置与主题必须实际保存") {
-            AppPreferencesStore(fixture.app).load() == later && ThemeStore(fixture.app).load() == ThemePreference.SYSTEM
+            AppPreferencesStore(fixture.app).load() == later && AppPreferencesStore(fixture.app).loadTheme() == ThemePreference.SYSTEM
         }
         val restored = fixture.restart().state.value
         assertEquals(later, restored.preferences)

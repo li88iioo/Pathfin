@@ -30,7 +30,6 @@ import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import dev.pathfin.android.domain.*
 import dev.pathfin.android.ui.theme.ThemePreference
-import dev.pathfin.android.ui.theme.ThemeStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.CoroutineScope
@@ -213,7 +212,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         videoSupport = DevicePlaybackCapabilities::supportsVideo)
     private val cloudApi = dev.pathfin.android.data.CloudPlaybackApi(videoSupport = DevicePlaybackCapabilities::supportsVideo)
     private val sessionStore by lazy { SessionStore(application) }
-    private val themeStore by lazy { ThemeStore(application) }
     private val preferencesStore by lazy { AppPreferencesStore(application) }
     private val homeSnapshotStore by lazy { HomeSnapshotStore(application) }
     private val browserSnapshotStore by lazy { BrowserSnapshotStore(application) }
@@ -310,7 +308,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     val saved = sessionStore.load()
                     val profileId = sessionStore.activeProfileId()
                     AppState(session = saved, profiles = sessionStore.loadProfiles(),
-                        currentProfileId = profileId, theme = themeStore.load(),
+                        currentProfileId = profileId, theme = preferencesStore.loadTheme(),
                         preferences = preferences, showServers = saved == null || !preferences.openLastServer,
                         home = if (saved != null && profileId != null) homeSnapshotStore.load(profileId, saved)?.homeState() ?: HomeState() else HomeState(),
                         hiddenLibraries = saved?.let { preferencesStore.hiddenLibraries(sessionKey(it)) }.orEmpty())
@@ -2586,7 +2584,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             storageReady.await()
             try {
                 withContext(kotlinx.coroutines.NonCancellable) {
-                    storeIo { themeStore.save(mode); lastCommittedTheme = mode }
+                    storeIo { preferencesStore.saveTheme(mode); lastCommittedTheme = mode }
                     if (revision == themeRevision) mutableState.update { it.copy(theme = mode) }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
