@@ -1308,17 +1308,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (query.searchTerm.isNotEmpty()) loadBrowser(key)
     }
 
-    /** 库内搜索建议：空词为库内收藏/随机条目，有词为片名匹配；失败只返回空列表，不打断输入。 */
+    /** 库内搜索建议：空词为库内收藏/随机条目，有词为片名匹配；普通失败静默，401 仅恢复所属会话。 */
     suspend fun librarySearchSuggestions(library: MediaItem, term: String): List<MediaItem> {
         val session = state.value.session ?: return emptyList()
         val query = library.librarySearchQuery(term)
-        return try {
-            ensureLocalNetworkAccess(session.server.baseUrl)
+        return serverSafely(session) {
             val page = if (query.searchTerm.isEmpty()) api.searchSuggestions(session, library.id, query.itemTypes)
                 else api.items(session, parentId = library.id, limit = LibrarySuggestionLimit, options = query)
             page.items.filter { it.name.isNotBlank() }.distinctBy { it.id }
-        } catch (error: Exception) {
-            if (error is CancellationException) throw error
+        }.getOrElse { error ->
+            if (session.hasSameAuthentication(state.value.session)) handleAuthFailure(error)
             emptyList()
         }
     }

@@ -11,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.domain.DiscoveryCategory
+import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.favoriteDiscoveryCategories
 import dev.pathfin.android.domain.searchDiscoveryCategories
 import dev.pathfin.android.ui.AppState
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -559,6 +561,65 @@ class DiscoveryFlowTest {
         assertTrue(app.state.value.favorites.sections.isEmpty())
         assertTrue(fixture.discoveryRequests().none { it.query["searchTerm"] == "must-not-run" })
         assertTrue(fixture.discoveryRequests().filter { it.userId == BETA_ID }.none { it.favorite })
+    }
+
+    @Test fun librarySuggestionsKeepOrdinaryFailuresSilentAndRecoverTheirCurrentAccount() {
+        for (term in listOf("", "library-match")) withApp { app, fixture ->
+            val library = MediaItem("suggestion-library", "合成电影库", "CollectionFolder", collectionType = "movies")
+            val profileId = app.state.value.currentProfileId
+            val key = PageKey(ALPHA_ID, term, DiscoveryCategory.MOVIES)
+            for (status in listOf(500, 401)) {
+                fixture.fail(key, status)
+                val response = main { app.viewModelScope.async { app.librarySearchSuggestions(library, term) } }
+                assertTrue("建议失败应返回空列表，term=$term status=$status",
+                    runBlocking { withTimeout(WAIT_MS) { response.await() } }.isEmpty())
+                val current = app.state.value
+                assertEquals(ALPHA_ID, current.session?.userId)
+                assertEquals(profileId, current.currentProfileId)
+                assertFalse(current.loginBusy)
+                if (status == 500) {
+                    assertNull("普通建议读取失败不能要求重新登录", current.reauthenticationProfile)
+                    assertNull(current.loginError)
+                    assertNull(current.notice)
+                } else {
+                    assertEquals("当前建议的 401 必须进入该账号的既有恢复流程", ALPHA_ID,
+                        current.reauthenticationProfile?.session?.userId)
+                    assertNotNull(current.loginError)
+                    assertFalse(current.home.loading)
+                }
+            }
+            val requests = fixture.discoveryRequests().filter { it.pageKey == key }
+            assertEquals("推荐和片名匹配分支都必须真实完成两次失败请求", 2, requests.size)
+            assertTrue(requests.all { it.query["parentId"] == library.id && it.query["limit"] == "8" })
+            assertTrue("每个请求均须保留实际推荐/片名匹配语义",
+                requests.all { it.query["searchTerm"] == term.takeIf(String::isNotEmpty) })
+        }
+    }
+
+    @Test fun oldLibrarySuggestionUnauthorizedResponseCannotReauthenticateTheNewAccount() = withApp { app, fixture ->
+        val library = MediaItem("suggestion-library", "合成电影库", "CollectionFolder", collectionType = "movies")
+        val key = PageKey(ALPHA_ID, "old-library-match", DiscoveryCategory.MOVIES)
+        fixture.fail(key, 401)
+        fixture.block(key).use { old ->
+            val response = main { app.viewModelScope.async { app.librarySearchSuggestions(library, key.term) } }
+            old.awaitRequest()
+            main { app.login(fixture.baseUrl, BETA, PASSWORD, allowHttp = true, displayName = "Discovery beta") }
+            val switched = await(app, fixture, "旧建议响应保持在途时第二账号须完成登录") {
+                it.session?.userId == BETA_ID && it.home.loaded && !it.home.loading && !it.loginBusy
+            }
+            assertFalse("旧建议必须实际跨越切号继续等待，不能用取消代替鉴权归属检查", response.isCompleted)
+            old.release(); old.awaitFinished()
+            assertTrue(runBlocking { withTimeout(WAIT_MS) { response.await() } }.isEmpty())
+            val current = app.state.value
+            assertEquals(switched.session, current.session)
+            assertEquals(switched.currentProfileId, current.currentProfileId)
+            assertNull("旧账号的 401 不能使新账号重新登录", current.reauthenticationProfile)
+            assertNull(current.loginError)
+            assertFalse(current.loginBusy)
+            assertTrue(current.home.loaded)
+            assertFalse(current.home.loading)
+            assertEquals(ALPHA_ID, fixture.requestsFor(key.term, DiscoveryCategory.MOVIES).single().userId)
+        }
     }
 
     private fun withApp(block: (AppViewModel, Fixture) -> Unit) {
