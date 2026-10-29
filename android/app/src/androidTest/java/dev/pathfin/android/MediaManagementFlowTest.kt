@@ -51,6 +51,8 @@ class MediaManagementFlowTest {
         check(item.name.startsWith("Pathfin UI fixture")) { "只允许带专用标记的合成媒体" }
         val management = MediaManagementApi(api)
         val before = management.editableMetadata(session, itemId).metadata
+        val editedTitle = if (before.title == "Pathfin UI fixture edited") "Pathfin UI fixture edited again"
+            else "Pathfin UI fixture edited"
         val saved = AtomicInteger()
         val loader = PosterImageCache.createLoader(context, session, OkHttpClient())
         try {
@@ -62,7 +64,7 @@ class MediaManagementFlowTest {
                 }
             }
             compose.waitUntil(15_000) { compose.onAllNodes(androidx.compose.ui.test.hasTestTag("metadata-title")).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag("metadata-title").performTextReplacement("Pathfin UI fixture edited")
+            compose.onNodeWithTag("metadata-title").performTextReplacement(editedTitle)
             compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
             compose.onNodeWithText("放弃未保存的修改？").assertVerificationDisplayed(compose)
             compose.onNodeWithText("继续编辑").performVerificationClick(compose)
@@ -70,7 +72,7 @@ class MediaManagementFlowTest {
             compose.onNodeWithTag("metadata-save").performVerificationClick(compose)
             compose.waitUntil(15_000) { saved.get() == 1 }
             val after = management.editableMetadata(session, itemId).metadata
-            assertEquals("Pathfin UI fixture edited", after.title)
+            assertEquals(editedTitle, after.title)
             assertEquals(before.overview, after.overview)
             assertEquals(before.genres, after.genres)
         } finally {
