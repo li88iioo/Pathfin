@@ -127,7 +127,7 @@ class AboutScreensUiTest {
     }
 
     @Test fun updateDialogFollowsDownloadStates() {
-        val release = AppRelease("9.9.9", "v9.9.9", "修复播放问题", "https://github.com/li88iioo/Pathfin/releases/tag/v9.9.9",
+        val release = AppRelease("9.9.9", "v9.9.9", "修复播放问题",
             "https://github.com/li88iioo/Pathfin/releases/download/v9.9.9/Pathfin.apk", 10_000_000, null)
         val update = mutableStateOf<UpdateState>(UpdateState.Available(release))
         val calls = mutableListOf<String>()

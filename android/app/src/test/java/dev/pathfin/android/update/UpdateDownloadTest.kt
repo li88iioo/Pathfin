@@ -115,7 +115,7 @@ class UpdateDownloadTest {
         }
 
         fun release(payload: ByteArray) = AppRelease(
-            version = "0.2.0", tag = "v0.2.0", notes = "", pageUrl = RELEASES_PAGE,
+            version = "0.2.0", tag = "v0.2.0", notes = "",
             apkUrl = "http://127.0.0.1:${server.address.port}/update.apk", apkSize = payload.size.toLong(),
             sha256 = MessageDigest.getInstance("SHA-256").digest(payload).joinToString("") { "%02x".format(it) },
         )

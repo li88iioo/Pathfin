@@ -4,14 +4,12 @@ import org.json.JSONObject
 
 internal const val RELEASE_REPOSITORY = "li88iioo/Pathfin"
 internal const val RELEASES_PAGE = "https://github.com/$RELEASE_REPOSITORY/releases"
-private const val ASSET_PREFIX = "$RELEASES_PAGE/download/"
 
 /** GitHub 正式 Release 中可直接安装的 APK。 */
 data class AppRelease(
     val version: String,
     val tag: String,
     val notes: String,
-    val pageUrl: String,
     val apkUrl: String,
     val apkSize: Long,
     /** GitHub 资产摘要；旧 Release 可能没有。 */
@@ -19,24 +17,23 @@ data class AppRelease(
 )
 
 internal object ReleaseParser {
-    private val tag = Regex("^v(\\d+(?:\\.\\d+){0,3})$")
+    private val tag = Regex("^v(\\d+\\.\\d+\\.\\d+)$")
     private val digest = Regex("^sha256:([0-9a-fA-F]{64})$")
 
-    /** 只接受 vX.Y.Z 正式版且带本仓库 APK 资产的 Release；其余视为没有可用更新。 */
+    /** 只接受 vX.Y.Z 正式版和属于当前标签的唯一 APK；歧义资产不按顺序任选。 */
     fun parse(json: JSONObject): AppRelease? {
         if (json.optBoolean("draft") || json.optBoolean("prerelease")) return null
         val tagName = json.optString("tag_name").trim()
         val version = tag.matchEntire(tagName)?.groupValues?.get(1) ?: return null
         val assets = json.optJSONArray("assets") ?: return null
-        val asset = (0 until assets.length()).mapNotNull(assets::optJSONObject).firstOrNull {
+        val asset = (0 until assets.length()).mapNotNull(assets::optJSONObject).singleOrNull {
             it.optString("name").endsWith(".apk", ignoreCase = true) &&
-                it.optString("browser_download_url").startsWith(ASSET_PREFIX) && it.optLong("size") > 0
+                it.optString("browser_download_url").startsWith("$RELEASES_PAGE/download/$tagName/") && it.optLong("size") > 0
         } ?: return null
         return AppRelease(
             version = version,
             tag = tagName,
             notes = json.optString("body").trim(),
-            pageUrl = json.optString("html_url").takeIf { it.startsWith(RELEASES_PAGE) } ?: RELEASES_PAGE,
             apkUrl = asset.optString("browser_download_url"),
             apkSize = asset.optLong("size"),
             sha256 = digest.matchEntire(asset.optString("digest"))?.groupValues?.get(1)?.lowercase(),

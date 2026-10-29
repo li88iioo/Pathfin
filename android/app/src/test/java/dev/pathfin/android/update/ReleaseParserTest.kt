@@ -33,15 +33,17 @@ class ReleaseParserTest {
         assertNull(ReleaseParser.parse(release(assets = arrayOf(asset(digest = "md5:abc"))))!!.sha256)
     }
 
-    @Test fun firstMatchingApkWinsOverOtherAssets() {
+    @Test fun uniqueApkIsSelectedAmongNonApkAssets() {
         val parsed = ReleaseParser.parse(release(assets = arrayOf(asset(name = "source.tar", url = apkUrl.replace(".apk", ".tar")), asset())))
         assertEquals(apkUrl, parsed!!.apkUrl)
+        assertNull("多个 APK 不应按列表顺序任选", ReleaseParser.parse(release(assets = arrayOf(asset(),
+            asset(name = "other.apk", url = apkUrl.replace("Pathfin-0.2.0.apk", "other.apk"))))))
     }
 
     @Test fun draftsPrereleasesAndForeignTagsAreIgnored() {
         assertNull(ReleaseParser.parse(release().put("draft", true)))
         assertNull(ReleaseParser.parse(release().put("prerelease", true)))
-        for (tag in listOf("android-v0.2.0", "0.2.0", "v0.2.0-beta", "v", "release")) {
+        for (tag in listOf("android-v0.2.0", "0.2.0", "v0.2.0-beta", "v", "release", "v1", "v1.2", "v1.2.3.4")) {
             assertNull(tag, ReleaseParser.parse(release(tag = tag)))
         }
     }
@@ -51,12 +53,8 @@ class ReleaseParserTest {
         assertNull("不是 APK", ReleaseParser.parse(release(assets = arrayOf(asset(name = "Pathfin.aab")))))
         assertNull("其他仓库", ReleaseParser.parse(release(assets = arrayOf(asset(url = apkUrl.replace("li88iioo", "someone"))))))
         assertNull("非 HTTPS", ReleaseParser.parse(release(assets = arrayOf(asset(url = apkUrl.replace("https", "http"))))))
+        assertNull("不属于当前版本", ReleaseParser.parse(release(assets = arrayOf(asset(url = apkUrl.replace("v0.2.0/", "v0.1.0/"))))))
         assertNull("空文件", ReleaseParser.parse(release(assets = arrayOf(asset(size = 0)))))
-    }
-
-    @Test fun foreignReleasePageFallsBackToTheRepository() {
-        val parsed = ReleaseParser.parse(release().put("html_url", "https://example.com/phish"))
-        assertEquals(RELEASES_PAGE, parsed!!.pageUrl)
     }
 
     @Test fun versionsCompareNumerically() {
