@@ -174,7 +174,7 @@ private fun LiveTvContent(session: Session, api: JellyfinApi, onBack: () -> Unit
                     error != null && channels.isEmpty() -> item("error", span = full) { ErrorPanel(error!!, modifier = Modifier.testTag("live-tv-error")) }
                     access?.canView == false -> item("permission", span = full) { EmptyPanel(tr("没有直播电视权限"), tr("请联系服务器管理员为当前账号启用直播电视访问权限，再刷新此页。"), PathfinIcons.Lock) }
                     access?.isConfigured == false -> item("unconfigured", span = full) { EmptyPanel(tr("服务器尚未启用直播电视"), tr("请在 Jellyfin 服务端配置直播源及节目指南，然后刷新频道。"), PathfinIcons.Tv) }
-                    !loaded -> item("initial", span = full) { EmptyPanel(tr("正在读取直播频道"), tr("连接当前服务器并读取频道与节目单。")) }
+                    !loaded -> item("initial", span = full) { EmptyPanel(tr("正在读取直播频道"), tr("连接当前服务器并读取频道与节目单。"), loading = true) }
                     channels.isEmpty() -> item("empty", span = full) { EmptyPanel(tr("暂无直播频道"), tr("服务器没有返回可访问频道，请检查直播源及账号的频道访问范围。"), PathfinIcons.Tv) }
                     filtered.isEmpty() -> item("search-empty", span = full) { EmptyPanel(tr("没有匹配的频道"), if (hasMore) tr("可继续载入全部频道，或换个频道名称、频道号或节目名称。") else tr("试试频道名称、频道号或当前节目名称。")) }
                 }
@@ -347,7 +347,7 @@ private fun ColumnScope.LiveTvPrograms(session: Session, service: LiveTvApi, cha
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             error?.let { message -> item("error") { ErrorPanel(message) } }
             if (programs.isEmpty()) item("empty") { EmptyPanel(if (!loaded && error == null) tr("正在读取节目单") else tr("暂无节目信息"),
-                if (!loaded && error == null) tr("读取所选频道的当日节目。") else tr("服务器没有提供这一天的节目，仍可直接观看直播。")) }
+                if (!loaded && error == null) tr("读取所选频道的当日节目。") else tr("服务器没有提供这一天的节目，仍可直接观看直播。"), loading = !loaded && error == null) }
             items(programs, key = { "program/${it.id}" }) { program ->
                 val airing = program.isAiring(now)
                 GroupCard(Modifier.testTag("live-tv-program-${program.id}")) {

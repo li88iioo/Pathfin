@@ -1,7 +1,10 @@
 package dev.pathfin.android
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -10,10 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -38,6 +47,7 @@ import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.ContentState
 import dev.pathfin.android.ui.DiscoveryState
 import dev.pathfin.android.ui.DiscoveryGridContent
+import dev.pathfin.android.ui.EmptyPanel
 import dev.pathfin.android.ui.FavoritesContent
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalNavigationBottomInset
@@ -302,6 +312,32 @@ class DiscoveryScreensUiTest {
         assertVisible("discovery-error-message", compose.onNodeWithText("剧集：服务器暂时不可用"))
         touch("discovery-error-retry", compose.onNodeWithText("重试"))
         compose.runOnIdle { assertEquals(1, retries) }
+    }
+
+    @Test fun emptyPanelLoadingDoesNotDependOnItsTitleAndKeepsItsBounds() {
+        val loading = mutableStateOf(false)
+        val title = mutableStateOf("Loading media")
+        show {
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxWidth().testTag("empty-panel-frame")) {
+                    EmptyPanel(title.value, "状态说明", loading = loading.value)
+                }
+            }
+        }
+        assertVisible("empty-panel-static", compose.onNodeWithText(title.value))
+        val progress = SemanticsMatcher.expectValue(SemanticsProperties.ProgressBarRangeInfo, ProgressBarRangeInfo.Indeterminate) and
+            hasAnyAncestor(hasTestTag("empty-panel-frame"))
+        compose.onAllNodes(progress, useUnmergedTree = true).assertCountEquals(0)
+        val frame = bounds("empty-panel-frame")
+        compose.runOnIdle { loading.value = true }
+        compose.onAllNodes(progress, useUnmergedTree = true).assertCountEquals(1)
+        assertEquals("切换加载状态不能改变面板占位", frame, bounds("empty-panel-frame"))
+        compose.runOnIdle { title.value = "暂无内容" }
+        compose.onAllNodes(progress, useUnmergedTree = true).assertCountEquals(1)
+        val chineseFrame = bounds("empty-panel-frame")
+        compose.runOnIdle { loading.value = false }
+        compose.onAllNodes(progress, useUnmergedTree = true).assertCountEquals(0)
+        assertEquals("同一中文文案下加载结束仍保留相同占位", chineseFrame, bounds("empty-panel-frame"))
     }
 
     private fun page(item: MediaItem) = ContentState(items = listOf(item), total = 1, nextIndex = 1)

@@ -392,7 +392,7 @@ internal fun MediaGrid(content: ContentState, session: Session, api: JellyfinApi
         gridItems(content.items, key = { it.id }) { item -> PosterCard(item, session, api, Modifier.fillMaxWidth()) { onOpen(item) } }
         if (content.items.isEmpty() && content.error == null) item(span = { GridItemSpan(maxLineSpan) }, key = "media-empty") {
             Column {
-                EmptyPanel(if (content.loading) tr("正在读取媒体") else tr("没有找到内容"), if (content.loading) tr("请稍候…") else tr("尝试刷新，或调整搜索条件。"))
+                EmptyPanel(if (content.loading) tr("正在读取媒体") else tr("没有找到内容"), if (content.loading) tr("请稍候…") else tr("尝试刷新，或调整搜索条件。"), loading = content.loading)
             }
         }
         content.error?.takeIf { content.retryAppend }?.let { error ->
@@ -559,7 +559,7 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
     val horizontalSafeArea = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
     if (item == null) {
         LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(horizontalSafeArea)) {
-            item { EmptyPanel(if (state.detailError == null) tr("正在读取详情") else tr("无法读取详情"), state.detailError ?: tr("请稍候…")) }
+            item { EmptyPanel(if (state.detailError == null) tr("正在读取详情") else tr("无法读取详情"), state.detailError ?: tr("请稍候…"), loading = state.detailError == null) }
         }
         return
     }

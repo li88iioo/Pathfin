@@ -44,14 +44,8 @@ internal fun ErrorPanel(message: String, modifier: Modifier = Modifier, retry: (
 }
 
 @Composable
-internal fun EmptyPanel(title: String, subtitle: String, icon: ImageVector? = null) {
-    // 标题已按界面语言翻译：中英文关键词都认（英文译文以 Loading / favorite / search 开头或包含）。
-    val isLoading = title.contains("正在") || title.startsWith("Loading")
-    val resolvedIcon = icon ?: when {
-        title.contains("收藏") || title.contains("favorite", ignoreCase = true) -> PathfinIcons.Star
-        title.contains("搜索") || title.contains("search", ignoreCase = true) -> PathfinIcons.Search
-        else -> MediaNavigationIcons.Movies
-    }
+internal fun EmptyPanel(title: String, subtitle: String, icon: ImageVector = MediaNavigationIcons.Movies,
+    loading: Boolean = false) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -62,8 +56,8 @@ internal fun EmptyPanel(title: String, subtitle: String, icon: ImageVector? = nu
             Modifier.size(60.dp).clip(RoundedCornerShape(18.dp)).background(PathfinAppearance.softFill),
             contentAlignment = Alignment.Center,
         ) {
-            if (isLoading) PathfinSpinner(PathfinAppearance.accent, Modifier.size(22.dp))
-            else Icon(resolvedIcon, contentDescription = null, modifier = Modifier.size(26.dp), tint = PathfinAppearance.textSub)
+            if (loading) PathfinSpinner(PathfinAppearance.accent, Modifier.size(22.dp))
+            else Icon(icon, contentDescription = null, modifier = Modifier.size(26.dp), tint = PathfinAppearance.textSub)
         }
         Spacer(Modifier.height(16.dp))
         Text(

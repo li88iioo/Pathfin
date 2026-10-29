@@ -169,6 +169,7 @@ internal fun BrowserScreen(
                                 title = if (awaitingFirstContent) tr("正在读取媒体") else tr("没有找到内容"),
                                 subtitle = if (awaitingFirstContent) tr("正在从服务器同步内容，请稍候…")
                                 else tr("尝试调整分类或筛选条件。"),
+                                loading = awaitingFirstContent,
                             )
                         }
                         state.content.error?.takeIf { state.content.retryAppend }?.let { error ->

@@ -78,14 +78,6 @@ class L10nTest {
         assertTrue("占位符不一致：$broken", broken.isEmpty())
     }
 
-    @Test fun englishTitlesKeepEmptyPanelKeywords() {
-        // EmptyPanel 按标题推断转圈与图标；英文译文须保留对应关键词。
-        val table = englishTable()
-        val loading = table.filterKeys { it.startsWith("正在读取") }.filterValues { !it.startsWith("Loading") }
-        assertTrue("读取中标题须以 Loading 开头：$loading", loading.isEmpty())
-        assertTrue(table.getValue("还没有收藏").contains("favorite", ignoreCase = true))
-    }
-
     @Test fun enumLabelsFollowTheCurrentLanguage() {
         // 枚举只初始化一次：名称必须在读取时翻译，切换语言后才会跟着变。
         val labels = {
