@@ -71,6 +71,8 @@ Before publishing, run `android/tools/verify_release.py` on the final APK, with 
 
 ## Changelog and releases
 
+Pushing `main` or manually running **Build and release** in GitHub Actions runs tests, release lint, a signed APK build and native-source verification. Verified APK/source artifacts and reports are retained for 7 days. These runs do not publish a Release; publication only happens on a matching `vX.Y.Z` tag push.
+
 `CHANGELOG.md` is the single source for version changes. GitHub Release uses the matching version's body, which the in-app update dialog also displays. Use short lists and absolute links; avoid tables, images and complex Markdown.
 
 When preparing a release, check `versionName` and the increasing `versionCode` in `android/app/build.gradle.kts`. Review `git log --reverse --no-merges <previous-release-tag>..<target-commit>` for additions, improvements, fixes and necessary upgrade instructions; for the first release, review all history through the target commit. Do not update the changelog for every development commit or treat local builds as formal releases.

@@ -71,6 +71,8 @@ cd android
 
 ## 更新日志与发布
 
+推送 `main` 或在 GitHub Actions 手动运行 **Build and release**，会执行测试、Release Lint、签名 APK 构建和原生源码配对校验。通过校验的 APK、对应源码和报告保留 7 天。这些运行不会发布 Release；只有推送匹配版本的 `vX.Y.Z` 标签才会发布。
+
 `CHANGELOG.md` 是版本变更内容的唯一维护入口。GitHub Release 使用对应版本的正文，应用内更新弹窗直接展示同一份内容。日志使用简短列表和绝对链接，避免表格、图片和复杂 Markdown。
 
 准备正式版本时，核对 `android/app/build.gradle.kts` 的 `versionName` 与递增的 `versionCode`，按 `git log --reverse --no-merges <上一个正式标签>..<目标提交>` 整理新增、优化、修复及必要的升级说明；首版核对截至目标提交的全部历史。日常开发提交不逐次追加日志，也不把本地 build 当作正式版本。

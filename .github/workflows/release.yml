@@ -1,19 +1,22 @@
-# 推送 vX.Y.Z 标签后构建正式签名 APK 并发布 GitHub Release。
+# main 推送和手动运行只构建验证；推送 vX.Y.Z 标签才发布 GitHub Release。
 # 应用内更新只认本仓库正式 Release 中唯一的 .apk 资产，并要求签名与已安装版本一致。
-name: Release
+name: Build and release
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: build-${{ github.ref }}
   cancel-in-progress: false
 
 env:
+  PUBLISH_RELEASE: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
   # 生产签名证书的公开指纹；产物签名不符时拒绝发布。
   RELEASE_CERT_SHA256: 9AE9364A61C4D6F4D8335DAFD9350355C41F70954BB101C70869C81715FB0BC0
   BUILD_TOOLS: '37.0.0'
@@ -21,13 +24,13 @@ env:
   RELEASE_APK: Pathfin-arm64-v8a.apk
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7.0.1
 
-      - name: Check tag, version and signing secrets
+      - name: Check version and signing secrets
         env:
           KEYSTORE_BASE64: ${{ secrets.PATHFIN_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.PATHFIN_KEYSTORE_PASSWORD }}
@@ -36,15 +39,17 @@ jobs:
         run: |
           version=$(sed -nE 's/^ *versionName = "([^"]+)".*/\1/p' android/app/build.gradle.kts)
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::versionName '$version' must be X.Y.Z"; exit 1; }
-          [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::Tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; }
+          if [[ "$PUBLISH_RELEASE" == true ]]; then
+            [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::Tag $GITHUB_REF_NAME does not match versionName $version"; exit 1; }
+          fi
           missing=()
           for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do [[ -n "${!name}" ]] || missing+=("PATHFIN_$name"); done
           (( ${#missing[@]} == 0 )) || { echo "::error::Missing secrets: ${missing[*]}"; exit 1; }
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Check changelog and extract release notes
+        if: env.PUBLISH_RELEASE == 'true'
         run: |
-          python3 -m unittest discover -s android/tools -p 'test_extract_release_notes.py'
           python3 android/tools/extract_release_notes.py CHANGELOG.md "$VERSION" --output "$RUNNER_TEMP/notes.md"
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -85,7 +90,9 @@ jobs:
 
       - name: Unit tests and release lint
         working-directory: android
-        run: ./gradlew --no-daemon testDebugUnitTest :app:lintRelease
+        run: |
+          python3 -m unittest discover -s tools -p 'test_extract_release_notes.py'
+          ./gradlew --no-daemon testDebugUnitTest :app:lintRelease
 
       - name: Build signed release APK
         env:
@@ -137,12 +144,28 @@ jobs:
       - uses: actions/upload-artifact@v7.0.2
         if: always()
         with:
-          name: release-reports
-          path: reports/
+          name: build-reports
+          path: |
+            reports/
+            android/**/build/reports/
+            android/**/build/test-results/
+            .superpowers/tmp/ffmpeg-native/logs/
+            .superpowers/tmp/ass-native/logs/
+          include-hidden-files: true
           if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload verified build
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pathfin-build-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
 
       # Release 与应用内更新说明统一使用 CHANGELOG 对应版本正文。
       - name: Publish GitHub Release
+        if: env.PUBLISH_RELEASE == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
