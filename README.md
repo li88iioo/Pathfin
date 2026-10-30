@@ -92,3 +92,7 @@ Replace the version in the command with the release version. Pending or invalid 
 ## Third-party components
 
 The app keeps offline open-source licenses and upstream evidence. When distributing an APK with the FFmpeg audio/video and libass extensions, also provide the two corresponding source archives that match the binaries. `android/tools/verify_native_pairing.py` checks the final APK, native libraries and archives with `--ffmpeg-source` and `--ass-source`; see the native module READMEs for details.
+
+## Acknowledgments
+
+- [LINUX.DO](https://linux.do): A friendly tech community.
