@@ -241,7 +241,7 @@ object MediaDownloads {
     }
 
     internal fun cancelIntent(context: Context, task: DownloadTask): PendingIntent = PendingIntent.getBroadcast(context, 0,
-        Intent(context, DownloadCancelReceiver::class.java).setData(Uri.parse("pathfin-download:${task.id}/${task.workId}"))
+        Intent(context, DownloadCancelReceiver::class.java).setData("pathfin-download:${task.id}/${task.workId}".toUri())
             .putExtra(MediaDownloadWorker.TASK_ID, task.id).putExtra("workId", task.workId),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
