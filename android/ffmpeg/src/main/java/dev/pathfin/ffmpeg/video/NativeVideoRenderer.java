@@ -64,6 +64,7 @@ public final class NativeVideoRenderer extends DecoderVideoRenderer {
   @Nullable static String codecFor(Format format) {
     if (MimeTypes.VIDEO_H264.equals(format.sampleMimeType)) return "h264";
     if (MimeTypes.VIDEO_H265.equals(format.sampleMimeType)) return "hevc";
+    if (MimeTypes.VIDEO_MPEG2.equals(format.sampleMimeType)) return "mpeg2video";
     if (isDolbyVision(format) && format.codecs != null) {
       Matcher matcher = DV_PROFILE.matcher(format.codecs);
       if (matcher.matches() && Integer.parseInt(matcher.group(1)) == 5) return "hevc";

@@ -83,6 +83,16 @@ class DevicePlaybackCapabilitiesTest {
         if (5 !in nativeProfiles) assertFalse(DevicePlaybackCapabilities.current.supportsDolbyVisionProfile(5))
     }
 
+    @Test fun mpeg2SoftwareSupportReachesTheRendererAndSourceCapabilityCheck() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_MPEG2).setWidth(720).setHeight(576).build()
+        val renderer = NativeVideoRenderer(0, Handler(Looper.getMainLooper()), object : VideoRendererEventListener {})
+        assertEquals(C.FORMAT_HANDLED, RendererCapabilities.getFormatSupport(renderer.supportsFormat(format)))
+        assertTrue(NativeVideoRenderer.supportsSource("mpeg2video", null, 720, 576, 8))
+        assertEquals(true, DevicePlaybackCapabilities.supportsVideo(MediaStream(type = "Video", codec = "mpeg2video",
+            profile = "Main", level = 8.0, width = 720, height = 576, bitDepth = 8, averageFrameRate = 25.0)))
+        assertFalse(NativeVideoRenderer.supportsSource("mpeg2video", null, 32768, 32768, 8))
+    }
+
     @Test fun matroskaProfile5WithoutCsdAndWithDefaultEightBitMetadataUsesNativeRenderer() {
         // 黑镜 S5 实测 Format：缺少 CSD 时 MatroskaExtractor 将未知位深默认为 8，
         // 不能因此拦住补解；真实帧与 RPU 是否为受支持的 10 位仍由 JNI 验证。

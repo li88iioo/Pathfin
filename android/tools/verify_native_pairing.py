@@ -69,7 +69,7 @@ def verify_module(module, source, apk, android, sdk, temporary):
         if module == "ffmpeg":
             assert not build["audioOnly"] and not build["gpl"] and not build["nonfree"]
             assert build["decoders"] == lock["native"]["decoders"]
-            assert build["videoDecoders"] == ["h264", "hevc"]
+            assert build["videoDecoders"] == lock["native"]["videoDecoders"]
             assert build["cxxRuntime"] == "c++_static" and build["renderer"] == lock["native"]["renderer"]
             assert set(build["staticArchives"]) == {"libplacebo.a"}
             config = read(archive, "build-config/arm64-v8a/ffmpeg/config.h").decode()

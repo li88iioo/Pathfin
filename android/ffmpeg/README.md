@@ -2,7 +2,7 @@
 
 模块保留 AndroidX Media3 **1.11.1** 的原始音频 renderer 和 Java decoder，修复音频 JNI 的 PCM 扩容追加、实际样本计数与初始化数据零填充，并增加 Pathfin 视频 decoder/JNI 及独立 libplacebo GLES 输出。固定提交、上游文件和本地实现文件的 SHA-256 见 `sources.lock.json`。默认仍优先 MediaCodec；软件视频输出由应用的 renderer 选择策略接入。
 
-同一份固定 FFmpeg 9.0.2 构建 `libavcodec`、`libavutil`、`libswresample`：保留 AAC、AC3、E-AC3、TrueHD、DTS、Vorbis、Opus、AMR-NB/WB、FLAC、ALAC、G.711 A/μ-law 和 MPEG 音频层 1/2/3 共 16 个音频 decoder，增加 H.264 与 HEVC 软件 decoder。HEVC 保留 Dolby Vision RPU 解析。网络、容器、滤镜、设备、缩放、外部 codec 库、GPL、nonfree 与 version3 均关闭，FFmpeg 保持 LGPL-2.1-or-later 配置。Media3 继续负责网络、解封装和播放时钟。
+同一份固定 FFmpeg 9.0.2 构建 `libavcodec`、`libavutil`、`libswresample`：保留 AAC、AC3、E-AC3、TrueHD、DTS、Vorbis、Opus、AMR-NB/WB、FLAC、ALAC、G.711 A/μ-law 和 MPEG 音频层 1/2/3 共 16 个音频 decoder，增加 H.264、HEVC 与 MPEG-2 软件 decoder。HEVC 保留 Dolby Vision RPU 解析。网络、容器、滤镜、设备、缩放、外部 codec 库、GPL、nonfree 与 version3 均关闭，FFmpeg 保持 LGPL-2.1-or-later 配置。Media3 继续负责网络、解封装和播放时钟。
 
 视频输出从固定 libplacebo、glad、fast_float 原始归档独立构建。仅启用 OpenGL/GLES 和 Dolby Vision reshaping；Vulkan、D3D11、libdovi、glslang、shaderc 和 lcms 关闭。解码后逐帧携带色彩与 Dolby Vision 元数据交给 GPU 渲染，不把 Profile 5 简单重标为普通 HEVC。完整的 Profile 7 FEL 增强层重建不在此路径支持范围，软件解码的实际分辨率和帧率上限取决于设备性能。
 

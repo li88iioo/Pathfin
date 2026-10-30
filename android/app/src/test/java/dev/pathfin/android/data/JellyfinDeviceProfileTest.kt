@@ -383,28 +383,59 @@ class JellyfinDeviceProfileTest {
     }
 
     @Test fun softwareCodecAbsentFromStaticCapabilitiesCanBeNegotiatedWithoutInventingOtherProfiles() {
-        val requests = AtomicInteger()
-        withServer({ exchange ->
-            val body = JSONObject(exchange.requestBody.bufferedReader().readText())
-            val count = requests.incrementAndGet()
-            assertTrue(count <= 2)
-            if (count == 2) {
-                assertEquals("source", body.getString("MediaSourceId"))
+        for ((codec, name, depth) in listOf(Triple("hevc", "Main 10", 10), Triple("mpeg2video", "Main", 8))) {
+            val level = if (codec == "hevc") 120 else 8
+            val range = if (codec == "hevc") "HDR10" else "SDR"
+            val requests = AtomicInteger()
+            val initial = AtomicReference<JSONObject>()
+            withServer({ exchange ->
+                val body = JSONObject(exchange.requestBody.bufferedReader().readText())
+                val count = requests.incrementAndGet()
+                assertTrue("$codec 来源限定协商最多两次请求", count <= 2)
                 val profile = body.getJSONObject("DeviceProfile")
                 val declared = profile.getJSONArray("DirectPlayProfiles").objects().single { it.getString("Type") == "Video" }
-                assertEquals(setOf("h264", "hevc"), declared.getString("VideoCodec").split(',').toSet())
                 assertEquals("aac", declared.getString("AudioCodec"))
-                val hevc = profile.getJSONArray("CodecProfiles").objects().single { it.getString("Codec") == "hevc" }
-                val condition = hevc.getJSONArray("Conditions").objects().single { it.getString("Property") == "VideoProfile" }
-                assertEquals("Main 10", condition.getString("Value"))
+                if (count == 1) {
+                    initial.set(profile)
+                    assertEquals("h264", declared.getString("VideoCodec"))
+                } else {
+                    assertEquals("source", body.getString("MediaSourceId"))
+                    assertEquals(setOf("h264", codec), declared.getString("VideoCodec").split(',').toSet())
+                    val before = initial.get()
+                    val original = before.getJSONArray("DirectPlayProfiles").objects().single { it.getString("Type") == "Video" }
+                    assertEquals("视频补解不能扩大容器范围", original.getString("Container"), declared.getString("Container"))
+                    assertEquals("音频声明必须原样保留",
+                        before.getJSONArray("DirectPlayProfiles").objects().filter { it.getString("Type") == "Audio" }.map { it.toString() },
+                        profile.getJSONArray("DirectPlayProfiles").objects().filter { it.getString("Type") == "Audio" }.map { it.toString() })
+                    val rows = profile.getJSONArray("CodecProfiles").objects()
+                    assertEquals("只能补充当前软件codec", setOf("h264", codec), rows.map { it.getString("Codec") }.toSet())
+                    assertEquals("不能扩大已有H264的profile",
+                        before.getJSONArray("CodecProfiles").objects().single().toString(),
+                        rows.single { it.getString("Codec") == "h264" }.toString())
+                    val conditions = rows.single { it.getString("Codec") == codec }.getJSONArray("Conditions").objects()
+                        .associateBy { it.getString("Property") }
+                    val exact = mapOf("Width" to "1920", "Height" to "1080", "VideoBitDepth" to depth.toString(),
+                        "VideoProfile" to name, "VideoLevel" to level.toString(), "VideoFramerate" to "24", "VideoRangeType" to range)
+                    assertEquals(exact.keys, conditions.keys)
+                    for ((property, value) in exact) {
+                        val condition = conditions.getValue(property)
+                        assertTrue("来源字段必须精确约束", condition.getBoolean("IsRequired"))
+                        assertEquals("MPEG2反序level只按当前来源精确匹配，不能变成递增上限",
+                            if (property == "VideoFramerate") "LessThanEqual" else "Equals", condition.getString("Condition"))
+                        if (value.toDoubleOrNull() == null) assertEquals(value, condition.getString("Value"))
+                        else assertEquals(value.toDouble(), condition.getString("Value").toDouble(), 0.0)
+                    }
+                }
+                exchange.json("""{"MediaSources":[{"Id":"source","SupportsDirectPlay":${count == 2},"Container":"mkv",
+                    "MediaStreams":[{"Type":"Video","Codec":"$codec","Profile":"$name","Width":1920,"Height":1080,
+                    "BitDepth":$depth,"Level":$level,"AverageFrameRate":24,"VideoRangeType":"$range"}]}],"PlaySessionId":"play-$count"}""")
+            }) { session ->
+                val api = JellyfinApi(videoSupport = { true })
+                val info = runBlocking { api.playbackInfo(session, "video") }
+                assertEquals(2, requests.get())
+                assertTrue(info.sources.single().supportsDirectPlay)
+                assertEquals("来源限定声明不能污染全局能力", initial.get().toString(), api.deviceProfile().toString())
             }
-            exchange.json("""{"MediaSources":[{"Id":"source","SupportsDirectPlay":${count == 2},"Container":"mkv",
-                "MediaStreams":[{"Type":"Video","Codec":"hevc","Profile":"Main 10","Width":1920,"Height":1080,
-                "BitDepth":10,"Level":120,"AverageFrameRate":24,"VideoRangeType":"HDR10"}]}],"PlaySessionId":"play-$count"}""")
-        }) { session ->
-            val info = runBlocking { JellyfinApi(videoSupport = { true }).playbackInfo(session, "video") }
-            assertEquals(2, requests.get())
-            assertTrue(info.sources.single().supportsDirectPlay)
         }
     }
 

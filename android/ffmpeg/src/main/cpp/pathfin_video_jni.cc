@@ -92,11 +92,9 @@ const AVCodec *find_codec(JNIEnv *env, jstring name)
     if (!name) return nullptr;
     const char *codec = env->GetStringUTFChars(name, nullptr);
     if (!codec) return nullptr;
-    AVCodecID id = AV_CODEC_ID_NONE;
-    if (strcmp(codec, "h264") == 0) id = AV_CODEC_ID_H264;
-    if (strcmp(codec, "hevc") == 0) id = AV_CODEC_ID_HEVC;
+    const AVCodec *decoder = avcodec_find_decoder_by_name(codec);
     env->ReleaseStringUTFChars(name, codec);
-    return id == AV_CODEC_ID_NONE ? nullptr : avcodec_find_decoder(id);
+    return decoder && decoder->type == AVMEDIA_TYPE_VIDEO ? decoder : nullptr;
 }
 
 void set_color_properties(AVCodecContext *decoder, int space, int range, int transfer)

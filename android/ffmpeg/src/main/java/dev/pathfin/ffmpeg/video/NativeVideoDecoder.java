@@ -70,8 +70,7 @@ public final class NativeVideoDecoder
 
   public static boolean isCodecAvailable(String codec) {
     try {
-      return ("h264".equals(codec) || "hevc".equals(codec))
-          && FfmpegLibrary.isAvailable() && hasDecoder(codec);
+      return FfmpegLibrary.isAvailable() && hasDecoder(codec);
     } catch (LinkageError unavailable) {
       return false;
     }

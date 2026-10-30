@@ -70,7 +70,8 @@
       "mp2",
       "mp3",
       "h264",
-      "hevc"
+      "hevc",
+      "mpeg2video"
     ],
     "sources": [
       {
@@ -118,7 +119,8 @@
     ],
     "videoDecoders": [
       "h264",
-      "hevc"
+      "hevc",
+      "mpeg2video"
     ],
     "hostTools": {
       "meson": "1.9.2",
@@ -149,7 +151,7 @@
     },
     {
       "path": "src/main/cpp/pathfin_video_jni.cc",
-      "sha256": "daa7fd1180924aef879b89bc0b0a7ffc8a433a201e722cb2aa7285c05ae6ca1c"
+      "sha256": "3a4a559877b4943464b101a1dd964ea20c7a14e46882a9acf6ac0e29ea5297a3"
     },
     {
       "path": "src/main/cpp/pathfin_video_render.c",
@@ -161,7 +163,7 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java",
-      "sha256": "a3f968642c15725b28b71d543f11a350dc86ec257770d174d50c4f9efbe645fb"
+      "sha256": "06cca96da9c57a0d98d2e164bbe24565d0ecf88cc704186ef48befcea140e381"
     },
     {
       "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java",
@@ -169,7 +171,7 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java",
-      "sha256": "505eb0ba257d44c3bfcdf81e41c3f452914975e686fc1146e30c2c67f6de2ca7"
+      "sha256": "9b3ebcf728f24cce455017eb551b39df4e4ee1f01931d2840c499e4bc22eae83"
     },
     {
       "path": "video-consumer-rules.pro",

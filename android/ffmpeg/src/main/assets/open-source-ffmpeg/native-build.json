@@ -13,7 +13,8 @@
   "sourceDateEpoch": 1792972800,
   "videoDecoders": [
     "h264",
-    "hevc"
+    "hevc",
+    "mpeg2video"
   ],
   "cxxRuntime": "c++_static",
   "renderer": {
@@ -39,7 +40,7 @@
     "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
     "build.gradle.kts": "f268bd7095c1c5d4bc8dad087623de5ece9ccaea79737d9888d3edb9d043b43e",
     "src/main/cpp/ffmpeg_jni.cc": "7bd4a3d09cf1828543848a1abf271f984f665d25092c81c61a4fe4735879d3f0",
-    "src/main/cpp/pathfin_video_jni.cc": "daa7fd1180924aef879b89bc0b0a7ffc8a433a201e722cb2aa7285c05ae6ca1c",
+    "src/main/cpp/pathfin_video_jni.cc": "3a4a559877b4943464b101a1dd964ea20c7a14e46882a9acf6ac0e29ea5297a3",
     "src/main/cpp/pathfin_video_render.c": "0e0e7ec8a290d1fe1808d2ae5ea48e13c6ea7c3e5a46dc4def38be4c0f895632",
     "src/main/cpp/pathfin_video_render.h": "d1bfe7e3107e01a70cd87fcd5f5db3456b235d01b19e21dc8c33effbbcd99dc5",
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioDecoder.java": "64b5ff45fd9f60b6775d542bda141698e5d32cacdd04ddd96141e86f2c0a51f8",
@@ -47,9 +48,9 @@
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegDecoderException.java": "9e73968d0802b2d7f8add911ec4dc5a6e621777e997eca74332e173c5463ad7a",
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegLibrary.java": "a0843232be53210aefe97d8bc0a0268ac781cc7ce72e2d47bf42cd07f8048880",
     "src/main/java/androidx/media3/decoder/ffmpeg/package-info.java": "1d75d02151fcec7a1c0036ee4a216e885ae91e1f85e8c9ddfbd72b4def6709be",
-    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "a3f968642c15725b28b71d543f11a350dc86ec257770d174d50c4f9efbe645fb",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "06cca96da9c57a0d98d2e164bbe24565d0ecf88cc704186ef48befcea140e381",
     "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java": "e9663135c8d8fb3c647cb5df67c78a3e97be8eb6de488299eb9e9e2660c87045",
-    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "505eb0ba257d44c3bfcdf81e41c3f452914975e686fc1146e30c2c67f6de2ca7",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "9b3ebcf728f24cce455017eb551b39df4e4ee1f01931d2840c499e4bc22eae83",
     "video-consumer-rules.pro": "d3726d0b9c258ecf14c2b234a2569dcee3718685aeb953d2664b23ad678d5774"
   },
   "copiedAvformatHeaders": {
@@ -78,13 +79,14 @@
     "mp2",
     "mp3",
     "h264",
-    "hevc"
+    "hevc",
+    "mpeg2video"
   ],
   "libraries": [
     {
       "file": "libavcodec.so",
-      "bytes": 3200768,
-      "sha256": "8d277c2e7eee3ec9e73f89884a20e0eac6bc2f4af77e8fb212eaf8e13a94e476",
+      "bytes": 3282352,
+      "sha256": "061091142122fe2d5667e1abaf457b42c1a9cba813538e150e3153d37d314a49",
       "loadAlignments": [
         16384,
         16384,
@@ -100,7 +102,7 @@
     {
       "file": "libavutil.so",
       "bytes": 729960,
-      "sha256": "4ea338c578bbcd48dd3de07645c220d4c8d46f978aab4e20212bd5c12509d9cc",
+      "sha256": "6d0b48350bc2734ee609da505d03c2899f9e66c9a811e96bbc5fa1896437a359",
       "loadAlignments": [
         16384,
         16384,
@@ -113,8 +115,8 @@
     },
     {
       "file": "libswresample.so",
-      "bytes": 96376,
-      "sha256": "17dc578b930b4aceb3a91ca9de8448e89a99b3a5e631937ce1d21f3ee022e4d7",
+      "bytes": 96392,
+      "sha256": "abd8f812ff01756b0b7f40eda32000b69e28924ed9030dd1451e1f4de972bf8e",
       "loadAlignments": [
         16384,
         16384
@@ -127,8 +129,8 @@
     },
     {
       "file": "libffmpegJNI.so",
-      "bytes": 743152,
-      "sha256": "8e73336984e559dbe1ff0878c2b064589fdb1165a3c354484b95e36d64c493f7",
+      "bytes": 743024,
+      "sha256": "bec5f4bb9578a071584b0d5e8dd420d83eb793b55a69c94b6203598faf4451fa",
       "loadAlignments": [
         16384,
         16384,
@@ -148,8 +150,8 @@
       ]
     }
   ],
-  "configSha256": "234d2c104880e4af2d7dc6c8594e0ee2fb483ccd17b2594f14562d8b79c4a70e",
-  "componentConfigSha256": "3ed0240b1c7a87006c7bb9e9d4bbbd1fde57adb898ed0d71f24d3ad311818239",
+  "configSha256": "71523b870e57ccb09142a55ff40dd8400caf040e1bd048b3ced6c9d14ed2a397",
+  "componentConfigSha256": "4054a9e9425a67f369c0dab792a92cc80dbda9aef92827c2f0f3a52e20c9c37c",
   "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
-  "sourceLockSha256": "e437cf18a64a61c3525a8d22bbaf1f502d11989a5baf38e30cb116ed3c8d9d37"
+  "sourceLockSha256": "82e0ac8851fc32e1fd41670f23f6a49ee56e575f22e0c97221108139100f3555"
 }
