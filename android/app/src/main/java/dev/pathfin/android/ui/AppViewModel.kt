@@ -1847,7 +1847,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(preparingPlay = true, pendingPlayback = pending.copy(sourceId = sourceId)) }
         val source = selection.info.sources.single { it.id == sourceId }
         val preferences = state.value.preferences
-        val cloudUrl = dev.pathfin.android.data.CloudPlaybackApi.candidateUrl(source)
+        val cloudUrl = dev.pathfin.android.data.CloudPlaybackApi.candidateUrl(session, source)
         val cloudEligible = preferences.originalPathEnabled && selection.item.type in setOf("Movie", "Episode", "Video") &&
             cloudUrl != null
         val cloud = if (cloudEligible) {

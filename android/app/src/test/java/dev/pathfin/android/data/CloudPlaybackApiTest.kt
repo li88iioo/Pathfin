@@ -30,34 +30,50 @@ class CloudPlaybackApiTest {
         "user", "Fixture", "device", serverId = "server")
     private val signature = "a".repeat(64)
 
-    @Test fun candidateUrlPrefersTheValidatedExtensionAndKeepsOriginalProtocolRules() {
+    @Test fun candidateUrlRebasesTheValidatedExtensionAndKeepsOriginalProtocolRules() {
         val original = source("https://mf.example")
         val signed = original.path!!
         val extension = signed.replace("mf.example", "cloud.example")
         for (protocol in listOf(null, "", "Http", "HTTP", "File", "Ftp")) {
             val source = original.copy(protocol = protocol)
             val expected = signed.takeIf { protocol.isNullOrBlank() || protocol.equals("Http", true) }
-            assertEquals(expected, CloudPlaybackApi.candidateUrl(source))
-            assertEquals(extension, CloudPlaybackApi.candidateUrl(source.copy(cloudPlaybackUrl = extension)))
+            assertEquals(expected, CloudPlaybackApi.candidateUrl(session, source))
+            assertEquals(signed.replace("mf.example", "jellyfin.example"),
+                CloudPlaybackApi.candidateUrl(session, source.copy(cloudPlaybackUrl = extension)))
         }
         for (invalid in listOf("", "/local/movie.strm", "file:///movie.strm", "ftp://cloud.example/playgy/a/b/c/d?v=1&sig=$signature",
                 extension.substringBefore('?'), extension.replace("v=1", "v=2"), extension.replace(signature, "short"),
                 extension.replace("cloud.example", "user:password@cloud.example"))) {
-            assertEquals(signed, CloudPlaybackApi.candidateUrl(original.copy(cloudPlaybackUrl = invalid)))
-            assertNull(CloudPlaybackApi.candidateUrl(original.copy(protocol = "File", cloudPlaybackUrl = invalid)))
+            assertEquals(signed, CloudPlaybackApi.candidateUrl(session, original.copy(cloudPlaybackUrl = invalid)))
+            assertNull(CloudPlaybackApi.candidateUrl(session, original.copy(protocol = "File", cloudPlaybackUrl = invalid)))
         }
     }
 
-    @Test fun reverseProxyExtensionUsesTheOriginalSignedUrlWithoutProxyCredentials() = runBlocking {
+    @Test fun extensionUsesTheCompleteHttpsOriginAndPreservesTheEncodedPathAndQuery() {
+        val proxySession = session.copy(server = ServerConfig("https://mediaflux.example:34488/jellyfin"))
+        val suffix = "/proxy/playgy/account%2Froot/share/file/movie%20one.mkv?v=1&sig=$signature&name=a%2Fb&name=two&tag=a+b&empty=&flag"
+        for (origin in listOf("https://mediaflux.example", "http://10.0.0.8:8096")) {
+            val raw = origin + suffix
+            val normal = source(origin).copy(path = raw, protocol = "Http")
+            assertEquals("普通 HTTP Path 保持原始 origin", raw, CloudPlaybackApi.candidateUrl(proxySession, normal))
+            assertEquals("扩展只替换会话 origin，不能拼接服务器 base path 或重编码签名参数",
+                "https://mediaflux.example:34488$suffix",
+                CloudPlaybackApi.candidateUrl(proxySession, normal.copy(protocol = "File", cloudPlaybackUrl = raw)))
+        }
+    }
+
+    @Test fun reverseProxyExtensionUsesTheSessionOriginWithoutProxyCredentials() = runBlocking {
         Fixture { exchange ->
             exchange.reply(if (exchange.requestURI.rawQuery.contains("view=variants")) variantsJson() else resolveJson())
         }.use { fixture ->
             val signed = source(fixture.baseUrl).path!! + "&name=a%2Fb&name=two"
-            val source = source(fixture.baseUrl).copy(path = "${fixture.baseUrl}/proxy/stream", protocol = "File", cloudPlaybackUrl = signed)
+            val advertised = signed.replace(fixture.baseUrl, "http://10.0.0.8:8096")
+            val proxySession = session.copy(server = ServerConfig(fixture.baseUrl, allowInsecureHttp = true))
+            val source = source(fixture.baseUrl).copy(path = "${fixture.baseUrl}/proxy/stream", protocol = "File", cloudPlaybackUrl = advertised)
             val api = CloudPlaybackApi()
-            val cloud = requireNotNull(api.discover(session, source))
+            val cloud = requireNotNull(api.discover(proxySession, source))
             assertEquals(signed, cloud.sourceUrl)
-            val initial = request(fixture.baseUrl).copy(source = source, cloudPlayback = cloud)
+            val initial = request(fixture.baseUrl).copy(session = proxySession, source = source, cloudPlayback = cloud)
             val selected = api.select(initial, PlaybackQuality.STANDARD)
             assertEquals(initial.source, selected.source)
             assertEquals(initial.startPositionMs, selected.startPositionMs)
@@ -73,7 +89,11 @@ class CloudPlaybackApiTest {
                 assertEquals(listOf("a/b", "two"), recorded.url.queryParameterValues("name"))
                 assertAnonymous(recorded)
             }
-            assertSafe(expectFailure { api.discover(session, source.copy(cloudPlaybackUrl = "$signed&api_key=${session.accessToken}")) })
+            for (unsafe in listOf("$advertised&api_key=${session.accessToken}",
+                    "$advertised&api_key=${session.accessToken.replace("-", "%252D")}",
+                    signed.replace(fixture.baseUrl, "http://${session.accessToken}.invalid"))) {
+                assertSafe(expectFailure { api.discover(proxySession, source.copy(cloudPlaybackUrl = unsafe)) })
+            }
             assertEquals("包含外部服务器凭据的扩展不能发出请求", 2, fixture.requests.size)
         }
     }

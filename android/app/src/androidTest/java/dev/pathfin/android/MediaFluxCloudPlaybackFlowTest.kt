@@ -81,12 +81,14 @@ class MediaFluxCloudPlaybackFlowTest {
         val base = requireNotNull(endpoint)
         val sourceUrl = get(base + "/bootstrap").getString("url")
         withApp(sourceUrl, reverseProxyPayload = reverseProxyPayload) { fixture, app, playback ->
+            val expectedSourceUrl = if (reverseProxyPayload) URI(sourceUrl).let { "${fixture.origin}${it.rawPath}?${it.rawQuery}" } else sourceUrl
             start(app, playback)
             await { playback.currentRequest?.quality == PlaybackQuality.STANDARD && playback.state.value.hasRenderedFrame }
             main {
                 assertNotNull(playback.currentRequest?.cloudPlayback)
                 assertFalse(playback.currentRequest!!.stream.trustedServer)
-                assertTrue(playback.currentRequest!!.cloudPlayback!!.sourceUrl == sourceUrl)
+                assertTrue(playback.currentRequest!!.stream.headers.isEmpty())
+                assertEquals(expectedSourceUrl, playback.currentRequest!!.cloudPlayback!!.sourceUrl)
                 if (reverseProxyPayload) {
                     assertEquals("File", playback.currentRequest!!.source.protocol)
                     assertEquals(sourceUrl, playback.currentRequest!!.source.cloudPlaybackUrl)
@@ -130,7 +132,11 @@ class MediaFluxCloudPlaybackFlowTest {
             control(base, "expire_once", true)
             main { playback.retry() }
             await { !playback.state.value.isPreparing && playback.state.value.errorMessage == null && playback.state.value.hasRenderedFrame && playback.player?.playbackState == Player.STATE_READY }
-            main { assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality); assertFalse(playback.player!!.playWhenReady) }
+            main {
+                assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality)
+                assertEquals(expectedSourceUrl, playback.currentRequest!!.cloudPlayback!!.sourceUrl)
+                assertFalse(playback.player!!.playWhenReady)
+            }
             main { playback.changeQuality(PlaybackQuality.ORIGINAL) }
             await { playback.currentRequest?.quality == PlaybackQuality.ORIGINAL && !playback.state.value.isChangingQuality && playback.state.value.hasRenderedFrame }
             main { assertEquals("video/mp4", playback.currentRequest!!.stream.mimeType); assertFalse(playback.player!!.playWhenReady) }
@@ -138,6 +144,10 @@ class MediaFluxCloudPlaybackFlowTest {
             runBlocking { withTimeout(WAIT) { playback.awaitPendingReports() } }
             assertEquals(1, fixture.eventCount("start", ITEM))
             assertEquals(0, fixture.eventCount("stop", ITEM))
+            if (reverseProxyPayload) {
+                assertEquals("反代发现必须从会话 origin 转发", 1, fixture.cloudVariantRequests.get())
+                assertTrue("切档和断流恢复都必须经过反代", fixture.cloudResolutions.size >= 5)
+            }
             Log.i("CloudQualityAcceptance", "default720+seek90+menu1080+paused+failed-switch-preserved+403-refresh+original:PASS")
         }
     }
@@ -148,8 +158,11 @@ class MediaFluxCloudPlaybackFlowTest {
             val sourceUrl = main {
                 val request = requireNotNull(playback.currentRequest)
                 assertEquals("File", request.source.protocol)
-                assertEquals(request.source.cloudPlaybackUrl, request.cloudPlayback!!.sourceUrl)
+                val advertised = URI(requireNotNull(request.source.cloudPlaybackUrl))
+                assertEquals("反代广告复现端口丢失", -1, advertised.port)
+                assertEquals("${fixture.origin}${advertised.rawPath}?${advertised.rawQuery}", request.cloudPlayback!!.sourceUrl)
                 assertNotEquals(request.source.path, request.cloudPlayback!!.sourceUrl)
+                assertTrue(request.stream.headers.isEmpty())
                 assertEquals(PlaybackQuality.STANDARD, request.quality)
                 playback.player!!.pause()
                 playback.player!!.seekTo(3_000)
@@ -196,8 +209,23 @@ class MediaFluxCloudPlaybackFlowTest {
                 assertFalse(playback.player!!.playWhenReady)
                 assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
             }
-            assertEquals("代理 Path 改变而原始云盘 URL 未变时复用发现结果", discoveries, fixture.cloudVariantRequests.get())
+            assertEquals("代理 Path 改变而补全 origin 后的云盘 URL 未变时复用发现结果", discoveries, fixture.cloudVariantRequests.get())
             assertEquals(negotiations + 1, fixture.nextPlaybackRequests.get())
+            val resolutions = fixture.cloudResolutions.size
+            main { playback.retry() }
+            await {
+                fixture.cloudResolutions.size > resolutions && !playback.state.value.isPreparing &&
+                    playback.state.value.errorMessage == null && playback.state.value.hasRenderedFrame && playback.player?.playbackState == Player.STATE_READY
+            }
+            main {
+                assertEquals(sourceUrl, playback.currentRequest!!.cloudPlayback!!.sourceUrl)
+                assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality)
+                assertFalse(playback.player!!.playWhenReady)
+                assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
+                assertEquals(1.5f, playback.player!!.playbackParameters.speed)
+            }
+            assertEquals("恢复必须通过会话 origin 重新解析画质", resolutions + 1, fixture.cloudResolutions.size)
+            assertEquals("云盘恢复不能追加 JF 协商", negotiations + 1, fixture.nextPlaybackRequests.get())
             assertNoJellyfinFallback(fixture)
         }
     }

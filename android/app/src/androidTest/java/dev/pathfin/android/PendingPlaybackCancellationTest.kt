@@ -36,6 +36,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -387,6 +390,8 @@ class PendingPlaybackCancellationTest {
         private val reverseProxyPayload: Boolean = false) : Closeable {
         enum class CloudScenario { ORIGINAL_ONLY, WITH_H264_RENDITIONS }
 
+        private val cloudProxy = if (reverseProxyPayload && externalSource != null)
+            OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).callTimeout(15, TimeUnit.SECONDS).build() else null
         val seriesResolution = ResponseGate(blockSeries)
         val playbackStatus = AtomicInteger(200)
         val nextDetail = ResponseGate(blockDetail)
@@ -458,10 +463,12 @@ class PendingPlaybackCancellationTest {
                         URLDecoder.decode(pair[0], "UTF-8") to URLDecoder.decode(pair.getOrElse(1) { "" }, "UTF-8")
                     }
                     val method = parts[0]
-                    val cloud = uri.path.startsWith("/playgy/") || uri.path.startsWith("/cloud-media/")
+                    val forwardedCloudView = cloudProxy != null && uri.rawPath == URI(externalSource!!).rawPath &&
+                        query["view"] in setOf("variants", "resolve")
+                    val cloud = forwardedCloudView || uri.path.startsWith("/playgy/") || uri.path.startsWith("/cloud-media/")
                     media = uri.path.startsWith("/media/") || uri.path.startsWith("/cloud-media/")
                     if (cloud) {
-                        check(cloudScenario != null)
+                        check(cloudScenario != null || forwardedCloudView)
                         check(listOf("authorization", "x-emby-token", "x-emby-authorization", "x-mediabrowser-token", "cookie")
                             .none { headers.containsKey(it) } && headers.values.none { TOKEN in it || "proxy-secret" in it } &&
                             !uri.toString().contains(TOKEN)) { "云盘请求不能携带 Jellyfin 或反代凭据" }
@@ -475,7 +482,17 @@ class PendingPlaybackCancellationTest {
                         else -> null
                     }
                     gate?.block()
-                    if (media) {
+                    if (forwardedCloudView) {
+                        check(method == "GET" && headers["accept"] == "application/json")
+                        val advertised = externalSource!!.toHttpUrl()
+                        check(query["v"] == advertised.queryParameter("v") && query["sig"] == advertised.queryParameter("sig"))
+                        val upstream = advertised.newBuilder().encodedQuery(uri.rawQuery).build()
+                        if (query["view"] == "variants") cloudVariantRequests.incrementAndGet()
+                        else cloudResolutions += requireNotNull(query["quality"])
+                        cloudProxy!!.newCall(Request.Builder().url(upstream).header("Accept", "application/json").build()).execute().use { response ->
+                            respond(connection, response.code, response.body.bytes(), response.header("Content-Type") ?: "application/json")
+                        }
+                    } else if (media) {
                         check(method == "GET" || method == "HEAD")
                         if (uri.path.startsWith("/media/")) serverMediaRequests.incrementAndGet()
                         if (uri.path == "/media/$TWO.mp4") nextMediaRequests.incrementAndGet()
@@ -573,8 +590,9 @@ class PendingPlaybackCancellationTest {
             .put("SeriesId", SERIES).put("SeasonId", SEASON).put("SeriesName", "Pending series").put("ParentIndexNumber", 1)
             .put("IndexNumber", if (id == ONE) 1 else 2).put("RunTimeTicks", 240_000_000L).put("ImageTags", JSONObject())
         private fun source(id: String, version: String, transcoding: Boolean = false, negotiated: Boolean = false): JSONObject {
+            val cloudOrigin = if (reverseProxyPayload) "http://127.0.0.1" else origin
             val cloudUrl = externalSource ?: if (cloudScenario != null || reverseProxyPayload)
-                "$origin/playgy/pending/disk/file/$version?v=1&sig=${"a".repeat(64)}" else null
+                "$cloudOrigin/playgy/pending/disk/file/$version?v=1&sig=${"a".repeat(64)}" else null
             return JSONObject()
             .put("Id", "source-$id-$version").put("Name", version + playbackSourceSuffix.get())
             .put("Path", if (reverseProxyPayload) "$origin/mf-proxy/$id/$version${playbackSourceSuffix.get()}/stream" else cloudUrl ?: "/synthetic/$id.mp4")
@@ -652,6 +670,7 @@ class PendingPlaybackCancellationTest {
             sockets.toList().forEach { runCatching { it.close() } }
             check(!accept.isAlive) { "待播放取消 fixture 接收线程未停止" }
             workers.shutdownNow()
+            cloudProxy?.let { it.dispatcher.cancelAll(); it.connectionPool.evictAll(); it.dispatcher.executorService.shutdownNow() }
             assertHealthy()
         }
     }

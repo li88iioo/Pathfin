@@ -705,7 +705,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                             videoPreflight = VideoPreflightPolicy.TRY_ORIGINAL_SOURCE)
                         val source = info.sources.firstOrNull { it.id == previous.source.id }
                             ?: throw IllegalStateException(tr("当前媒体版本已不存在"))
-                        val cloud = if (dev.pathfin.android.data.CloudPlaybackApi.candidateUrl(source) == basis.cloudPlayback?.sourceUrl) basis.cloudPlayback else
+                        val cloud = if (dev.pathfin.android.data.CloudPlaybackApi.candidateUrl(previous.session, source) == basis.cloudPlayback?.sourceUrl) basis.cloudPlayback else
                             cloudApi.discover(previous.session, source)
                                 ?: throw IllegalStateException(tr("媒体来源已变化，请重新打开播放"))
                         basis = basis.copy(info = info, source = source, cloudPlayback = cloud)

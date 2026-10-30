@@ -27,8 +27,7 @@ class CloudPlaybackApi(
         .connectTimeout(8, TimeUnit.SECONDS).readTimeout(12, TimeUnit.SECONDS).callTimeout(15, TimeUnit.SECONDS).build()
 
     suspend fun discover(session: Session, source: MediaSource): CloudPlayback? {
-        val url = candidateUrl(source) ?: return null
-        require(!PlaybackHeaders.containsExternalServerCredential(session, url)) { tr("片源地址包含服务器凭据") }
+        val url = candidateUrl(session, source) ?: return null
         val json = readJson(url, "variants", discovery = true) ?: return null
         val values = json.optJSONArray("variants") ?: error(tr("云盘画质列表不完整"))
         val variants = (0 until values.length()).map { index -> parseVariant(requireNotNull(values.optJSONObject(index)) { tr("云盘画质条目不完整") }, source) }
@@ -124,11 +123,17 @@ class CloudPlaybackApi(
     }
 
     companion object {
-        /** 反代扩展保留原始 HTTP 地址；普通 Path 仍必须符合 Jellyfin 的来源协议。 */
-        fun candidateUrl(source: MediaSource): String? {
-            source.cloudPlaybackUrl?.takeIf(::isCandidate)?.let { return it }
-            if (!source.protocol.isNullOrBlank() && !source.protocol.equals("Http", true)) return null
-            return source.path?.takeIf(::isCandidate)
+        /** MF 扩展通过当前服务器访问，避免前置代理改写 Host 丢失公网端口；普通 STRM 仍用原地址。 */
+        fun candidateUrl(session: Session, source: MediaSource): String? {
+            val extension = source.cloudPlaybackUrl?.takeIf(::isCandidate)
+            val original = extension ?: source.path?.takeIf {
+                (source.protocol.isNullOrBlank() || source.protocol.equals("Http", true)) && isCandidate(it)
+            } ?: return null
+            require(!PlaybackHeaders.containsExternalServerCredential(session, original)) { tr("片源地址包含服务器凭据") }
+            if (extension == null) return original
+            val server = requireNotNull(ServerUrls.normalize(session.server).baseUrl.toHttpUrlOrNull())
+            return requireNotNull(original.toHttpUrlOrNull()).newBuilder()
+                .scheme(server.scheme).host(server.host).port(server.port).build().toString()
         }
 
         fun isCandidate(raw: String): Boolean {
