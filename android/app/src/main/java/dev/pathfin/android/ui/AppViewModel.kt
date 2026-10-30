@@ -1159,11 +1159,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (state.value.pendingPlayback != null) { cancelPendingPlayback(); return }
         if (state.value.routes == listOf(Route.Search) && !state.value.showServers) { selectTab(Route.Home); return }
         if (state.value.routes.size <= 1) { if (!state.value.showServers || state.value.route != Route.Home) showServers(); return }
+        popRoutes(state.value.routes.size - 1)
+    }
+
+    /** 单集或季回到所属剧集：返回栈里已有这部剧就退回去，不重复叠一层详情。 */
+    fun openSeries(item: MediaItem) {
+        val seriesId = item.seriesId?.takeIf { item.type in setOf("Episode", "Season") && it.isNotBlank() } ?: return
+        cancelPendingPlayback()
+        val index = state.value.routes.indexOfLast { it == Route.Detail(seriesId) }
+        if (index >= 0) { popRoutes(index + 1); return }
+        open(MediaItem(seriesId, item.seriesName.orEmpty(), "Series", isFolder = true,
+            logoTag = item.logoTag.takeIf { item.logoItemId == seriesId }, logoItemId = item.logoItemId.takeIf { it == seriesId },
+            backdropTag = item.backdropTag.takeIf { item.backdropItemId == seriesId },
+            backdropItemId = item.backdropItemId.takeIf { it == seriesId }))
+    }
+
+    private fun popRoutes(size: Int) {
+        val removed = state.value.routes.drop(size).takeIf { it.isNotEmpty() && size > 0 } ?: return
         invalidatePlaybackPrefetch()
         playJob?.cancel()
-        (state.value.route as? Route.Detail)?.id?.let(::cancelDetailLoad)
+        removed.filterIsInstance<Route.Detail>().forEach { cancelDetailLoad(it.id) }
         mutableState.update {
-            val routes = it.routes.dropLast(1)
+            val routes = it.routes.take(size)
             val destination = routes.last() as? Route.Detail
             it.copy(routes = routes, preparingPlay = false, sourceSelection = null, playbackError = null,
                 detailLoading = detailLoad?.let { load -> load.itemId == destination?.id } == true, detailError = null)

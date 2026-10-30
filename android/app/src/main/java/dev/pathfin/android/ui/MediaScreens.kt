@@ -31,6 +31,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
@@ -597,7 +598,8 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
                 resumeItems.firstOrNull() ?: extras?.nextUp?.firstOrNull(), onPlay, onStart, onCast?.let { { it(item) } },
                 onFavorite = { vm.toggleFavorite(item) },
                 onDownload = if (session.canDownload && item.canDownload != false && item.type in setOf("Movie", "Episode", "Video", "Audio")) ({ vm.prepareDownload(item) }) else null,
-                onWatched = { vm.togglePlayed(item) }, actionBusy = state.actionBusy)
+                onWatched = { vm.togglePlayed(item) }, actionBusy = state.actionBusy,
+                onSeries = { vm.openSeries(item) }.takeIf { item.type in setOf("Episode", "Season") && !item.seriesId.isNullOrBlank() })
         }
         // 播放失败由全局的重试对话框提示，详情页不再重复一张同样的错误卡片。
         state.detailError?.let { error -> item(key = "detail-error") {
@@ -678,7 +680,7 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
 @Composable
 internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, busy: Boolean, playable: Boolean, hasResume: Boolean,
     playTarget: MediaItem?, onPlay: () -> Unit, onStart: () -> Unit, onCast: (() -> Unit)? = null,
-    onFavorite: () -> Unit, onDownload: (() -> Unit)?, onWatched: () -> Unit, actionBusy: Set<String>) {
+    onFavorite: () -> Unit, onDownload: (() -> Unit)?, onWatched: () -> Unit, actionBusy: Set<String>, onSeries: (() -> Unit)? = null) {
     val surface = MaterialTheme.colorScheme.surface
     val safeArea = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
     val season = item.type == "Season"
@@ -701,7 +703,9 @@ internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, bus
             if (season) Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
                 PosterImage(item, session, api, Modifier.width(seasonPosterWidth).aspectRatio(2f / 3f))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DetailTitle(item.copy(name = item.seriesName?.takeIf(String::isNotBlank) ?: item.name), session, api, compact = true)
+                    // 季页标题就是剧名，点击回到整部剧。
+                    DetailTitle(item.copy(name = item.seriesName?.takeIf(String::isNotBlank) ?: item.name), session, api, compact = true,
+                        onClick = onSeries)
                     if (!item.seriesName.isNullOrBlank()) Text(item.name, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium)
                     DetailInfo(item)
                 }
@@ -712,8 +716,8 @@ internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, bus
             if (playable) DetailActions(item, busy, hasResume, onPlay, onStart, onCast,
                 onFavorite, onDownload, onWatched, "favorite/${item.id}" in actionBusy,
                 "download/${item.id}" in actionBusy, "played/${item.id}" in actionBusy, playTarget)
-            item.seriesName?.takeIf { item.type == "Episode" && it.isNotBlank() }?.let {
-                Text(it, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            item.seriesName?.takeIf { item.type == "Episode" && it.isNotBlank() }?.let { series ->
+                SeriesLink(series, onSeries)
             }
             DetailSynopsis(item)
         }
@@ -721,8 +725,21 @@ internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, bus
     }
 }
 
+/** 单集所属剧名；可回到剧集详情时带箭头。 */
 @Composable
-private fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, compact: Boolean = false) {
+private fun SeriesLink(name: String, onClick: (() -> Unit)?) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    if (onClick == null) { Text(name, fontSize = 13.sp, color = color); return }
+    Row(Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(8.dp))
+        .clickable(role = Role.Button, onClickLabel = tr("打开剧集详情"), onClick = onClick).testTag("detail-series-link"),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(name, Modifier.weight(1f, fill = false), fontSize = 13.sp, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(PathfinIcons.Chevron, null, Modifier.size(14.dp), tint = color)
+    }
+}
+
+@Composable
+private fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, compact: Boolean = false, onClick: (() -> Unit)? = null) {
     val context = LocalContext.current
     val request = remember(context, session, item.id, item.logoTag, item.logoItemId) { PosterRequests.logo(context, session, api, item) }
     var imageReady by remember(request) { mutableStateOf(false) }
@@ -736,7 +753,9 @@ private fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, com
         }
     }
     val titleSlot = if (compact) 32.dp else 84.dp
-    Box(Modifier.fillMaxWidth().heightIn(min = titleSlot).testTag("detail-title/${item.id}"),
+    Box(Modifier.fillMaxWidth().heightIn(min = titleSlot)
+        .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = tr("打开剧集详情"), onClick = onClick) else Modifier)
+        .testTag("detail-title/${item.id}"),
         contentAlignment = if (compact) Alignment.TopStart else Alignment.BottomStart) {
         Text(item.name, Modifier.fillMaxWidth().padding(bottom = 4.dp).then(if (imageReady) Modifier.alpha(0f) else Modifier),
             fontSize = 25.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)

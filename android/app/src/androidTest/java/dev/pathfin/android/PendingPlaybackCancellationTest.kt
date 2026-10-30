@@ -2,7 +2,9 @@ package dev.pathfin.android
 
 import android.content.Context
 import android.view.KeyEvent
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.common.util.UnstableApi
@@ -68,6 +70,51 @@ class PendingPlaybackCancellationTest {
         }
     } }
     @get:Rule val rules: TestRule = RuleChain.outerRule(isolatedStorage).around(compose)
+
+    @Test fun episodeSeriesLinkCancelsPreparationBeforeOpeningItsSeries() = checkSeriesNavigation(reuseSeries = false)
+
+    @Test fun episodeSeriesLinkCancelsPreparationBeforePoppingBackToItsSeries() = checkSeriesNavigation(reuseSeries = true)
+
+    private fun checkSeriesNavigation(reuseSeries: Boolean) {
+        fixture(blockPlayback = true).use { fixture ->
+            val app = login(fixture)
+            val base = app.state.value.routes
+            try {
+                if (reuseSeries) {
+                    main { app.open(MediaItem(SERIES, "Pending series", "Series", isFolder = true)) }
+                    await(fixture) { !app.state.value.detailLoading }
+                    main { app.open(MediaItem(SEASON, "Pending season", "Season", isFolder = true, seriesId = SERIES)) }
+                    await(fixture) { !app.state.value.detailLoading }
+                }
+                main { app.open(episode(TWO)) }
+                await(fixture) { !app.state.value.detailLoading && app.state.value.details[TWO]?.seriesName == "Pending series" }
+                compose.onNodeWithTag("detail-content").performScrollToNode(hasTestTag("detail-series-link"))
+                main { app.preparePlayback(app.state.value.details.getValue(TWO), fromStart = true) }
+                fixture.nextPlayback.awaitEntered()
+                val pending = pendingJob(app)
+                fixture.nextPlayback.expectCancellation.set(true)
+                compose.onNodeWithTag("detail-series-link").performVerificationClick(compose)
+                val expected = base + (if (reuseSeries) emptyList() else listOf(Route.Detail(TWO))) + Route.Detail(SERIES)
+                await(fixture) { app.state.value.routes == expected }
+                main {
+                    assertNull("跳转剧集必须清除待播目标", app.state.value.pendingPlayback)
+                    assertNull(app.state.value.sourceSelection)
+                    assertFalse(app.state.value.preparingPlay)
+                }
+                fixture.nextPlayback.release()
+                fixture.nextPlayback.awaitResponseAttempt()
+                join(pending)
+                compose.waitForIdle()
+                assertTrue(pending.isCancelled)
+                assertNull("迟到响应不能在跳页后起播", app.state.value.activePlayback)
+                assertEquals(0, fixture.nextMediaRequests.get())
+                assertEquals(0, fixture.eventCount("start", TWO))
+                main { compose.activity.onBackPressedDispatcher.onBackPressed() }
+                await(fixture) { app.state.value.routes == expected.dropLast(1) && !app.state.value.detailLoading }
+                fixture.assertHealthy()
+            } finally { main { app.playerClosed(0) } }
+        }
+    }
 
     @Test fun backWhileTheNextEpisodeIsBlockedCannotReopenPlaybackAfterItsLateResponse() {
         fixture(blockDetail = true).use { fixture ->

@@ -928,6 +928,29 @@ class LibrarySearchFlowTest {
         assertEquals(originalRoutes.dropLast(1), env.vm.state.value.routes)
     }
 
+    @Test fun seasonTitleOpensItsSeriesAndReusesTheSeriesAlreadyInTheBackStack() = withApp { env ->
+        val base = env.vm.state.value.routes
+        // 直接进入季：栈里没有这部剧，点标题新开剧集详情。
+        main { env.vm.open(MediaItem(SEASON, "合成第一季", "Season", isFolder = true, seriesId = SERIES)) }
+        await(env, "季详情") { it.route == Route.Detail(SEASON) && !it.detailLoading }
+        compose.onNodeWithTag("detail-title/$SEASON").performVerificationClick(compose)
+        await(env, "打开所属剧集") { it.route == Route.Detail(SERIES) && !it.detailLoading }
+        assertEquals(base + Route.Detail(SEASON) + Route.Detail(SERIES), env.vm.state.value.routes)
+        // 剧 → 季 → 剧：退回已有的剧集详情，不再叠一层。
+        main { env.vm.open(MediaItem(SEASON, "合成第一季", "Season", isFolder = true, seriesId = SERIES)) }
+        await(env, "再次进入季详情") { it.route == Route.Detail(SEASON) && !it.detailLoading }
+        compose.onNodeWithTag("detail-title/$SEASON").performVerificationClick(compose)
+        await(env, "退回已有剧集详情") { it.routes == base + Route.Detail(SEASON) + Route.Detail(SERIES) }
+        // 不属于剧集的条目不响应。
+        main { env.vm.openSeries(MediaItem("movie", "电影", "Movie", seriesId = SERIES)) }
+        main { env.vm.openSeries(MediaItem("orphan", "无剧集的单集", "Episode")) }
+        assertEquals(base + Route.Detail(SEASON) + Route.Detail(SERIES), env.vm.state.value.routes)
+        main { env.vm.back() }
+        await(env, "返回季详情") { it.route == Route.Detail(SEASON) }
+        main { env.vm.back() }
+        await(env, "返回原页面") { it.routes == base }
+    }
+
     private fun selectLetter(label: String, diagnostic: Environment? = null) {
         showLetterIndex()
         diagnostic?.let { recordLetterDiagnostic(it, "$label-before-touch") }
