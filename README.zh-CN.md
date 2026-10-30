@@ -41,7 +41,7 @@
 
 电影、剧集或视频明确开启原始路径并选择原画时，普通 HTTP STRM 也保持直连，不要求服务端实现云盘画质协议。已知本机无法处理或实际解码失败时不自动替换成 Jellyfin 转码；关闭原始路径或主动选择服务器画质后，仍按服务器能力协商。原地址网络重试继续遵守直连选择。
 
-服务端需提供 `mediaflux.playback.v1` 的 `variants` / `resolve` 接口。只保存原始签名 STRM 地址用于查询和续期，不把临时 CDN URL 当作新媒体版本，也不向云盘发送 Jellyfin 账号凭据。
+服务端需提供 `mediaflux.playback.v1` 的 `variants` / `resolve` 接口。连接 MediaFlux 媒体反代时，支持读取 `MediaSource.MediaFluxPlayback` 附带的原始签名 STRM 地址，继续使用云盘画质；MF 与 Pathfin 两端均需支持此扩展，手机需能访问该地址。只保存原始签名 STRM 地址用于查询和续期，不把临时 CDN URL 当作新媒体版本，也不向云盘发送 Jellyfin 账号凭据。
 
 ## 构建
 

@@ -71,18 +71,27 @@ class MediaFluxCloudPlaybackFlowTest {
     } }
     @get:Rule val rules: TestRule = RuleChain.outerRule(setup).around(compose)
 
-    @Test fun liveCloudUsesDefaultThenSwitchesThroughMenuAndKeepsPositionOnFailure() {
+    @Test fun liveCloudUsesDefaultThenSwitchesThroughMenuAndKeepsPositionOnFailure() = verifyLiveCloudFlow(false)
+
+    @Test fun liveCloudThroughReverseProxyUsesDefaultThenSwitchesAndKeepsPositionOnFailure() = verifyLiveCloudFlow(true)
+
+    private fun verifyLiveCloudFlow(reverseProxyPayload: Boolean) {
         val endpoint = InstrumentationRegistry.getArguments().getString("cloudEndpoint")
         assumeTrue("需要显式授权的只读云盘桥", !endpoint.isNullOrBlank())
         val base = requireNotNull(endpoint)
         val sourceUrl = get(base + "/bootstrap").getString("url")
-        withApp(sourceUrl) { fixture, app, playback ->
+        withApp(sourceUrl, reverseProxyPayload = reverseProxyPayload) { fixture, app, playback ->
             start(app, playback)
             await { playback.currentRequest?.quality == PlaybackQuality.STANDARD && playback.state.value.hasRenderedFrame }
             main {
                 assertNotNull(playback.currentRequest?.cloudPlayback)
                 assertFalse(playback.currentRequest!!.stream.trustedServer)
                 assertTrue(playback.currentRequest!!.cloudPlayback!!.sourceUrl == sourceUrl)
+                if (reverseProxyPayload) {
+                    assertEquals("File", playback.currentRequest!!.source.protocol)
+                    assertEquals(sourceUrl, playback.currentRequest!!.source.cloudPlaybackUrl)
+                    assertNotEquals(sourceUrl, playback.currentRequest!!.source.path)
+                }
                 assertEquals("application/x-mpegURL", playback.currentRequest!!.stream.mimeType)
                 assertEquals(720, playback.player!!.videoSize.height)
                 playback.player!!.volume = 0f
@@ -130,6 +139,88 @@ class MediaFluxCloudPlaybackFlowTest {
             assertEquals(1, fixture.eventCount("start", ITEM))
             assertEquals(0, fixture.eventCount("stop", ITEM))
             Log.i("CloudQualityAcceptance", "default720+seek90+menu1080+paused+failed-switch-preserved+403-refresh+original:PASS")
+        }
+    }
+
+    @Test fun reverseProxyPayloadStartsSwitchesAndRefreshesSubtitlesWhileKeepingPositionOnFailure() {
+        withApp(cloudScenario = Fixture.CloudScenario.WITH_H264_RENDITIONS, reverseProxyPayload = true) { fixture, app, playback ->
+            start(app, playback)
+            val sourceUrl = main {
+                val request = requireNotNull(playback.currentRequest)
+                assertEquals("File", request.source.protocol)
+                assertEquals(request.source.cloudPlaybackUrl, request.cloudPlayback!!.sourceUrl)
+                assertNotEquals(request.source.path, request.cloudPlayback!!.sourceUrl)
+                assertEquals(PlaybackQuality.STANDARD, request.quality)
+                playback.player!!.pause()
+                playback.player!!.seekTo(3_000)
+                playback.player!!.setPlaybackSpeed(1.5f)
+                request.cloudPlayback!!.sourceUrl
+            }
+            await { playback.player?.playbackState == Player.STATE_READY && kotlin.math.abs(playback.player!!.currentPosition - 3_000) < 500 }
+            val position = main { playback.player!!.currentPosition }
+            val negotiations = fixture.nextPlaybackRequests.get()
+            assertEquals("默认云盘档只使用首次 JF PlaybackInfo", 1, negotiations)
+            main { playback.changeQuality(PlaybackQuality.HIGH) }
+            await { playback.currentRequest?.quality == PlaybackQuality.HIGH && !playback.state.value.isChangingQuality && playback.state.value.hasRenderedFrame }
+            main {
+                assertEquals(sourceUrl, playback.currentRequest!!.cloudPlayback!!.sourceUrl)
+                assertFalse(playback.player!!.playWhenReady)
+                assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
+                assertEquals(1.5f, playback.player!!.playbackParameters.speed)
+            }
+            assertEquals("反代云盘切档不能重新协商 JF", negotiations, fixture.nextPlaybackRequests.get())
+            val owner = main { playback.player!! }
+            fixture.cloudResolveStatus.set(503)
+            try {
+                main { playback.changeQuality(PlaybackQuality.STANDARD) }
+                await { !playback.state.value.isChangingQuality && playback.state.value.qualityError != null }
+                main {
+                    assertSame(owner, playback.player)
+                    assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality)
+                    assertFalse(playback.player!!.playWhenReady)
+                    assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
+                    assertTrue(playback.state.value.qualityError!!.contains("云盘未登录"))
+                }
+            } finally { fixture.cloudResolveStatus.set(200) }
+
+            val discoveries = fixture.cloudVariantRequests.get()
+            fixture.playbackSourceSuffix.set("-subtitle-refresh")
+            main { playback.refreshSubtitles(requireNotNull(playback.currentRequest).item) }
+            await {
+                playback.currentRequest?.source?.name == "first-subtitle-refresh" &&
+                    !playback.state.value.isChangingQuality && playback.state.value.hasRenderedFrame
+            }
+            main {
+                assertEquals(sourceUrl, playback.currentRequest!!.cloudPlayback!!.sourceUrl)
+                assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality)
+                assertFalse(playback.player!!.playWhenReady)
+                assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
+            }
+            assertEquals("代理 Path 改变而原始云盘 URL 未变时复用发现结果", discoveries, fixture.cloudVariantRequests.get())
+            assertEquals(negotiations + 1, fixture.nextPlaybackRequests.get())
+            assertNoJellyfinFallback(fixture)
+        }
+    }
+
+    @Test fun disabledOriginalPathKeepsReverseProxyPlaybackOnJellyfin() = verifyReverseProxyJellyfinFallback(false)
+
+    @Test fun invalidReverseProxyExtensionKeepsNormalJellyfinPlayback() = verifyReverseProxyJellyfinFallback(true)
+
+    private fun verifyReverseProxyJellyfinFallback(originalPathEnabled: Boolean) {
+        withApp(reverseProxyPayload = true) { fixture, app, playback ->
+            if (originalPathEnabled) fixture.cloudExtensionProtocol.set("mediaflux.playback.v2")
+            main { app.setPreferences(app.state.value.preferences.copy(originalPathEnabled = originalPathEnabled)) }
+            start(app, playback)
+            main {
+                assertEquals("File", playback.currentRequest!!.source.protocol)
+                assertNull(playback.currentRequest!!.cloudPlayback)
+                assertNull(playback.state.value.cloudQualityOptions)
+                assertEquals(PlaybackQuality.ORIGINAL, playback.currentRequest!!.quality)
+                assertTrue(playback.currentRequest!!.stream.trustedServer)
+            }
+            assertEquals(0, fixture.cloudVariantRequests.get())
+            assertTrue(fixture.cloudResolutions.isEmpty())
+            assertTrue(fixture.serverMediaRequests.get() > 0)
         }
     }
 
@@ -386,9 +477,11 @@ class MediaFluxCloudPlaybackFlowTest {
     }
 
     private fun withApp(sourceUrl: String? = null, cloudScenario: Fixture.CloudScenario? = null, multipleSources: Boolean = false,
+        reverseProxyPayload: Boolean = false,
         block: (Fixture, AppViewModel, PlaybackViewModel) -> Unit) {
         val bytes = instrumentation.context.assets.open("ass-extension/plain.mp4").use { it.readBytes() }
-        Fixture(bytes, externalSource = sourceUrl, cloudScenario = cloudScenario, multipleSources = multipleSources).use { fixture ->
+        Fixture(bytes, externalSource = sourceUrl, cloudScenario = cloudScenario, multipleSources = multipleSources,
+            reverseProxyPayload = reverseProxyPayload).use { fixture ->
             val app = main { ViewModelProvider(compose.activity)[AppViewModel::class.java] }
             val playback = main { ViewModelProvider(compose.activity)[PlaybackViewModel::class.java] }
             try {

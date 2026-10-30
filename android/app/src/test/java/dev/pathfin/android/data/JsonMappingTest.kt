@@ -147,6 +147,36 @@ class JsonMappingTest {
         assertTrue(info.sources.single().supportsDirectPlay)
     }
 
+    @Test fun mapsMediaFluxPlaybackWithoutChangingTheProxyPathOrProtocol() {
+        val url = "https://mf.example/playgy/account/share/file/movie.mkv?v=1&sig=${"a".repeat(64)}&name=a%2Fb&name=two"
+        val json = JSONObject().put("Id", "source").put("Path", "/proxy/movie.strm").put("Protocol", "File")
+            .put("MediaFluxPlayback", JSONObject().put("protocol", "mediaflux.playback.v1").put("source_url", url))
+        val payload = JSONObject().put("Id", "item").put("MediaSources", org.json.JSONArray().put(json))
+        val source = JsonMapping.playbackInfo(payload).sources.single()
+
+        assertEquals(url, source.cloudPlaybackUrl)
+        assertEquals("/proxy/movie.strm", source.path)
+        assertEquals("File", source.protocol)
+        assertEquals(source, JsonMapping.mediaItem(payload).mediaSources.single())
+    }
+
+    @Test fun malformedOrUnknownMediaFluxExtensionsLeaveNormalPlaybackMappingIntact() {
+        val url = "https://mf.example/playgy/account/share/file/movie.mkv?v=1&sig=${"a".repeat(64)}"
+        val valid = JSONObject().put("protocol", "mediaflux.playback.v1").put("source_url", url)
+        val invalid = listOf(JSONObject.NULL, "mediaflux.playback.v1", org.json.JSONArray(),
+            JSONObject().put("source_url", url), JSONObject(valid.toString()).put("protocol", "mediaflux.playback.v2"),
+            JSONObject(valid.toString()).put("protocol", "MEDIAFLUX.PLAYBACK.V1")) +
+            listOf(JSONObject.NULL, "", " ", 7, true).map { JSONObject(valid.toString()).put("source_url", it) }
+        for (extension in listOf(null) + invalid) {
+            val json = JSONObject().put("Id", "source").put("Path", "/local/movie.mkv").put("Protocol", "File")
+                .put("MediaFluxPlayback", extension)
+            val source = JsonMapping.mediaSources(org.json.JSONArray().put(json)).single()
+            assertNull(source.cloudPlaybackUrl)
+            assertEquals("/local/movie.mkv", source.path)
+            assertEquals("File", source.protocol)
+        }
+    }
+
     @Test fun mapsOwnFirstBackdropAndRealMetadataWithoutLosingDecimalRating() {
         val item = JsonMapping.mediaItem(JSONObject("""{
             "Id":"series","Type":"Series","BackdropImageTags":["own-first","own-second"],

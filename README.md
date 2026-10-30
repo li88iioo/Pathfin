@@ -41,7 +41,7 @@ The existing hardware HDR10/HLG path is kept. Progressive Profile 7 and the Prof
 
 When a movie, series or video explicitly uses the original path with Original selected, plain HTTP STRM also stays direct, without requiring the server to implement the cloud quality protocol. If the device is known to be unable to handle it, or decoding actually fails, the app does not substitute Jellyfin transcoding. After turning off the original path or choosing a server quality, playback negotiates with the server's capabilities again. Network retries on the original address keep the direct choice.
 
-The server must provide the `variants` / `resolve` endpoints of `mediaflux.playback.v1`. Only the original signed STRM address is stored, for queries and renewal. Temporary CDN URLs are never treated as new media versions, and Jellyfin account credentials are never sent to the cloud drive.
+The server must provide the `variants` / `resolve` endpoints of `mediaflux.playback.v1`. When connecting through the MediaFlux media proxy, Pathfin can read the original signed STRM URL from `MediaSource.MediaFluxPlayback` and keep using cloud qualities. Both MediaFlux and Pathfin must support this extension, and the phone must be able to reach that URL. Only the original signed STRM address is stored, for queries and renewal. Temporary CDN URLs are never treated as new media versions, and Jellyfin account credentials are never sent to the cloud drive.
 
 ## Building
 

@@ -383,7 +383,8 @@ class PendingPlaybackCancellationTest {
     internal class Fixture(private val video: ByteArray, blockDetail: Boolean = false, blockPlayback: Boolean = false,
         private val multipleSources: Boolean = false, blockSeries: Boolean = false,
         private val externalSource: String? = null, private val cloudScenario: CloudScenario? = null,
-        private val negotiationVideo: JSONObject? = null, private val allowDeletes: Boolean = false) : Closeable {
+        private val negotiationVideo: JSONObject? = null, private val allowDeletes: Boolean = false,
+        private val reverseProxyPayload: Boolean = false) : Closeable {
         enum class CloudScenario { ORIGINAL_ONLY, WITH_H264_RENDITIONS }
 
         val seriesResolution = ResponseGate(blockSeries)
@@ -398,6 +399,8 @@ class PendingPlaybackCancellationTest {
         val nextPlaybackRequests = AtomicInteger()
         val nextMediaRequests = AtomicInteger()
         val cloudVariantRequests = AtomicInteger()
+        val cloudResolveStatus = AtomicInteger(200)
+        val cloudExtensionProtocol = AtomicReference("mediaflux.playback.v1")
         val cloudResolutions = ConcurrentLinkedQueue<String>()
         val cloudMediaRequests = ConcurrentLinkedQueue<String>()
         val serverMediaRequests = AtomicInteger()
@@ -459,7 +462,9 @@ class PendingPlaybackCancellationTest {
                     media = uri.path.startsWith("/media/") || uri.path.startsWith("/cloud-media/")
                     if (cloud) {
                         check(cloudScenario != null)
-                        check(headers["authorization"] == null && headers["x-emby-token"] == null) { "云盘请求不能携带 Jellyfin 凭据" }
+                        check(listOf("authorization", "x-emby-token", "x-emby-authorization", "x-mediabrowser-token", "cookie")
+                            .none { headers.containsKey(it) } && headers.values.none { TOKEN in it || "proxy-secret" in it } &&
+                            !uri.toString().contains(TOKEN)) { "云盘请求不能携带 Jellyfin 或反代凭据" }
                     } else if (uri.path != "/Users/AuthenticateByName" && uri.path != "/System/Info/Public")
                         check(headers["authorization"].orEmpty().contains(TOKEN)) { "合成认证头缺失" }
                     gate = when {
@@ -483,7 +488,11 @@ class PendingPlaybackCancellationTest {
                         respond(connection, if (range == null) 200 else 206, video.copyOfRange(start, end + 1), "video/mp4",
                             if (range == null) null else "bytes $start-$end/${video.size}", head = method == "HEAD")
                     } else {
-                        val status = if (gate === nextPlayback) playbackStatus.get() else 200
+                        val status = when {
+                            gate === nextPlayback -> playbackStatus.get()
+                            uri.path.startsWith("/playgy/") && query["view"] == "resolve" -> cloudResolveStatus.get()
+                            else -> 200
+                        }
                         val response = if (status == 200) response(method, uri.path, query, String(body)) else JSONObject().put("Message", "Synthetic preparation unavailable")
                         respond(connection, if (status != 200) status else if (response == null) 204 else 200,
                             response?.toString()?.toByteArray(Charsets.UTF_8) ?: ByteArray(0), "application/json")
@@ -563,12 +572,20 @@ class PendingPlaybackCancellationTest {
             .put("Type", when (id) { SERIES -> "Series"; SEASON -> "Season"; else -> "Episode" })
             .put("SeriesId", SERIES).put("SeasonId", SEASON).put("SeriesName", "Pending series").put("ParentIndexNumber", 1)
             .put("IndexNumber", if (id == ONE) 1 else 2).put("RunTimeTicks", 240_000_000L).put("ImageTags", JSONObject())
-        private fun source(id: String, version: String, transcoding: Boolean = false, negotiated: Boolean = false) = JSONObject()
+        private fun source(id: String, version: String, transcoding: Boolean = false, negotiated: Boolean = false): JSONObject {
+            val cloudUrl = externalSource ?: if (cloudScenario != null || reverseProxyPayload)
+                "$origin/playgy/pending/disk/file/$version?v=1&sig=${"a".repeat(64)}" else null
+            return JSONObject()
             .put("Id", "source-$id-$version").put("Name", version + playbackSourceSuffix.get())
-            .put("Path", externalSource ?: if (cloudScenario != null) "$origin/playgy/pending/disk/file/$version?v=1&sig=${"a".repeat(64)}" else "/synthetic/$id.mp4")
-            .put("Protocol", if (externalSource != null || cloudScenario != null) "Http" else "File").put("Container", "mp4")
+            .put("Path", if (reverseProxyPayload) "$origin/mf-proxy/$id/$version${playbackSourceSuffix.get()}/stream" else cloudUrl ?: "/synthetic/$id.mp4")
+            .put("Protocol", if (!reverseProxyPayload && cloudUrl != null) "Http" else "File").put("Container", "mp4")
             .put("DirectStreamUrl", "$origin/media/$id.mp4").put("SupportsDirectPlay", true).put("SupportsDirectStream", true)
             .apply {
+                if (reverseProxyPayload) {
+                    put("MediaFluxPlayback", JSONObject().put("protocol", cloudExtensionProtocol.get()).put("source_url", cloudUrl))
+                    put("RequiredHttpHeaders", JSONObject().put("Authorization", "Bearer proxy-secret")
+                        .put("Cookie", "proxy=private").put("X-Emby-Token", TOKEN))
+                }
                 negotiationVideo?.let { video ->
                     put("MediaStreams", JSONArray().put(JSONObject(video.toString())))
                     put("SupportsDirectPlay", negotiated).put("SupportsDirectStream", negotiated)
@@ -590,6 +607,7 @@ class PendingPlaybackCancellationTest {
                     if (transcoding) put("TranscodingUrl", "$origin/media/transcoded/$id.mp4?MediaSourceId=source-$id-$version")
                 }
             }
+        }
 
         private fun cloudResponse(path: String, query: Map<String, String>): JSONObject {
             val original = if (multipleSources && path.substringAfterLast('/') == "first")

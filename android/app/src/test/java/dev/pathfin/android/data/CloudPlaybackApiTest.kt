@@ -30,6 +30,72 @@ class CloudPlaybackApiTest {
         "user", "Fixture", "device", serverId = "server")
     private val signature = "a".repeat(64)
 
+    @Test fun candidateUrlPrefersTheValidatedExtensionAndKeepsOriginalProtocolRules() {
+        val original = source("https://mf.example")
+        val signed = original.path!!
+        val extension = signed.replace("mf.example", "cloud.example")
+        for (protocol in listOf(null, "", "Http", "HTTP", "File", "Ftp")) {
+            val source = original.copy(protocol = protocol)
+            val expected = signed.takeIf { protocol.isNullOrBlank() || protocol.equals("Http", true) }
+            assertEquals(expected, CloudPlaybackApi.candidateUrl(source))
+            assertEquals(extension, CloudPlaybackApi.candidateUrl(source.copy(cloudPlaybackUrl = extension)))
+        }
+        for (invalid in listOf("", "/local/movie.strm", "file:///movie.strm", "ftp://cloud.example/playgy/a/b/c/d?v=1&sig=$signature",
+                extension.substringBefore('?'), extension.replace("v=1", "v=2"), extension.replace(signature, "short"),
+                extension.replace("cloud.example", "user:password@cloud.example"))) {
+            assertEquals(signed, CloudPlaybackApi.candidateUrl(original.copy(cloudPlaybackUrl = invalid)))
+            assertNull(CloudPlaybackApi.candidateUrl(original.copy(protocol = "File", cloudPlaybackUrl = invalid)))
+        }
+    }
+
+    @Test fun reverseProxyExtensionUsesTheOriginalSignedUrlWithoutProxyCredentials() = runBlocking {
+        Fixture { exchange ->
+            exchange.reply(if (exchange.requestURI.rawQuery.contains("view=variants")) variantsJson() else resolveJson())
+        }.use { fixture ->
+            val signed = source(fixture.baseUrl).path!! + "&name=a%2Fb&name=two"
+            val source = source(fixture.baseUrl).copy(path = "${fixture.baseUrl}/proxy/stream", protocol = "File", cloudPlaybackUrl = signed)
+            val api = CloudPlaybackApi()
+            val cloud = requireNotNull(api.discover(session, source))
+            assertEquals(signed, cloud.sourceUrl)
+            val initial = request(fixture.baseUrl).copy(source = source, cloudPlayback = cloud)
+            val selected = api.select(initial, PlaybackQuality.STANDARD)
+            assertEquals(initial.source, selected.source)
+            assertEquals(initial.startPositionMs, selected.startPositionMs)
+            assertEquals("hd", selected.cloudPlayback!!.selectedId)
+            assertEquals(signed, selected.cloudPlayback.sourceUrl)
+            assertTrue(selected.stream.headers.isEmpty())
+            assertFalse(selected.stream.trustedServer)
+            assertTrue(PlaybackHeaders.forUrl(selected, selected.stream.uri).isEmpty())
+            assertEquals(listOf("variants", "resolve"), fixture.requests.map { it.url.queryParameter("view") })
+            fixture.requests.forEach { recorded ->
+                assertEquals("/proxy/playgy/account/share/file/movie.mkv", recorded.url.encodedPath)
+                assertEquals(signature, recorded.url.queryParameter("sig"))
+                assertEquals(listOf("a/b", "two"), recorded.url.queryParameterValues("name"))
+                assertAnonymous(recorded)
+            }
+            assertSafe(expectFailure { api.discover(session, source.copy(cloudPlaybackUrl = "$signed&api_key=${session.accessToken}")) })
+            assertEquals("包含外部服务器凭据的扩展不能发出请求", 2, fixture.requests.size)
+        }
+    }
+
+    @Test fun invalidExtensionsFallBackToTheNormalSourceAndNeverProbeLocalFiles() = runBlocking {
+        Fixture { it.reply(variantsJson()) }.use { fixture ->
+            val api = CloudPlaybackApi()
+            val original = source(fixture.baseUrl)
+            val invalid = "${fixture.baseUrl}/proxy/stream"
+            val normal = original.copy(cloudPlaybackUrl = invalid)
+            assertEquals(original.path, api.discover(session, normal)?.sourceUrl)
+            val local = normal.copy(path = "/local/movie.strm", protocol = "File", supportsDirectStream = true,
+                directStreamUrl = "/Videos/item/stream")
+            assertNull(api.discover(session, local))
+            val stream = PlaybackResolver.resolve(session, MediaItem("item", "Local", "Movie"), PlaybackInfo(listOf(local), "play"), local.id)
+            assertTrue("无效扩展仍保留原 Jellyfin 播放", stream.trustedServer)
+            assertNull(api.discover(session, normal.copy(protocol = "File")))
+            assertEquals("只能探测原本有效的 HTTP Path", 1, fixture.requests.size)
+            assertAnonymous(fixture.requests.single())
+        }
+    }
+
     @Test fun originalUsesItsCompleteSourceVideoWhileCloudRenditionsKeepTheirOwnFormat() = runBlocking {
         val inspected = mutableListOf<MediaStream>()
         Fixture { exchange ->

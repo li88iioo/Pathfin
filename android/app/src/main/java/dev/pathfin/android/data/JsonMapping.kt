@@ -207,6 +207,8 @@ object JsonMapping {
                 id = id,
                 path = source.text("Path"),
                 protocol = source.text("Protocol"),
+                cloudPlaybackUrl = source.optJSONObject("MediaFluxPlayback")
+                    ?.takeIf { it.text("protocol") == "mediaflux.playback.v1" }?.nonBlankText("source_url"),
                 container = source.text("Container"),
                 name = source.text("Name"),
                 directStreamUrl = source.text("DirectStreamUrl"),
