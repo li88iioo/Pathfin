@@ -49,6 +49,34 @@ import org.junit.runner.RunWith
 class SessionValidationRaceTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
+    @Test fun liveTvOwnerSurvivesNavigationButIsReplacedAfterValidationAndExpiredCredentials() = withRestoredApp { app, fixture ->
+        fixture.validation.awaitRequest()
+        await(app, fixture) { !it.restoringSession && it.session != null }
+        main { app.openLiveTv() }
+        val restored = checkNotNull(await(app, fixture) { it.route == Route.LiveTv }.liveTv)
+        completeValidation(app, fixture)
+        val validated = checkNotNull(app.state.value.liveTv)
+        assertNotSame("验证后的会话必须成为频道请求所有者", restored, validated)
+        assertEquals(app.state.value.session, validated.session)
+        main { validated.query = "四川"; app.back() }
+        assertEquals(Route.Home, app.state.value.route)
+        main { app.openLiveTv() }
+        val returned = await(app, fixture) { it.route == Route.LiveTv }
+        assertSame("真实路由退出重进应复用同一份频道状态", validated, returned.liveTv)
+        assertEquals("四川", returned.liveTv?.query)
+
+        main { app.authenticationExpired(validated.session) }
+        await(app, fixture) { it.reauthenticationProfile != null }
+        main { app.dismissReauthentication() }
+        assertNull(app.state.value.liveTv)
+        assertNull(app.state.value.reauthenticationProfile)
+        assertEquals("退出恢复登录提示后不能遗留没有状态的空白直播路由", Route.Home, app.state.value.route)
+        main { app.openLiveTv() }
+        val fresh = checkNotNull(await(app, fixture) { it.route == Route.LiveTv }.liveTv)
+        assertNotSame(validated, fresh)
+        assertEquals("", fresh.query)
+    }
+
     @Test fun detailRequestedBeforeUserValidationStillCompletesAfterAvatarChanges() = withRestoredApp { app, fixture ->
         val item = searchBeforeValidation(app, fixture)
         main { app.open(item) }

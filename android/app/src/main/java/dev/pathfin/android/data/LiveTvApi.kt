@@ -15,7 +15,7 @@ class LiveTvApi(private val api: JellyfinApi) {
     private data class Access(val session: Session, val capabilities: LiveTvCapabilities)
     @Volatile private var access: Access? = null
 
-    /** 每次进入或主动刷新时重新读取权限；不把管理员身份当作直播权限。 */
+    /** 重读频道快照时更新权限；缓存仅用于同一会话内的后续分页和节目单。 */
     suspend fun capabilities(session: Session): LiveTvCapabilities {
         access = null
         val user = api.authenticatedObject(session, "Users/Me")

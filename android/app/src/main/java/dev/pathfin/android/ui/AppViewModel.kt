@@ -178,6 +178,7 @@ data class AppState(
     val addingServer: Boolean = false,
     val reauthenticationProfile: ServerProfile? = null,
     val home: HomeState = HomeState(),
+    val liveTv: LiveTvState? = null,
     val routes: List<Route> = listOf(Route.Home),
     val folders: Map<String, ContentState> = emptyMap(),
     val details: Map<String, MediaItem> = emptyMap(),
@@ -351,6 +352,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     if (validated != saved) storeIo { sessionStore.save(validated) }
                     if (epoch != generation) return@launch
                     mutableState.update { current -> current.copy(session = validated,
+                        liveTv = current.liveTv?.let { liveTvFor(validated) },
                         home = if (freshHome) HomeState() else current.home,
                         profiles = current.profiles.map { if (it.id == current.currentProfileId) it.copy(session = validated) else it }) }
                     state.value.currentProfileId?.let(homeSnapshots::allowProfile)
@@ -470,6 +472,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun cancelRequests() {
+        state.value.liveTv?.cancel()
         generation++
         invalidatePlaybackPrefetch()
         deletingBatch = false
@@ -477,7 +480,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         activeMediaReads.clear()
         pendingLocalNetworkAccess?.result?.cancel()
         pendingLocalNetworkAccess = null
-        mutableState.update { it.copy(localNetworkPermissionRequest = null, localNetworkPermissionDenied = false,
+        mutableState.update { it.copy(liveTv = null, routes = it.routes.filterNot { route -> route == Route.LiveTv }.ifEmpty { listOf(Route.Home) },
+            localNetworkPermissionRequest = null, localNetworkPermissionDenied = false,
             switchingProfileId = null,
             actionBusy = emptySet(),
             pendingPlayback = null, preparingPlay = false, sourceSelection = null, playbackError = null,
@@ -681,7 +685,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             cancelDiscoveryPages(true)
             suggestionsJob?.cancel()
             suggestionsLoad = null
-            mutableState.update { it.copy(session = updated.session, hiddenLibraries = hidden, home = HomeState(), browsers = emptyMap(),
+            mutableState.update { it.copy(session = updated.session, liveTv = it.liveTv?.let { liveTvFor(updated.session) },
+                hiddenLibraries = hidden, home = HomeState(), browsers = emptyMap(),
                 search = SearchState(), favorites = DiscoveryState()) }
             homeSnapshots.allowProfile(updated.id)
             refreshHome()
@@ -819,11 +824,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 ensureLocalNetworkAccess(session.server.baseUrl)
                 if (epoch == generation) {
                     invalidatePlaybackPrefetch()
-                    mutableState.update { it.copy(routes = it.routes + Route.LiveTv) }
+                    mutableState.update { it.copy(routes = it.routes + Route.LiveTv,
+                        liveTv = liveTvFor(session)) }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { if (epoch == generation) notify(message(error)) }
         }
+    }
+    private fun liveTvFor(session: Session): LiveTvState {
+        state.value.liveTv?.let { if (it.session == session) return it else it.cancel() }
+        return LiveTvState(session, api, viewModelScope, { authenticationExpired(session) })
     }
     fun openDownloads() {
         cancelServerSwitch()

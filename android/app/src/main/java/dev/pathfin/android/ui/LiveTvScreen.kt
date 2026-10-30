@@ -1,5 +1,6 @@
 package dev.pathfin.android.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -10,7 +11,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
@@ -20,7 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,53 +49,60 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** 参考素材只证实直播入口；此页沿现有设计系统呈现真实 Jellyfin 直播能力。 */
-@Composable
-fun LiveTvScreen(session: Session, api: JellyfinApi, onBack: () -> Unit, onPlay: (MediaItem) -> Unit, onAuthExpired: () -> Unit = {},
-    preparingId: String? = null) {
-    key(session) { LiveTvContent(session, api, onBack, onPlay, onAuthExpired, preparingId) }
-}
+/** 当前会话的唯一频道快照与请求所有者；页面退出不销毁列表、搜索和滚动位置。 */
+class LiveTvState(val session: Session, val api: JellyfinApi, private val scope: CoroutineScope,
+    val onAuthExpired: () -> Unit = {}, private val clock: () -> Long = SystemClock::elapsedRealtime) {
+    val service = LiveTvApi(api)
+    var access by mutableStateOf<LiveTvCapabilities?>(null)
+        private set
+    var channels by mutableStateOf<List<LiveTvChannel>>(emptyList())
+        private set
+    var total by mutableIntStateOf(0)
+        private set
+    var nextIndex by mutableIntStateOf(0)
+        private set
+    var loadKind by mutableStateOf<LiveTvLoad?>(null)
+        private set
+    var error by mutableStateOf<String?>(null)
+        private set
+    var query by mutableStateOf("")
+    val grid = LazyGridState()
+    val hasMore: Boolean get() = nextIndex < total
+    private var loadedAt by mutableStateOf<Long?>(null)
+    val loaded: Boolean get() = loadedAt != null
+    private var job: Job? = null
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LiveTvContent(session: Session, api: JellyfinApi, onBack: () -> Unit, onPlay: (MediaItem) -> Unit, onAuthExpired: () -> Unit,
-    preparingId: String?) {
-    val service = remember(api) { LiveTvApi(api) }
-    val scope = rememberCoroutineScope()
-    val snackbar = remember { SnackbarHostState() }
-    var access by remember { mutableStateOf<LiveTvCapabilities?>(null) }
-    var channels by remember { mutableStateOf<List<LiveTvChannel>>(emptyList()) }
-    var total by remember { mutableIntStateOf(0) }
-    var nextIndex by remember { mutableIntStateOf(0) }
-    var hasMore by remember { mutableStateOf(false) }
-    var loaded by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
-    var appending by remember { mutableStateOf(false) }
-    var loadingAll by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var query by rememberSaveable { mutableStateOf("") }
-    var selected by remember { mutableStateOf<LiveTvChannel?>(null) }
-    var job by remember { mutableStateOf<Job?>(null) }
-    val grid = rememberLazyGridState()
-    val now = liveTvClock()
+    // 当前节目与权限短期复用；过期重进时保留旧频道，刷新整段成功后再替换。
+    suspend fun enter() {
+        job?.takeIf { it.isActive }?.let { pending -> pending.join(); if (pending.isCancelled) return }
+        if (loadedAt?.let { clock() - it < 60_000L } != true) load()
+    }
+    fun cancel() { job?.cancel() }
+    fun denyAccess() { cancel(); access = LiveTvCapabilities(false, false, false); error = null; clearChannels() }
+    private fun clearChannels() {
+        channels = emptyList(); total = 0; nextIndex = 0; loadedAt = clock()
+    }
 
-    fun load(append: Boolean = false, all: Boolean = false) {
-        if (loading || (append && !hasMore)) return
+    fun load(kind: LiveTvLoad = LiveTvLoad.Refresh) {
+        val append = kind != LiveTvLoad.Refresh
+        val all = kind == LiveTvLoad.All
+        if (loadKind != null || (append && !hasMore)) return
         val readTarget = nextIndex.coerceAtLeast(CHANNEL_PAGE_SIZE)
-        loading = true; appending = append; loadingAll = all; error = null
+        loadKind = kind; error = null
         job = scope.launch {
             try {
                 if (!append) {
                     val permission = service.capabilities(session)
                     access = permission
                     if (!permission.canView || !permission.isConfigured) {
-                        channels = emptyList(); total = 0; nextIndex = 0; hasMore = false; loaded = true
+                        clearChannels()
                         return@launch
                     }
                 }
@@ -115,22 +122,37 @@ private fun LiveTvContent(session: Session, api: JellyfinApi, onBack: () -> Unit
                     more = page.hasMore
                     // 搜索全部是明确的长操作，逐页显示进度；普通刷新整段成功后再发布。
                     if (all) {
-                        channels = incoming; total = page.totalCount; nextIndex = offset; hasMore = more; loaded = true
+                        channels = incoming; total = page.totalCount; nextIndex = offset
                     }
                 } while (more && (all || (!append && offset < readTarget)))
-                channels = incoming; total = checkNotNull(readTotal); nextIndex = offset; hasMore = more; loaded = true
+                channels = incoming; total = checkNotNull(readTotal); nextIndex = offset
+                if (!append) loadedAt = clock()
             } catch (exception: Exception) {
                 if (exception is CancellationException) throw exception
-                if (exception is ApiException && exception.statusCode == 401) onAuthExpired()
-                if (exception is ApiException && exception.statusCode == 403) {
-                    access = LiveTvCapabilities(false, false, false); channels = emptyList(); hasMore = false
+                when ((exception as? ApiException)?.statusCode) {
+                    401 -> onAuthExpired()
+                    403 -> denyAccess()
                 }
                 error = liveTvError(exception)
-            } finally { loading = false; appending = false; loadingAll = false }
+            } finally { loadKind = null }
         }
     }
+}
 
-    LaunchedEffect(session) { load() }
+enum class LiveTvLoad { Refresh, Append, All }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> Unit, preparingId: String? = null) = with(state) {
+    val snackbar = remember(state) { SnackbarHostState() }
+    var selected by remember(state) { mutableStateOf<LiveTvChannel?>(null) }
+    val loading = loadKind != null
+    val appending = loading && loadKind != LiveTvLoad.Refresh
+    val loadingAll = loadKind == LiveTvLoad.All
+    val now = liveTvClock()
+
+    LaunchedEffect(state) { enter() }
+    DisposableEffect(state) { onDispose { if (state.loadKind == LiveTvLoad.All) state.cancel() } }
     LaunchedEffect(error) {
         if (channels.isNotEmpty()) error?.let { message ->
             snackbar.showSnackbar(message, duration = SnackbarDuration.Long)
@@ -143,8 +165,8 @@ private fun LiveTvContent(session: Session, api: JellyfinApi, onBack: () -> Unit
             channel.currentProgram?.name?.contains(search, true) == true
     } }
     AutomaticGridPagination(grid, PaginationStatus(channels.size, nextIndex, total,
-        refreshing = loading && !appending, appending = appending, failed = error != null, hasMore = hasMore),
-        session, { load(append = true) }, enabled = search.isEmpty() && selected == null)
+        refreshing = loadKind == LiveTvLoad.Refresh, appending = appending, failed = error != null, hasMore = hasMore),
+        session, { load(LiveTvLoad.Append) }, enabled = search.isEmpty() && selected == null)
 
     val focus = LocalFocusManager.current
     Column(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
@@ -185,9 +207,9 @@ private fun LiveTvContent(session: Session, api: JellyfinApi, onBack: () -> Unit
                 item("footer", span = full) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         when {
-                            loadingAll -> QuietButton(tr("停止加载 · 已读取 %1\$s 个频道", channels.size), { job?.cancel() },
+                            loadingAll -> QuietButton(tr("停止加载 · 已读取 %1\$s 个频道", channels.size), { cancel() },
                                 Modifier.testTag("live-tv-cancel-search"), color = PathfinAppearance.accent)
-                            hasMore && search.isNotEmpty() -> QuietButton(tr("搜索全部频道"), { load(append = true, all = true) },
+                            hasMore && search.isNotEmpty() -> QuietButton(tr("搜索全部频道"), { load(LiveTvLoad.All) },
                                 Modifier.testTag("live-tv-more"), enabled = !loading, color = PathfinAppearance.accent)
                             !hasMore && loaded && channels.isNotEmpty() -> Text(tr("已显示全部频道"), fontSize = 12.sp, color = PathfinAppearance.textMuted)
                         }
@@ -202,7 +224,7 @@ private fun LiveTvContent(session: Session, api: JellyfinApi, onBack: () -> Unit
             containerColor = PathfinAppearance.canvas, dragHandle = null,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
             LiveTvGuide(session, service, channel, now, access?.canPlay == true, preparingId, onPlay = { onPlay(channel.item) }, onAuthExpired = onAuthExpired,
-                onAccessDenied = { selected = null; access = LiveTvCapabilities(false, false, false); channels = emptyList(); hasMore = false })
+                onAccessDenied = { selected = null; denyAccess() })
         }
     }
 }
@@ -395,7 +417,5 @@ private fun liveTvProgramTime(program: LiveTvProgram): String {
     }.getOrDefault(tr("播出时间无法显示")) else tr("播出时间未提供")
 }
 
-private fun liveTvError(exception: Exception): String = when (exception) {
-    is ApiException -> exception.message ?: tr("读取直播电视失败，请刷新重试")
-    else -> tr("读取直播电视失败，请刷新重试")
-}
+private fun liveTvError(exception: Exception): String =
+    (exception as? ApiException)?.message ?: tr("读取直播电视失败，请刷新重试")

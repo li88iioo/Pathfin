@@ -328,9 +328,8 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                         MediaIdentificationScreen(route.item, session, vm.api, onBack = { vm.back() },
                             onChanged = { vm.mediaChanged(session, route.item.id) }, onAuthExpired = { vm.authenticationExpired(session) })
                     } else if (route == Route.LiveTv && session != null) {
-                        LiveTvScreen(session, vm.api, onBack = { vm.back() }, onPlay = { vm.preparePlayback(it, true) },
-                            onAuthExpired = { vm.authenticationExpired(session) },
-                            preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay })
+                        state.liveTv?.let { liveTv -> LiveTvScreen(liveTv, onBack = { vm.back() }, onPlay = { vm.preparePlayback(it, true) },
+                            preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }) }
                     } else if (route == Route.ServerAdministration && session != null) {
                         ServerAdministrationScreen(session, vm.api, onBack = { vm.back() }, onAuthExpired = { vm.authenticationExpired(session) })
                     } else savedState.SaveableStateProvider(state.savedPageKey()) {

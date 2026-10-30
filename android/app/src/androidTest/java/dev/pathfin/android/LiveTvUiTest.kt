@@ -3,7 +3,14 @@ package dev.pathfin.android
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.test.hasTestTag
@@ -12,10 +19,13 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -24,6 +34,7 @@ import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.LiveTvScreen
+import dev.pathfin.android.ui.LiveTvState
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.time.Instant
@@ -32,6 +43,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicBoolean
 import okhttp3.HttpUrl
@@ -108,6 +120,187 @@ class LiveTvUiTest {
         compose.onNodeWithText("没有直播电视权限").assertVerificationDisplayed(compose)
         compose.onNodeWithTag("live-tv-play-harbour").assertDoesNotExist()
         assertEquals(listOf("/proxy/Users/Me"), fixture.paths.toList())
+    }
+
+    @Test fun freshReentryRetainsLoadedPagesScrollAndSearchWithoutRequestingChannelsAgain() {
+        Fixture(paginated = true).use { fixture ->
+            fixture.channelPages.holdAt.set(40)
+            val host = show(fixture)
+            waitFor("live-tv-channel-channel-0")
+            scrollEnd("live-tv-channel-list", "live-tv-channel-channel-39")
+            compose.waitUntil(WAIT_MS) { fixture.channelPages.heldStarted.count == 0L }
+            // 先关闭自动追加再释放第二页，固定已读范围；收起输入法后比较返回位置。
+            compose.onNodeWithTag("live-tv-search").performTextInput("合成频道")
+            compose.onNodeWithTag("live-tv-search").performImeAction()
+            fixture.channelPages.releaseHeld.countDown()
+            val list = compose.onNodeWithTag("live-tv-channel-list")
+            compose.waitUntil(WAIT_MS) { runCatching {
+                list.performScrollToNode(hasTestTag("live-tv-channel-channel-60")); true
+            }.getOrDefault(false) }
+            assertEquals(listOf(0, 40), fixture.channelPages.requests.map { it.startIndex })
+            VerificationDisplay.awaitWindowReady(compose, "live-tv-retained-position", list)
+            val before = channelBounds("live-tv-channel-channel-60")
+            val requests = fixture.paths.size
+
+            reenter(host)
+            VerificationDisplay.awaitWindowReady(compose, "live-tv-reentered-position", list)
+            compose.onNodeWithTag("live-tv-search").assertTextContains("合成频道")
+            compose.onNodeWithTag("live-tv-channel-channel-60").assertVerificationDisplayed(compose)
+            assertSameBounds(before, channelBounds("live-tv-channel-channel-60"))
+            compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
+            assertNoNewRequests(fixture.channelPages, 2)
+            assertEquals(requests, fixture.paths.size)
+
+            compose.onNodeWithTag("live-tv-search").performTextReplacement("合成频道 60")
+            reenter(host)
+            compose.onNodeWithTag("live-tv-search").assertTextContains("合成频道 60")
+            compose.onNodeWithTag("live-tv-channel-channel-60").assertVerificationDisplayed(compose)
+            assertNoNewRequests(fixture.channelPages, 2)
+            assertEquals(requests, fixture.paths.size)
+
+            compose.onNodeWithTag("live-tv-search").performTextClearance()
+            scrollEnd("live-tv-channel-list", "live-tv-channel-channel-79")
+            compose.waitUntil(WAIT_MS) { fixture.channelPages.requests.size == 3 }
+            list.performScrollToNode(hasTestTag("live-tv-channel-channel-80"))
+            compose.onNodeWithTag("live-tv-channel-channel-80").assertVerificationDisplayed(compose)
+            assertEquals(listOf(0, 40, 80), fixture.channelPages.requests.map { it.startIndex })
+        }
+    }
+
+    @Test fun successfulEmptyChannelsRemainLoadedAcrossReentry() {
+        Fixture(empty = true).use { fixture ->
+            val host = show(fixture)
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText("暂无直播频道").fetchSemanticsNodes().isNotEmpty() }
+            val requests = fixture.paths.toList()
+            repeat(2) {
+                reenter(host)
+                compose.onNodeWithText("暂无直播频道").assertVerificationDisplayed(compose)
+                compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
+            }
+            assertNoNewRequests(fixture.channelPages, 1)
+            assertEquals(requests, fixture.paths.toList())
+        }
+    }
+
+    @Test fun staleReentryRefreshesInBackgroundAndFailedRefreshKeepsTheLastGoodChannels() {
+        Fixture(blockRefresh = true).use { fixture ->
+            val host = show(fixture)
+            waitFor("live-tv-channel-harbour")
+            VerificationDisplay.awaitWindowReady(compose, "live-tv-before-stale-reentry", compose.onNodeWithTag("live-tv-channel-list"))
+            val before = channelBounds()
+            try {
+                host.clock.addAndGet(60_001)
+                reenter(host)
+                compose.waitUntil(WAIT_MS) { fixture.refreshStarted.count == 0L }
+                compose.onNodeWithText("港湾电视").assertVerificationDisplayed(compose)
+                compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
+                assertSameBounds(before, channelBounds())
+            } finally { fixture.releaseRefresh.countDown() }
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText("刷新 · 港湾电视").fetchSemanticsNodes().isNotEmpty() }
+
+            fixture.channelStatus.set(503)
+            host.clock.addAndGet(60_001)
+            reenter(host)
+            compose.waitUntil(WAIT_MS) { fixture.channelPages.requests.size == 3 }
+            assertNoNewRequests(fixture.channelPages, 3)
+            compose.onNodeWithText("刷新 · 港湾电视").assertVerificationDisplayed(compose)
+            compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
+            assertEquals(listOf(0, 0, 0), fixture.channelPages.requests.map { it.startIndex })
+        }
+    }
+
+    @Test fun staleReentryWaitsForThePendingAppendThenRefreshesTheWholeRetainedRange() {
+        Fixture(paginated = true, blockRefresh = true).use { fixture ->
+            val probe = fixture.channelPages
+            probe.holdAt.set(40)
+            val host = show(fixture)
+            waitFor("live-tv-channel-channel-0")
+            try {
+                scrollEnd("live-tv-channel-list", "live-tv-channel-channel-39")
+                compose.waitUntil(WAIT_MS) { probe.heldStarted.count == 0L }
+                // 保留同样的结果集合，同时禁止追加完成后的自动分页干扰待验证的整段刷新。
+                val search = compose.onNodeWithTag("live-tv-search")
+                search.performTextInput("合成频道")
+                search.performImeAction()
+                val list = compose.onNodeWithTag("live-tv-channel-list")
+                list.performScrollToNode(hasTestTag("live-tv-channel-channel-39"))
+                VerificationDisplay.awaitWindowReady(compose, "live-tv-pending-append-position", list)
+                val before = channelBounds("live-tv-channel-channel-39")
+
+                host.clock.addAndGet(60_001)
+                reenter(host)
+                VerificationDisplay.awaitWindowReady(compose, "live-tv-pending-append-reentry", list)
+                compose.onNodeWithTag("live-tv-channel-channel-39").assertVerificationDisplayed(compose)
+                compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
+                assertSameBounds(before, channelBounds("live-tv-channel-channel-39"))
+                assertEquals(listOf(0, 40), probe.requests.map { it.startIndex })
+
+                probe.holdAt.set(-1)
+                probe.releaseHeld.countDown()
+                compose.waitUntil(WAIT_MS) { probe.refreshStarted.count == 0L }
+                // 已完成的追加必须先发布，随后只重读一次此前已载入的完整80条范围。
+                assertEquals(listOf(0, 40, 0), probe.requests.map { it.startIndex })
+                compose.onNodeWithText("搜索已加载的 80 个频道", substring = true).assertVerificationDisplayed(compose)
+                compose.onNodeWithText(fixture.originalName(false, 39)).assertVerificationDisplayed(compose)
+                assertSameBounds(before, channelBounds("live-tv-channel-channel-39"))
+                compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
+            } finally {
+                probe.releaseHeld.countDown()
+                probe.releaseRefresh.countDown()
+            }
+            compose.waitUntil(WAIT_MS) {
+                probe.requests.size == 4 && compose.onAllNodesWithText(fixture.refreshedName(false, 39)).fetchSemanticsNodes().isNotEmpty()
+            }
+            assertNoNewRequests(probe, 4)
+            assertEquals(listOf(0, 40, 0, 40), probe.requests.map { it.startIndex })
+            assertEquals(2, fixture.paths.count { it.endsWith("Users/Me") })
+        }
+    }
+
+    @Test fun staleAccessDenialClearsChannelsAndExpiredAuthenticationIsReportedOnce() {
+        Fixture().use { denied ->
+            val host = show(denied)
+            waitFor("live-tv-channel-harbour")
+            denied.channelStatus.set(403)
+            host.clock.addAndGet(60_001)
+            reenter(host)
+            compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("live-tv-channel-harbour").fetchSemanticsNodes().isEmpty() }
+            compose.onNodeWithTag("live-tv-play-harbour").assertDoesNotExist()
+            assertNoNewRequests(denied.channelPages, 2)
+            assertEquals(0, host.authExpired.get())
+
+            Fixture(session = denied.session.copy(accessToken = "replacement-token"), channelPrefix = "fresh-").use { expired ->
+                compose.runOnIdle { host.fixture = expired }
+                waitFor("live-tv-channel-fresh-harbour")
+                expired.channelStatus.set(401)
+                host.clock.addAndGet(60_001)
+                reenter(host)
+                compose.waitUntil(WAIT_MS) { host.authExpired.get() == 1 }
+                assertNoNewRequests(expired.channelPages, 2)
+                assertEquals(1, host.authExpired.get())
+                assertEquals(2, denied.channelPages.requests.size)
+            }
+        }
+    }
+
+    @Test fun aDelayedOldSessionResponseCannotReplaceTheNewServersChannels() {
+        Fixture(channelPrefix = "old-").use { previous ->
+            previous.channelPages.holdAt.set(0)
+            val host = show(previous)
+            compose.waitUntil(WAIT_MS) { previous.channelPages.heldStarted.count == 0L }
+            val replacement = previous.session.copy(server = ServerConfig("https://replacement.invalid/proxy"),
+                accessToken = "replacement-token", userId = "replacement-user")
+            Fixture(session = replacement, channelPrefix = "new-").use { current ->
+                compose.runOnIdle { host.fixture = current }
+                waitFor("live-tv-channel-new-harbour")
+                previous.channelPages.releaseHeld.countDown()
+                compose.waitUntil(WAIT_MS) { previous.channelPages.heldReturned.count == 0L }
+                assertNoNewRequests(current.channelPages, 1)
+                compose.onNodeWithTag("live-tv-channel-new-harbour").assertVerificationDisplayed(compose)
+                compose.onNodeWithTag("live-tv-channel-old-harbour").assertDoesNotExist()
+                assertEquals(0, host.authExpired.get())
+            }
+        }
     }
 
     @Test fun channelsAppendOnScrollAndRefreshKeepsTheReadRangeAfterAnAppendFailure() =
@@ -305,7 +498,7 @@ class LiveTvUiTest {
         }
     }
 
-    private fun channelBounds() = compose.onNodeWithTag("live-tv-channel-harbour").readVerificationNode(compose) { node ->
+    private fun channelBounds(tag: String = "live-tv-channel-harbour") = compose.onNodeWithTag(tag).readVerificationNode(compose) { node ->
         if (!node.layoutInfo.isPlaced) DpRect(Dp.Unspecified, Dp.Unspecified, Dp.Unspecified, Dp.Unspecified)
         else with(node.layoutInfo.density) {
             val position = node.positionInRoot
@@ -313,12 +506,43 @@ class LiveTvUiTest {
         }
     }
 
+    private fun assertSameBounds(before: DpRect, after: DpRect) {
+        assertEquals(before.left.value, after.left.value, .5f)
+        assertEquals(before.top.value, after.top.value, .5f)
+        assertEquals(before.right.value, after.right.value, .5f)
+        assertEquals(before.bottom.value, after.bottom.value, .5f)
+    }
+
     private fun waitFor(tag: String) = compose.waitUntil(5_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
 
-    private fun show(fixture: Fixture, onPlay: (MediaItem) -> Unit = {}) {
-        compose.setContent { PathfinTheme(ThemePreference.LIGHT) { Surface {
-            LiveTvScreen(fixture.session, fixture.api, {}, onPlay)
-        } } }
+    private class ScreenHost(fixture: Fixture) {
+        var fixture by mutableStateOf(fixture)
+        var visible by mutableStateOf(true)
+        val clock = AtomicLong(1_000)
+        val authExpired = AtomicInteger()
+    }
+
+    private fun show(fixture: Fixture, onPlay: (MediaItem) -> Unit = {}): ScreenHost {
+        val host = ScreenHost(fixture)
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            val current = host.fixture
+            val state = remember(current) {
+                LiveTvState(current.session, current.api, scope, { host.authExpired.incrementAndGet() }, clock = host.clock::get)
+            }
+            DisposableEffect(state) { onDispose { state.cancel() } }
+            PathfinTheme(ThemePreference.LIGHT) { Surface {
+                if (host.visible) LiveTvScreen(state, { host.visible = false }, onPlay)
+            } }
+        }
+        return host
+    }
+
+    private fun reenter(host: ScreenHost) {
+        compose.runOnIdle { host.visible = false }
+        compose.onNodeWithTag("live-tv-screen").assertDoesNotExist()
+        compose.runOnIdle { host.visible = true }
+        waitFor("live-tv-screen")
     }
 
     private data class PageRequest(val startIndex: Int, val limit: Int)
@@ -332,6 +556,7 @@ class LiveTvUiTest {
         val holdAt = AtomicInteger(-1)
         val heldStarted = CountDownLatch(1)
         val releaseHeld = CountDownLatch(1)
+        val heldReturned = CountDownLatch(1)
         val holdRefresh = AtomicBoolean(blockRefresh)
         val holdRemainder = AtomicBoolean()
         val refreshStarted = CountDownLatch(1)
@@ -345,7 +570,9 @@ class LiveTvUiTest {
             val request = PageRequest(requireNotNull(url.queryParameter("startIndex")).toInt(), requireNotNull(url.queryParameter("limit")).toInt())
             check(request.startIndex >= 0 && request.limit in 1..100)
             requests += request
-            if (request.startIndex == holdAt.get()) { heldStarted.countDown(); check(releaseHeld.await(10, TimeUnit.SECONDS)) }
+            if (request.startIndex == holdAt.get()) {
+                heldStarted.countDown(); check(releaseHeld.await(10, TimeUnit.SECONDS)); heldReturned.countDown()
+            }
             if (request.startIndex == 0 && requests.count { it.startIndex == 0 } > 1) {
                 refreshed = true
                 if (holdRefresh.get()) { refreshStarted.countDown(); check(releaseRefresh.await(10, TimeUnit.SECONDS)) }
@@ -357,28 +584,35 @@ class LiveTvUiTest {
         override fun close() { releaseRefresh.countDown(); releaseRemainder.countDown(); releaseHeld.countDown() }
     }
 
-    private class Fixture(allowed: Boolean = true, blockRefresh: Boolean = false, private val paginated: Boolean = false) : Closeable {
-        val session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User", "device")
+    private class Fixture(allowed: Boolean = true, blockRefresh: Boolean = false, private val paginated: Boolean = false,
+        private val empty: Boolean = false,
+        val session: Session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User", "device"),
+        private val channelPrefix: String = "") : Closeable {
         val paths = CopyOnWriteArrayList<String>()
         val channelPages = PageProbe(blockRefresh)
         val programPages = PageProbe()
+        val channelStatus = AtomicInteger(200)
         val refreshStarted get() = channelPages.refreshStarted
         val releaseRefresh get() = channelPages.releaseRefresh
         val api = JellyfinApi(OkHttpClient.Builder().addInterceptor { chain ->
             val path = chain.request().url.encodedPath; paths += path
+            assertTrue(chain.request().header("Authorization")?.contains(session.accessToken) == true)
             val now = Instant.now()
             var code = 200
             val body = when (path) {
-                "/proxy/Users/Me" -> JSONObject().put("Id", "user").put("Policy", JSONObject().put("IsDisabled", false).put("EnableLiveTvAccess", allowed).put("EnableMediaPlayback", true))
+                "/proxy/Users/Me" -> JSONObject().put("Id", session.userId).put("Policy", JSONObject().put("IsDisabled", false).put("EnableLiveTvAccess", allowed).put("EnableMediaPlayback", true))
                 "/proxy/LiveTv/Info" -> JSONObject().put("IsEnabled", true)
                 "/proxy/LiveTv/Channels" -> {
                     val request = channelPages.read(chain.request().url)
-                    if (request.startIndex == channelPages.failAt.get() || (channelPages.refreshed && request.startIndex == channelPages.failRefreshAt.get())) { code = 503; JSONObject() }
+                    if (channelStatus.get() != 200) { code = channelStatus.get(); JSONObject() }
+                    else if (request.startIndex == channelPages.failAt.get() || (channelPages.refreshed && request.startIndex == channelPages.failRefreshAt.get())) { code = 503; JSONObject() }
+                    else if (empty) page()
                     else if (paginated) page(request, channelPages.total(request, 81)) { index ->
                         val sourceIndex = if (channelPages.repeatBoundary.get() && request.startIndex in 1 until 80 && index == request.startIndex) index - 1 else index
                         channel("channel-$sourceIndex", channelName(sourceIndex, channelPages.refreshed))
                     }
-                    else page(channel("harbour", "港湾电视"), channel("seagull", "海鸥电视"))
+                    else page(channel("${channelPrefix}harbour", (if (channelPages.refreshed) "刷新 · " else "") + "港湾电视"),
+                        channel("${channelPrefix}seagull", (if (channelPages.refreshed) "刷新 · " else "") + "海鸥电视"))
                 }
                 "/proxy/LiveTv/Programs" -> {
                     val request = programPages.read(chain.request().url)
