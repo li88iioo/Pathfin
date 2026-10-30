@@ -18,7 +18,7 @@ android {
         applicationId = "dev.pathfin.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 31
+        versionCode = 32
         versionName = "0.1.0"
         resValue("string", "app_name", "Pathfin")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
