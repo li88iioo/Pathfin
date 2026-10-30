@@ -4,11 +4,6 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
-## [0.1.1] - 2026-10-30
-
-- [单集与季详情可直达所属剧集](https://github.com/li88iioo/Pathfin/commit/33430c6e46d7f5f308842a0be2a61cbb06f12a76)：单集详情点击剧名、季详情点击标题即可打开整部剧；返回栈里已有这部剧时直接退回，不重复叠加页面。
-- 已安装 `0.1.0` 的用户可在“设置 → 关于 → 检查更新”中直接升级。
-
 ## [0.1.0] - 2026-10-30
 
 ### 首次发布
@@ -17,9 +12,10 @@
 
 ### 本次重发
 
-- 本次基于最新代码重新发布 `0.1.0`，Android 版本码提升至 `32`。已安装旧 `0.1.0` 的用户请[重新下载 APK](https://github.com/li88iioo/Pathfin/releases/download/v0.1.0/Pathfin-arm64-v8a.apk)覆盖安装；同名版本不会触发应用内更新提示。
+- 本次基于最新代码重新发布 `0.1.0`，Android 版本码提升至 `33`。已安装旧 `0.1.0` 的用户请[重新下载 APK](https://github.com/li88iioo/Pathfin/releases/download/v0.1.0/Pathfin-arm64-v8a.apk)覆盖安装；同名版本不会触发应用内更新提示。
 - [优化直播页重复进入](https://github.com/li88iioo/Pathfin/commit/71c25b60cc36373fdc912d4679ac22403202bd6a)：同一会话内保留频道、搜索、分页和滚动位置，过期时保留已有内容刷新。
 - [优化媒体库控制台进入与返回](https://github.com/li88iioo/Pathfin/commit/ba7d963b5cf102f39ce20b7b27b2f196b561c8df)：保留子页、列表和滚动位置，读取期间可切换子页，避免旧日志响应覆盖新选择。
+- [单集与季详情可直达所属剧集](https://github.com/li88iioo/Pathfin/commit/33430c6e46d7f5f308842a0be2a61cbb06f12a76)：单集详情点击剧名、季详情点击标题即可打开整部剧；返回栈里已有这部剧时直接退回，不重复叠加页面。
 
 ### 主要功能
 
@@ -39,5 +35,4 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
-[0.1.1]: https://github.com/li88iioo/Pathfin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/li88iioo/Pathfin/releases/tag/v0.1.0
