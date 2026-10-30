@@ -242,15 +242,14 @@ class PlayerSystemFlowTest {
         check(context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE))
         check(!context.getSystemService(KeyguardManager::class.java).isDeviceLocked)
         val task = main { host().taskId }
-        val appTask = context.getSystemService(ActivityManager::class.java).appTasks.single { it.taskInfo?.taskId == task }
         val before = main { active.player.currentPosition }
-        try {
-            assertTrue(ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME))
-            await("真实Home动作必须按设置进入系统画中画") { main { host().isInPictureInPictureMode && active.player.isPlaying && active.player.currentPosition > before + 300 } }
-        } finally {
-            appTask.moveToFront()
-            await("画中画恢复同一窗口") { main { currentActivity.get()?.let { !it.isInPictureInPictureMode && it.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) } == true } }
-        }
+        assertTrue(ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME))
+        await("真实Home动作必须按设置进入系统画中画") { main { host().isInPictureInPictureMode && active.player.isPlaying && active.player.currentPosition > before + 300 } }
+        // PiP 状态早于系统入场动画完成；通过可交互的系统展开按钮恢复原任务。
+        clickPipAction("展开画中画") { it.viewIdResourceName?.endsWith(":id/expand_button") == true }
+        await("画中画恢复同一窗口") { main { currentActivity.get()?.let {
+            !it.isInPictureInPictureMode && it.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) && it.taskId == task
+        } == true } }
         assertContinuous(active)
     }
 
