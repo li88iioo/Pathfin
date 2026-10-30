@@ -33,7 +33,7 @@ With **STRM original address** turned on, MediaFlux STRM that supports the quali
 
 Original-quality capability checks keep Jellyfin's full video track information, including Dolby Vision profile, bit depth and dynamic range; compressed cloud levels are checked against their own formats. When the default Original quality is known to be undecodable, the highest compatible cloud level is chosen without changing the default quality preference. If no compatible cloud level exists, the app says the device can't play it and does not start Jellyfin transcoding. When a manual quality switch fails, the app first restores the resource that was playing; a network error renews the original STRM address only once.
 
-Video prefers the system MediaCodec. On ARM64, H.264/HEVC software fallback covers Hi10P and Dolby Vision Profile 5: FFmpeg decodes the video and libplacebo maps it to SDR on the GPU using per-frame color and RPU metadata, instead of treating Profile 5 as plain HEVC. For a clear system audio or video decoder error, once the local extension is confirmed to support the format, audio and video can each fall back once on the same source. Position, speed, pause state and track selection are kept, and persistent preferences are not changed.
+Video prefers the system MediaCodec. ARM64 software fallback supports H.264, HEVC and MPEG-2, including Hi10P and Dolby Vision Profile 5: FFmpeg decodes the video and libplacebo maps it to SDR on the GPU using per-frame color and RPU metadata, instead of treating Profile 5 as plain HEVC. For a clear system audio or video decoder error, once the local extension is confirmed to support the format, audio and video can each fall back once on the same source. Position, speed, pause state and track selection are kept, and persistent preferences are not changed.
 
 The existing hardware HDR10/HLG path is kept. Progressive Profile 7 and the Profile 8 variants Media3 supports can use the HEVC base layer; the Profile 7 FEL enhancement layer is not rebuilt. The software path is currently limited to 4096 pixels per side and at most 4096×2304 in total. Whether it plays in real time still depends on the device, encoding complexity and frame rate; smooth software decoding of every 4K file on every device is not promised. Network, container, audio, subtitles and the playback clock stay in the same ExoPlayer.
 
@@ -56,7 +56,7 @@ python3 android/tools/package_source.py --native ffmpeg --output .superpowers/tm
 python3 android/tools/package_source.py --native ass --output .superpowers/tmp/ass-native/release/pathfin-ass-corresponding-source.tar
 ```
 
-Native build prerequisites, locked inputs and corresponding-source notes are in the [ASS module](android/ass/README.md) and [FFmpeg audio/video module](android/ffmpeg/README.md) READMEs. FFmpeg builds audio decoding, resampling and H.264/HEVC software decoding; video color mapping is done by libplacebo GLES output, while network, container and playback clock are managed by Media3. libass and its font parsing and shaping dependencies are statically linked into the ASS JNI library. The two modules have no runtime dependency on each other, and only the ASS module packages the NDK shared C++ runtime.
+Native build prerequisites, locked inputs and corresponding-source notes are in the [ASS module](android/ass/README.md) and [FFmpeg audio/video module](android/ffmpeg/README.md) READMEs. FFmpeg builds audio decoding, resampling and H.264/HEVC/MPEG-2 software decoding; video color mapping is done by libplacebo GLES output, while network, container and playback clock are managed by Media3. libass and its font parsing and shaping dependencies are statically linked into the ASS JNI library. The two modules have no runtime dependency on each other, and only the ASS module packages the NDK shared C++ runtime.
 
 ```bash
 cd android
@@ -77,7 +77,7 @@ Pushing `main` or manually running **Build and release** in GitHub Actions runs 
 
 When preparing a release, check `versionName` and the increasing `versionCode` in `android/app/build.gradle.kts`. Review `git log --reverse --no-merges <previous-release-tag>..<target-commit>` for additions, improvements, fixes and necessary upgrade instructions; for the first release, review all history through the target commit. Do not update the changelog for every development commit or treat local builds as formal releases.
 
-Use `## [X.Y.Z] - YYYY-MM-DD` for each version heading and at least one `- Description` list item. Replace the first version's current `待发布` (pending release) date when the actual release date is confirmed. Add real commit links where traceability is useful and a comparison link when a previous release tag exists. If an `[Unreleased]` comparison link is retained, update it to compare the new tag with `HEAD`.
+Use `## [X.Y.Z] - YYYY-MM-DD` for each version heading and at least one `- Description` list item. Set the actual release date when preparing the tag. Add real commit links where traceability is useful and a comparison link when a previous release tag exists. If an `[Unreleased]` comparison link is retained, update it to compare the new tag with `HEAD`.
 
 Before committing release changes, validate and preview the notes from the repository root:
 

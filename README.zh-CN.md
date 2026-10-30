@@ -33,7 +33,7 @@
 
 原画能力判断保留 Jellyfin 的完整视频轨信息，包括 Dolby Vision Profile、位深和动态范围；云端压缩档按自身格式判断。默认原画已知无法解码时，优先选择最高兼容云档，不改写默认画质偏好；没有兼容云档时明确提示本机不支持，不发起 Jellyfin 转码。手动切换画质失败仍优先恢复原来可播放的资源，网络错误只对原 STRM 地址续签一次。
 
-视频默认优先使用系统 MediaCodec。ARM64 的 H.264/HEVC 软件补解覆盖 Hi10P 和 Dolby Vision Profile 5：FFmpeg 解码视频，libplacebo 在 GPU 上按逐帧色彩及 RPU 元数据映射为 SDR；不会把 Profile 5 简单改写成普通 HEVC。明确的系统音频或视频解码错误，在确认本地扩展支持该格式后，可按音频、视频各同源回退一次；保留播放位置、倍速、暂停和轨道选择，不改变持久偏好。
+视频默认优先使用系统 MediaCodec。ARM64 软件补解支持 H.264、HEVC 和 MPEG-2，并覆盖 Hi10P 和 Dolby Vision Profile 5：FFmpeg 解码视频，libplacebo 在 GPU 上按逐帧色彩及 RPU 元数据映射为 SDR；不会把 Profile 5 简单改写成普通 HEVC。明确的系统音频或视频解码错误，在确认本地扩展支持该格式后，可按音频、视频各同源回退一次；保留播放位置、倍速、暂停和轨道选择，不改变持久偏好。
 
 原有硬解 HDR10/HLG 路径保留。渐进式 Profile 7 和 Media3 支持的 Profile 8 可使用 HEVC 基础层，不重建 Profile 7 FEL 增强层。软件路径当前限制单边 4096、总像素不超过 4096×2304，是否能实时播放仍取决于设备、编码复杂度与帧率；不承诺任意 4K 文件或设备都能流畅软解。网络、容器、音频、字幕与播放时钟继续由同一个 ExoPlayer 管理。
 
@@ -41,7 +41,7 @@
 
 电影、剧集或视频明确开启原始路径并选择原画时，普通 HTTP STRM 也保持直连，不要求服务端实现云盘画质协议。已知本机无法处理或实际解码失败时不自动替换成 Jellyfin 转码；关闭原始路径或主动选择服务器画质后，仍按服务器能力协商。原地址网络重试继续遵守直连选择。
 
-服务端需提供 `mediaflux.playback.v1` 的 `variants` / `resolve` 接口。连接 MediaFlux 媒体反代时，支持读取 `MediaSource.MediaFluxPlayback` 附带的原始签名 STRM 地址，继续使用云盘画质；MF 与 Pathfin 两端均需支持此扩展，手机需能访问该地址。只保存原始签名 STRM 地址用于查询和续期，不把临时 CDN URL 当作新媒体版本，也不向云盘发送 Jellyfin 账号凭据。
+服务端需提供 `mediaflux.playback.v1` 的 `variants` / `resolve` 接口。连接 MediaFlux 媒体反代时，Pathfin 将 `MediaSource.MediaFluxPlayback` 的签名路径和查询参数与当前连接服务器的协议、主机和端口组合，避免前置代理改写 Host 后丢失公网入口。MediaFlux 需支持在媒体反代入口查询画质，手机无需访问内部面板地址；直接连接 Jellyfin 时，原始 STRM 地址仍需可访问。只保存签名入口用于查询和续期，不把临时 CDN URL 当作新媒体版本，也不向云盘发送 Jellyfin 账号凭据。
 
 ## 构建
 
@@ -56,7 +56,7 @@ python3 android/tools/package_source.py --native ffmpeg --output .superpowers/tm
 python3 android/tools/package_source.py --native ass --output .superpowers/tmp/ass-native/release/pathfin-ass-corresponding-source.tar
 ```
 
-原生构建前置条件、锁定输入与对应源码说明见 [ASS 模块](android/ass/README.md)和 [FFmpeg 音视频模块](android/ffmpeg/README.md)。FFmpeg 构建音频解码、重采样及 H.264/HEVC 软件解码，视频色彩映射由 libplacebo GLES 输出承担；网络、容器和播放时钟由 Media3 管理。libass、字体解析和整形依赖静态链接入 ASS JNI。两个模块无相互运行时依赖，只有 ASS 模块打包 NDK 的共享 C++ 运行时。
+原生构建前置条件、锁定输入与对应源码说明见 [ASS 模块](android/ass/README.md)和 [FFmpeg 音视频模块](android/ffmpeg/README.md)。FFmpeg 构建音频解码、重采样及 H.264/HEVC/MPEG-2 软件解码，视频色彩映射由 libplacebo GLES 输出承担；网络、容器和播放时钟由 Media3 管理。libass、字体解析和整形依赖静态链接入 ASS JNI。两个模块无相互运行时依赖，只有 ASS 模块打包 NDK 的共享 C++ 运行时。
 
 ```bash
 cd android
@@ -77,7 +77,7 @@ cd android
 
 准备正式版本时，核对 `android/app/build.gradle.kts` 的 `versionName` 与递增的 `versionCode`，按 `git log --reverse --no-merges <上一个正式标签>..<目标提交>` 整理新增、优化、修复及必要的升级说明；首版核对截至目标提交的全部历史。日常开发提交不逐次追加日志，也不把本地 build 当作正式版本。
 
-版本标题格式为 `## [X.Y.Z] - YYYY-MM-DD`，正文至少包含一条 `- 内容` 列表。当前首版的“待发布”需在确认发版时替换为实际日期。对需要追溯的条目补充真实提交链接；已有上一正式标签时维护对应版本的比较链接，若保留 `[Unreleased]` 比较链接则更新到新标签与 `HEAD`。
+版本标题格式为 `## [X.Y.Z] - YYYY-MM-DD`，正文至少包含一条 `- 内容` 列表，准备标签时填写实际发布日期。对需要追溯的条目补充真实提交链接；已有上一正式标签时维护对应版本的比较链接，若保留 `[Unreleased]` 比较链接则更新到新标签与 `HEAD`。
 
 提交发版改动前可在仓库根目录验证并预览正文：
 
