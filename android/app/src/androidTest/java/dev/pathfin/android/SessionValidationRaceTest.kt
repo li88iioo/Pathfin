@@ -49,6 +49,28 @@ import org.junit.runner.RunWith
 class SessionValidationRaceTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
+    @Test fun consoleOwnerSurvivesNavigationAndIsDiscardedWithItsRouteOnAuthenticationFailure() = withRestoredApp(administrator = true) { app, fixture ->
+        fixture.validation.awaitRequest()
+        await(app, fixture) { !it.restoringSession && it.session != null }
+        main { app.openServerAdministration() }
+        val restored = checkNotNull(app.state.value.administration)
+        completeValidation(app, fixture)
+        val validated = checkNotNull(app.state.value.administration)
+        assertNotSame(restored, validated)
+        assertEquals(app.state.value.session, validated.session)
+        main { validated.page = "activity"; app.back(); app.openServerAdministration() }
+        assertEquals(Route.ServerAdministration, app.state.value.route)
+        assertSame("真实路由重进必须保留控制台子页状态", validated, app.state.value.administration)
+        assertEquals("activity", app.state.value.administration?.page)
+        main { app.authenticationExpired(validated.session); app.dismissReauthentication() }
+        assertNull(app.state.value.administration)
+        assertNull(app.state.value.reauthenticationProfile)
+        assertEquals("退出登录恢复提示后不能留下没有状态的控制台", Route.Home, app.state.value.route)
+        main { app.openServerAdministration() }
+        assertNotSame(validated, app.state.value.administration)
+        assertEquals("overview", app.state.value.administration?.page)
+    }
+
     @Test fun liveTvOwnerSurvivesNavigationButIsReplacedAfterValidationAndExpiredCredentials() = withRestoredApp { app, fixture ->
         fixture.validation.awaitRequest()
         await(app, fixture) { !it.restoringSession && it.session != null }
@@ -169,7 +191,7 @@ class SessionValidationRaceTest {
         assertEquals(USER_ID, updated.session?.userId)
     }
 
-    private fun withRestoredApp(block: (AppViewModel, Fixture) -> Unit) {
+    private fun withRestoredApp(administrator: Boolean = false, block: (AppViewModel, Fixture) -> Unit) {
         val context = instrumentation.targetContext
         check(context.packageName == TARGET) { "会话竞态回归只允许独立 verification 包" }
         val preferences = AppPreferencesStore(context)
@@ -179,9 +201,9 @@ class SessionValidationRaceTest {
         clearSyntheticSessions(context)
         preferences.save(AppPreferences(openLastServer = true))
         try {
-            Fixture().use { fixture ->
+            Fixture(administrator).use { fixture ->
                 SessionStore(context).save(Session(ServerConfig(fixture.origin, true), OLD_TOKEN, USER_ID, USER_NAME,
-                    DEVICE_ID, SERVER_ID, userImageTag = OLD_AVATAR))
+                    DEVICE_ID, SERVER_ID, userImageTag = OLD_AVATAR, isAdministrator = administrator))
                 try {
                     val model = main {
                         val provider = ViewModelProvider(owner, ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application))
@@ -230,7 +252,7 @@ class SessionValidationRaceTest {
         fun awaitResponseAttempt() = assertTrue("迟到响应必须实际尝试完成", finished.await(WAIT, TimeUnit.MILLISECONDS))
     }
 
-    private class Fixture : Closeable {
+    private class Fixture(private val administrator: Boolean) : Closeable {
         val validation = Gate()
         val detail = Gate()
         val playback = Gate()
@@ -324,6 +346,7 @@ class SessionValidationRaceTest {
         }
 
         private fun user() = JSONObject().put("Id", USER_ID).put("Name", USER_NAME).put("PrimaryImageTag", NEW_AVATAR)
+            .put("Policy", JSONObject().put("IsAdministrator", administrator))
         private fun item(id: String, full: Boolean) = JSONObject().put("Id", id).put("Name", "Validation $id").put("Type", "Movie")
             .put("Overview", if (full) FULL_OVERVIEW else "").put("RunTimeTicks", 600_000_000L)
         private fun page(vararg items: JSONObject) = JSONObject().put("Items", JSONArray(items.toList())).put("TotalRecordCount", items.size)

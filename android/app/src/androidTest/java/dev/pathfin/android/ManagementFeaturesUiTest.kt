@@ -7,6 +7,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
 import dev.pathfin.android.createVerificationComposeRule
@@ -19,11 +20,13 @@ import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.MediaIdentificationScreen
 import dev.pathfin.android.ui.LocalPosterLoader
 import dev.pathfin.android.ui.ServerAdministrationScreen
+import dev.pathfin.android.ui.ServerAdministrationState
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import coil3.ImageLoader
 import java.io.Closeable
 import java.io.DataInputStream
+import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -35,6 +38,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import org.json.JSONArray
 import org.json.JSONObject
@@ -223,10 +227,7 @@ class ManagementFeaturesUiTest {
 
     @Test fun acceptedTaskWithFailedReloadRetriesOnlyReadsAndRestartAlwaysConfirms() {
         Fixture().use { fixture ->
-            val shown = mutableStateOf(true); val api = JellyfinApi(); val session = fixture.session()
-            compose.setContent { ManagementContent {
-                if (shown.value) ServerAdministrationScreen(session, api, onBack = { shown.value = false })
-            } }
+            val host = showAdministration(fixture)
             waitForTask(fixture)
             scrollAdministration(hasTestTag("server-task-task"))
             compose.onNodeWithTag("server-task-task").performVerificationClick(compose)
@@ -272,9 +273,15 @@ class ManagementFeaturesUiTest {
             awaitDialog("server-restart-confirm", "restart-dialog-reopened")
             compose.onNodeWithTag("server-restart-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.restarts.get() == 1 && !exists("server-restart-confirm") }
+            waitForAdministrationIdle(host, fixture)
             compose.onNodeWithTag("server-restart").assertIsNotEnabled()
             assertEquals(1, fixture.runs.get()); assertEquals(1, fixture.cancels.get())
-            compose.runOnIdle { shown.value = false }
+            val requests = fixture.total.get()
+            reenterAdministration(host)
+            compose.onNodeWithTag("server-restart").assertIsNotEnabled()
+            assertAdministrationRequestsStayAt(fixture, requests)
+            assertEquals("重进不能再次提交重启", 1, fixture.restarts.get())
+            compose.runOnIdle { host.shown.value = false }
         }
     }
 
@@ -289,10 +296,7 @@ class ManagementFeaturesUiTest {
     private fun assertAcceptedTaskSurvivesAnOlderPoll(failedReload: Boolean) {
         Fixture().use { fixture ->
             fixture.backgroundTaskRunning.set(true)
-            val shown = mutableStateOf(true); val api = JellyfinApi(); val session = fixture.session()
-            compose.setContent { ManagementContent {
-                if (shown.value) ServerAdministrationScreen(session, api, onBack = { shown.value = false })
-            } }
+            val host = showAdministration(fixture)
             waitForTask(fixture)
             fixture.holdNextTaskRead.set(true)
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.taskPollStarted.count == 0L }
@@ -322,16 +326,13 @@ class ManagementFeaturesUiTest {
                 assertEquals("旧读取不能自动发起取消", 0, fixture.cancels.get())
                 SystemClock.sleep(25)
             }
-            compose.runOnIdle { shown.value = false }
+            compose.runOnIdle { host.shown.value = false }
         }
     }
 
     @Test fun activityPaginationAndLogReadingUseRealReadRequests() {
         Fixture().use { fixture ->
-            val shown = mutableStateOf(true); val api = JellyfinApi(); val session = fixture.session()
-            compose.setContent { ManagementContent {
-                if (shown.value) ServerAdministrationScreen(session, api, onBack = { shown.value = false })
-            } }
+            val host = showAdministration(fixture)
             waitForTask(fixture)
             scrollAdministration(hasText("更多", substring = false))
             compose.onNodeWithText("更多", substring = false).performVerificationClick(compose)
@@ -355,17 +356,13 @@ class ManagementFeaturesUiTest {
             compose.onNodeWithText("synthetic safe log").assertVerificationDisplayed(compose)
             compose.onAllNodesWithText(TOKEN, substring = true).assertCountEquals(0)
             assertEquals(1, fixture.logReads.get())
-            compose.runOnIdle { shown.value = false }
+            compose.runOnIdle { host.shown.value = false }
         }
     }
 
     @Test fun activityAppendFailureStopsAutomaticRetriesAndRefreshKeepsTheReadRange() {
         Fixture(activityCount = 61).use { fixture ->
-            val shown = mutableStateOf(true)
-            val session = fixture.session(); val api = JellyfinApi()
-            compose.setContent { ManagementContent {
-                if (shown.value) ServerAdministrationScreen(session, api, onBack = { shown.value = false })
-            } }
+            val host = showAdministration(fixture)
             waitForTask(fixture)
             scrollAdministration(hasText("更多", substring = false))
             compose.onNodeWithText("更多", substring = false).performVerificationClick(compose)
@@ -410,7 +407,7 @@ class ManagementFeaturesUiTest {
             assertActivityRequestsStayAt(fixture, terminalRequests)
             compose.onNodeWithTag("server-activity-more").assertDoesNotExist()
             assertEquals(0, fixture.runs.get()); assertEquals(0, fixture.cancels.get()); assertEquals(0, fixture.restarts.get())
-            compose.runOnIdle { shown.value = false }
+            compose.runOnIdle { host.shown.value = false }
         }
     }
 
@@ -495,9 +492,219 @@ class ManagementFeaturesUiTest {
         }
     }
 
+    @Test fun aFreshAdministrationSnapshotKeepsItsSubpageAndActualScrollPositionWithoutRequests() {
+        Fixture().use { fixture ->
+            val host = showAdministration(fixture)
+            waitForAdministrationIdle(host, fixture)
+            scrollAdministration(hasText("更多", substring = false))
+            compose.onNodeWithText("更多", substring = false).performVerificationClick(compose)
+            scrollActivityEnd(29)
+            scrollActivityEnd(30)
+            waitForAdministrationIdle(host, fixture)
+            compose.onNodeWithText("Synthetic event 30", substring = false).assertVerificationDisplayed(compose)
+            val state = checkNotNull(host.state.get())
+            lateinit var position: Pair<Int, Int>
+            compose.runOnIdle { position = state.list.firstVisibleItemIndex to state.list.firstVisibleItemScrollOffset }
+            val requests = fixture.total.get()
+
+            reenterAdministration(host)
+
+            compose.onNodeWithText("Synthetic event 30", substring = false).assertVerificationDisplayed(compose)
+            compose.runOnIdle {
+                assertSame("同一会话继续使用同一个状态所有者", state, host.state.get())
+                assertEquals("activity", state.page)
+                assertEquals(position, state.list.firstVisibleItemIndex to state.list.firstVisibleItemScrollOffset)
+            }
+            assertAdministrationRequestsStayAt(fixture, requests)
+            assertEquals(listOf(0, 30), fixture.activityRequests.map { it.first })
+        }
+    }
+
+    @Test fun reenteringDuringTheFirstReadJoinsItAndAllowsTheReadyActivityPage() {
+        Fixture(activityCount = 1).use { fixture ->
+            fixture.holdNextInfoRead.set(true)
+            val host = showAdministration(fixture)
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.infoReadStarted.count == 0L &&
+                exists("server-task-task") && compose.onAllNodesWithText("Synthetic event 0", substring = false).fetchSemanticsNodes().isNotEmpty() }
+            scrollAdministration(hasText("更多", substring = false))
+            compose.onNodeWithText("更多", substring = false).assertIsEnabled().performVerificationClick(compose)
+            compose.onNodeWithText("Synthetic event 0", substring = false).assertVerificationDisplayed(compose)
+            reenterAdministration(host)
+            assertEquals("首读未结束时不能重发概览", 1, fixture.infoReads.get())
+            fixture.releaseInfoRead.countDown()
+            waitForAdministrationIdle(host, fixture)
+            assertEquals("activity", checkNotNull(host.state.get()).page)
+            compose.onNodeWithText("Synthetic event 0", substring = false).assertVerificationDisplayed(compose)
+            assertAdministrationRequestsStayAt(fixture, 3)
+            assertEquals(1, fixture.infoReads.get()); assertEquals(1, fixture.taskReads.get())
+            assertEquals(listOf(0), fixture.activityRequests.map { it.first })
+        }
+    }
+
+    @Test fun anExpiredActivityReadFailureKeepsTheOldRowsAndDoesNotRefreshOtherPages() {
+        Fixture(activityCount = 1).use { fixture ->
+            val host = showAdministration(fixture)
+            waitForAdministrationIdle(host, fixture)
+            scrollAdministration(hasText("更多", substring = false))
+            compose.onNodeWithText("更多", substring = false).performVerificationClick(compose)
+            compose.onNodeWithText("Synthetic event 0", substring = false).assertVerificationDisplayed(compose)
+            fixture.failActivityAt.set(0)
+            host.clock.addAndGet(30_001L)
+
+            reenterAdministration(host)
+
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("server-administration-error") }
+            waitForAdministrationIdle(host, fixture)
+            compose.onNodeWithText("Synthetic event 0", substring = false).assertVerificationDisplayed(compose)
+            compose.onAllNodesWithText("Refreshed synthetic event 0", substring = false).assertCountEquals(0)
+            assertEquals(1, fixture.infoReads.get()); assertEquals(1, fixture.taskReads.get())
+            assertEquals(listOf(0, 0), fixture.activityRequests.map { it.first })
+            assertAdministrationRequestsStayAt(fixture, 4)
+        }
+    }
+
+    @Test fun leavingAdministrationStopsItsRealTaskPoll() {
+        Fixture().use { fixture ->
+            fixture.backgroundTaskRunning.set(true)
+            val host = showAdministration(fixture)
+            waitForAdministrationIdle(host, fixture)
+            fixture.holdNextTaskRead.set(true)
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.taskPollStarted.count == 0L }
+            val taskReadsAtExit = fixture.taskReads.get()
+            assertTrue("至少执行过初读与一次真实轮询", taskReadsAtExit >= 2)
+            fixture.allowCancelledResponse.set(true)
+            compose.runOnIdle { host.shown.value = false }
+            compose.waitUntil(WAIT_MS) { !exists("server-administration-screen") }
+            fixture.releaseTaskPoll.countDown()
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.taskPollDelivered.count == 0L }
+            val requests = fixture.total.get()
+            assertAdministrationRequestsStayAt(fixture, requests, durationMs = 4_300L)
+            assertEquals("离开后不能再轮询", taskReadsAtExit, fixture.taskReads.get())
+            assertEquals(0, fixture.runs.get()); assertEquals(0, fixture.cancels.get()); assertEquals(0, fixture.restarts.get())
+        }
+    }
+
+    @Test fun replacingTheSessionRejectsAnOldUnauthorizedResponseAndOnlyReportsTheCurrentFailure() {
+        Fixture(activityCount = 1).use { previous ->
+            previous.infoStatus.set(401); previous.holdNextInfoRead.set(true)
+            val host = showAdministration(previous)
+            compose.waitUntil(WAIT_MS) { previous.assertHealthy(); previous.infoReadStarted.count == 0L }
+            previous.allowCancelledResponse.set(true)
+            Fixture(activityCount = 1).use { current ->
+                current.serverName.set("Replacement synthetic server")
+                compose.runOnIdle { host.session.value = current.session() }
+                waitForAdministrationIdle(host, current)
+                compose.onAllNodesWithText("Replacement synthetic server").onFirst().assertVerificationDisplayed(compose)
+                previous.releaseInfoRead.countDown()
+                compose.waitUntil(WAIT_MS) { previous.assertHealthy(); previous.infoReadDelivered.count == 0L }
+                assertAdministrationRequestsStayAt(current, 3)
+                assertEquals("旧会话401不能要求新会话重登", 0, host.authExpired.get())
+                compose.onAllNodesWithText("Replacement synthetic server").onFirst().assertVerificationDisplayed(compose)
+
+                current.infoStatus.set(401)
+                host.clock.addAndGet(30_001L)
+                reenterAdministration(host)
+                compose.waitUntil(WAIT_MS) { current.assertHealthy(); host.authExpired.get() == 1 }
+                waitForAdministrationIdle(host, current)
+                assertAdministrationRequestsStayAt(current, 6)
+                assertEquals(1, host.authExpired.get())
+                assertEquals(0, current.runs.get()); assertEquals(0, current.restarts.get())
+            }
+        }
+    }
+
+    @Test fun aDelayedLogReadCannotPopulateAnotherFileSelectedBeforeItFinishes() {
+        Fixture(secondLog = true).use { fixture ->
+            val host = showAdministration(fixture)
+            waitForAdministrationIdle(host, fixture)
+            scrollAdministration(hasTestTag("server-logs-open"))
+            compose.onNodeWithTag("server-logs-open").performVerificationClick(compose)
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); compose.onAllNodesWithTag("server-log-file").fetchSemanticsNodes().size == 2 }
+            waitForAdministrationIdle(host, fixture)
+            fixture.holdNextLogRead.set(true)
+            compose.onNodeWithText("synthetic.log", substring = false).performVerificationClick(compose)
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.logReadStarted.count == 0L }
+
+            compose.onNodeWithTag("server-administration-back").performVerificationClick(compose)
+            compose.onNodeWithText("synthetic-second.log", substring = false).assertVerificationDisplayed(compose).performVerificationClick(compose)
+            compose.runOnIdle {
+                val state = checkNotNull(host.state.get())
+                assertEquals("log", state.page)
+                assertEquals("synthetic-second.log", state.logFile?.name)
+            }
+            assertEquals("第二个文件等待已有短读结束", listOf("synthetic.log"), fixture.logRequests.toList())
+            fixture.releaseLogRead.countDown()
+
+            compose.waitUntil(WAIT_MS) {
+                fixture.assertHealthy()
+                compose.onAllNodesWithText("synthetic safe log", substring = false).assertCountEquals(0)
+                compose.onAllNodesWithText("second synthetic safe log", substring = false).fetchSemanticsNodes().isNotEmpty()
+            }
+            waitForAdministrationIdle(host, fixture)
+            compose.onNodeWithText("second synthetic safe log", substring = false).assertVerificationDisplayed(compose)
+            compose.onAllNodesWithText("synthetic safe log", substring = false).assertCountEquals(0)
+            compose.onAllNodesWithText(TOKEN, substring = true).assertCountEquals(0)
+            assertEquals(listOf("synthetic.log", "synthetic-second.log"), fixture.logRequests.toList())
+            assertAdministrationRequestsStayAt(fixture, 6)
+            assertEquals(0, fixture.runs.get()); assertEquals(0, fixture.cancels.get()); assertEquals(0, fixture.restarts.get())
+        }
+    }
+
+    private class AdministrationHost(session: Session) {
+        val session = mutableStateOf(session)
+        val shown = mutableStateOf(true)
+        val clock = AtomicLong(1_000L)
+        val authExpired = AtomicInteger()
+        val state = AtomicReference<ServerAdministrationState?>()
+    }
+
+    private fun showAdministration(fixture: Fixture, session: Session = fixture.session()): AdministrationHost {
+        val host = AdministrationHost(session)
+        val api = JellyfinApi()
+        compose.setContent { ManagementContent {
+            val scope = rememberCoroutineScope()
+            val current = host.session.value
+            val state = remember(current) {
+                ServerAdministrationState(current, api, scope, { host.authExpired.incrementAndGet() }, clock = host.clock::get)
+            }
+            DisposableEffect(state) {
+                host.state.set(state)
+                onDispose { state.cancel() }
+            }
+            if (host.shown.value) ServerAdministrationScreen(state, onBack = { host.shown.value = false })
+        } }
+        return host
+    }
+
+    private fun reenterAdministration(host: AdministrationHost) {
+        compose.runOnIdle { host.shown.value = false }
+        compose.waitUntil(WAIT_MS) { !exists("server-administration-screen") }
+        compose.runOnIdle { host.shown.value = true }
+        compose.waitUntil(WAIT_MS) { exists("server-administration-screen") }
+        compose.waitForIdle()
+    }
+
+    private fun waitForAdministrationIdle(host: AdministrationHost, fixture: Fixture) {
+        compose.waitUntil(WAIT_MS) {
+            fixture.assertHealthy()
+            val state = host.state.get()
+            state != null && state.session == host.session.value && !state.loading && !state.writing &&
+                fixture.infoReads.get() > 0 && fixture.taskReads.get() > 0 && fixture.activityRequests.isNotEmpty()
+        }
+        compose.waitForIdle()
+    }
+
+    private fun assertAdministrationRequestsStayAt(fixture: Fixture, expected: Int, durationMs: Long = 750L) {
+        val until = SystemClock.elapsedRealtime() + durationMs
+        while (SystemClock.elapsedRealtime() < until) {
+            compose.waitForIdle(); fixture.assertHealthy()
+            assertEquals("重复进入、失败或离页不能额外读取控制台", expected, fixture.total.get())
+            SystemClock.sleep(25)
+        }
+    }
+
     private fun openActivities(fixture: Fixture) {
-        val session = fixture.session(); val api = JellyfinApi()
-        compose.setContent { ManagementContent { ServerAdministrationScreen(session, api, {}) } }
+        showAdministration(fixture)
         waitForTask(fixture)
         scrollAdministration(hasText("更多", substring = false))
         compose.waitUntil(WAIT_MS) {
@@ -511,8 +718,7 @@ class ManagementFeaturesUiTest {
 
     @Test fun nonAdministratorCannotReadAdministrativeData() {
         Fixture().use { fixture ->
-            val api = JellyfinApi(); val session = fixture.session().copy(isAdministrator = false)
-            compose.setContent { ManagementContent { ServerAdministrationScreen(session, api, {}) } }
+            showAdministration(fixture, fixture.session().copy(isAdministrator = false))
             compose.onNodeWithText("需要管理员权限").assertVerificationDisplayed(compose)
             compose.waitForIdle()
             assertEquals(0, fixture.total.get())
@@ -575,10 +781,16 @@ class ManagementFeaturesUiTest {
         }
     }
 
-    private class Fixture(private val activityCount: Int = 31) : Closeable {
+    private class Fixture(private val activityCount: Int = 31, private val secondLog: Boolean = false) : Closeable {
         val total = AtomicInteger(); val searches = AtomicInteger(); val applies = AtomicInteger()
+        val infoReads = AtomicInteger(); val infoStatus = AtomicInteger(200)
+        val serverName = AtomicReference("Synthetic Jellyfin")
+        val holdNextInfoRead = AtomicBoolean(); val allowCancelledResponse = AtomicBoolean()
+        val infoReadStarted = CountDownLatch(1); val releaseInfoRead = CountDownLatch(1); val infoReadDelivered = CountDownLatch(1)
         val taskReads = AtomicInteger(); val runs = AtomicInteger(); val cancels = AtomicInteger(); val restarts = AtomicInteger()
         val activityAppends = AtomicInteger(); val logReads = AtomicInteger()
+        val logRequests = CopyOnWriteArrayList<String>()
+        val holdNextLogRead = AtomicBoolean(); val logReadStarted = CountDownLatch(1); val releaseLogRead = CountDownLatch(1)
         val activityRequests = CopyOnWriteArrayList<Pair<Int, Int>>()
         val failActivityAt = AtomicInteger(-1)
         val emptyActivityAt = AtomicInteger(-1)
@@ -624,7 +836,7 @@ class ManagementFeaturesUiTest {
                 headers[line.substringBefore(':').lowercase()] = line.substringAfter(':').trim() }
             val bytes = ByteArray(headers["content-length"]?.toIntOrNull() ?: 0); input.readFully(bytes)
             assertTrue(headers["authorization"].orEmpty().contains(TOKEN)); total.incrementAndGet()
-            var code = 200; var body = ""; var contentType = "application/json"; var heldTaskPoll = false
+            var code = 200; var body = ""; var contentType = "application/json"; var heldTaskPoll = false; var heldInfoRead = false
             when {
                 path.startsWith("/proxy/Items/RemoteSearch/Apply/") -> {
                     assertEquals("POST", method); applies.incrementAndGet()
@@ -646,7 +858,14 @@ class ManagementFeaturesUiTest {
                         .put("Name", candidateName.get()).put("ProductionYear", 2024).put("ProviderIds", JSONObject().put("Tmdb", "42"))
                         .put("ImageUrl", "https://image.invalid/poster.jpg")).toString()
                 }
-                path == "/proxy/System/Info" -> body = """{"ServerName":"Synthetic Jellyfin","Version":"12.3.0","CanSelfRestart":true}"""
+                path == "/proxy/System/Info" -> {
+                    infoReads.incrementAndGet(); code = infoStatus.get()
+                    body = JSONObject().put("ServerName", serverName.get()).put("Version", "12.3.0").put("CanSelfRestart", true).toString()
+                    if (holdNextInfoRead.compareAndSet(true, false)) {
+                        heldInfoRead = true; infoReadStarted.countDown()
+                        check(releaseInfoRead.await(15, TimeUnit.SECONDS))
+                    }
+                }
                 path == "/proxy/ScheduledTasks" -> {
                     taskReads.incrementAndGet()
                     if (failTaskReads.get() && runs.get() > 0) { code = 503; body = "{}" }
@@ -688,19 +907,37 @@ class ManagementFeaturesUiTest {
                         body = JSONObject().put("Items", items).put("TotalRecordCount", currentTotal).put("StartIndex", startIndex).toString()
                     }
                 }
-                path == "/proxy/System/Logs" -> body = """[{"Name":"synthetic.log","Size":100}]"""
-                path == "/proxy/System/Logs/Log" -> { logReads.incrementAndGet(); contentType = "text/plain"; body = "synthetic safe log\nAuthorization: Bearer $TOKEN\n" }
+                path == "/proxy/System/Logs" -> {
+                    val files = JSONArray().put(JSONObject().put("Name", "synthetic.log").put("Size", 100))
+                    if (secondLog) files.put(JSONObject().put("Name", "synthetic-second.log").put("Size", 100))
+                    body = files.toString()
+                }
+                path == "/proxy/System/Logs/Log" -> {
+                    val name = uri.query.substringAfter("name=")
+                    assertTrue(name == "synthetic.log" || secondLog && name == "synthetic-second.log")
+                    logRequests += name; logReads.incrementAndGet(); contentType = "text/plain"
+                    body = (if (name == "synthetic.log") "synthetic safe log" else "second synthetic safe log") + "\nAuthorization: Bearer $TOKEN\n"
+                    if (holdNextLogRead.compareAndSet(true, false)) {
+                        logReadStarted.countDown(); check(releaseLogRead.await(15, TimeUnit.SECONDS))
+                    }
+                }
                 path == "/proxy/System/Restart" -> { assertEquals("POST", method); restarts.incrementAndGet(); code = 204 }
                 else -> error("合成服务收到未知路径")
             }
             val payload = body.toByteArray()
-            val output = socket.getOutputStream()
-            output.write("HTTP/1.1 $code ${if (code < 400) "OK" else "Unavailable"}\r\nContent-Type: $contentType\r\nContent-Length: ${payload.size}\r\nConnection: close\r\n\r\n".toByteArray())
-            output.write(payload); output.flush()
-            if (heldTaskPoll) taskPollDelivered.countDown()
+            try {
+                val output = socket.getOutputStream()
+                output.write("HTTP/1.1 $code ${if (code < 400) "OK" else "Unavailable"}\r\nContent-Type: $contentType\r\nContent-Length: ${payload.size}\r\nConnection: close\r\n\r\n".toByteArray())
+                output.write(payload); output.flush()
+            } catch (cancelled: IOException) {
+                if (!allowCancelledResponse.get()) throw cancelled
+            } finally {
+                if (heldTaskPoll) taskPollDelivered.countDown()
+                if (heldInfoRead) infoReadDelivered.countDown()
+            }
         }
         override fun close() {
-            closed = true; allowApply.countDown(); releaseActivityRefresh.countDown(); releaseActivityRemainder.countDown(); releaseTaskPoll.countDown(); server.close()
+            closed = true; allowApply.countDown(); releaseActivityRefresh.countDown(); releaseActivityRemainder.countDown(); releaseTaskPoll.countDown(); releaseInfoRead.countDown(); releaseLogRead.countDown(); server.close()
             synchronized(sockets) { sockets.toList() }.forEach { runCatching { it.close() } }; executor.shutdownNow()
             assertHealthy()
         }

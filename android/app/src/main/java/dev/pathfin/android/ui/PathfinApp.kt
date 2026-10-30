@@ -331,7 +331,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                         state.liveTv?.let { liveTv -> LiveTvScreen(liveTv, onBack = { vm.back() }, onPlay = { vm.preparePlayback(it, true) },
                             preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }) }
                     } else if (route == Route.ServerAdministration && session != null) {
-                        ServerAdministrationScreen(session, vm.api, onBack = { vm.back() }, onAuthExpired = { vm.authenticationExpired(session) })
+                        state.administration?.let { ServerAdministrationScreen(it, onBack = { vm.back() }) }
                     } else savedState.SaveableStateProvider(state.savedPageKey()) {
                         when (route) {
                             Route.Downloads -> DownloadsScreen(state.currentProfileId)

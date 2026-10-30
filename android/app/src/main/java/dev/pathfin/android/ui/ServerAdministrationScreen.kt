@@ -1,10 +1,11 @@
 package dev.pathfin.android.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -36,6 +37,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -44,57 +47,63 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** 服务端管理与本机账号管理分开；切账号或离开页面自动取消旧会话请求。 */
-@Composable
-fun ServerAdministrationScreen(session: Session, api: JellyfinApi, onBack: () -> Unit, onAuthExpired: () -> Unit = {}) {
-    key(session) { ServerAdministrationContent(session, api, onBack, onAuthExpired) }
-}
+/** 当前会话的唯一控制台状态；短读跨页面复用，轮询由可见页面管理。 */
+class ServerAdministrationState(val session: Session, api: JellyfinApi, private val scope: CoroutineScope,
+    val onAuthExpired: () -> Unit = {}, private val clock: () -> Long = SystemClock::elapsedRealtime) {
+    private val administration = ServerAdministrationApi(api)
+    var page by mutableStateOf("overview")
+    var info by mutableStateOf<ServerAdministrationInfo?>(null)
+    var tasks by mutableStateOf<List<ServerScheduledTask>>(emptyList())
+    private var taskReadVersion = 0L
+    var activities by mutableStateOf<List<ServerActivity>>(emptyList())
+    var activityTotal by mutableIntStateOf(0)
+    var activityNextIndex by mutableIntStateOf(0)
+    var activityHasMore by mutableStateOf(false)
+    var activityFailed by mutableStateOf(false)
+    var logs by mutableStateOf<List<ServerLogFile>>(emptyList())
+    var logFile by mutableStateOf<ServerLogFile?>(null)
+    var logContent by mutableStateOf<ServerLogContent?>(null)
+    var logLines by mutableStateOf<List<String>>(emptyList())
+    private var loadKind by mutableStateOf<AdministrationLoad?>(null)
+    val loading get() = loadKind != null
+    val activityAppending get() = loadKind == AdministrationLoad.Append
+    var writing by mutableStateOf(false)
+    var error by mutableStateOf<String?>(null)
+    var notice by mutableStateOf<String?>(null)
+    var restartPending by mutableStateOf(false)
+    private val positions = mutableMapOf<String, LazyListState>()
+    val list get() = positions.getOrPut(page) { LazyListState() }
+    private val readAt = mutableStateMapOf<String, Long>()
+    private var readJob: Job? = null
+    private var writeJob: Job? = null
 
-@Composable
-private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBack: () -> Unit, onAuthExpired: () -> Unit) {
-    val administration = remember(api) { ServerAdministrationApi(api) }
-    val scope = rememberCoroutineScope()
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var page by remember { mutableStateOf("overview") }
-    var info by remember { mutableStateOf<ServerAdministrationInfo?>(null) }
-    var tasks by remember { mutableStateOf<List<ServerScheduledTask>>(emptyList()) }
-    var taskReadVersion by remember { mutableLongStateOf(0L) }
-    var activities by remember { mutableStateOf<List<ServerActivity>>(emptyList()) }
-    var activityTotal by remember { mutableIntStateOf(0) }
-    var activityNextIndex by remember { mutableIntStateOf(0) }
-    var activityHasMore by remember { mutableStateOf(false) }
-    var activityAppending by remember { mutableStateOf(false) }
-    var activityFailed by remember { mutableStateOf(false) }
-    var logs by remember { mutableStateOf<List<ServerLogFile>>(emptyList()) }
-    var logsLoaded by remember { mutableStateOf(false) }
-    var logFile by remember { mutableStateOf<ServerLogFile?>(null) }
-    var logContent by remember { mutableStateOf<ServerLogContent?>(null) }
-    var logLines by remember { mutableStateOf<List<String>>(emptyList()) }
-    var loading by remember { mutableStateOf(false) }
-    var writing by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var notice by remember { mutableStateOf<String?>(null) }
-    var pendingTask by remember { mutableStateOf<ServerScheduledTask?>(null) }
-    var confirmRestart by remember { mutableStateOf(false) }
-    var restartPending by remember { mutableStateOf(false) }
-    val list = rememberLazyListState()
-
-    fun failure(exception: Exception, committed: Boolean = false) {
+    fun loaded(page: String) = page in readAt
+    suspend fun enter() {
+        readJob?.takeIf { it.isActive }?.let { pending -> pending.join(); if (pending.isCancelled) return }
+        val pages = if (page == "overview") listOf("overview", "tasks", "activity") else listOf(page)
+        if (error != null || pages.any { key -> readAt[key]?.let { clock() - it < 30_000L } != true }) load()
+    }
+    fun cancel() { taskReadVersion++; readJob?.cancel(); leave() }
+    fun leave() { writeJob?.cancel() }
+    fun openLog(file: ServerLogFile) {
+        logFile = file; logContent = null; logLines = emptyList(); readAt.remove("log"); positions.remove("log"); page = "log"
+    }
+    private fun failure(exception: Exception, committed: Boolean = false) {
         if (exception is CancellationException) throw exception
-        if (exception is ApiException && exception.statusCode == 401) onAuthExpired()
+        if ((exception as? ApiException)?.statusCode == 401) onAuthExpired()
         error = if (committed) tr("操作已接受，但重新读取失败。请刷新状态，不要重复提交。") else administrationError(exception)
     }
     suspend fun readTasks(committed: Boolean = false) {
         val version = ++taskReadVersion
         try {
             val incoming = administration.tasks(session)
-            if (version == taskReadVersion) tasks = incoming
+            if (version == taskReadVersion) { tasks = incoming; readAt["tasks"] = clock() }
         } catch (exception: Exception) {
             if (exception is CancellationException) throw exception
             if (version == taskReadVersion) failure(exception, committed)
         }
     }
-    suspend fun readActivities(append: Boolean) {
+    private suspend fun readActivities(append: Boolean) {
         val readTarget = activityNextIndex.coerceAtLeast(ACTIVITY_PAGE_SIZE)
         var offset = if (append) activityNextIndex else 0
         var incoming = if (append) activities else emptyList()
@@ -113,9 +122,10 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
             more = result.items.isNotEmpty() && offset < result.total
         } while (more && !append && offset < readTarget)
         activities = incoming; activityTotal = checkNotNull(readTotal); activityNextIndex = offset; activityHasMore = more
+        if (!append) readAt["activity"] = clock()
     }
-    suspend fun readOverview() = coroutineScope {
-        launch { try { info = administration.info(session); restartPending = false } catch (exception: Exception) { failure(exception) } }
+    private suspend fun readOverview() = coroutineScope {
+        launch { try { info = administration.info(session); restartPending = false; readAt["overview"] = clock() } catch (exception: Exception) { failure(exception) } }
         launch { readTasks() }
         launch { try { readActivities(append = false) }
             catch (exception: Exception) { activityFailed = true; failure(exception) } }
@@ -124,18 +134,18 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
         if (loading || writing || !session.isAdministrator) return
         if (append && (page != "activity" || !activityHasMore)) return
         val requestedPage = page
-        loading = true; activityAppending = append; error = null
+        loadKind = if (append) AdministrationLoad.Append else AdministrationLoad.Refresh; error = null
         if (requestedPage in listOf("overview", "activity")) activityFailed = false
-        scope.launch {
+        readJob = scope.launch {
             try {
                 when (requestedPage) {
-                    "logs" -> { logs = administration.logs(session); logsLoaded = true }
+                    "logs" -> { logs = administration.logs(session); readAt["logs"] = clock() }
                     "log" -> logFile?.let { file ->
                         val content = administration.readLog(session, file)
                         val lines = withContext(Dispatchers.Default) {
                             content.text.lineSequence().flatMap { it.ifEmpty { " " }.chunked(1000).asSequence() }.take(10_000).toList()
                         }
-                        logContent = content; logLines = lines
+                        if (logFile == file) { logContent = content; logLines = lines; readAt["log"] = clock() }
                     }
                     "activity" -> readActivities(append)
                     "tasks" -> readTasks()
@@ -145,20 +155,15 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
                 if (requestedPage == "activity") activityFailed = true
                 failure(exception)
             }
-            finally { loading = false; activityAppending = false }
+            finally { loadKind = null }
         }
     }
-    fun back() {
-        if (writing) return
-        when (page) { "log" -> { page = "logs"; logFile = null }; "overview" -> onBack(); else -> page = "overview" }
-    }
-    fun openLogs() { if (loading || writing) return; page = "logs"; if (!logsLoaded) load() }
     fun taskAction(task: ServerScheduledTask) {
         if (writing || loading) return
         // 写操作一开始就撤销旧读取的发布权，不能让在途轮询覆盖已接受的运行/取消状态。
         taskReadVersion++
-        pendingTask = null; writing = true; error = null; notice = null
-        scope.launch {
+        writing = true; error = null; notice = null
+        writeJob = scope.launch {
             var committed = false
             try {
                 val run = task.state == ServerTaskState.IDLE
@@ -171,10 +176,37 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
             finally { writing = false }
         }
     }
+    fun restart() {
+        if (writing) return
+        writing = true; restartPending = true; error = null; notice = null
+        writeJob = scope.launch {
+            try { administration.restart(session); notice = tr("重启请求已接受，请稍后刷新服务器状态。") }
+            catch (exception: Exception) { failure(exception) }
+            finally {
+                notice = notice ?: tr("无法确认重启结果，请先刷新服务器状态；不要重复发送重启请求。")
+                writing = false
+            }
+        }
+    }
+}
+
+private enum class AdministrationLoad { Refresh, Append }
+
+@Composable
+fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> Unit) = with(state) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val active = LocalPageActive.current
+    var pendingTask by remember(state) { mutableStateOf<ServerScheduledTask?>(null) }
+    var confirmRestart by remember(state) { mutableStateOf(false) }
+    fun back() {
+        if (writing) return
+        when (page) { "log" -> { page = "logs"; logFile = null }; "overview" -> onBack(); else -> page = "overview" }
+    }
     BackHandler(enabled = writing || page != "overview") { back() }
-    LaunchedEffect(session) { load() }
-    LaunchedEffect(session, lifecycleOwner) {
-        if (!session.isAdministrator) return@LaunchedEffect
+    LaunchedEffect(state, page, active) { if (active) enter() }
+    DisposableEffect(state) { onDispose { state.leave() } }
+    LaunchedEffect(state, lifecycleOwner, active) {
+        if (!active || !session.isAdministrator) return@LaunchedEffect
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) {
                 delay(4_000)
@@ -228,31 +260,31 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
                                 AdministrationAction(tr("重启服务器"), PathfinIcons.Power, danger = true,
                                     enabled = !writing && !loading && !restartPending && info?.canSelfRestart == true,
                                     modifier = Modifier.weight(1f).testTag("server-restart")) { confirmRestart = true }
-                                AdministrationAction(tr("系统日志"), PathfinIcons.List, enabled = !writing && !loading,
-                                    modifier = Modifier.weight(1f).testTag("server-logs-open"), onClick = ::openLogs)
+                                AdministrationAction(tr("系统日志"), PathfinIcons.List, enabled = !writing,
+                                    modifier = Modifier.weight(1f).testTag("server-logs-open"), onClick = { page = "logs" })
                             }
                         }
-                        item("tasks-title") { AdministrationSectionTitle(tr("计划任务"), tr("全部"), !loading && !writing) { page = "tasks" } }
+                        item("tasks-title") { AdministrationSectionTitle(tr("计划任务"), tr("全部"), !writing) { page = "tasks" } }
                     }
                     if (page in listOf("overview", "tasks")) {
                         val summary = tasks.filter { it.key in listOf("RefreshLibrary", "ExtractChapterImages") }.ifEmpty { tasks.take(2) }
                         items(if (page == "overview") summary else tasks, key = { "task/${it.id}" }) { task ->
                             AdministrationTaskRow(task, !writing && !loading) { pendingTask = task }
                         }
-                        if (tasks.isEmpty() && !loading) item { EmptyPanel(tr("暂无计划任务"), tr("刷新以重新读取服务器任务。"), PathfinIcons.Clock) }
+                        if (tasks.isEmpty() && loaded("tasks")) item { EmptyPanel(tr("暂无计划任务"), tr("刷新以重新读取服务器任务。"), PathfinIcons.Clock) }
                     }
-                    if (page == "overview") item("activity-title") { AdministrationSectionTitle(tr("活动日志"), tr("更多"), !loading && !writing) { page = "activity" } }
+                    if (page == "overview") item("activity-title") { AdministrationSectionTitle(tr("活动日志"), tr("更多"), !writing) { page = "activity" } }
                     if (page in listOf("overview", "activity")) {
                         items(if (page == "overview") activities.take(6) else activities, key = { "activity/${it.id}" }) { entry ->
                             AdministrationActivityRow(entry)
                         }
-                        if (activities.isEmpty() && !loading) item { EmptyPanel(tr("暂无活动"), tr("服务器还没有可显示的活动记录。"), PathfinIcons.List) }
+                        if (activities.isEmpty() && loaded("activity")) item { EmptyPanel(tr("暂无活动"), tr("服务器还没有可显示的活动记录。"), PathfinIcons.List) }
                     }
                     if (page == "logs") {
                         items(logs, key = { "log/${it.name}" }) { file ->
                             GroupCard(Modifier.testTag("server-log-file")) {
-                                Row(Modifier.fillMaxWidth().clickable(enabled = !loading && !writing, role = Role.Button) {
-                                    logFile = file; logContent = null; logLines = emptyList(); page = "log"; load()
+                                Row(Modifier.fillMaxWidth().clickable(enabled = !writing, role = Role.Button) {
+                                    openLog(file)
                                 }.heightIn(min = 64.dp).padding(start = 16.dp, end = 14.dp, top = 12.dp, bottom = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically) {
                                     GroupIcon(PathfinIcons.List)
@@ -266,7 +298,7 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
                                 }
                             }
                         }
-                        if (logs.isEmpty() && !loading) item { EmptyPanel(tr("暂无系统日志"), tr("刷新以重新读取日志列表。"), PathfinIcons.List) }
+                        if (logs.isEmpty() && loaded("logs")) item { EmptyPanel(tr("暂无系统日志"), tr("刷新以重新读取日志列表。"), PathfinIcons.List) }
                     }
                     if (page == "log") {
                         if (logContent?.truncated == true || logLines.size == 10_000) item("log-truncated") {
@@ -289,24 +321,14 @@ private fun ServerAdministrationContent(session: Session, api: JellyfinApi, onBa
         val run = task.state == ServerTaskState.IDLE
         AppAlertDialog(onDismissRequest = { if (!writing) pendingTask = null }, title = { Text(if (run) tr("运行计划任务？") else tr("取消正在运行的任务？")) },
             text = { Text(task.name + if (run) tr("\n任务将在此服务器执行，可能影响正在进行的播放。") else tr("\n服务器可能需要一些时间结束当前任务。")) },
-            confirmButton = { DialogAction(if (run) tr("运行") else tr("确认取消"), { taskAction(task) }, Modifier.testTag("server-task-confirm"),
+            confirmButton = { DialogAction(if (run) tr("运行") else tr("确认取消"), { pendingTask = null; taskAction(task) }, Modifier.testTag("server-task-confirm"),
                 enabled = !writing && !loading, role = DialogActionRole.Primary) },
             dismissButton = { DialogAction(tr("返回"), { pendingTask = null }, enabled = !writing) })
     }
     if (confirmRestart) AppAlertDialog(onDismissRequest = { if (!writing) confirmRestart = false }, title = { Text(tr("重启此 Jellyfin 服务器？")) },
         text = { Text(tr("将中断此服务器上所有用户的播放和连接。服务器重启后需要一些时间恢复。\n\n%1\$s", info?.name.orEmpty())) },
-        confirmButton = { DialogAction(tr("确认重启"), {
-            if (!writing) {
-                confirmRestart = false; writing = true; restartPending = true; error = null
-                scope.launch {
-                    try { administration.restart(session); notice = tr("重启请求已接受，请稍后刷新服务器状态。") }
-                    catch (exception: Exception) {
-                        failure(exception)
-                        notice = tr("无法确认重启结果，请先刷新服务器状态；不要重复发送重启请求。")
-                    } finally { writing = false }
-                }
-            }
-        }, Modifier.testTag("server-restart-confirm"), enabled = !writing, role = DialogActionRole.Danger) },
+        confirmButton = { DialogAction(tr("确认重启"), { confirmRestart = false; restart() },
+            Modifier.testTag("server-restart-confirm"), enabled = !writing, role = DialogActionRole.Danger) },
         dismissButton = { DialogAction(tr("取消"), { confirmRestart = false }, enabled = !writing) })
 }
 
