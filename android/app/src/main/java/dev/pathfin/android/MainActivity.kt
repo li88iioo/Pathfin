@@ -174,7 +174,7 @@ class MainActivity : ComponentActivity() {
                 when {
                     next != null -> {
                         autoAdvancedGeneration = endedGeneration
-                        appViewModel.prepareEpisodePlayback(next)
+                        appViewModel.prepareEpisodePlayback(next, playbackViewModel.preferredQuality)
                     }
                     !pictureInPicture -> finishPlayback()
                 }
@@ -248,10 +248,10 @@ class MainActivity : ComponentActivity() {
                                 ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                         },
                         onPrevious = appViewModel.playbackNeighbor(-1)?.takeUnless { state.preparingPlay }?.let { previous ->
-                            { appViewModel.prepareEpisodePlayback(previous) }
+                            { appViewModel.prepareEpisodePlayback(previous, playbackViewModel.preferredQuality) }
                         },
                         onNext = appViewModel.playbackNeighbor(1)?.takeUnless { state.preparingPlay }?.let { next ->
-                            { appViewModel.prepareEpisodePlayback(next) }
+                            { appViewModel.prepareEpisodePlayback(next, playbackViewModel.preferredQuality) }
                         },
                         onShowEpisodes = state.activePlayback?.item?.seriesId?.let { { showEpisodes = true; appViewModel.loadPlaybackEpisodes() } },
                         onShowChapters = if (state.preferences.showPlayerChapters && state.activePlayback?.item?.chapters?.any {
@@ -265,7 +265,7 @@ class MainActivity : ComponentActivity() {
                     if (!pictureInPicture) {
                         if (showEpisodes) androidx.compose.runtime.CompositionLocalProvider(dev.pathfin.android.ui.LocalPosterLoader provides posterLoader) {
                             PlaybackEpisodesSheet(state.playbackEpisodes, state.activePlayback!!.item.id, state.preparingPlay,
-                            onSelect = { showEpisodes = false; appViewModel.prepareEpisodePlayback(it) },
+                            onSelect = { showEpisodes = false; appViewModel.prepareEpisodePlayback(it, playbackViewModel.preferredQuality) },
                             onRefresh = { appViewModel.loadPlaybackEpisodes(refresh = true) },
                             onMore = { appViewModel.loadPlaybackEpisodes(append = true) }, onDismiss = { showEpisodes = false },
                             session = state.activePlayback!!.session, api = appViewModel.api,

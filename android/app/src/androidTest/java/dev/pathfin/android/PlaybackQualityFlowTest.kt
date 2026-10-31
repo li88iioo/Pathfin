@@ -150,7 +150,11 @@ class PlaybackQualityFlowTest {
                     !playback.state.value.isChangingQuality && playback.state.value.qualityError != null }
             }
             awaitSelected(playback, "Japanese main", "Spanish captions")
-            main { assertPausedAt(playback, 10_000, 1.75f) }
+            main {
+                assertPausedAt(playback, 10_000, 1.75f)
+                assertNull("失败档位不能变成下一集偏好", playback.currentRequest!!.preferredQuality)
+                assertNull(playback.preferredQuality)
+            }
             assertTrue("失败回滚必须实际重新准备原媒体", fixture.originalMediaRequests.get() > originalRequests)
             assertEquals("回滚不能重复请求失败质量", 1, fixture.playbackRequests.count {
                 it.optInt("MaxStreamingBitrate") == PlaybackQuality.DATA_SAVER.maxBitrate
@@ -160,7 +164,11 @@ class PlaybackQualityFlowTest {
             main { playback.changeQuality(PlaybackQuality.DATA_SAVER) }
             awaitReady(playback, PlaybackQuality.DATA_SAVER)
             awaitSelected(playback, "Japanese main", "Spanish captions")
-            main { assertPausedAt(playback, 10_000, 1.75f); assertNull(playback.state.value.qualityError) }
+            main {
+                assertPausedAt(playback, 10_000, 1.75f)
+                assertNull(playback.state.value.qualityError)
+                assertEquals(PlaybackQuality.DATA_SAVER, playback.preferredQuality)
+            }
             assertEquals(requestsAfterRecovery + 1, fixture.playbackRequests.size)
         }
     }

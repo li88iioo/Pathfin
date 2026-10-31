@@ -54,6 +54,42 @@ class CloudPlaybackTest {
         assertTrue(cloud.options().filter { it.quality != PlaybackQuality.ORIGINAL }.none { it.description.contains("×") })
     }
 
+    @Test fun carriedManualQualityWinsOverTheDefaultWhenTheEpisodeHasIt() {
+        val cloud = CloudPlayback("https://mediaflux.example/signed", listOf(
+            variant("original", 3840, 2160, original = true), variant("fhd", 1920, 1080), variant("hd", 1280, 720)))
+
+        assertEquals(PlaybackQuality.HIGH, cloud.quality(PlaybackQuality.HIGH, PlaybackQuality.STANDARD))
+        assertEquals(PlaybackQuality.STANDARD, cloud.quality(PlaybackQuality.STANDARD, PlaybackQuality.ORIGINAL))
+        assertEquals(PlaybackQuality.ORIGINAL, cloud.quality(PlaybackQuality.ORIGINAL, PlaybackQuality.STANDARD))
+        assertEquals("没有手选时仍用默认画质", PlaybackQuality.STANDARD, cloud.quality(null, PlaybackQuality.STANDARD))
+    }
+
+    @Test fun missingCarriedQualityStepsDownToTheNearestPlayableTierBeforeUsingTheDefault() {
+        val unplayableOriginal = variant("original", 3840, 2160, original = true).copy(playable = false)
+        val compressed = CloudPlayback("https://mediaflux.example/signed", listOf(
+            unplayableOriginal, variant("fhd", 1920, 1080), variant("sd", 854, 480)))
+        assertEquals("原画不可播时向下取最近档", PlaybackQuality.HIGH, compressed.quality(PlaybackQuality.ORIGINAL, PlaybackQuality.ORIGINAL))
+        assertEquals(PlaybackQuality.DATA_SAVER, compressed.quality(PlaybackQuality.DATA_SAVER, PlaybackQuality.HIGH))
+
+        val onlyHigh = CloudPlayback("https://mediaflux.example/signed", listOf(
+            variant("original", 3840, 2160, original = true), variant("fhd", 1920, 1080)))
+        assertEquals("向下都没有档位时回到默认", PlaybackQuality.ORIGINAL, onlyHigh.quality(PlaybackQuality.STANDARD, PlaybackQuality.ORIGINAL))
+        assertEquals(PlaybackQuality.HIGH, onlyHigh.quality(PlaybackQuality.DATA_SAVER, PlaybackQuality.HIGH))
+    }
+
+    @Test fun anUnplayableOriginalDefaultFallsBackToHighOrFailsWhenNoCompatibleTierExists() {
+        val unplayableOriginal = variant("original", 3840, 2160, original = true).copy(playable = false)
+        val withHigh = CloudPlayback("https://mediaflux.example/signed", listOf(unplayableOriginal, variant("fhd", 1920, 1080)))
+        assertEquals(PlaybackQuality.HIGH, withHigh.quality(null, PlaybackQuality.ORIGINAL))
+
+        val originalOnly = CloudPlayback("https://mediaflux.example/signed", listOf(unplayableOriginal))
+        for (preferred in listOf(null, PlaybackQuality.ORIGINAL, PlaybackQuality.DATA_SAVER)) {
+            val error = runCatching { originalOnly.quality(preferred, PlaybackQuality.ORIGINAL) }.exceptionOrNull()
+            assertTrue("$preferred", error is IllegalArgumentException && error.message!!.contains("本机不支持此原画"))
+        }
+        assertEquals("非原画默认档缺失仍交给解析阶段报错", PlaybackQuality.STANDARD, originalOnly.quality(null, PlaybackQuality.STANDARD))
+    }
+
     private fun variant(id: String, width: Int?, height: Int?, original: Boolean = false) = CloudVariant(
         id = id, original = original, label = id, width = width, height = height, videoCodec = "h264",
         bitrate = 1_000_000, transport = if (original) "file" else "hls",

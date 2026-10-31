@@ -193,6 +193,8 @@ data class PlaybackRequest(
     val profileId: String? = null,
     val quality: PlaybackQuality = PlaybackQuality.ORIGINAL,
     val cloudPlayback: CloudPlayback? = null,
+    /** 播放器里手选的档位；切集时沿用，退出播放器即失效。null 表示按默认画质。 */
+    val preferredQuality: PlaybackQuality? = null,
 ) {
     val delivery: PlaybackDelivery get() = info.delivery
 }

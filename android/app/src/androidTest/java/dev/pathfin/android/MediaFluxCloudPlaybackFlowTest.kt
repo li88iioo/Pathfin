@@ -190,6 +190,7 @@ class MediaFluxCloudPlaybackFlowTest {
                 main {
                     assertSame(owner, playback.player)
                     assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality)
+                    assertEquals("切档失败不能改写连播沿用的画质", PlaybackQuality.HIGH, playback.currentRequest!!.preferredQuality)
                     assertFalse(playback.player!!.playWhenReady)
                     assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
                     assertTrue(playback.state.value.qualityError!!.contains("云盘未登录"))
@@ -206,6 +207,7 @@ class MediaFluxCloudPlaybackFlowTest {
             main {
                 assertEquals(sourceUrl, playback.currentRequest!!.cloudPlayback!!.sourceUrl)
                 assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.quality)
+                assertEquals("字幕刷新保留手选画质", PlaybackQuality.HIGH, playback.currentRequest!!.preferredQuality)
                 assertFalse(playback.player!!.playWhenReady)
                 assertTrue(kotlin.math.abs(playback.player!!.currentPosition - position) < 500)
             }
@@ -227,6 +229,78 @@ class MediaFluxCloudPlaybackFlowTest {
             assertEquals("恢复必须通过会话 origin 重新解析画质", resolutions + 1, fixture.cloudResolutions.size)
             assertEquals("云盘恢复不能追加 JF 协商", negotiations + 1, fixture.nextPlaybackRequests.get())
             assertNoJellyfinFallback(fixture)
+        }
+    }
+
+    @Test fun manualCloudQualityCarriesThroughEpisodeSwitchesAndAutoAdvanceThenResetsAfterLeaving() {
+        withApp(cloudScenario = Fixture.CloudScenario.WITH_H264_RENDITIONS) { fixture, app, playback ->
+            start(app, playback)
+            main {
+                assertEquals(PlaybackQuality.STANDARD, playback.currentRequest!!.quality)
+                assertNull("默认档不是手选", playback.currentRequest!!.preferredQuality)
+                playback.changeQuality(PlaybackQuality.HIGH)
+            }
+            await { playback.currentRequest?.quality == PlaybackQuality.HIGH && !playback.state.value.isChangingQuality && playback.state.value.hasRenderedFrame }
+            main { assertEquals(PlaybackQuality.HIGH, playback.currentRequest!!.preferredQuality) }
+            episodeFromUi(app, playback, "player-previous", OTHER)
+            assertCarried(playback, PlaybackQuality.HIGH, "high")
+            main { app.setPreferences(app.state.value.preferences.copy(autoPlayNextEpisode = true)) }
+            main { playback.player!!.run { seekTo(duration - 300); play() } }
+            awaitEpisode(app, playback, ITEM)
+            assertCarried(playback, PlaybackQuality.HIGH, "high")
+            assertEquals(listOf("standard", "high", "high", "high"), fixture.cloudResolutions.toList())
+
+            leavePlayer(app, playback)
+            start(app, playback)
+            main {
+                assertEquals("退出播放器后回到 STRM 默认画质", PlaybackQuality.STANDARD, playback.currentRequest!!.quality)
+                assertNull(playback.currentRequest!!.preferredQuality)
+            }
+            assertEquals("手选不能改写 STRM 默认画质", PlaybackQuality.STANDARD, AppPreferencesStore(context).load().strmDefaultQuality)
+            assertNoJellyfinFallback(fixture)
+        }
+    }
+
+    @Test fun manualServerQualityCarriesThroughEpisodeSwitchesAndAutoAdvanceThenResetsAfterLeaving() {
+        withApp(cloudScenario = Fixture.CloudScenario.WITH_H264_RENDITIONS) { fixture, app, playback ->
+            main { app.setPreferences(app.state.value.preferences.copy(originalPathEnabled = false)) }
+            start(app, playback)
+            main {
+                assertNull(playback.currentRequest!!.cloudPlayback)
+                assertEquals(PlaybackQuality.ORIGINAL, playback.currentRequest!!.quality)
+                playback.changeQuality(PlaybackQuality.STANDARD)
+            }
+            await { playback.currentRequest?.quality == PlaybackQuality.STANDARD && !playback.state.value.isChangingQuality && playback.state.value.hasRenderedFrame }
+            val before = fixture.playbackBodies.size
+            episodeFromUi(app, playback, "player-previous", OTHER)
+            main {
+                val request = playback.currentRequest!!
+                assertNull(request.cloudPlayback)
+                assertEquals(PlaybackQuality.STANDARD, request.quality)
+                assertEquals(PlaybackQuality.STANDARD, request.preferredQuality)
+                assertEquals(PlayMethod.TRANSCODE, request.stream.method)
+            }
+            val bodies = fixture.playbackBodies.toList().drop(before)
+            assertFalse("切集首次协商按原画，选定片源后再协商码率", bodies.first().has("MaxStreamingBitrate"))
+            assertEquals(4_000_000, bodies.last().getInt("MaxStreamingBitrate"))
+            assertEquals(OTHER, bodies.last().getString("MediaSourceId").removePrefix("source-").removeSuffix("-first"))
+
+            main { app.setPreferences(app.state.value.preferences.copy(autoPlayNextEpisode = true)) }
+            main { playback.player!!.run { seekTo(duration - 300); play() } }
+            awaitEpisode(app, playback, ITEM)
+            main {
+                assertEquals(PlaybackQuality.STANDARD, playback.currentRequest!!.quality)
+                assertEquals(PlaybackQuality.STANDARD, playback.preferredQuality)
+                assertEquals(PlayMethod.TRANSCODE, playback.currentRequest!!.stream.method)
+            }
+            assertEquals(4_000_000, fixture.playbackBodies.last().getInt("MaxStreamingBitrate"))
+
+            leavePlayer(app, playback)
+            start(app, playback)
+            main {
+                assertEquals("退出播放器后回到原画", PlaybackQuality.ORIGINAL, playback.currentRequest!!.quality)
+                assertNull(playback.currentRequest!!.preferredQuality)
+            }
         }
     }
 
@@ -468,6 +542,34 @@ class MediaFluxCloudPlaybackFlowTest {
         }
     }
 
+    private fun episodeFromUi(app: AppViewModel, playback: PlaybackViewModel, tag: String, target: String) {
+        await { app.state.value.playbackNeighbors.any { it.id == target } }
+        main { playback.player!!.pause() }
+        if (compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().isEmpty())
+            compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(androidx.compose.ui.geometry.Offset(width * .5f, height * .3f)) }
+        compose.onNodeWithTag(tag).performVerificationClick(compose)
+        awaitEpisode(app, playback, target)
+    }
+
+    private fun awaitEpisode(app: AppViewModel, playback: PlaybackViewModel, id: String) = await {
+        app.state.value.playbackError?.let { throw AssertionError("准备播放失败：$it") }
+        playback.state.value.errorMessage?.let { throw AssertionError("实际播放失败：$it") }
+        playback.currentRequest?.item?.id == id && playback.state.value.hasRenderedFrame && !playback.state.value.isChangingQuality
+    }
+
+    private fun assertCarried(playback: PlaybackViewModel, quality: PlaybackQuality, variant: String) = main {
+        val request = playback.currentRequest!!
+        assertEquals(quality, request.quality)
+        assertEquals(quality, request.preferredQuality)
+        assertEquals(variant, request.cloudPlayback!!.selectedId)
+    }
+
+    private fun leavePlayer(app: AppViewModel, playback: PlaybackViewModel) {
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+        await { app.state.value.activePlayback == null && app.state.value.pendingPlayback == null && playback.player == null }
+        main { assertNull("退出播放器后必须清理手选画质交接", playback.preferredQuality) }
+    }
+
     private fun preferOriginal(app: AppViewModel) {
         main { app.setPreferences(app.state.value.preferences.copy(strmDefaultQuality = PlaybackQuality.ORIGINAL)) }
         await { AppPreferencesStore(context).load().strmDefaultQuality == PlaybackQuality.ORIGINAL }
@@ -618,6 +720,7 @@ class MediaFluxCloudPlaybackFlowTest {
     private companion object {
         const val SERVER_ID = "pending-playback-fixture"
         const val ITEM = "pending-episode-two"
+        const val OTHER = "pending-episode-one"
         const val WAIT = 35_000L
     }
 }

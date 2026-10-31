@@ -189,7 +189,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         videoSupport = DevicePlaybackCapabilities::supportsVideo)
     private val cloudApi = dev.pathfin.android.data.CloudPlaybackApi(videoSupport = DevicePlaybackCapabilities::supportsVideo)
     private var active: ActivePlayback? = null
-    private var completedManualTracks: CompletedManualTracks? = null
+    private var completedPlayback: CompletedPlayback? = null
     private var progressJob: Job? = null
     private var retryJob: Job? = null
     private var qualityJob: Job? = null
@@ -197,6 +197,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var qualityRollback: PlaybackRecovery? = null
     private var pendingSubtitleRefresh: dev.pathfin.android.domain.MediaItem? = null
     val currentRequest: PlaybackRequest? get() = active?.request
+    /** 自然结束后仍可交接手选画质；显式停止或下一次有效起播清空结束记录。 */
+    val preferredQuality: PlaybackQuality? get() = if (active != null) active?.request?.preferredQuality
+        else completedPlayback?.preferredQuality
     private var playerListener: Player.Listener? = null
     private var generation = 0L
     private val entryGate = PlaybackEntryGate()
@@ -257,11 +260,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             .let { if (request.item.type == "Audio") it.copy(introSkipMs = 0, outroSkipMs = 0) else it }
         val position = if (request.item.type == "TvChannel") 0 else tuning.initialPositionMs(request.startPositionMs, request.item.runTimeTicks)
         // 第一次有效起播立即消费结束交接；不匹配也丢弃，不能绕过别的媒体再继承。
-        val completedTracks = completedManualTracks
-        completedManualTracks = null
+        val completed = completedPlayback
+        completedPlayback = null
         val inheritedTracks = when {
             existing != null && player != null && canInheritManualTracks(existing.request, request, tuning.keepTracksForContinuousPlayback) -> existing.manualTracks
-            completedTracks != null && canInheritManualTracks(completedTracks.identity, request, tuning.keepTracksForContinuousPlayback) -> completedTracks.selections
+            completed != null && canInheritManualTracks(completed.identity, request, tuning.keepTracksForContinuousPlayback) -> completed.selections
             else -> ManualTrackSelections()
         }
         mutableSubtitlePresentation.value = SubtitlePresentation(preferences.subtitleScale,
@@ -693,11 +696,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         mutableState.update { it.copy(isChangingQuality = true, qualityError = null) }
         qualityJob = viewModelScope.launch {
             try {
-                val previous = current.request
+                val previous = recovery?.request ?: current.request
                 val item = updatedItem ?: previous.item
                 val delivery = recovery?.request?.delivery ?: if (updatedItem != null) previous.delivery else PlaybackDelivery.AUTOMATIC
                 val prepared = if (previous.cloudPlayback != null) {
-                    var basis = (recovery?.request ?: previous).copy(item = item)
+                    var basis = previous.copy(item = item)
                     // 上传/删除外挂字幕仍刷新原文件的轨道信息，但不能让非原画档位触发JF转码。
                     if (updatedItem != null && recovery == null) {
                         val info = api.playbackInfo(previous.session, item.id, previous.source.id,
@@ -733,7 +736,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 val restored = recovery?.state ?: capturePlayerState(checkNotNull(owner))
                 val rollback = if (recovery == null) PlaybackRecovery(previous, restored) else null
                 qualityJob = null
-                startPlayback(prepared, current.originalRequest, current.tuning,
+                // 只有手动切换才记为连播沿用的画质；字幕刷新和失败回滚保留原记录。
+                val manual = updatedItem == null && recovery == null
+                startPlayback(if (manual) prepared.copy(preferredQuality = quality) else prepared, current.originalRequest, current.tuning,
                     current.introHistory, current.manualTracks, current.localSubtitles.toList(), rollback,
                     recoveryPolicy = if (updatedItem != null) current.recoveryPolicy else PlaybackRecoveryPolicy(), restored = restored)
                 mutableState.update { it.copy(isChangingQuality = qualityRollback != null,
@@ -1032,7 +1037,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun stop() {
-        completedManualTracks = null
+        completedPlayback = null
         finishActive()
         entryGate.reset()
         mutableState.value = PlaybackUiState(playerGeneration = generation)
@@ -1079,8 +1084,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     exoPlayer.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }))
                 acceptPlaybackSource(current)
             if (playbackState == Player.STATE_ENDED) {
-                completedManualTracks = if (current.manualTracks != ManualTrackSelections())
-                    trackContinuityIdentity(current.request)?.let { CompletedManualTracks(it, current.manualTracks) } else null
+                completedPlayback = trackContinuityIdentity(current.request)?.let {
+                    CompletedPlayback(it, current.manualTracks, current.request.preferredQuality)
+                }
                 entryGate.completed(current.originalRequest, current.request)
                 finishActive()
                 mutableState.update {
@@ -1187,7 +1193,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     override fun onCleared() {
-        completedManualTracks = null
+        completedPlayback = null
         try { finishActive() }
         finally {
             reports.close()
@@ -1224,7 +1230,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         val pendingManualTrackTypes: MutableSet<RememberedTrackType> = RememberedTrackType.entries
             .filterTo(mutableSetOf()) { manualTracks[it] != null },
     )
-    private data class CompletedManualTracks(val identity: TrackContinuityIdentity, val selections: ManualTrackSelections)
+    private data class CompletedPlayback(val identity: TrackContinuityIdentity, val selections: ManualTrackSelections,
+        val preferredQuality: PlaybackQuality?)
     /** 同一媒体重建共享一份运行态；不保留旧 TrackGroup，也不跨新播放入口继承。 */
     private data class PlayerState(val positionMs: Long, val parameters: androidx.media3.common.PlaybackParameters,
         val playing: Boolean, val locked: Boolean, val disabledTrackTypes: Set<Int>)

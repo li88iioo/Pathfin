@@ -144,7 +144,8 @@ data class PendingPlayback(
     val fromStart: Boolean,
     val sourceId: String?,
     val loadDetails: Boolean = false,
-    val quality: PlaybackQuality = PlaybackQuality.ORIGINAL,
+    /** 连播沿用的手选画质；null 按默认画质。 */
+    val quality: PlaybackQuality? = null,
 )
 
 /** 连接页第一步的探测结果：确认地址属于 Jellyfin，并带出可选的公开账号。 */
@@ -1783,11 +1784,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         beginPlaybackPreparation(item, fromStart, sourceId)
     }
 
-    fun prepareEpisodePlayback(item: MediaItem) {
+    /** 播放器内切集；quality 是当前手选画质，连播时沿用。 */
+    fun prepareEpisodePlayback(item: MediaItem, quality: PlaybackQuality? = null) {
         if (item.type != "Episode") return
         val full = state.value.details[item.id]
         beginPlaybackPreparation(full ?: item, fromStart = true,
-            loadDetails = full == null)
+            loadDetails = full == null, quality = quality)
     }
 
     fun retryPendingPlayback() {
@@ -1796,7 +1798,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun beginPlaybackPreparation(item: MediaItem, fromStart: Boolean,
-        sourceId: String? = null, loadDetails: Boolean = false, quality: PlaybackQuality = PlaybackQuality.ORIGINAL) {
+        sourceId: String? = null, loadDetails: Boolean = false, quality: PlaybackQuality? = null) {
         val current = state.value
         val session = current.session ?: return
         if (current.preparingPlay || current.loginBusy || current.reauthenticationProfile != null) return
@@ -1821,11 +1823,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     details = if (loadDetails) it.details + (target.id to target) else it.details) }
                 val start = if (fromStart) 0L else TimeUnits.ticksToMs(target.positionTicks)
                 val startTicks = TimeUnits.msToTicks(start)
-                val prefetched = if (sourceId == null && quality == PlaybackQuality.ORIGINAL)
-                    takePrefetchedPlaybackInfo(target.id, startTicks, session, epoch) else null
+                // 首次协商一律按原画：STRM 不能因码率档触发 JF 转码，服务器档位在选定片源后再协商。
+                val prefetched = if (sourceId == null) takePrefetchedPlaybackInfo(target.id, startTicks, session, epoch) else null
                 val videoPreflight = prefetched?.videoPreflight ?: if (state.value.preferences.prefersOriginalSource(target))
                     VideoPreflightPolicy.TRY_ORIGINAL_SOURCE else VideoPreflightPolicy.NEGOTIATE_UNSUPPORTED
-                val info = prefetched?.info ?: api.playbackInfo(session, target.id, sourceId, startTicks, quality,
+                val info = prefetched?.info ?: api.playbackInfo(session, target.id, sourceId, startTicks,
                     videoPreflight = videoPreflight)
                 currentCoroutineContext().ensureActive()
                 if (!isCurrentPreparation(pending.id, session, profileId, epoch)) return@launch
@@ -1892,37 +1894,34 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             cloudApi.discover(session, source)
         } else null
         val request = if (cloud != null) {
-            val cloudQuality = if (preferences.strmDefaultQuality == PlaybackQuality.ORIGINAL &&
-                cloud.variant(PlaybackQuality.ORIGINAL)?.playable == false) {
-                require(cloud.variant(PlaybackQuality.HIGH) != null) { tr("本机不支持此原画，网盘也没有兼容画质。请更换片源。") }
-                PlaybackQuality.HIGH
-            } else preferences.strmDefaultQuality
             val original = ResolvedPlayback(cloud.sourceUrl, emptyMap(), PlayMethod.DIRECT_PLAY, sourceId, false)
             cloudApi.select(PlaybackRequest(selection.item, selection.info, source, original, selection.startMs, session, profileId,
-                cloudPlayback = cloud), cloudQuality)
+                cloudPlayback = cloud, preferredQuality = pending.quality), cloud.quality(pending.quality, preferences.strmDefaultQuality))
         } else {
+            val quality = pending.quality ?: PlaybackQuality.ORIGINAL
             // 原始HTTP直连不依赖云盘画质发现协议，不能因旧服务返回302而改走服务器。
             val originalHttp = PlaybackResolver.prefersOriginalHttp(selection.item, source,
-                preferences.prefersOriginalSource(selection.item), pending.quality, selection.info.delivery)
+                preferences.prefersOriginalSource(selection.item), quality, selection.info.delivery)
             val video = source.mediaStreams.firstOrNull { it.type.equals("Video", true) }
             val localSupport = if (selection.info.delivery != PlaybackDelivery.TRANSCODE &&
                 !(selection.item.type == "TvChannel" && preferences.liveTvDirectPlay) && video != null)
                 withContext(Dispatchers.Default) { DevicePlaybackCapabilities.supportsVideo(video) } else null
             require(!originalHttp || localSupport != false) { tr("本机不支持此原画，请更换片源或关闭原始路径后选择服务器画质。") }
             val info = when {
-                localSupport == false -> api.playbackInfo(session, selection.item.id, sourceId,
-                    TimeUnits.msToTicks(selection.startMs), pending.quality, PlaybackDelivery.TRANSCODE,
+                localSupport == false || quality.maxBitrate != null -> api.playbackInfo(session, selection.item.id, sourceId,
+                    TimeUnits.msToTicks(selection.startMs), quality, PlaybackDelivery.TRANSCODE,
                     selection.info.audioStreamIndex, selection.info.subtitleStreamIndex)
                 localSupport == true && !originalHttp && selection.needsSelectedVideoPreflight ->
                     api.negotiateSelectedSourceVideo(session, selection.item.id, selection.info, sourceId,
-                        TimeUnits.msToTicks(selection.startMs), pending.quality)
+                        TimeUnits.msToTicks(selection.startMs), quality)
                 else -> selection.info
             }
             val selected = info.sources.firstOrNull { it.id == sourceId }
                 ?: throw IllegalArgumentException(tr("所选媒体版本已不存在，请重新选择"))
             val resolved = PlaybackResolver.resolve(session, selection.item, info, sourceId,
-                preferences.prefersOriginalSource(selection.item), pending.quality)
-            PlaybackRequest(selection.item, info, selected, resolved, selection.startMs, session, profileId, pending.quality)
+                preferences.prefersOriginalSource(selection.item), quality)
+            PlaybackRequest(selection.item, info, selected, resolved, selection.startMs, session, profileId, quality,
+                preferredQuality = pending.quality)
         }
         ensureLocalNetworkAccess(request.stream.uri)
         currentCoroutineContext().ensureActive()

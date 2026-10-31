@@ -38,6 +38,16 @@ data class CloudPlayback(val sourceUrl: String, val variants: List<CloudVariant>
             .maxWithOrNull(compareBy<CloudVariant> { it.width!!.toLong() * it.height!! }.thenBy { it.bitrate ?: 0 })
     }
 
+    /** 手选档位缺失时向下取最近可播档；都没有再按默认画质。默认原画不可播时退到高质量。 */
+    fun quality(preferred: PlaybackQuality?, default: PlaybackQuality): PlaybackQuality {
+        preferred?.let { wanted ->
+            PlaybackQuality.entries.drop(wanted.ordinal).firstOrNull { variant(it)?.playable == true }?.let { return it }
+        }
+        if (default != PlaybackQuality.ORIGINAL || variant(PlaybackQuality.ORIGINAL)?.playable != false) return default
+        require(variant(PlaybackQuality.HIGH) != null) { tr("本机不支持此原画，网盘也没有兼容画质。请更换片源。") }
+        return PlaybackQuality.HIGH
+    }
+
     fun options(): List<PlaybackQualityOption> = PlaybackQuality.entries.map { quality ->
         val variant = variant(quality)
         PlaybackQualityOption(quality, variant?.description ?: tr("没有可用的云盘档位"), variant?.playable == true)

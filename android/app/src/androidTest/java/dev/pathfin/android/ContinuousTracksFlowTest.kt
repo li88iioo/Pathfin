@@ -21,6 +21,7 @@ import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.MediaSource
 import dev.pathfin.android.domain.PlayMethod
 import dev.pathfin.android.domain.PlaybackInfo
+import dev.pathfin.android.domain.PlaybackQuality
 import dev.pathfin.android.domain.PlaybackRequest
 import dev.pathfin.android.domain.ResolvedPlayback
 import dev.pathfin.android.domain.ServerConfig
@@ -173,7 +174,7 @@ class ContinuousTracksFlowTest {
         withFixture { fixture, playback ->
             val preferences = preferences()
             show(fixture, playback, preferences)
-            main { playback.play(fixture.request(ONE), preferences) }
+            main { playback.play(fixture.request(ONE).copy(preferredQuality = PlaybackQuality.HIGH), preferences) }
             awaitPlayback(playback)
             pause(playback)
             chooseTrack(playback, C.TRACK_TYPE_AUDIO, "Japanese main")
@@ -186,8 +187,12 @@ class ContinuousTracksFlowTest {
             compose.waitUntil(WAIT) { assertHealthy(playback); playback.state.value.ended }
             main {
                 assertNull("必须经过真实自然结束释放，不能只在旧 active 存在时切集", playback.player)
+                assertNull(playback.currentRequest)
+                assertEquals("自然结束同时交接手选画质", PlaybackQuality.HIGH, playback.preferredQuality)
                 if (explicitStop) playback.stop()
+                if (explicitStop) assertNull("退出后不能保留手选画质", playback.preferredQuality)
                 playback.play(fixture.request(TWO), preferences)
+                assertNull("新起播必须消费旧交接，未指定画质时保持默认", playback.preferredQuality)
             }
             awaitPlayback(playback)
             if (explicitStop) awaitSelected(playback, "English main", "English captions", "PATHFIN ENGLISH")
