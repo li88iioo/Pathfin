@@ -1780,8 +1780,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(detailLoading = false, detailError = null) }
     }
 
-    fun preparePlayback(item: MediaItem, fromStart: Boolean = false, sourceId: String? = null) {
-        beginPlaybackPreparation(item, fromStart, sourceId)
+    fun preparePlayback(item: MediaItem, fromStart: Boolean = false, sourceId: String? = null, loadDetails: Boolean = false) {
+        beginPlaybackPreparation(item, fromStart, sourceId, loadDetails)
     }
 
     /** 播放器内切集；quality 是当前手选画质，连播时沿用。 */
@@ -1811,11 +1811,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         playJob = viewModelScope.launch {
             try {
                 ensureLocalNetworkAccess(session.server.baseUrl)
-                val target = when {
-                    item.type == "Series" || item.type == "Season" -> resolveSeriesEpisode(session, item, fromStart)
-                    loadDetails -> api.item(session, item.id)
-                    else -> item
-                }
+                val candidate = if (item.type == "Series" || item.type == "Season") resolveSeriesEpisode(session, item, fromStart) else item
+                // 首页等列表只有摘要：补齐实际播放目标的章节等信息，同时保留本次续播/章节起播意图。
+                val target = if (loadDetails) api.item(session, candidate.id).copy(positionTicks = candidate.positionTicks) else candidate
                 currentCoroutineContext().ensureActive()
                 if (!isCurrentPreparation(pending.id, session, profileId, epoch)) return@launch
                 val resolvedPending = pending.copy(item = target, loadDetails = false)
@@ -2474,7 +2472,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playSeries(item: MediaItem, fromStart: Boolean = false) {
-        beginPlaybackPreparation(item, fromStart)
+        preparePlayback(item, fromStart, loadDetails = true)
     }
 
     fun toggleFavorite(item: MediaItem) = updateUserData(item, "favorite") { session -> api.setFavorite(session, item.id, !item.isFavorite) }

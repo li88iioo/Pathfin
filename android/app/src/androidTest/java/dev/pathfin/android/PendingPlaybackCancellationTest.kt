@@ -434,7 +434,8 @@ class PendingPlaybackCancellationTest {
         private val multipleSources: Boolean = false, blockSeries: Boolean = false,
         private val externalSource: String? = null, private val cloudScenario: CloudScenario? = null,
         private val negotiationVideo: JSONObject? = null, private val allowDeletes: Boolean = false,
-        private val reverseProxyPayload: Boolean = false) : Closeable {
+        private val reverseProxyPayload: Boolean = false, private val homePlaybackType: String? = null,
+        private val detailChapters: Boolean = false) : Closeable {
         enum class CloudScenario { ORIGINAL_ONLY, WITH_H264_RENDITIONS }
 
         private val cloudProxy = if (reverseProxyPayload && externalSource != null)
@@ -581,6 +582,7 @@ class PendingPlaybackCancellationTest {
             }
             path == "/System/Info/Public" -> JSONObject().put("Id", SERVER_ID).put("ServerName", "Pending fixture").put("Version", "12.3.0")
             path == "/Users/Me" -> user()
+            homePlaybackType != null && path.startsWith("/Items/") && "/Images/" in path -> null
             allowDeletes && path in setOf("/Items/$ONE", "/Items/$TWO", "/Items/$SERIES", "/Items/$SEASON") -> {
                 val id = path.removePrefix("/Items/")
                 when (method) {
@@ -591,9 +593,14 @@ class PendingPlaybackCancellationTest {
             }
             path == "/UserViews" -> page(JSONObject().put("Id", "pending-library").put("Name", "Pending episodes").put("Type", "CollectionFolder").put("CollectionType", "tvshows").put("IsFolder", true))
             path == "/Items/Latest" -> JSONArray().put(item(ONE))
+            path == "/UserItems/Resume" && homePlaybackType == "Episode" -> page(item(TWO)
+                .put("UserData", JSONObject().put("PlaybackPositionTicks", 50_000_000L)))
             path == "/UserItems/Resume" || path == "/Shows/NextUp" || path.endsWith("/Similar") -> page()
             path == "/Shows/pending-series/Episodes" -> page(item(ONE), item(TWO))
-            path == "/Items" -> query["ids"]?.let { page(item(it)) } ?: page(item(ONE), item(TWO))
+            path == "/Items" -> query["ids"]?.let { page(item(it).apply {
+                if (detailChapters) put("Chapters", JSONArray().put(JSONObject()
+                    .put("Name", "Synthetic chapter").put("StartPositionTicks", 20_000_000L)))
+            }) } ?: page(item(ONE), item(TWO))
             method == "POST" && path.startsWith("/Items/") && path.endsWith("/PlaybackInfo") -> {
                 val request = JSONObject(body)
                 playbackBodies += request
@@ -633,9 +640,10 @@ class PendingPlaybackCancellationTest {
         }
 
         private fun item(id: String) = JSONObject().put("Id", id).put("Name", "Pending $id")
-            .put("Type", when (id) { SERIES -> "Series"; SEASON -> "Season"; else -> "Episode" })
+            .put("Type", when (id) { SERIES -> "Series"; SEASON -> "Season"; else -> homePlaybackType ?: "Episode" })
             .put("SeriesId", SERIES).put("SeasonId", SEASON).put("SeriesName", "Pending series").put("ParentIndexNumber", 1)
             .put("IndexNumber", if (id == ONE) 1 else 2).put("RunTimeTicks", 240_000_000L).put("ImageTags", JSONObject())
+            .apply { if (homePlaybackType == "Movie") put("BackdropImageTags", JSONArray().put("synthetic-backdrop")) }
         private fun source(id: String, version: String, transcoding: Boolean = false, negotiated: Boolean = false): JSONObject {
             val cloudOrigin = if (reverseProxyPayload) "http://127.0.0.1" else origin
             val cloudUrl = externalSource ?: if (cloudScenario != null || reverseProxyPayload)

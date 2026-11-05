@@ -51,6 +51,49 @@ class PlaybackPreparationFlowTest {
     } }
     @get:Rule val rules: TestRule = RuleChain.outerRule(isolatedStorage).around(compose)
 
+    @Test fun homeEpisodePlaybackLoadsChaptersWithoutLosingItsResumePosition() {
+        assertHomePlaybackDetails("Episode", TWO, 5_000L)
+    }
+
+    @Test fun homeMoviePlaybackLoadsChaptersFromItsFullDetails() {
+        assertHomePlaybackDetails("Movie", ONE, 0L)
+    }
+
+    private fun assertHomePlaybackDetails(type: String, id: String, positionMs: Long) {
+        withFixture(homePlaybackType = type, detailChapters = true) { fixture, app, _ ->
+            assertTrue("首页摘要不包含章节，不能冒充完整播放条目",
+                main { (app.state.value.home.resume + app.state.value.home.libraryItems.values.flatten())
+                    .first { it.id == id }.chapters.isEmpty() })
+            compose.onNodeWithTag("home-ambient-play").performVerificationClick(compose)
+            await(fixture) {
+                app.state.value.playbackError?.let { throw AssertionError(it) }
+                app.state.value.activePlayback?.item?.id == id
+            }
+            main {
+                val request = checkNotNull(app.state.value.activePlayback)
+                assertEquals(type, request.item.type)
+                assertEquals("首页直接播放也必须保留章节入口", listOf("Synthetic chapter"), request.item.chapters.map { it.name })
+                assertEquals("补全详情不能覆盖用户从首页选择的续播位置", positionMs, request.startPositionMs)
+                assertEquals(Route.Home, app.state.value.route)
+            }
+        }
+    }
+
+    @Test fun seriesPlaybackLoadsTheResolvedEpisodeDetailsBeforePreparingItsSource() {
+        withFixture(detailChapters = true) { fixture, app, _ ->
+            main { app.playSeries(MediaItem("pending-series", "Synthetic series", "Series"), fromStart = true) }
+            await(fixture) {
+                app.state.value.playbackError?.let { throw AssertionError(it) }
+                app.state.value.activePlayback?.item?.id == ONE
+            }
+            main {
+                val item = checkNotNull(app.state.value.activePlayback).item
+                assertEquals("Episode", item.type)
+                assertEquals("剧集播放必须补全实际单集，而不是节目摘要", listOf("Synthetic chapter"), item.chapters.map { it.name })
+            }
+        }
+    }
+
     @Test fun completedDetailPrefetchIsConsumedOnceWithoutAnotherPlaybackRequest() {
         withFixture { fixture, app, _ ->
             openDetail(fixture, app)
@@ -340,11 +383,13 @@ class PlaybackPreparationFlowTest {
     }
 
     private fun withFixture(blockPlayback: Boolean = false, blockSeries: Boolean = false,
-        multipleSources: Boolean = false, negotiationVideo: JSONObject? = null,
+        multipleSources: Boolean = false, negotiationVideo: JSONObject? = null, homePlaybackType: String? = null,
+        detailChapters: Boolean = false,
         block: (Fixture, AppViewModel, PlaybackViewModel) -> Unit) {
         val video = instrumentation.context.assets.open("ass-extension/plain.mp4").use { it.readBytes() }
         Fixture(video, blockPlayback = blockPlayback, blockSeries = blockSeries,
-            multipleSources = multipleSources, negotiationVideo = negotiationVideo).use { fixture ->
+            multipleSources = multipleSources, negotiationVideo = negotiationVideo, homePlaybackType = homePlaybackType,
+            detailChapters = detailChapters).use { fixture ->
             val app = main { ViewModelProvider(compose.activity)[AppViewModel::class.java] }
             val playback = main { ViewModelProvider(compose.activity)[PlaybackViewModel::class.java] }
             try {

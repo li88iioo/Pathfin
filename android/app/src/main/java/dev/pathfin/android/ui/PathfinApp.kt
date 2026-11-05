@@ -350,7 +350,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                     }
                                     val preparing = state.pendingPlayback?.item?.takeIf { state.preparingPlay }
                                     HomeScreen(visibleHome, session, vm.api, vm::open, vm::refreshHomeFromPage,
-                                        onPlay = { if (it.type == "Series") vm.playSeries(it) else vm.preparePlayback(it) },
+                                        onPlay = { vm.preparePlayback(it, loadDetails = true) },
                                         preparingIds = setOfNotNull(preparing?.id, preparing?.seriesId),
                                         onAmbientCovered = { homeAmbientCovered = it })
                                 }
