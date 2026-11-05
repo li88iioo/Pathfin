@@ -97,7 +97,6 @@ class AppPreferencesStore internal constructor(
             put("exactSeek", v.exactSeek); put("showBufferSpeed", v.showBufferSpeed)
             put("blurAdultCovers", v.blurAdultCovers)
             put("hideSystemStatusBar", v.hideSystemStatusBar)
-            put("blurTopBar", v.blurTopBar)
             put("pullToRefreshEnabled", v.pullToRefreshEnabled)
             put("backgroundBlurRadiusDp", v.backgroundBlurRadiusDp.coerceIn(0, 30))
             put("hideChaptersWithoutImage", v.hideChaptersWithoutImage); put("preferEpisodeBackgrounds", v.preferEpisodeBackgrounds)
@@ -153,7 +152,6 @@ class AppPreferencesStore internal constructor(
             exactSeek = j.optBoolean("exactSeek", true), showBufferSpeed = j.optBoolean("showBufferSpeed", false),
             blurAdultCovers = j.optBoolean("blurAdultCovers", false),
             hideSystemStatusBar = j.optBoolean("hideSystemStatusBar", false),
-            blurTopBar = j.optBoolean("blurTopBar", false),
             pullToRefreshEnabled = j.optBoolean("pullToRefreshEnabled", true),
             backgroundBlurRadiusDp = j.optInt("backgroundBlurRadiusDp", 0).coerceIn(0, 30),
             hideChaptersWithoutImage = j.optBoolean("hideChaptersWithoutImage", false),

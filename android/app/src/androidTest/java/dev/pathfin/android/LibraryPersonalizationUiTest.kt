@@ -1,10 +1,6 @@
 package dev.pathfin.android
 
-import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.assertTextEquals
 import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.Build
@@ -24,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.click
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -133,18 +128,21 @@ class LibraryPersonalizationUiTest {
                     }
                 }
             }
-            compose.onNodeWithTag("home-next-up").performScrollTo().assertVerificationDisplayed(compose)
-            // 剧集 A 已在继续观看中，接下来只保留剧集 B；未开始的下一集显示整集时长。
-            compose.onAllNodesWithText("剧集A").assertCountEquals(1)
-            val next = compose.onNode(hasText("剧集B") and hasAnyAncestor(hasTestTag("home-next-up")))
+            // 剧集 A 已在继续观看中，下一集分组只保留剧集 B；未开始的下一集显示整集时长。
+            compose.onNodeWithTag("home-ambient-thumb/resume-a").assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("home-ambient-thumb/next-a").assertDoesNotExist()
+            compose.onNodeWithTag("home-ambient-group/NEXT_UP").assertTextEquals("下一集 1").performVerificationClick(compose)
+            val next = compose.onNodeWithTag("home-ambient-thumb/next-b")
             next.assertVerificationDisplayed(compose)
-            compose.onNode(hasText("46 分") and hasAnyAncestor(hasTestTag("home-next-up"))).assertVerificationDisplayed(compose)
+            compose.onNodeWithText("S1E2 · 46 分", useUnmergedTree = true).assertVerificationDisplayed(compose)
+            // 切组后第一张已选中，再点一次进入详情。
             next.performVerificationClick(compose)
             compose.runOnIdle { assertEquals("next-b", opened) }
             pullPageToRefresh(compose, stage = "next-up-home-refresh")
             compose.runOnIdle { assertEquals(1, homeRefreshes) }
             compose.runOnIdle { home.value = home.value.copy(nextUp = listOf(episode("next-a2", "A"))) }
-            compose.onNodeWithTag("home-next-up").assertDoesNotExist()
+            compose.onNodeWithTag("home-ambient-group/NEXT_UP").assertDoesNotExist()
+            compose.onNodeWithTag("home-ambient-thumb/resume-a").assertExists()
         } finally { loader.shutdown() }
     }
 

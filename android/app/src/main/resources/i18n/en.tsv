@@ -601,7 +601,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 排序	Sort
 排序名称	Sort name
 排序标题	Sort title
-接下来	Up next
 接口路径无效	Invalid API path
 控制栏	Control bar
 推荐	Recommended
@@ -964,7 +963,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 此账号登录已失效，请重新登录	This account's sign-in expired. Please sign in again
 此账号的下载	This account's downloads
 每次询问	Ask every time
-毛玻璃效果	Frosted glass
 没有匹配的组件	No matching components
 没有匹配的频道	No matching channels
 没有可播放的剧集	No playable episodes
@@ -993,7 +991,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 海报	Poster
 深色	Dark
 深色模式	Dark mode
-深色模式、主题色、毛玻璃效果	Dark mode, accent color, frosted glass
 添加	Add
 添加一台 Jellyfin 服务器	Add a Jellyfin server
 添加到服务器	Add to server
@@ -1025,7 +1022,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 片源地址包含服务器凭据，已阻止发送至外部站点	The source address contains server credentials; blocked sending it to an external site
 版本 %1$s	Version %1$s
 特大	Extra large
-状态栏、标题栏、导航栏、菜单与弹窗透出背后内容	Status bar, title bar, navigation bar, menus and dialogs show the content behind them
 珊瑚	Coral
 琥珀	Amber
 用户名	Username
@@ -1508,3 +1504,7 @@ GitHub 请求过于频繁，请稍后重试	Too many requests to GitHub. Please 
 无法读取崩溃记录，点击重试	Couldn't read the crash log. Tap to retry
 无法打开安装权限设置，请在系统设置中允许安装未知应用	Couldn't open installation permissions. Allow installing unknown apps in system settings
 打开剧集详情	Open series details
+继续观看 %1$s	Continue watching %1$s
+已选中	Selected
+下一集 %1$s	Next episodes %1$s
+深色模式、主题色、导航与状态栏	Dark mode, accent color, navigation and status bar

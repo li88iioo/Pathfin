@@ -13,7 +13,7 @@ class AppPreferencesTest {
             longPressSpeedEnabled = false, longPressSpeed = 3f, seekSeconds = 30, showClock = false, showBattery = false,
             preferredAudioLanguage = "ja", preferredSubtitleLanguage = "zh", subtitlesEnabled = false,
             bufferPreset = dev.pathfin.android.domain.BufferPreset.LARGE, introSkipSeconds = 60, imageCacheSizeMb = 2048,
-            hideSystemStatusBar = true, blurTopBar = true, blurAdultCovers = true,
+            hideSystemStatusBar = true, blurAdultCovers = true,
             pullToRefreshEnabled = false)
         val encoded = AppPreferencesStore.encode(value)
         assertEquals(value, AppPreferencesStore.decode(encoded))
@@ -98,8 +98,7 @@ class AppPreferencesTest {
         val defaults = AppPreferencesStore.decode(JSONObject())
         assertFalse(defaults.hideSystemStatusBar)
         assertFalse(defaults.blurAdultCovers)
-        assertFalse(defaults.blurTopBar)
-        val options = listOf("hideSystemStatusBar", "blurTopBar", "blurAdultCovers")
+        val options = listOf("hideSystemStatusBar", "blurAdultCovers")
         options.forEach { selected ->
             val restored = AppPreferencesStore.decode(JSONObject().put(selected, true))
             val encoded = AppPreferencesStore.encode(restored)

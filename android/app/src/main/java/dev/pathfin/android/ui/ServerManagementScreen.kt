@@ -660,7 +660,7 @@ private fun FeaturedServer(
 ) {
     val shape = RoundedCornerShape(16.dp)
     // 拼贴铺满整张卡并作为卡内采样源；续播条与“正在使用”标签是叠在拼贴上的毛玻璃。
-    CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState(LocalAppPreferences.current.blurTopBar)) {
+    CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState()) {
     Box(
         modifier.fillMaxWidth().testTag("server-row/${profile.id}")
             .shadow(20.dp, shape, clip = false, ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.14f))

@@ -126,7 +126,7 @@ class SoftPressIndicationTest {
         }
     }
 
-    @Test fun actualServerCardKeepsCoverEdgesWithEitherBlurSettingAndMoreStaysIndependent() {
+    @Test fun actualServerCardKeepsCoverEdgesAndMoreStaysIndependent() {
         val profile = ServerProfile("synthetic-press-profile",
             Session(ServerConfig("https://fixture.invalid"), "synthetic-token", "synthetic-user", "Synthetic", "synthetic-device"),
             "合成按压服务器", icon = "S", showUserName = false, showLastPlayed = false)
@@ -135,7 +135,6 @@ class SoftPressIndicationTest {
         // 空海报、无 image tag 的续播与自定义账号图标不会产生图片 URL 或网络请求。
         assertTrue(api.imageUrl(profile.session, resume) == null && api.imageUrl(profile.session, resume, type = "Backdrop") == null)
         val loader = ImageLoader.Builder(compose.activity).diskCache(null).build()
-        val blur = mutableStateOf(false)
         var cardSurface = Color.Unspecified
         var opens = 0
         var expectedOpens = 0
@@ -146,7 +145,7 @@ class SoftPressIndicationTest {
                 PathfinTheme(ThemePreference.LIGHT) {
                     val surface = PathfinAppearance.card
                     SideEffect { cardSurface = surface }
-                    CompositionLocalProvider(LocalAppPreferences provides AppPreferences(blurTopBar = blur.value),
+                    CompositionLocalProvider(LocalAppPreferences provides AppPreferences(),
                         LocalPosterLoader provides loader) {
                         Box(Modifier.fillMaxSize().background(PathfinAppearance.canvas)) {
                             ServerManagementScreen(listOf(profile), profile.id, busy = false, error = null, probe = null,
@@ -158,32 +157,29 @@ class SoftPressIndicationTest {
                     }
                 }
             }
-            for (enabled in listOf(false, true)) {
-                compose.runOnIdle { blur.value = enabled }
-                compose.waitForIdle()
-                val baseline = captureCard()
-                compose.mainClock.autoAdvance = false
-                try {
-                    for (cancelled in listOf(true, false)) {
-                        val label = "blur=$enabled ${if (cancelled) "Cancel" else "Up"}"
-                        card.performVerificationTouchInput(compose) { down(Offset(baseline.width / 2f, baseline.width * 11f / 32f)) }
-                        // LazyColumn 会延迟发出 Press；同时等待它与按下动画，仍早于长按阈值。
-                        compose.mainClock.advanceTimeBy(300)
-                        compose.waitForIdle()
-                        assertServerCoverHeld(baseline, captureCard(), cardSurface, label)
-                        card.performVerificationTouchInput(compose) { if (cancelled) cancel() else up() }
-                        compose.mainClock.advanceTimeBy(400)
-                        compose.waitForIdle()
-                        val restored = captureCard()
-                        (serverCoverPoints(baseline) + cornerPoints(baseline)).forEach { (x, y) ->
-                            assertColorNear("$label 后恢复 ($x,$y)", baseline[x, y], restored[x, y])
-                        }
-                        if (!cancelled) expectedOpens++
-                        compose.runOnIdle { assertEquals("$label 的主卡点击次数", expectedOpens, opens) }
+            compose.waitForIdle()
+            val baseline = captureCard()
+            compose.mainClock.autoAdvance = false
+            try {
+                for (cancelled in listOf(true, false)) {
+                    val label = if (cancelled) "Cancel" else "Up"
+                    card.performVerificationTouchInput(compose) { down(Offset(baseline.width / 2f, baseline.width * 11f / 32f)) }
+                    // LazyColumn 会延迟发出 Press；同时等待它与按下动画，仍早于长按阈值。
+                    compose.mainClock.advanceTimeBy(300)
+                    compose.waitForIdle()
+                    assertServerCoverHeld(baseline, captureCard(), cardSurface, label)
+                    card.performVerificationTouchInput(compose) { if (cancelled) cancel() else up() }
+                    compose.mainClock.advanceTimeBy(400)
+                    compose.waitForIdle()
+                    val restored = captureCard()
+                    (serverCoverPoints(baseline) + cornerPoints(baseline)).forEach { (x, y) ->
+                        assertColorNear("$label 后恢复 ($x,$y)", baseline[x, y], restored[x, y])
                     }
-                } finally {
-                    compose.mainClock.autoAdvance = true
+                    if (!cancelled) expectedOpens++
+                    compose.runOnIdle { assertEquals("$label 的主卡点击次数", expectedOpens, opens) }
                 }
+            } finally {
+                compose.mainClock.autoAdvance = true
             }
             compose.onNodeWithContentDescription(tr("服务器操作 %1\$s", profile.displayName)).performVerificationClick(compose)
             compose.onNodeWithText(tr("显示名称"), substring = false).assertVerificationDisplayed(compose)

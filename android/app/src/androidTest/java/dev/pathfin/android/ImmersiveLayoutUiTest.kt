@@ -76,16 +76,10 @@ class ImmersiveLayoutUiTest {
         val background = "app-floating-navigation"
         val material = "app-dock-surface"
         assertNavigationBounds(background)
-        compose.onNodeWithTag("home-list").performScrollToIndex(libraries.size + 1)
+        // 没有观看记录也没有剧照时不显示氛围区：首项是库标签，其后各库一栏，滚到最后一栏。
+        compose.onNodeWithTag("home-list").performScrollToIndex(libraries.size)
         val subtitleTag = "poster-subtitle/${movies.last().id}"
         assertContentAboveNavigation(subtitleTag, material, useUnmergedTree = true)
-        val oldNavigation = bounds(background)
-        val oldContent = bounds(subtitleTag, useUnmergedTree = true)
-        compose.runOnIdle { state.value = state.value.copy(preferences = state.value.preferences.copy(blurTopBar = true)) }
-        assertNavigationBounds(background)
-        assertContentAboveNavigation(subtitleTag, material, useUnmergedTree = true)
-        assertEquals("模糊开关不能移动真实底栏", oldNavigation, bounds(background))
-        assertEquals("模糊开关不能重排已滚至末尾的首页内容", oldContent, bounds(subtitleTag, useUnmergedTree = true))
         compose.onNodeWithTag("app-tab-bar").assertDoesNotExist()
     }
 
@@ -98,19 +92,11 @@ class ImmersiveLayoutUiTest {
         val lastTag = "server-row/${profiles.last().id}"
 
         for (hidden in listOf(false, true)) {
-            compose.runOnIdle { state.value = state.value.copy(preferences = state.value.preferences.copy(hideSystemStatusBar = hidden, blurTopBar = false)) }
+            compose.runOnIdle { state.value = state.value.copy(preferences = state.value.preferences.copy(hideSystemStatusBar = hidden)) }
             assertNavigationBounds("app-manager-navigation", "服务器", checkHomeAction = false)
             compose.onNodeWithTag("server-list").performScrollToIndex(profiles.size + 1)
             assertContentAboveNavigation(lastTag, "app-dock-surface")
             assertEquals("服务器正文必须延展到导航背后的系统底边", bounds("browser-back-motion").bottom, bounds("server-list").bottom, 0.5f)
-            val oldContent = bounds(lastTag)
-            val oldNavigation = bounds("app-manager-navigation")
-
-            compose.runOnIdle { state.value = state.value.copy(preferences = state.value.preferences.copy(blurTopBar = true)) }
-            assertNavigationBounds("app-manager-navigation", "服务器", checkHomeAction = false)
-            assertContentAboveNavigation(lastTag, "app-dock-surface")
-            assertEquals("模糊开关不能移动服务器导航", oldNavigation, bounds("app-manager-navigation"))
-            assertEquals("模糊开关不能移动服务器列表末项", oldContent, bounds(lastTag))
         }
         // 用真实触摸打开末项操作，避免只验证被导航遮挡的语义节点仍然存在。
         compose.onNodeWithContentDescription("服务器操作 ${profiles.last().displayName}").performVerificationClick(compose)

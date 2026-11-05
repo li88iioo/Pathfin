@@ -228,6 +228,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     var imageEditor by remember(session, route) { mutableStateOf(false) }
     var imageEditorBusy by remember(session, route) { mutableStateOf(false) }
     var detailScrolled by remember(route) { mutableStateOf(false) }
+    var homeAmbientCovered by remember(route) { mutableStateOf(false) }
     var navigationVisible by remember { mutableStateOf(true) }
     val pageActive = LocalPageActive.current
     LaunchedEffect(route, pageActive) {
@@ -260,7 +261,9 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     val navigationBottomInset = (if (hasBottomNavigation) 88.dp else 16.dp) + navigationBarHeight
     val lightSurface = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     // 在组合中读取滚动状态：只在SideEffect里读会漏掉详情子树独立重组后的前景切换。
-    val lightStatusBars = lightSurface && (!isDetail || detailScrolled)
+    // 首页氛围区在标题栏下方时，标题栏与状态栏都按深色剧照使用白色前景。
+    val homeOverAmbient = route == Route.Home && homeAmbientCovered
+    val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !homeOverAmbient
     SideEffect {
         if (pageActive) (context as? Activity)?.let { activity -> WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = lightStatusBars }
     }
@@ -277,7 +280,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     val insetInContent = route == Route.Home || route == Route.Libraries || route == Route.Search ||
         route == Route.Favorites || route is Route.Discovery || libraryPage || route == Route.Settings || route is Route.SettingsPage || route is Route.MediaTools
     val scrollToTopRequests = remember { mutableIntStateOf(0) }
-    val topBarBlur = rememberTopBarBlurState(state.preferences.blurTopBar)
+    val topBarBlur = rememberTopBarBlurState()
     // 带固定工具栏的页面自己提供采样源，工具栏作为标题栏第二行一起模糊。
     val pageOwnsBlurSource = route == Route.Search || libraryPage || route is Route.MediaTools
     CompositionLocalProvider(LocalNavigationBottomInset provides navigationBottomInset,
@@ -345,7 +348,11 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                             libraryItems = state.home.libraryItems.filterKeys { it !in state.hiddenLibraries },
                                             recent = if (state.home.libraries.isNotEmpty()) emptyList() else state.home.recent)
                                     }
-                                    HomeScreen(visibleHome, session, vm.api, vm::open, vm::refreshHomeFromPage)
+                                    val preparing = state.pendingPlayback?.item?.takeIf { state.preparingPlay }
+                                    HomeScreen(visibleHome, session, vm.api, vm::open, vm::refreshHomeFromPage,
+                                        onPlay = { if (it.type == "Series") vm.playSeries(it) else vm.preparePlayback(it) },
+                                        preparingIds = setOfNotNull(preparing?.id, preparing?.seriesId),
+                                        onAmbientCovered = { homeAmbientCovered = it })
                                 }
                                 Route.Libraries -> LibrariesScreen(state.home.copy(libraries = state.home.libraries.filterNot { it.collectionType == "livetv" }),
                                     session, vm.api, vm::open, vm::refreshHomeFromPage)
@@ -382,15 +389,17 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                 }
             }
             // 连接页底图本身就是状态栏背景，不再盖一层画布色雾带。
-            if (state.preferences.blurTopBar && !hasHeader && !isDetail && !connecting && route != Route.Search && route !is Route.LibrarySearch && route !is Route.MediaTools) {
+            if (!hasHeader && !isDetail && !connecting && route != Route.Search && route !is Route.LibrarySearch && route !is Route.MediaTools) {
                 val statusHeight = AppSafeDrawingInsets.asPaddingValues().calculateTopPadding()
                 if (statusHeight > 0.dp) TopBarBlurSurface(
                     Modifier.fillMaxWidth().height(statusHeight).align(Alignment.TopCenter), height = statusHeight,
                 ) {}
             }
             // 标题栏自己接住点击，不再穿透到下面的海报；双击发出“回到顶部”。
-            if (hasHeader) PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
-                .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scrollToTopRequests.intValue++ }) }, height = headerInset) {
+            if (hasHeader) CompositionLocalProvider(LocalContentColor provides if (homeOverAmbient) Color.White else LocalContentColor.current) {
+            PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
+                .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scrollToTopRequests.intValue++ }) }, height = headerInset,
+                visible = !homeOverAmbient) {
                         Row(Modifier.fillMaxWidth()
                             .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
                             .heightIn(min = 60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -456,6 +465,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                 } else if (libraryPage) Spacer(Modifier.width(48.dp))
                             }
                         }
+            }
             }
             if (isDetail) {
                 CompositionLocalProvider(LocalContentColor provides if (detailScrolled) MaterialTheme.colorScheme.onSurface else Color.White) {

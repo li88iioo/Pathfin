@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -78,64 +79,49 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
-internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, retry: () -> Unit) {
+internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, retry: () -> Unit,
+    onPlay: ((MediaItem) -> Unit)? = null, preparingIds: Set<String> = emptySet(), onAmbientCovered: (Boolean) -> Unit = {}) {
     val bottomInset = LocalNavigationBottomInset.current
-    val resumeHeight = compactResumeHeight()
-    // 续播确认后再显示去重结果；暖刷新继续保留已确认的观看分组。
-    val resumeSeries = home.resume.mapNotNullTo(mutableSetOf()) { it.seriesId }
-    val nextUp = home.nextUp.filter { item -> home.resume.none { it.id == item.id } && item.seriesId !in resumeSeries }
+    val topInset = LocalPageTopInset.current
+    val ambient = remember(home) { homeAmbientEntries(home) }
+    val showAmbient = ambient.isNotEmpty() || homeAmbientPending(home)
+    val list = rememberLazyListState()
+    val coverLimitPx = with(LocalDensity.current) { (topInset + AmbientFade).roundToPx() }
+    val ambientShown by rememberUpdatedState(showAmbient)
+    // 剧照的深色部分仍在标题栏下方时标题栏保持透明白字；只剩渐隐的浅色尾巴时就恢复底色。
+    val covered by remember(coverLimitPx) { derivedStateOf {
+        val first = list.layoutInfo.visibleItemsInfo.firstOrNull()
+        ambientShown && first != null && first.index == 0 && first.offset + first.size > coverLimitPx
+    } }
+    LaunchedEffect(covered) { onAmbientCovered(covered) }
     RefreshablePage(home.loading, retry, Modifier.fillMaxSize(), refreshOnEntry = home.loaded || home.error != null) {
         LazyColumn(
             Modifier.fillMaxSize().testTag("home-list"),
-            contentPadding = PaddingValues(top = LocalPageTopInset.current, bottom = bottomInset),
+            state = list,
+            contentPadding = PaddingValues(top = if (showAmbient) 0.dp else topInset, bottom = bottomInset),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (showAmbient) item(key = "home-ambient") {
+                HomeAmbient(ambient, session, api, topInset, preparingIds, onOpen, onPlay)
+            }
             item(key = "home-libraries") {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionTitle(tr("媒体库"), compact = true)
-                    Box(Modifier.fillMaxWidth().height(168.dp * 9f / 16f).testTag("home-libraries-content"), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().height(40.dp).testTag("home-libraries-content"), contentAlignment = Alignment.Center) {
                     if (home.libraries.isNotEmpty()) {
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(home.libraries, key = { it.id }) { library ->
-                            val cover = libraryCover(library, home.libraryItems[library.id].orEmpty())
-                            LibraryCoverCard(library, cover, session, api, Modifier.width(168.dp), imageWidth = 168.dp) { onOpen(library) }
+                        LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(home.libraries, key = { it.id }) { library -> LibraryPill(library) { onOpen(library) } }
                         }
-                    }
                     } else if (home.librariesLoaded) Text(tr("暂无可见媒体库"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                    }
                 }
             }
-            item(key = "home-resume") {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionTitle(tr("继续观看"), compact = true)
-                    Box(Modifier.fillMaxWidth().height(resumeHeight).testTag("home-resume-content"), contentAlignment = Alignment.Center) {
-                    if (home.resume.isNotEmpty()) {
-                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(home.resume, key = { it.id }) { media ->
-                            ResumeCard(media, session, api, Modifier.width(196.dp), compact = true) { onOpen(media) }
-                        }
-                    }
-                    } else if (home.resumeLoaded) Text(tr("暂无观看记录"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                    }
-                }
-            }
-            if (home.resumeLoaded && nextUp.isNotEmpty()) item(key = "home-next-up") {
-                Column(Modifier.testTag("home-next-up"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SectionTitle(tr("接下来"), compact = true)
-                    LazyRow(Modifier.height(resumeHeight), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(nextUp, key = { it.id }) { media ->
-                            ResumeCard(media, session, api, Modifier.width(196.dp), nextUp = true, compact = true) { onOpen(media) }
-                        }
-                    }
-                }
-            }
+            // 每栏标题就是库名，点击进入该库。
             home.libraries.filter { it.supportsLatestItems }.forEach { library ->
                 item(key = "library-shelf/${library.id}") {
                     PosterShelf(
-                        tr("最近入库 · %1\$s", library.name), home.libraryItems[library.id].orEmpty(), session, api, onOpen,
+                        library.name, home.libraryItems[library.id].orEmpty(), session, api, onOpen,
                         onMore = { onOpen(library) }, compactHeading = true,
                         loading = !home.libraryItems.containsKey(library.id),
-                        keepEmptySpace = true,
+                        keepEmptySpace = true, icon = libraryTypeIcon(library), leadWide = true,
+                        modifier = Modifier.testTag("library-shelf/${library.id}"),
                     )
                 }
             }
@@ -150,13 +136,15 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
 }
 
 @Composable
-internal fun SectionTitle(title: String, onMore: (() -> Unit)? = null, compact: Boolean = false, count: Int? = null) {
+internal fun SectionTitle(title: String, onMore: (() -> Unit)? = null, compact: Boolean = false, count: Int? = null,
+    icon: ImageVector? = null) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             .then(if (onMore != null) Modifier.heightIn(min = 48.dp).clickable(onClick = onMore,
                 role = androidx.compose.ui.semantics.Role.Button, onClickLabel = tr("浏览媒体库")) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (icon != null) Icon(icon, null, Modifier.padding(end = 8.dp).size(18.dp), tint = PathfinAppearance.textSub)
         Text(
             title,
             Modifier.weight(1f, fill = false),
@@ -193,10 +181,13 @@ internal fun PosterShelf(
     loading: Boolean = false,
     keepEmptySpace: Boolean = false,
     compactHeading: Boolean = false,
+    icon: ImageVector? = null,
+    leadWide: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val rowHeight = compactPosterHeight()
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionTitle(title, onMore, compact = compactHeading)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SectionTitle(title, onMore, compact = compactHeading, icon = icon)
         if (items.isEmpty() && keepEmptySpace) {
             Box(Modifier.fillMaxWidth().height(rowHeight), contentAlignment = Alignment.Center) {
                 // 首次读取保留真实海报栏的空间，不制造短时闪现的骨架。
@@ -208,13 +199,32 @@ internal fun PosterShelf(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(items, key = { it.id }) { item ->
-                    PosterCard(item, session, api, Modifier.width(112.dp), compact = true) { onOpen(item) }
+                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                    if (leadWide && index == 0 && !item.backdropTag.isNullOrBlank()) LatestLeadCard(item, session, api) { onOpen(item) }
+                    else PosterCard(item, session, api, Modifier.width(112.dp), compact = true) { onOpen(item) }
                 }
             }
         }
     }
 }
+
+/** 每栏打头的最新一部：与海报同高的横版剧照，压上 Logo，和首页氛围区呼应。 */
+@Composable
+private fun LatestLeadCard(item: MediaItem, session: Session, api: JellyfinApi, onOpen: () -> Unit) {
+    val width = LatestLeadWidth
+    val context = LocalContext.current
+    val logo = remember(context, session, item.id, item.logoTag, item.logoItemId) { PosterRequests.logo(context, session, api, item) }
+    BrowserMediaCard(item, session, api, PosterStyle.BACKDROP, Modifier.width(width).testTag("latest-lead/${item.id}"),
+        compact = true, imageWidth = width, onOpen = onOpen, artworkOverlay = {
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = .55f))))
+            if (logo != null) AsyncImage(logo, null, imageLoader = LocalPosterLoader.current,
+                modifier = Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 12.dp).fillMaxWidth(.55f).height(44.dp),
+                contentScale = ContentScale.Fit, alignment = Alignment.BottomStart)
+        })
+}
+
+/** 与 112dp 海报同高（2:3 → 168dp）的 16:9 宽度。 */
+private val LatestLeadWidth = 112.dp * 1.5f * 16f / 9f
 
 @Composable
 internal fun LibrariesScreen(home: HomeState, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, retry: () -> Unit) {
@@ -285,17 +295,10 @@ private fun LibraryCoverCard(library: MediaItem, cover: MediaItem, session: Sess
 }
 
 @Composable
-private fun ResumeCard(item: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, nextUp: Boolean = false, compact: Boolean = false, onClick: () -> Unit) {
+private fun ResumeCard(item: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, nextUp: Boolean = false, onClick: () -> Unit) {
     val title = item.seriesName?.takeIf(String::isNotBlank) ?: item.name
     val subtitle = resumeSubtitle(item, title)
-    val watchedMs = TimeUnits.ticksToMs(item.positionTicks)
-    val timing = when {
-        nextUp && item.positionTicks <= 0 && item.runTimeTicks > 0 -> compactDuration(TimeUnits.ticksToMs(item.runTimeTicks))
-        item.runTimeTicks > 0 -> tr("剩 %1\$s", compactDuration(TimeUnits.ticksToMs((item.runTimeTicks - item.positionTicks).coerceAtLeast(0))))
-        watchedMs >= 1_000 -> tr("已看 %1\$s", compactDuration(watchedMs))
-        nextUp -> tr("待观看")
-        else -> null
-    }
+    val timing = resumeTiming(item, nextUp)
     val shape = RoundedCornerShape(14.dp)
     val interactionSource = remember { MutableInteractionSource() }
     Column(
@@ -324,10 +327,10 @@ private fun ResumeCard(item: MediaItem, session: Session, api: JellyfinApi, modi
                 style = ArtworkTextStyle, maxLines = 1)
             WatchProgress(item, Modifier.align(Alignment.BottomCenter))
         }
-        Column(verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 5.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(
                 title,
-                Modifier.fillMaxWidth().then(if (compact) Modifier.height(with(LocalDensity.current) { (scaledLineHeightPx(14.sp, 20.sp) + 2).toDp() }) else Modifier),
+                Modifier.fillMaxWidth(),
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 fontWeight = FontWeight.Medium,
@@ -338,9 +341,9 @@ private fun ResumeCard(item: MediaItem, session: Session, api: JellyfinApi, modi
             )
             Text(
                 subtitle.ifBlank { " " },
-                Modifier.fillMaxWidth().then(if (compact) Modifier.height(with(LocalDensity.current) { (scaledLineHeightPx(11.sp, 14.sp) + 2).toDp() }) else Modifier),
-                fontSize = if (compact) 11.sp else 12.sp,
-                lineHeight = if (compact) 14.sp else 16.sp,
+                Modifier.fillMaxWidth(),
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
                 textAlign = TextAlign.Start,
                 color = PathfinAppearance.textSub,
                 maxLines = 1,
@@ -350,13 +353,19 @@ private fun ResumeCard(item: MediaItem, session: Session, api: JellyfinApi, modi
     }
 }
 
-@Composable
-private fun compactResumeHeight() = with(LocalDensity.current) {
-    val imageHeight = kotlin.math.round(196.dp.roundToPx() * 9f / 16f)
-    (imageHeight + 5.dp.roundToPx() + 2.dp.roundToPx() + scaledLineHeightPx(14.sp, 20.sp) + scaledLineHeightPx(11.sp, 14.sp) + 4).toDp()
+/** 续播卡上的时间：下一集显示整集时长，看了一半显示剩余。 */
+internal fun resumeTiming(item: MediaItem, nextUp: Boolean): String? {
+    val watchedMs = TimeUnits.ticksToMs(item.positionTicks)
+    return when {
+        nextUp && item.positionTicks <= 0 && item.runTimeTicks > 0 -> compactDuration(TimeUnits.ticksToMs(item.runTimeTicks))
+        item.runTimeTicks > 0 -> tr("剩 %1\$s", compactDuration(TimeUnits.ticksToMs((item.runTimeTicks - item.positionTicks).coerceAtLeast(0))))
+        watchedMs >= 1_000 -> tr("已看 %1\$s", compactDuration(watchedMs))
+        nextUp -> tr("待观看")
+        else -> null
+    }
 }
 
-private fun resumeSubtitle(item: MediaItem, title: String): String {
+internal fun resumeSubtitle(item: MediaItem, title: String): String {
     if (item.type != "Episode") return item.year?.toString().orEmpty()
     val episodeNumber = item.indexNumber?.takeIf { it >= 0 }
     val episodeCode = buildString {
@@ -685,7 +694,7 @@ internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, bus
     val safeArea = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
     val season = item.type == "Season"
     // 背景大图是首屏的卡内采样源，播放键与图标键是叠在上面的毛玻璃。
-    CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState(LocalAppPreferences.current.blurTopBar)) {
+    CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState()) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val seasonPosterWidth = (maxWidth * .34f).coerceIn(108.dp, 154.dp)
         val imageHeight = if (season) (maxWidth * .85f).coerceIn(300.dp, 460.dp) else (maxWidth * 1.2f).coerceIn(400.dp, 600.dp)
@@ -739,7 +748,8 @@ private fun SeriesLink(name: String, onClick: (() -> Unit)?) {
 }
 
 @Composable
-private fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, compact: Boolean = false, onClick: (() -> Unit)? = null) {
+internal fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, compact: Boolean = false, onClick: (() -> Unit)? = null,
+    tag: String = "detail") {
     val context = LocalContext.current
     val request = remember(context, session, item.id, item.logoTag, item.logoItemId) { PosterRequests.logo(context, session, api, item) }
     var imageReady by remember(request) { mutableStateOf(false) }
@@ -755,12 +765,12 @@ private fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, com
     val titleSlot = if (compact) 32.dp else 84.dp
     Box(Modifier.fillMaxWidth().heightIn(min = titleSlot)
         .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = tr("打开剧集详情"), onClick = onClick) else Modifier)
-        .testTag("detail-title/${item.id}"),
+        .testTag("$tag-title/${item.id}"),
         contentAlignment = if (compact) Alignment.TopStart else Alignment.BottomStart) {
         Text(item.name, Modifier.fillMaxWidth().padding(bottom = 4.dp).then(if (imageReady) Modifier.alpha(0f) else Modifier),
             fontSize = 25.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
         if (request != null) AsyncImage(request, null, imageLoader = LocalPosterLoader.current,
-            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().height(titleSlot).testTag("detail-logo/${item.id}")
+            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().height(titleSlot).testTag("$tag-logo/${item.id}")
                 .semantics { stateDescription = if (imageReady) tr("已加载") else tr("正在加载") },
             contentScale = ContentScale.Fit, alignment = Alignment.BottomStart, clipToBounds = false,
             transform = transform, onState = { imageReady = it is AsyncImagePainter.State.Success })
@@ -844,4 +854,4 @@ internal fun compactDuration(ms: Long): String {
 internal fun ratingText(value: Double): String = String.format(Locale.ROOT, "%.1f", value)
 
 /** 媒体缺图沿用参考的深中性底，不随浅色主题变成不可辨识的亮灰块。 */
-private val MediaImagePlaceholder = Color(0xff3d3d3d)
+internal val MediaImagePlaceholder = Color(0xff3d3d3d)

@@ -141,7 +141,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
 
     private fun homeParameters(session: Session, limit: Int) = mutableMapOf(
         "userId" to session.userId, "limit" to limit.toString(), "fields" to HOME_FIELDS,
-        "enableUserData" to "true", "enableImages" to "true", "imageTypeLimit" to "1", "enableImageTypes" to "Primary,Backdrop,Thumb",
+        "enableUserData" to "true", "enableImages" to "true", "imageTypeLimit" to "1", "enableImageTypes" to "Primary,Backdrop,Thumb,Logo",
     )
 
     private suspend fun mapHomePage(json: JSONObject, limit: Int): MediaPage {

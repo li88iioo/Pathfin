@@ -120,7 +120,7 @@ class TopBarBlurUiTest {
         val body = mutableStateOf<Color?>(Color.Black)
         compose.setContent {
             MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
-                val state = rememberTopBarBlurState(true)
+                val state = rememberTopBarBlurState()
                 CompositionLocalProvider(LocalTopBarBlurState provides state) {
                     Box(Modifier.size(300.dp, 224.dp).background(Color.White).testTag("blur-fixture")) {
                         Canvas(Modifier.fillMaxSize().topBarBlurSource()) {
@@ -166,7 +166,7 @@ class TopBarBlurUiTest {
         val uniformBody = mutableStateOf<Color?>(null)
         compose.setContent {
             MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
-                val state = rememberTopBarBlurState(true)
+                val state = rememberTopBarBlurState()
                 CompositionLocalProvider(LocalTopBarBlurState provides state) {
                     Box(Modifier.size(300.dp, 224.dp).background(Color.White).testTag("blur-fixture")) {
                         Canvas(Modifier.fillMaxSize().topBarBlurSource()) {
@@ -316,7 +316,8 @@ class TopBarBlurUiTest {
     private fun NavigationFixture(enabled: Boolean, floating: Boolean, body: Color?, frequencyControls: Boolean = false) {
         MaterialTheme(colorScheme = lightColorScheme(surface = Color.White, onSurface = Color.Black,
             surfaceContainerLowest = Color.White)) {
-            val state = rememberTopBarBlurState(enabled)
+            // 毛玻璃始终开启；不提供采样源就是播放器等页面实际走的实色退路。
+            val state = if (enabled) rememberTopBarBlurState() else null
             val shape = if (floating) CircleShape else RectangleShape
             CompositionLocalProvider(LocalTopBarBlurState provides state) {
                 Box(Modifier.size(300.dp, 280.dp).background(Color.White).testTag("blur-fixture")) {
@@ -346,7 +347,8 @@ class TopBarBlurUiTest {
     @Composable
     private fun SolidFixture(enabled: Boolean, source: Color, sourcePresent: Boolean = true) {
         MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
-            val state = rememberTopBarBlurState(enabled)
+            // 毛玻璃始终开启；不提供采样源就是播放器等页面实际走的实色退路。
+            val state = if (enabled) rememberTopBarBlurState() else null
             CompositionLocalProvider(LocalTopBarBlurState provides state) {
                 Box(Modifier.size(300.dp, 224.dp).background(Color.White).testTag("blur-fixture")) {
                     if (sourcePresent) Box(Modifier.fillMaxSize().topBarBlurSource().background(source))

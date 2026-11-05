@@ -811,7 +811,7 @@ class JellyfinLibraryApiTest {
         assertEquals("true", query.queryParameter("enableUserData"))
         assertEquals("true", query.queryParameter("enableImages"))
         assertEquals("1", query.queryParameter("imageTypeLimit"))
-        assertEquals(setOf("Primary", "Backdrop", "Thumb"), query.queryParameter("enableImageTypes")!!.split(',').toSet())
+        assertEquals(setOf("Primary", "Backdrop", "Thumb", "Logo"), query.queryParameter("enableImageTypes")!!.split(',').toSet())
         val authorization = exchange.requestHeaders.getFirst("Authorization").orEmpty()
         assertTrue(authorization.startsWith("MediaBrowser "))
         assertTrue(authorization.contains("Token=\"fixture-token\""))

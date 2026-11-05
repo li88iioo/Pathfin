@@ -84,7 +84,7 @@ private fun PersonHero(item: MediaItem, session: Session, api: JellyfinApi, movi
     val topInset = AppSafeDrawingInsets.asPaddingValues().calculateTopPadding()
     val safeArea = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
     // 头像放大模糊铺满首屏，作为卡内采样源；外部资料胶囊是叠在上面的毛玻璃。
-    CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState(LocalAppPreferences.current.blurTopBar)) {
+    CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState()) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val posterWidth = (maxWidth * .34f).coerceIn(108.dp, 150.dp)
         val backgroundHeight = topInset + 72.dp + posterWidth * 1.5f + 40.dp

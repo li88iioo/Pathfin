@@ -43,7 +43,8 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun BrowserMediaCard(item: MediaItem, session: Session, api: JellyfinApi, style: PosterStyle, modifier: Modifier = Modifier, compact: Boolean = false, imageWidth: androidx.compose.ui.unit.Dp? = null, libraryStyle: Boolean = false,
-    selected: Boolean? = null, onLongClick: (() -> Unit)? = null, onOpen: () -> Unit) {
+    selected: Boolean? = null, onLongClick: (() -> Unit)? = null, artworkOverlay: (@Composable BoxScope.() -> Unit)? = null,
+    onOpen: () -> Unit) {
     val showBadges = LocalAppPreferences.current.showPosterBadges
     val titleLines = if (compact || libraryStyle) 1 else 2
     val subtitleFontSize = if (compact && !libraryStyle) 11.sp else 12.sp
@@ -71,6 +72,7 @@ internal fun BrowserMediaCard(item: MediaItem, session: Session, api: JellyfinAp
             PosterImage(item, session, api, Modifier.matchParentSize(), shape = cardShape, imageType = when (style) {
                 PosterStyle.POSTER -> "Primary"; PosterStyle.BACKDROP -> "Backdrop"
             }, displayWidth = imageWidth, displayAspectRatio = style.aspectRatio)
+            artworkOverlay?.invoke(this)
             if (showBadges) PosterArtworkMarks(item)
             WatchProgress(item, Modifier.align(Alignment.BottomCenter))
             if (selected != null) SelectionMark(selected, cardShape)

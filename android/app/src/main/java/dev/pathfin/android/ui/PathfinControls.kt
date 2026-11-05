@@ -322,7 +322,7 @@ internal fun PathfinDock(items: List<DockItem>, modifier: Modifier = Modifier) {
             .clip(CircleShape).border(PathfinAppearance.cardBorder, CircleShape).testTag("app-dock-surface"),
     ) {
         // 毛玻璃胶囊上，实色画布片会像贴了一块白纸；改为点缀色的淡玻璃片，透出底下的模糊。
-        val frosted = LocalTopBarBlurState.current?.enabled == true
+        val frosted = frostedEnabled
         val accent = PathfinAppearance.accent
         Row(Modifier.padding(horizontal = 5.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items.forEach { item ->

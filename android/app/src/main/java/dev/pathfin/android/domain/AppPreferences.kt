@@ -33,7 +33,6 @@ data class AppPreferences(
     val showBufferSpeed: Boolean = false,
     val blurAdultCovers: Boolean = false,
     val hideSystemStatusBar: Boolean = false,
-    val blurTopBar: Boolean = false,
     val pullToRefreshEnabled: Boolean = true,
     val backgroundBlurRadiusDp: Int = 0,
     val hideChaptersWithoutImage: Boolean = false,

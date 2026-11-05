@@ -8,13 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
@@ -41,16 +39,13 @@ import dev.chrisbanes.haze.rememberHazeState
 /** 每个切页页面独立提供，进出中的两页不能共用采样源或标题范围。 */
 internal val LocalTopBarBlurState = compositionLocalOf<TopBarBlurState?> { null }
 
+/** 毛玻璃始终开启：有采样源的页面都提供；播放器等没有采样源的界面不提供，组件退回实色。 */
 @Stable
-internal class TopBarBlurState internal constructor(
-    internal val source: HazeState,
-    private val enabledState: State<Boolean>,
-) {
+internal class TopBarBlurState internal constructor(internal val source: HazeState) {
     private data class Region(val top: Dp, val bottom: Dp, val secondaryRow: Boolean)
 
     private val regions = mutableStateMapOf<Any, Region>()
 
-    val enabled: Boolean get() = enabledState.value
     internal val minimumTop: Dp get() = regions.values.minOfOrNull { it.top } ?: 0.dp
     internal val maximumBottom: Dp get() = regions.values.maxOfOrNull { it.bottom } ?: 0.dp
     internal val hasSecondaryRow: Boolean get() = regions.values.any { it.secondaryRow }
@@ -67,10 +62,9 @@ internal class TopBarBlurState internal constructor(
 
 @OptIn(ExperimentalHazeApi::class)
 @Composable
-internal fun rememberTopBarBlurState(enabled: Boolean): TopBarBlurState {
+internal fun rememberTopBarBlurState(): TopBarBlurState {
     val source = rememberHazeState()
-    val enabledState = rememberUpdatedState(enabled)
-    return remember(source, enabledState) { TopBarBlurState(source, enabledState) }
+    return remember(source) { TopBarBlurState(source) }
 }
 
 /**
@@ -81,7 +75,7 @@ internal fun rememberTopBarBlurState(enabled: Boolean): TopBarBlurState {
 @Composable
 internal fun Modifier.topBarBlurSource(zIndex: Float = 0f): Modifier {
     val state = LocalTopBarBlurState.current
-    return if (state?.enabled == true) hazeSource(state.source, zIndex) else this
+    return if (state != null) hazeSource(state.source, zIndex) else this
 }
 
 /**
@@ -115,7 +109,7 @@ internal fun TopBarBlurSurface(
 
     Box(modifier) {
         if (visible) {
-            if (state?.enabled == true) {
+            if (state != null) {
                 TopBarBlurMaterial(state, topOffset, knownBottom)
             } else {
                 Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surface))
@@ -148,7 +142,7 @@ internal fun Modifier.frostedControl(card: Color = PathfinAppearance.card): Modi
 internal fun Modifier.frostedPanel(card: Color = PathfinAppearance.card): Modifier = frostedCard(0.88f, card, 32.dp)
 
 /** 当前页面是否启用毛玻璃；播放器等没有采样源的界面恒为 false。 */
-internal val frostedEnabled: Boolean @Composable get() = LocalTopBarBlurState.current?.enabled == true
+internal val frostedEnabled: Boolean @Composable get() = LocalTopBarBlurState.current != null
 
 /** 采样本页正文的毛玻璃卡片底，底栏与浮层菜单共用；模糊关闭或无采样源时铺 fallback（默认实色卡片）。 */
 @OptIn(ExperimentalHazeApi::class)
@@ -157,7 +151,7 @@ internal fun Modifier.frostedCard(tintAlpha: Float = 0.80f, card: Color = Pathfi
     fallback: Color = card): Modifier {
     val state = LocalTopBarBlurState.current
     val canvas = PathfinAppearance.canvas
-    return if (state?.enabled == true) hazeBlur(
+    return if (state != null) hazeBlur(
         input = HazeInput.Sources(state.source, retention = HazeSourceRetention.ClearWhenUnavailable),
         style = HazeBlurStyle {
             backgroundColor(canvas)

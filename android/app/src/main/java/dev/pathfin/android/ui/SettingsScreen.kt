@@ -123,7 +123,7 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
             null -> {
                 item("common-label") { SettingLabel(tr("通用")) }
                 item("general") { SettingsEntryItem(PathfinIcons.Sliders, tr("常规"), tr("系统语言、启动连接、下拉刷新"), GroupPosition.TOP) { onPage("general") } }
-                item("appearance") { SettingsEntryItem(PathfinIcons.Palette, tr("外观"), tr("深色模式、主题色、毛玻璃效果"), GroupPosition.BOTTOM) { onPage("appearance") } }
+                item("appearance") { SettingsEntryItem(PathfinIcons.Palette, tr("外观"), tr("深色模式、主题色、导航与状态栏"), GroupPosition.BOTTOM) { onPage("appearance") } }
                 item("media-label") { SettingLabel(tr("媒体与播放")) }
                 item("library") { SettingsEntryItem(MediaNavigationIcons.Movies, tr("媒体库"), tr("艺术图、续播截图、封面角标与推荐"), GroupPosition.TOP) { onPage("library") } }
                 item("player") { SettingsEntryItem(PathfinIcons.Play, tr("播放"), tr("音轨字幕、片头片尾与缓冲"), GroupPosition.MIDDLE) { onPage("player") } }
@@ -148,12 +148,8 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
                 item("hide-navigation") { SettingsSwitch(tr("滚动时隐藏导航栏"), p.autoHideNavigation, tr("向下滚动列表时自动收起导航栏")) { onPreferences(p.copy(autoHideNavigation = it)) } }
                 item("window-label") { SettingLabel(tr("窗口")) }
                 item("hide-status-bar") { SettingsSwitch(tr("隐藏系统状态栏"), p.hideSystemStatusBar,
-                    tr("浏览与详情页面隐藏系统状态栏"), tag = "settings-hide-system-status-bar", position = GroupPosition.TOP) {
+                    tr("浏览与详情页面隐藏系统状态栏"), tag = "settings-hide-system-status-bar", position = GroupPosition.SINGLE) {
                     onPreferences(p.copy(hideSystemStatusBar = it))
-                } }
-                item("blur-top-bar") { SettingsSwitch(tr("毛玻璃效果"), p.blurTopBar,
-                    tr("状态栏、标题栏、导航栏、菜单与弹窗透出背后内容"), tag = "settings-blur-top-bar", position = GroupPosition.BOTTOM) {
-                    onPreferences(p.copy(blurTopBar = it))
                 } }
             }
             "library" -> {

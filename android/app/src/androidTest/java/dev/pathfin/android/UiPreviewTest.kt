@@ -89,7 +89,6 @@ class UiPreviewTest {
     fun exportRepresentativeScreens() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val fixtureUrl = fixtureUrl()
-        val blurTopBar = InstrumentationRegistry.getArguments().getString("pathfin.previewBlurTopBar") == "true"
         val session = Session(
             server = ServerConfig(fixtureUrl, allowInsecureHttp = true),
             accessToken = "fixture-token",
@@ -127,7 +126,7 @@ class UiPreviewTest {
             "家庭片库 ${index + 1}", icon = if (index % 2 == 0) "🎞️" else "🎧") }
         val browser = BrowserUiState(content = ContentState(items = movies, total = movies.size, nextIndex = movies.size),
             query = LibraryQuery(itemTypes = setOf("Movie", "Series")), filterOptions = LibraryFilterOptions(genres = listOf("剧情", "冒险"), years = listOf(2024, 2025, 2026), officialRatings = listOf("PG-13")))
-        val base = AppState(session = session, home = home, theme = ThemePreference.LIGHT, preferences = AppPreferences(blurTopBar = blurTopBar), profiles = profiles, currentProfileId = profiles.first().id,
+        val base = AppState(session = session, home = home, theme = ThemePreference.LIGHT, preferences = AppPreferences(), profiles = profiles, currentProfileId = profiles.first().id,
             browsers = mapOf(libraries.first().id to browser),
             favorites = DiscoveryState(requested = true, sections = mapOf(
                 DiscoveryCategory.MOVIES to ContentState(items = movies.take(5), total = 5, nextIndex = 5, queryKey = "favorites"),

@@ -17,11 +17,14 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.TextLayoutResult
@@ -51,7 +54,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** 真实首页组件；仅 verification、合成条目、无封面 URL，不读账号、不联网。 */
+/** 真实首页组件；仅 verification、合成条目，会话主机为 .invalid，不读账号、不联网。 */
 @RunWith(AndroidJUnit4::class)
 class HomePresentationTest {
     @get:Rule val compose = createVerificationComposeRule<ComponentActivity>()
@@ -68,53 +71,51 @@ class HomePresentationTest {
 
     @After fun close() { loader.shutdown() }
 
-    @Test fun nextUpWaitsForResumeDeduplicationAndWarmRefreshKeepsItsVisibleRow() {
+    @Test fun nextUpGroupWaitsForResumeDeduplicationAndNeverMovesTheShelves() {
         val library = MediaItem("library", "合成电影库", "CollectionFolder", isFolder = true)
         val resume = MediaItem("episode-1", "第一集", "Episode", seriesId = "series", seriesName = "同一部剧")
         val next = resume.copy(id = "episode-2", name = "第二集")
-        val home = mutableStateOf(HomeState(libraries = listOf(library), loaded = true, loading = true,
+        val home = mutableStateOf(HomeState(libraries = listOf(library), loaded = true, librariesLoaded = true, loading = true,
             libraryItems = mapOf(library.id to listOf(movie)), nextUp = listOf(next), nextUpLoaded = true))
         showHome(home)
-        val following = compose.onNodeWithText("最近入库 · ${library.name}")
+        val following = heading(library)
         VerificationDisplay.awaitWindowReady(compose, "next-up-before-resume", following)
         val before = layoutBounds(following).top
-        compose.onNodeWithTag("home-next-up").assertDoesNotExist()
+        compose.onNodeWithTag("home-ambient").assertExists()
+        compose.onNodeWithTag("home-ambient-thumb/${next.id}").assertDoesNotExist()
+
         compose.runOnIdle { home.value = home.value.copy(resume = listOf(resume), resumeLoaded = true) }
-        compose.onNodeWithTag("home-next-up").assertDoesNotExist()
-        assertSamePosition(before, layoutBounds(following).top, "NextUp先返回不能先显示再被续播去重移除")
+        compose.onNodeWithTag("home-ambient-thumb/${resume.id}").assertExists()
+        compose.onNodeWithTag("home-ambient-group/NEXT_UP").assertDoesNotExist()
+        compose.onNodeWithTag("home-ambient-thumb/${next.id}").assertDoesNotExist()
+        assertSamePosition(before, layoutBounds(following).top, "续播到达并去掉同剧下一集")
 
-        compose.runOnIdle { home.value = home.value.copy(nextUp = emptyList(), nextUpLoaded = false) }
-        compose.onNodeWithTag("home-next-up").assertDoesNotExist()
-        compose.runOnIdle { home.value = home.value.copy(nextUp = listOf(next), nextUpLoaded = true) }
-        compose.onNodeWithTag("home-next-up").assertDoesNotExist()
-        assertSamePosition(before, layoutBounds(following).top, "Resume先返回也应得到相同布局")
+        val other = next.copy(id = "other-next", seriesId = "other-series", seriesName = "另一部剧")
+        compose.runOnIdle { home.value = home.value.copy(loading = false, nextUp = listOf(next, other)) }
+        compose.onNodeWithTag("home-ambient-group/NEXT_UP").assertTextEquals("下一集 1").performVerificationClick(compose)
+        compose.onNodeWithTag("home-ambient-thumb/${other.id}").assertExists()
+        compose.onNodeWithTag("home-ambient-hero/${other.id}").assertExists()
+        compose.onNodeWithTag("home-ambient-thumb/${resume.id}").assertDoesNotExist()
+        assertSamePosition(before, layoutBounds(following).top, "切换到下一集分组")
 
-        compose.runOnIdle {
-            home.value = home.value.copy(loading = false,
-                nextUp = listOf(next.copy(id = "other-next", seriesId = "other-series", seriesName = "另一部剧")))
-        }
-        val visible = compose.onNodeWithTag("home-next-up").performScrollTo()
-        VerificationDisplay.awaitWindowReady(compose, "next-up-warm-row", visible)
-        val position = layoutBounds(visible).top
         compose.runOnIdle { home.value = home.value.copy(loading = true) }
-        visible.assertExists()
-        assertSamePosition(position, layoutBounds(visible).top, "暖刷新不能收起已展示的接下来")
-        compose.runOnIdle { home.value = home.value.copy(loading = false) }
-        assertSamePosition(position, layoutBounds(visible).top, "刷新完成不能移动未变化的观看分组")
+        compose.onNodeWithTag("home-ambient-thumb/${other.id}").assertExists()
+        assertSamePosition(before, layoutBounds(following).top, "暖刷新不能收起已展示的分组")
     }
 
-    @Test fun libraryHeadingOpensTheOriginalLibraryAndOldHomeActionsAreAbsent() {
+    @Test fun libraryPillsAndShelfHeadingsOpenTheOriginalLibraryAndOldHomeActionsAreAbsent() {
         val library = MediaItem("library", "合成电影库", "CollectionFolder", collectionType = "movies", isFolder = true)
         val collections = MediaItem("collection-library", "合成合集库", "CollectionFolder", collectionType = "boxsets", isFolder = true)
-        val home = mutableStateOf(HomeState(libraries = listOf(collections, library), loaded = true,
+        val home = mutableStateOf(HomeState(libraries = listOf(collections, library), loaded = true, librariesLoaded = true,
             libraryItems = mapOf(library.id to listOf(movie))))
         var opened: MediaItem? = null
         var opens = 0
         showHome(home, onOpen = { opened = it; opens++ })
-        compose.onNodeWithContentDescription(collections.name).assertVerificationDisplayed(compose).assertHasClickAction()
-        compose.onNodeWithText("最近入库 · ${collections.name}").assertDoesNotExist()
+        compose.onNodeWithTag("home-library/${collections.id}").assertVerificationDisplayed(compose).assertHasClickAction()
+            .assertTextEquals(collections.name)
+        compose.onNodeWithTag("library-shelf/${collections.id}").assertDoesNotExist()
 
-        val heading = compose.onNodeWithText("最近入库 · ${library.name}").performScrollTo()
+        val heading = heading(library).performScrollTo()
         heading.assertVerificationDisplayed(compose)
         val bounds = layoutBounds(heading)
         assertTrue("整行库标题必须保留至少48dp点击高度", bounds.height >= 48f * context.resources.displayMetrics.density - 1f)
@@ -123,8 +124,11 @@ class HomePresentationTest {
             assertSame("库标题应打开原库，而不是某张封面条目", library, opened)
             assertEquals("一个标题入口只能触发一次打开", 1, opens)
         }
+        compose.onNodeWithTag("home-library/${collections.id}").performScrollTo().performVerificationClick(compose)
+        compose.runOnIdle { assertSame("没有最近入库栏的库也能从标签进入", collections, opened); assertEquals(2, opens) }
         compose.onNodeWithText("更多").assertDoesNotExist()
         compose.onNodeWithText("接下来").assertDoesNotExist()
+        compose.onNodeWithText("最近入库 · ${library.name}").assertDoesNotExist()
     }
 
     @Test fun homeShowsSeriesAndEpisodeWhileLongMovieTitlesKeepOneStableLine() {
@@ -160,11 +164,12 @@ class HomePresentationTest {
     @Test fun loadingEmptyAndLoadedLibraryShelvesKeepTheFollowingHeadingInPlace() {
         val first = MediaItem("first-library", "合成首库", "CollectionFolder", isFolder = true)
         val second = MediaItem("second-library", "合成次库", "CollectionFolder", isFolder = true)
-        val home = mutableStateOf(HomeState(libraries = listOf(first, second), loading = true,
+        // 观看记录已确定为空且条目没有剧照：不显示氛围区，这里只验证各海报栏。
+        val home = mutableStateOf(HomeState(libraries = listOf(first, second), loading = true, resumeLoaded = true, nextUpLoaded = true,
             libraryItems = mapOf(second.id to listOf(movie.copy(id = "second-movie")))))
         showHome(home, fontScale = mutableStateOf(1.6f))
-        val anchor = compose.onNodeWithText("最近入库 · ${first.name}")
-        val following = compose.onNodeWithText("最近入库 · ${second.name}")
+        val anchor = heading(first)
+        val following = heading(second)
         // 以首库为滚动锚点，让次库标题进入短屏；后续不重滚，避免对齐次库掩盖真实位移。
         compose.onNodeWithTag("home-list").performScrollToKey("library-shelf/${first.id}")
         VerificationDisplay.awaitWindowReady(compose, "home-shelf-stable-anchor", anchor, following)
@@ -208,7 +213,7 @@ class HomePresentationTest {
         for (mode in listOf(ThemePreference.LIGHT, ThemePreference.DARK)) {
             for (scale in listOf(1f, 1.6f)) {
                 compose.runOnIdle { theme.value = mode; fontScale.value = scale }
-                val heading = compose.onNodeWithText("最近入库 · ${library.name}").performScrollTo()
+                val heading = heading(library).performScrollTo()
                 heading.assertVerificationDisplayed(compose)
                 compose.onNodeWithTag("poster-rating", true).assertVerificationDisplayed(compose)
                 val pixels = compose.onNodeWithTag("poster-rating", true).captureToImage().toPixelMap()
@@ -233,22 +238,85 @@ class HomePresentationTest {
         }
     }
 
-    @Test fun resumeArrivingAfterLibrariesOrBecomingEmptyDoesNotMoveTheLatestShelf() {
+    @Test fun ambientHoldsItsSpaceUntilWatchingArrivesThenFallsBackToLatestBackdrops() {
         val library = MediaItem("delayed-resume-library", "即时电影库", "CollectionFolder", isFolder = true)
+        // 条目带剧照标签才能作为氛围区的最近入库；会话主机是 .invalid，图片请求只会解析失败，不会联网。
+        val latest = movie.copy(id = "latest-movie", backdropTag = "synthetic-backdrop")
         val home = mutableStateOf(HomeState(libraries = listOf(library), loading = true,
-            librariesLoaded = true, resumeLoaded = false, libraryItems = mapOf(library.id to listOf(movie))))
+            librariesLoaded = true, resumeLoaded = false, libraryItems = mapOf(library.id to listOf(latest))))
         showHome(home)
-        val heading = compose.onNodeWithText("最近入库 · ${library.name}")
+        val heading = heading(library)
         heading.assertVerificationDisplayed(compose)
         val before = layoutBounds(heading)
-        val slot = layoutBounds(compose.onNodeWithTag("home-resume-content"))
-        compose.runOnIdle { home.value = home.value.copy(resume = listOf(movie.copy(positionTicks = 50_000_000)), resumeLoaded = true) }
+        compose.onNodeWithTag("home-ambient").assertExists()
+        val slot = layoutBounds(compose.onNodeWithTag("home-ambient"))
+
+        val resume = movie.copy(positionTicks = 50_000_000, runTimeTicks = 600_000_000)
+        compose.runOnIdle { home.value = home.value.copy(resume = listOf(resume), resumeLoaded = true) }
+        compose.onNodeWithTag("home-ambient-thumb/${resume.id}").assertExists()
         assertEquals("慢续播不能推移已显示的媒体库", before, layoutBounds(heading))
-        assertEquals(slot, layoutBounds(compose.onNodeWithTag("home-resume-content")))
-        compose.runOnIdle { home.value = home.value.copy(resume = emptyList(), loading = false, loaded = true) }
-        compose.onNodeWithText("暂无观看记录").assertVerificationDisplayed(compose)
-        assertEquals("空续播也不能收起已有空间", before, layoutBounds(heading))
+        assertEquals("氛围区占位与填充后同高", slot, layoutBounds(compose.onNodeWithTag("home-ambient")))
+
+        compose.runOnIdle { home.value = home.value.copy(resume = emptyList(), nextUpLoaded = true, loading = false, loaded = true) }
+        compose.onNodeWithTag("home-ambient-group/LATEST").assertTextEquals("最近入库")
+        compose.onNodeWithTag("home-ambient-thumb/${latest.id}").assertExists()
+        assertEquals("没有观看记录时改放最近入库，不能收起已有空间", before, layoutBounds(heading))
     }
+
+    @Test fun ambientThumbsSelectThenOpenWhilePlayAndTitleBarCoverFollowTheSelection() {
+        fun watching(id: String, series: String) = MediaItem(id, "第 3 集", "Episode", seriesId = series, seriesName = series,
+            parentIndexNumber = 1, indexNumber = 3, runTimeTicks = 27_600_000_000L, positionTicks = 6_000_000_000L)
+        val first = watching("watch-1", "第一部剧")
+        val second = watching("watch-2", "第二部剧")
+        // 后面接几栏海报，页面足够长，才能把氛围区完整滚出标题栏。
+        val libraries = List(4) { MediaItem("ambient-library-$it", "合成库 $it", "CollectionFolder", isFolder = true) }
+        val home = mutableStateOf(HomeState(libraries = libraries, loaded = true, librariesLoaded = true, resumeLoaded = true,
+            nextUpLoaded = true, resume = listOf(first, second),
+            libraryItems = libraries.associate { it.id to listOf(movie.copy(id = "movie-${it.id}")) }))
+        var opened: MediaItem? = null
+        var played: MediaItem? = null
+        val covered = mutableListOf<Boolean>()
+        showHome(home, onOpen = { opened = it }, onPlay = { played = it }, onAmbientCovered = { covered += it })
+        compose.onNodeWithTag("home-ambient-hero/${first.id}").assertExists()
+        compose.runOnIdle { assertEquals("氛围区在标题栏下方时通知外壳透明标题栏", true, covered.lastOrNull()) }
+
+        compose.onNodeWithTag("home-ambient-thumb/${second.id}").performVerificationClick(compose)
+        compose.onNodeWithTag("home-ambient-hero/${second.id}").assertExists()
+        compose.runOnIdle { assertEquals("第一次点击只切换选中，不进入详情", null, opened) }
+        compose.onNodeWithTag("home-ambient-thumb/${second.id}").performVerificationClick(compose)
+        compose.runOnIdle { assertSame("再点已选中的小图进入详情", second, opened) }
+        compose.onNodeWithTag("home-ambient-play").assertTextEquals("继续播放").performVerificationClick(compose)
+        compose.runOnIdle { assertSame("播放键播放当前选中的一集", second, played) }
+
+        compose.onNodeWithTag("home-list").performScrollToKey("library-shelf/${libraries.last().id}")
+        compose.runOnIdle { assertEquals("剧照滚出标题栏后恢复底色", false, covered.last()) }
+        compose.onNodeWithTag("home-list").performScrollToIndex(0)
+        compose.runOnIdle { assertEquals(true, covered.last()) }
+    }
+
+    @Test fun eachShelfLeadsWithItsNewestBackdropAtPosterHeight() {
+        val library = MediaItem("lead-library", "合成剧集库", "CollectionFolder", collectionType = "tvshows", isFolder = true)
+        val lead = movie.copy(id = "lead-movie", name = "最新一部", backdropTag = "synthetic-backdrop")
+        val plain = movie.copy(id = "plain-movie", name = "没有剧照")
+        val home = mutableStateOf(HomeState(libraries = listOf(library), loaded = true, librariesLoaded = true,
+            resumeLoaded = true, nextUpLoaded = true, libraryItems = mapOf(library.id to listOf(lead, plain))))
+        showHome(home)
+        heading(library).performScrollTo()
+        compose.onNodeWithTag("latest-lead/${lead.id}").assertExists()
+        compose.onNodeWithTag("latest-lead/${plain.id}").assertDoesNotExist()
+        val leadTitle = layoutBounds(compose.onNodeWithTag("poster-title/${lead.id}", true))
+        val plainTitle = layoutBounds(compose.onNodeWithTag("poster-title/${plain.id}", true))
+        assertEquals("横版首卡与海报同高，标题在同一行", plainTitle.top, leadTitle.top, 1f)
+        assertTrue("横版首卡明显比海报宽", leadTitle.width > plainTitle.width * 2)
+
+        compose.runOnIdle { home.value = home.value.copy(libraryItems = mapOf(library.id to listOf(plain, lead))) }
+        compose.onNodeWithTag("latest-lead/${plain.id}").assertDoesNotExist()
+        compose.onNodeWithTag("latest-lead/${lead.id}").assertDoesNotExist()
+    }
+
+    /** 库名也出现在顶部库标签上，栏标题按所在栏查找。 */
+    private fun heading(library: MediaItem) =
+        compose.onNode(hasText(library.name) and hasAnyAncestor(hasTestTag("library-shelf/${library.id}")))
 
     private fun layoutBounds(target: SemanticsNodeInteraction): Rect {
         val node = target.fetchSemanticsNode()
@@ -261,6 +329,8 @@ class HomePresentationTest {
         theme: MutableState<ThemePreference> = mutableStateOf(ThemePreference.LIGHT),
         fontScale: MutableState<Float> = mutableStateOf(1f),
         onOpen: (MediaItem) -> Unit = {},
+        onPlay: ((MediaItem) -> Unit)? = null,
+        onAmbientCovered: (Boolean) -> Unit = {},
     ) {
         compose.setContent {
             val density = LocalDensity.current.density
@@ -268,7 +338,7 @@ class HomePresentationTest {
                 LocalPosterLoader provides loader,
                 LocalAppPreferences provides AppPreferences(showPosterBadges = true)) {
                 PathfinTheme(theme.value) {
-                    Surface(Modifier.fillMaxSize()) { HomeScreen(home.value, session, api, onOpen, retry = {}) }
+                    Surface(Modifier.fillMaxSize()) { HomeScreen(home.value, session, api, onOpen, retry = {}, onPlay = onPlay, onAmbientCovered = onAmbientCovered) }
                 }
             }
         }

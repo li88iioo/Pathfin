@@ -155,7 +155,6 @@ def main():
     parser.add_argument("--output", type=Path, required=True, help="新的或空的导出目录")
     parser.add_argument("--frames", help="仅 UI 套件：逗号分隔的预设帧名；省略为全部")
     parser.add_argument("--fixture-url", help="仅 UI 套件：回环 fixture 地址，默认 http://127.0.0.1:8097")
-    parser.add_argument("--blur-top-bar", action="store_true", help="UI 截图启用状态栏、标题栏与底部导航模糊")
     parser.add_argument("--timeout", type=int, default=600, help="整个 instrumentation 的秒数上限，默认600")
     args = parser.parse_args()
     try:
@@ -193,7 +192,7 @@ def main():
                   "-e", "pathfin.screenshotRun", run]
     if args.suite == "ui":
         invocation += ["-e", "pathfin.screenshots", "true", "-e", "pathfin.fixtureUrl", fixture,
-                       "-e", "pathfin.previewFrames", ",".join(frames), "-e", "pathfin.previewBlurTopBar", str(args.blur_top_bar).lower()]
+                       "-e", "pathfin.previewFrames", ",".join(frames)]
     elif args.suite == "player":
         invocation += ["-e", "pathfin.playerPreviews", "true"]
     else:

@@ -132,7 +132,7 @@ class DiscoveryScreensUiTest {
         val submitted = mutableListOf<String>()
         val blur = mutableStateOf(false)
         show(fontScale = 1.6f, theme = ThemePreference.DARK) {
-            CompositionLocalProvider(LocalTopBarBlurState provides rememberTopBarBlurState(blur.value)) {
+            CompositionLocalProvider(LocalTopBarBlurState provides if (blur.value) rememberTopBarBlurState() else null) {
                 SearchContent(state.value, session, api,
                     onSearch = { term -> submitted += term; state.value = state.value.copy(query = term) },
                     onToggleCategory = { state.value = state.value.copy(categories = setOfNotNull(it)) },

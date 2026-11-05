@@ -472,7 +472,9 @@ class ServerSwitchContinuityTest {
 
     private fun capturePosition(fixture: ProfilesFixture, library: Int, movie: Int): Position {
         val card = compose.onNodeWithTag("poster-title/${fixture.movieId(library, movie)}", true)
-        val heading = compose.onNodeWithText("最近入库 · ${fixture.libraryName(library, 1)}")
+        // 库名同时出现在库标签上，标题按所在栏查找。
+        val heading = compose.onNode(hasText(fixture.libraryName(library, 1)) and
+            hasAnyAncestor(hasTestTag("library-shelf/${fixture.libraryId(library)}")))
         compose.waitForIdle()
         VerificationDisplay.awaitWindowReady(compose, "scroll-${fixture.label}", card, heading)
         card.assertVerificationDisplayed(compose); heading.assertVerificationDisplayed(compose)
