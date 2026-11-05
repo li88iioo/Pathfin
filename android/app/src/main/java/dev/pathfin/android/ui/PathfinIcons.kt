@@ -10,10 +10,10 @@ import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-/** 全 App 描边图标的构建入口：24dp 画布、1.4 细描边、圆端圆角，由 Icon 的 tint 着色。filled 用于选中态，轮廓与空心版一致。 */
-internal fun strokeIcon(name: String, filled: Boolean = false, content: PathBuilder.() -> Unit): ImageVector =
+/** 全 App 描边图标的构建入口：24dp 画布、1.75 描边、圆端圆角，由 Icon 的 tint 着色。filled 用于选中态，轮廓与空心版一致。 */
+internal fun strokeIcon(name: String, filled: Boolean = false, width: Float = 1.75f, content: PathBuilder.() -> Unit): ImageVector =
     ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
-        path(fill = if (filled) SolidColor(Color.Black) else null, stroke = SolidColor(Color.Black), strokeLineWidth = 1.4f,
+        path(fill = if (filled) SolidColor(Color.Black) else null, stroke = SolidColor(Color.Black), strokeLineWidth = width,
             strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round, pathBuilder = content)
     }.build()
 
@@ -162,6 +162,8 @@ internal object PathfinIcons {
     } }
     val Download by lazy { strokeIcon("Download") { moveTo(12f, 4f); lineTo(12f, 15f); moveTo(7.5f, 10.5f); lineTo(12f, 15f); lineTo(16.5f, 10.5f); moveTo(5f, 19.5f); lineTo(19f, 19.5f) } }
     val Tv by lazy { strokeIcon("Tv") { roundRect(3f, 6f, 21f, 18f, 2.5f); moveTo(8.5f, 2.5f); lineTo(12f, 6f); lineTo(15.5f, 2.5f); moveTo(8f, 21f); lineTo(16f, 21f) } }
+    /** 入库角标里的箭头：只在约 7dp 的小圆里出现，描边加粗才看得清。 */
+    val ArrivalArrow by lazy { strokeIcon("ArrivalArrow", width = 3.2f) { moveTo(12f, 5f); lineTo(12f, 18f); moveTo(6.5f, 12.5f); lineTo(12f, 18f); lineTo(17.5f, 12.5f) } }
     val ChevronDown by lazy { strokeIcon("ChevronDown") { moveTo(6.5f, 9.5f); lineTo(12f, 15f); lineTo(17.5f, 9.5f) } }
     val Calendar by lazy { strokeIcon("Calendar") { roundRect(3.5f, 5f, 20.5f, 20f, 2.5f); moveTo(3.5f, 10f); lineTo(20.5f, 10f); moveTo(8f, 3f); lineTo(8f, 7f); moveTo(16f, 3f); lineTo(16f, 7f) } }
     val SortAlpha by lazy { strokeIcon("SortAlpha") {

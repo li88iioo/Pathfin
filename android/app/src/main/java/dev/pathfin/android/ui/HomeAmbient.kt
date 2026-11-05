@@ -120,7 +120,7 @@ internal fun HomeAmbient(
         }
         CompositionLocalProvider(LocalContentColor provides Color.White) {
             Column(Modifier.fillMaxWidth().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal))
-                .padding(top = topInset + 56.dp, bottom = AmbientFade), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                .padding(top = topInset + AmbientContentGap, bottom = AmbientFade), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 Box(Modifier.fillMaxWidth().height(AmbientHeroHeight)) {
                     if (selected != null) AmbientHero(selected, session, api, selected.item.id in preparingIds, onOpen, onPlay)
                 }
@@ -140,8 +140,7 @@ private fun AmbientHero(entry: AmbientEntry, session: Session, api: JellyfinApi,
     Column(Modifier.fillMaxSize().clickable(role = Role.Button, onClickLabel = tr("详情")) { onOpen(item) }
         .padding(horizontal = 20.dp).widthIn(max = 560.dp).testTag("home-ambient-hero/${item.id}"),
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom)) {
-        Text(when (entry.kind) { AmbientKind.RESUME -> tr("继续观看"); AmbientKind.NEXT_UP -> tr("下一集"); AmbientKind.LATEST -> tr("最近入库") },
-            fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 1.5.sp, color = Color.White.copy(alpha = .78f))
+        // 属于哪一组由下方加粗的分组标签说明，封面上不再重复。
         Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.BottomStart) {
             DetailTitle(item.copy(name = title), session, api, tag = "home-ambient")
         }
@@ -270,8 +269,9 @@ internal fun LibraryPill(library: MediaItem, onClick: () -> Unit) {
     }
 }
 
-private val AmbientHeroHeight = 236.dp
-/** 氛围区底部渐隐进页面底色的高度；这一段压不住白字，标题栏到这里就要恢复底色。 */
-internal val AmbientFade = 112.dp
+private val AmbientHeroHeight = 212.dp
+/** 标题栏与氛围区第一行内容之间的留白；滚过这段，内容就会滑到标题栏下方。 */
+internal val AmbientContentGap = 56.dp
+private val AmbientFade = 112.dp
 private val ThumbWidth = 112.dp
 private val ThumbHeight = 112.dp * 9f / 16f + 6.dp + 16.dp

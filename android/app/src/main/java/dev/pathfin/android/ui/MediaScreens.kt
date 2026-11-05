@@ -86,12 +86,11 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
     val ambient = remember(home) { homeAmbientEntries(home) }
     val showAmbient = ambient.isNotEmpty() || homeAmbientPending(home)
     val list = rememberLazyListState()
-    val coverLimitPx = with(LocalDensity.current) { (topInset + AmbientFade).roundToPx() }
+    val scrollLimitPx = with(LocalDensity.current) { AmbientContentGap.roundToPx() }
     val ambientShown by rememberUpdatedState(showAmbient)
-    // 剧照的深色部分仍在标题栏下方时标题栏保持透明白字；只剩渐隐的浅色尾巴时就恢复底色。
-    val covered by remember(coverLimitPx) { derivedStateOf {
-        val first = list.layoutInfo.visibleItemsInfo.firstOrNull()
-        ambientShown && first != null && first.index == 0 && first.offset + first.size > coverLimitPx
+    // 标题栏中间有服务器名：氛围区内容一开始滑到标题栏下方就恢复毛玻璃底，避免文字叠在一起。
+    val covered by remember(scrollLimitPx) { derivedStateOf {
+        ambientShown && list.firstVisibleItemIndex == 0 && list.firstVisibleItemScrollOffset < scrollLimitPx
     } }
     LaunchedEffect(covered) { onAmbientCovered(covered) }
     RefreshablePage(home.loading, retry, Modifier.fillMaxSize(), refreshOnEntry = home.loaded || home.error != null) {
@@ -120,7 +119,7 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
                         library.name, home.libraryItems[library.id].orEmpty(), session, api, onOpen,
                         onMore = { onOpen(library) }, compactHeading = true,
                         loading = !home.libraryItems.containsKey(library.id),
-                        keepEmptySpace = true, icon = libraryTypeIcon(library), leadWide = true,
+                        keepEmptySpace = true, leading = { LatestArrivalIcon(libraryTypeIcon(library)) }, leadWide = true,
                         modifier = Modifier.testTag("library-shelf/${library.id}"),
                     )
                 }
@@ -137,14 +136,14 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
 
 @Composable
 internal fun SectionTitle(title: String, onMore: (() -> Unit)? = null, compact: Boolean = false, count: Int? = null,
-    icon: ImageVector? = null) {
+    leading: (@Composable () -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             .then(if (onMore != null) Modifier.heightIn(min = 48.dp).clickable(onClick = onMore,
                 role = androidx.compose.ui.semantics.Role.Button, onClickLabel = tr("浏览媒体库")) else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) Icon(icon, null, Modifier.padding(end = 8.dp).size(18.dp), tint = PathfinAppearance.textSub)
+        if (leading != null) Box(Modifier.padding(end = 12.dp)) { leading() }
         Text(
             title,
             Modifier.weight(1f, fill = false),
@@ -181,13 +180,13 @@ internal fun PosterShelf(
     loading: Boolean = false,
     keepEmptySpace: Boolean = false,
     compactHeading: Boolean = false,
-    icon: ImageVector? = null,
+    leading: (@Composable () -> Unit)? = null,
     leadWide: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val rowHeight = compactPosterHeight()
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SectionTitle(title, onMore, compact = compactHeading, icon = icon)
+        SectionTitle(title, onMore, compact = compactHeading, leading = leading)
         if (items.isEmpty() && keepEmptySpace) {
             Box(Modifier.fillMaxWidth().height(rowHeight), contentAlignment = Alignment.Center) {
                 // 首次读取保留真实海报栏的空间，不制造短时闪现的骨架。
@@ -204,6 +203,19 @@ internal fun PosterShelf(
                     else PosterCard(item, session, api, Modifier.width(112.dp), compact = true) { onOpen(item) }
                 }
             }
+        }
+    }
+}
+
+/** 栏标题前的“最近入库”标记：库类型图标，右下角叠一枚主题色入库箭头，外圈用页面底色与图标隔开。 */
+@Composable
+private fun LatestArrivalIcon(type: ImageVector) {
+    // 图标主体与标题按同一中线对齐（中文字形重心略低，下移 1dp 补正）；角标偏移挂在右下角外侧，不参与排版。
+    Box(Modifier.offset(y = 1.dp).size(20.dp).semantics { contentDescription = tr("最近入库") }) {
+        Icon(type, null, Modifier.fillMaxSize(), tint = PathfinAppearance.textSub)
+        Box(Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 3.dp).size(12.dp).border(1.5.dp, PathfinAppearance.canvas, CircleShape)
+            .padding(1.dp).background(PathfinAppearance.accent, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(PathfinIcons.ArrivalArrow, null, Modifier.size(7.dp), tint = PathfinAppearance.onAccent)
         }
     }
 }
