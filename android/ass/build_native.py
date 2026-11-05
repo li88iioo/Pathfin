@@ -163,8 +163,9 @@ def main():
     for path in destination.glob("*.so"):
         if path.name not in names:
             path.unlink()
+    # assets 由源码打包生成，不能把其中的锁文件副本反过来算作构建输入。
     inputs = {str(p.relative_to(HERE)): sha(p) for p in HERE.rglob("*") if p.is_file() and
-        not set(p.relative_to(HERE).parts) & {"build", "build-native", "jniLibs", "__pycache__"} and
+        not set(p.relative_to(HERE).parts) & {"build", "build-native", "jniLibs", "__pycache__", "assets"} and
         (p.suffix in {".cpp", ".h", ".kt"} or p.name in {"CMakeLists.txt", "build_native.py", "build.gradle.kts", "sources.lock.json", "requirements-build.txt"})}
     report = {"schemaVersion": 1, "ndkVersion": native["ndkVersion"], "abi": native["abi"], "androidApi": native["androidApi"],
         "sourceDateEpoch": EPOCH, "libraries": inventory, "sourceInputs": inputs,

@@ -51,7 +51,7 @@
     },
     {
       "path": "build_native.py",
-      "sha256": "e196e4245a48ebd701490d2d44e377911e7c515827483aad13427aaeee75a9d1"
+      "sha256": "b073d5c5a6230f1cc8dea261235f84ed723ca6aa3a0ade17bbc96b5280282bbe"
     },
     {
       "path": "consumer-rules.pro",
