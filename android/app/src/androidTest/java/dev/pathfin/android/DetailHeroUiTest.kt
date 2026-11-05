@@ -14,12 +14,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.captureToImage
@@ -38,11 +43,25 @@ import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.DetailHero
+import dev.pathfin.android.ui.DetailTitle
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalPosterLoader
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.io.File
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -171,13 +190,221 @@ class DetailHeroUiTest {
         } finally { loader.shutdown() }
     }
 
+    @Test fun cachedLogoSwitchesNeverDrawFallbackTextIncludingEpisodesWithTheSameSeriesLogo() {
+        checkVerification()
+        val loader = loader()
+        val blue = item.copy(id = "blue-title", name = "缓存标题不应闪现文字", logoTag = "blue")
+        val green = blue.copy(id = "green-title", logoTag = "green")
+        val episode = blue.copy(id = "episode-one", type = "Episode", logoTag = "shared", logoItemId = "series")
+        val nextEpisode = episode.copy(id = "episode-two")
+        cache(loader, blue, "Logo", logo(android.graphics.Color.BLUE), 720)
+        cache(loader, green, "Logo", logo(android.graphics.Color.GREEN), 720)
+        cache(loader, episode, "Logo", logo(android.graphics.Color.BLUE), 720)
+        assertEquals(api.imageUrl(session, episode, 720, "Logo"), api.imageUrl(session, nextEpisode, 720, "Logo"))
+        val current = mutableStateOf(blue)
+        val frames = TitleFrames()
+        try {
+            showTitle(loader, current, frames)
+            awaitLogo(blue.id)
+            frames.awaitSamples()
+            compose.mainClock.autoAdvance = false
+            for (target in listOf(green, blue, green, episode, nextEpisode, episode, blue)) {
+                compose.runOnUiThread { current.value = target }
+                repeat(3) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle(); frames.awaitSamples() }
+            }
+            val drawn = frames.finish()
+            assertTrue("必须记录切换过程的实际绘制帧", drawn.size >= 8)
+            assertTrue("已缓存蓝色 Logo 必须真实绘制", drawn.any { it.blue > 50 })
+            assertTrue("已缓存绿色 Logo 必须真实绘制", drawn.any { it.green > 50 })
+            for (frame in drawn) {
+                assertEquals("${frame.id} 缓存切换的任一帧都不能闪出或叠出红色文字", 0, frame.red)
+                assertTrue("${frame.id} 已缓存 Logo 不能先清空标题", frame.logo > 50)
+                if (frame.id == green.id) assertTrue("绿色目标不能残留旧蓝色 Logo：$frame", frame.green > 50 && frame.blue == 0)
+                else assertTrue("蓝色目标不能残留旧绿色 Logo：$frame", frame.blue > 50 && frame.green == 0)
+            }
+        } finally { compose.mainClock.autoAdvance = true; loader.shutdown() }
+    }
+
+    @Test fun pendingLogosKeepTheSlotClearAndLateResponsesCannotReplaceTheLatestSelection() {
+        checkVerification()
+        val first = item.copy(id = "cold-title", name = "冷加载不应闪出文字", logoTag = "cold")
+        val stale = first.copy(id = "stale-title", logoTag = "stale")
+        val latest = first.copy(id = "latest-title", logoTag = "latest")
+        val cold = LogoReply(logo(android.graphics.Color.BLUE))
+        val delayed = LogoReply(logo(android.graphics.Color.BLUE))
+        val replies = mapOf("cold" to cold, "stale" to delayed)
+        val client = logoTransport(replies)
+        val loader = PosterImageCache.createMemoryLoader(context, client)
+        cache(loader, latest, "Logo", logo(android.graphics.Color.GREEN), 720)
+        val current = mutableStateOf(first)
+        val frames = TitleFrames()
+        try {
+            showTitle(loader, current, frames)
+            compose.waitUntil(5_000) { cold.requested.count == 0L }
+            val slot = bounds("detail-title/${first.id}")
+            assertEquals("已知有 Logo 的等待态不能先绘制普通标题", 0, colors(capture("detail-title/${first.id}")).red)
+            cold.release.countDown()
+            awaitLogo(first.id)
+            val loaded = capture("detail-title/${first.id}")
+            save(loaded, "title-cold-loaded.png")
+            assertTrue("解码完成后必须呈现蓝色 Logo：${colors(loaded)}", colors(loaded).blue > 50)
+            assertEquals("冷加载前后标题占位保持稳定", slot, bounds("detail-title/${first.id}"))
+
+            compose.runOnIdle { current.value = stale }
+            compose.waitUntil(5_000) { delayed.requested.count == 0L }
+            compose.runOnIdle { current.value = latest }
+            awaitLogo(latest.id)
+            delayed.release.countDown()
+            assertTrue("已切走请求的合成响应必须已经释放", delayed.returned.await(5, TimeUnit.SECONDS))
+            compose.mainClock.autoAdvance = false
+            repeat(4) { compose.mainClock.advanceTimeByFrame(); compose.waitForIdle() }
+            val pixels = colors(capture("detail-title/${latest.id}"))
+            assertTrue("迟到蓝色响应不能覆盖当前绿色 Logo", pixels.green > 50 && pixels.blue == 0)
+            for (frame in frames.finish()) {
+                assertEquals("${frame.id} 等待与成功切换之间都不能短暂叠出文字", 0, frame.red)
+            }
+        } finally {
+            compose.mainClock.autoAdvance = true
+            replies.values.forEach { it.release.countDown() }
+            loader.shutdown()
+            client.dispatcher.executorService.shutdownNow()
+            client.connectionPool.evictAll()
+        }
+    }
+
+    @Test fun missingAndFailedLogosShowReadableTextWithoutMovingTheTitleSlot() {
+        checkVerification()
+        val missing = item.copy(id = "missing-title", name = "没有标志时保留标题")
+        val failed = missing.copy(id = "failed-title", logoTag = "missing-image")
+        val error = LogoReply(null)
+        val client = logoTransport(mapOf("missing-image" to error))
+        val loader = PosterImageCache.createMemoryLoader(context, client)
+        val current = mutableStateOf(missing)
+        try {
+            showTitle(loader, current)
+            val before = bounds("detail-title/${missing.id}")
+            assertTrue("没有 Logo 的媒体应立即绘制可读标题", colors(capture("detail-title/${missing.id}")).red > 50)
+            compose.runOnIdle { current.value = failed }
+            compose.waitUntil(5_000) { error.requested.count == 0L }
+            assertEquals("失败尚未确定前不能闪出临时文字", 0, colors(capture("detail-title/${failed.id}")).red)
+            error.release.countDown()
+            compose.waitUntil(5_000) { colors(capture("detail-title/${failed.id}")).red > 50 }
+            assertEquals("明确失败回退文字不能改变标题占位", before, bounds("detail-title/${failed.id}"))
+        } finally {
+            error.release.countDown()
+            loader.shutdown()
+            client.dispatcher.executorService.shutdownNow()
+            client.connectionPool.evictAll()
+        }
+    }
+
+    private fun showTitle(loader: ImageLoader, current: MutableState<MediaItem>, frames: TitleFrames? = null) {
+        compose.setContent {
+            PathfinTheme(ThemePreference.DARK) {
+                CompositionLocalProvider(LocalPosterLoader provides loader, LocalAppPreferences provides AppPreferences()) {
+                    Surface(Modifier.fillMaxSize(), color = Color.Black, contentColor = Color.Red) {
+                        Column(Modifier.fillMaxSize()) {
+                            val media = current.value
+                            if (frames == null) Box(Modifier.width(320.dp)) { DetailTitle(media, session, api) }
+                            else frames.Record(media.id) { DetailTitle(media, session, api) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private data class TitleColors(val id: String = "", val red: Int, val green: Int, val blue: Int, val logo: Int)
+
+    private fun colors(bitmap: Bitmap, id: String = ""): TitleColors {
+        var red = 0; var green = 0; var blue = 0; var logo = 0
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        for (pixel in pixels) {
+            // 采样层透明边缘先合成到夹具黑底；不能把 alpha=1 的反预乘噪声当作可见颜色。
+            val alpha = pixel ushr 24
+            val r = (pixel shr 16 and 255) * alpha / 255
+            val g = (pixel shr 8 and 255) * alpha / 255
+            val b = (pixel and 255) * alpha / 255
+            if (r > 180 && g < 80 && b < 80) red++
+            if (g > 180 && r < 80 && b < 80) green++
+            if (b > 180 && r < 80 && g < 80) blue++
+            if (max(g, b) > 20 && max(g, b) > r * 2) logo++
+        }
+        return TitleColors(id, red, green, blue, logo)
+    }
+
+    /** 每次绘制单独记录图层，读取完成后释放；异步读回不复用下一帧的记录内容。 */
+    private inner class TitleFrames {
+        private val recording = AtomicBoolean(true)
+        private val submitted = AtomicInteger()
+        private val finished = AtomicInteger()
+        private val samples = CopyOnWriteArrayList<TitleColors>()
+        private val failures = CopyOnWriteArrayList<Throwable>()
+
+        @Composable fun Record(id: String, content: @Composable () -> Unit) {
+            val graphics = LocalGraphicsContext.current
+            val scope = rememberCoroutineScope()
+            Box(Modifier.width(320.dp).drawWithContent {
+                if (!recording.get()) { drawContent(); return@drawWithContent }
+                val layer = graphics.createGraphicsLayer()
+                layer.record { this@drawWithContent.drawContent() }
+                // 采样层只供读回，屏幕直接绘制原内容，释放采样层不会影响已提交帧。
+                drawContent()
+                submitted.incrementAndGet()
+                scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    try {
+                        val hardware = layer.toImageBitmap().asAndroidBitmap()
+                        try {
+                            val bitmap = hardware.copy(Bitmap.Config.ARGB_8888, false)
+                            try { samples += colors(bitmap, id) } finally { bitmap.recycle() }
+                        } finally { hardware.recycle() }
+                    } catch (failure: Throwable) { failures += failure }
+                    finally { graphics.releaseGraphicsLayer(layer); finished.incrementAndGet() }
+                }
+            }) { content() }
+        }
+
+        fun awaitSamples() {
+            // GPU 异步读回完成后再切下一条，避免采样中引用的子图层被下一帧改写。
+            compose.waitUntil(5_000) { finished.get() == submitted.get() }
+            assertTrue("每帧像素读回必须成功：$failures", failures.isEmpty())
+        }
+
+        fun finish(): List<TitleColors> {
+            compose.runOnUiThread { recording.set(false) }
+            awaitSamples()
+            return samples.toList()
+        }
+    }
+
+    private class LogoReply(val image: Bitmap?) {
+        val requested = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val returned = CountDownLatch(1)
+    }
+
+    private fun logoTransport(replies: Map<String, LogoReply>) = OkHttpClient.Builder().addInterceptor { chain ->
+        check(chain.request().url.host == "hero-fixture.invalid")
+        val reply = requireNotNull(replies[chain.request().url.queryParameter("tag")])
+        reply.requested.countDown()
+        check(reply.release.await(10, TimeUnit.SECONDS)) { "合成 Logo 响应未释放" }
+        val bytes = ByteArrayOutputStream().use { output ->
+            reply.image?.compress(Bitmap.CompressFormat.PNG, 100, output)
+            output.toByteArray()
+        }
+        Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+            .code(if (reply.image == null) 404 else 200).message("Synthetic logo")
+            .body(bytes.toResponseBody("image/png".toMediaType())).build().also { reply.returned.countDown() }
+    }.build()
+
     @androidx.compose.runtime.Composable
     private fun Hero(media: MediaItem) = DetailHero(media, session, api, busy = false, playable = true, hasResume = false,
         playTarget = null, onPlay = {}, onStart = {}, onFavorite = {}, onDownload = {}, onWatched = {}, actionBusy = emptySet())
 
-    private fun awaitLogo() {
+    private fun awaitLogo(id: String = "hero") {
         compose.waitUntil(5_000) {
-            compose.onNodeWithTag("detail-logo/hero", true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription) == "已加载"
+            compose.onNodeWithTag("detail-logo/$id", true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.StateDescription) == "已加载"
         }
         compose.waitForIdle()
     }

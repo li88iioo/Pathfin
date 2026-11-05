@@ -2,6 +2,8 @@ package dev.pathfin.android.ui
 
 import android.os.Build
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,6 +98,7 @@ internal fun homeAmbientPending(home: HomeState): Boolean = home.loading && !hom
  * 氛围首页：整块背景是选中条目的剧照（Android 12 起模糊），切换下面的小图时淡入淡出；
  * 前景始终压在加深的剧照上，用白色；底部留一段空白渐隐进页面底色。
  */
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 internal fun HomeAmbient(
     entries: List<AmbientEntry>, session: Session, api: JellyfinApi, topInset: Dp, preparingIds: Set<String>,
@@ -111,7 +114,9 @@ internal fun HomeAmbient(
     val canvas = MaterialTheme.colorScheme.surface
     Box(Modifier.fillMaxWidth().testTag("home-ambient")) {
         Box(Modifier.matchParentSize().background(MediaImagePlaceholder)) {
-            Crossfade(selected?.item, Modifier.fillMaxSize(), animationSpec = tween(700), label = "home-ambient-background") { item ->
+            updateTransition(selected?.item, label = "home-ambient-background").Crossfade(
+                Modifier.fillMaxSize(), animationSpec = tween(200),
+                contentKey = { item -> item?.let { api.imageUrl(session, it, type = "Backdrop") } }) { item ->
                 if (item != null) PosterImage(item, session, api, Modifier.fillMaxSize()
                     .then(if (Build.VERSION.SDK_INT >= 31) Modifier.blur(12.dp, BlurredEdgeTreatment.Rectangle) else Modifier),
                     wide = true, shape = RectangleShape, imageType = "Backdrop")

@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -61,6 +62,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
@@ -764,8 +767,7 @@ private fun SeriesLink(name: String, onClick: (() -> Unit)?) {
 internal fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, compact: Boolean = false, onClick: (() -> Unit)? = null,
     tag: String = "detail") {
     val context = LocalContext.current
-    val request = remember(context, session, item.id, item.logoTag, item.logoItemId) { PosterRequests.logo(context, session, api, item) }
-    var imageReady by remember(request) { mutableStateOf(false) }
+    val request = remember(context, session, item.logoItemId ?: item.id, item.logoTag) { PosterRequests.logo(context, session, api, item) }
     val shadowColor = rememberUpdatedState(MaterialTheme.colorScheme.onSurface.copy(alpha = .72f))
     val shadowLayer = rememberGraphicsLayer()
     val shadowRadius = with(LocalDensity.current) { 2.dp.toPx() }
@@ -776,17 +778,25 @@ internal fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, co
         }
     }
     val titleSlot = if (compact) 32.dp else 84.dp
-    Box(Modifier.fillMaxWidth().heightIn(min = titleSlot)
-        .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = tr("打开剧集详情"), onClick = onClick) else Modifier)
-        .testTag("$tag-title/${item.id}"),
-        contentAlignment = if (compact) Alignment.TopStart else Alignment.BottomStart) {
-        Text(item.name, Modifier.fillMaxWidth().padding(bottom = 4.dp).then(if (imageReady) Modifier.alpha(0f) else Modifier),
-            fontSize = 25.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-        if (request != null) AsyncImage(request, null, imageLoader = LocalPosterLoader.current,
-            modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().height(titleSlot).testTag("$tag-logo/${item.id}")
-                .semantics { stateDescription = if (imageReady) tr("已加载") else tr("正在加载") },
-            contentScale = ContentScale.Fit, alignment = Alignment.BottomStart, clipToBounds = false,
-            transform = transform, onState = { imageReady = it is AsyncImagePainter.State.Success })
+    key(request?.memoryCacheKey) {
+        SubcomposeAsyncImage(request, null, imageLoader = LocalPosterLoader.current,
+            modifier = Modifier.fillMaxWidth().heightIn(min = titleSlot)
+                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClickLabel = tr("打开剧集详情"), onClick = onClick) else Modifier)
+                .testTag("$tag-title/${item.id}"),
+            transform = transform, contentScale = ContentScale.Fit, alignment = Alignment.BottomStart, clipToBounds = false) {
+            // 同一快照决定文字和 Logo 的绘制，避免图片先更新、文字晚一帧隐藏。
+            val state by painter.state.collectAsState()
+            val logo = (state as? AsyncImagePainter.State.Success)?.painter
+            Box(Modifier.fillMaxWidth().heightIn(min = titleSlot),
+                contentAlignment = if (compact) Alignment.TopStart else Alignment.BottomStart) {
+                Text(item.name, Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                    .alpha(if (request == null || state is AsyncImagePainter.State.Error) 1f else 0f),
+                    fontSize = 25.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (request != null) this@SubcomposeAsyncImage.SubcomposeAsyncImageContent(painter = logo ?: ColorPainter(Color.Transparent),
+                    modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().height(titleSlot).testTag("$tag-logo/${item.id}")
+                        .semantics { stateDescription = if (logo != null) tr("已加载") else tr("正在加载") })
+            }
+        }
     }
 }
 
