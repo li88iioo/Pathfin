@@ -1,5 +1,6 @@
 package dev.pathfin.android.domain
 
+import dev.pathfin.android.BuildConfig
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -193,7 +194,7 @@ class PlaybackResolverTest {
         assertEquals("https://media.example/jellyfin/Videos/item/stream?Static=true&MediaSourceId=source&DeviceId=device", stream.uri)
         assertTrue(stream.trustedServer)
         assertEquals(setOf("Authorization"), stream.headers.keys)
-        assertEquals("MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"device\", Version=\"0.1.0\", Token=\"jellyfin-secret\"", stream.headers["Authorization"])
+        assertEquals("MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"device\", Version=\"${BuildConfig.VERSION_NAME}\", Token=\"jellyfin-secret\"", stream.headers["Authorization"])
         assertFalse(stream.uri.contains("jellyfin-secret"))
     }
 

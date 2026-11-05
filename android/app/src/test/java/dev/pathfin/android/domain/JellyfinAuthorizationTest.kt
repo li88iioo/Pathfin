@@ -1,12 +1,13 @@
 package dev.pathfin.android.domain
 
+import dev.pathfin.android.BuildConfig
 import java.net.URLDecoder
 import org.junit.Assert.*
 import org.junit.Test
 
 class JellyfinAuthorizationTest {
     @Test fun standardHeaderContainsIdentityAndOptionalToken() {
-        val identity = "MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"device\", Version=\"0.1.0\""
+        val identity = "MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"device\", Version=\"${BuildConfig.VERSION_NAME}\""
         assertEquals(mapOf("Authorization" to identity), JellyfinAuthorization.headers("device"))
         assertEquals(mapOf("Authorization" to "$identity, Token=\"test-token\""), JellyfinAuthorization.headers("device", "test-token"))
     }

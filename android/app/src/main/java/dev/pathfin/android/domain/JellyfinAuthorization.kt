@@ -1,5 +1,6 @@
 package dev.pathfin.android.domain
 
+import dev.pathfin.android.BuildConfig
 import dev.pathfin.android.i18n.tr
 import java.net.URLEncoder
 
@@ -7,7 +8,7 @@ import java.net.URLEncoder
 object JellyfinAuthorization {
     fun headers(deviceId: String, accessToken: String? = null): Map<String, String> {
         require(deviceId.matches(Regex("[A-Za-z0-9_-]{1,128}"))) { tr("设备标识无效") }
-        val identity = "MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"$deviceId\", Version=\"0.1.0\""
+        val identity = "MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"$deviceId\", Version=\"${BuildConfig.VERSION_NAME}\""
         val authorization = if (accessToken == null) identity else {
             require(accessToken.isNotBlank() && accessToken.all { it.code in 0x21..0x7e }) {
                 tr("登录信息无效，请重新登录")

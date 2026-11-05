@@ -1,5 +1,6 @@
 package dev.pathfin.android.data
 
+import dev.pathfin.android.BuildConfig
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import dev.pathfin.android.domain.MediaItem
@@ -257,7 +258,7 @@ class JellyfinApiTest {
 
     private fun session(url: String) = Session(ServerConfig(url, true), "fixture-token", "user", "Alice", "device")
 
-    private val identityHeader = "MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"device\", Version=\"0.1.0\""
+    private val identityHeader = "MediaBrowser Client=\"Pathfin\", Device=\"Android\", DeviceId=\"device\", Version=\"${BuildConfig.VERSION_NAME}\""
 
     @Test fun publicUsersAreAnonymousAndSkipIncompleteEntries() = withServer({ exchange ->
         assertEquals("/proxy/Users/Public", exchange.requestURI.path)
