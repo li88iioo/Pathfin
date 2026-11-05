@@ -153,14 +153,16 @@ internal fun Modifier.frostedCard(tintAlpha: Float = 0.80f, card: Color = Pathfi
     val canvas = PathfinAppearance.canvas
     return if (state != null) hazeBlur(
         input = HazeInput.Sources(state.source, retention = HazeSourceRetention.ClearWhenUnavailable),
-        style = HazeBlurStyle {
-            backgroundColor(canvas)
-            colorEffects(listOf(HazeColorEffect.tint(card.copy(alpha = tintAlpha))))
-            blurRadius(radius)
-            noiseFactor(0f)
-            fallbackColorEffect(HazeColorEffect.tint(fallback))
-            progressive(null)
-            mask(null)
+        style = remember(canvas, card, tintAlpha, radius, fallback) {
+            HazeBlurStyle {
+                backgroundColor(canvas)
+                colorEffects(listOf(HazeColorEffect.tint(card.copy(alpha = tintAlpha))))
+                blurRadius(radius)
+                noiseFactor(0f)
+                fallbackColorEffect(HazeColorEffect.tint(fallback))
+                progressive(null)
+                mask(null)
+            }
         },
         performanceMode = HazePerformanceMode.Quality,
     ) else background(fallback)
@@ -222,14 +224,16 @@ private fun BoxScope.TopBarBlurMaterial(
             .clipToBounds()
             .hazeBlur(
                 input = HazeInput.Sources(state.source, retention = HazeSourceRetention.ClearWhenUnavailable),
-                style = HazeBlurStyle {
-                    backgroundColor(canvas)
-                    colorEffects(emptyList())
-                    blurRadius(20.dp)
-                    noiseFactor(0f)
-                    fallbackColorEffect(HazeColorEffect.tint(canvas))
-                    progressive(null)
-                    mask(fade)
+                style = remember(canvas, fade) {
+                    HazeBlurStyle {
+                        backgroundColor(canvas)
+                        colorEffects(emptyList())
+                        blurRadius(20.dp)
+                        noiseFactor(0f)
+                        fallbackColorEffect(HazeColorEffect.tint(canvas))
+                        progressive(null)
+                        mask(fade)
+                    }
                 },
                 performanceMode = HazePerformanceMode.Quality,
             )

@@ -22,7 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +49,7 @@ import dev.pathfin.android.ui.LocalTopBarBlurState
 import dev.pathfin.android.ui.NavigationBarSurface
 import dev.pathfin.android.ui.PageTitleBar
 import dev.pathfin.android.ui.TopBarBlurSurface
+import dev.pathfin.android.ui.frostedCard
 import dev.pathfin.android.ui.rememberTopBarBlurState
 import dev.pathfin.android.ui.topBarBlurSource
 import kotlin.math.abs
@@ -66,10 +69,40 @@ class TopBarBlurUiTest {
     @get:Rule val compose = createVerificationComposeRule<ComponentActivity>()
 
     @Test
+    fun unrelatedRecompositionKeepsTheBlurModifierEquivalent() {
+        val generation = mutableIntStateOf(0)
+        var renderedGeneration = -1
+        var material: Modifier = Modifier
+        compose.setContent {
+            MaterialTheme {
+                val state = rememberTopBarBlurState()
+                CompositionLocalProvider(LocalTopBarBlurState provides state) {
+                    val currentGeneration = generation.intValue
+                    val currentMaterial = Modifier.frostedCard()
+                    SideEffect { renderedGeneration = currentGeneration; material = currentMaterial }
+                    Box(Modifier.size(300.dp, 224.dp).testTag("blur-fixture")) {
+                        Box(Modifier.fillMaxSize().topBarBlurSource().background(Color.Red))
+                        Box(Modifier.size(96.dp).then(currentMaterial))
+                        Text("$currentGeneration")
+                    }
+                }
+            }
+        }
+        ready("blur-before-recomposition")
+        val original = compose.runOnIdle { material.also { generation.intValue++ } }
+        compose.runOnIdle {
+            assertEquals("必须真正完成一次无关状态重组", 1, renderedGeneration)
+            // Compose 用 Modifier 等价性判断是否更新效果节点，避免无关状态使模糊层失效。
+            assertEquals("样式未变时不应更新模糊效果节点", original, material)
+        }
+    }
+
+    @Test
     fun togglingBlurKeepsLayoutAndForegroundSharpWhileMaterialTracksTheBody() {
         val enabled = mutableStateOf(false)
         val source = mutableStateOf(Color.Red)
-        compose.setContent { SolidFixture(enabled.value, source.value) }
+        val surface = mutableStateOf(Color.White)
+        compose.setContent { SolidFixture(enabled.value, source.value, surface = surface.value) }
         ready("blur-disabled")
 
         val originalGeometry = geometry()
@@ -93,6 +126,13 @@ class TopBarBlurUiTest {
         assertTrue("材质必须实时采样正文，不能是固定实底：red=$red blue=$blue",
             red.red - red.blue > 0.12f && blue.blue - blue.red > 0.12f)
         assertEquals("正文变化不能改变固定栏或首行位置", originalGeometry, geometry())
+        assertInkPreserved(originalText, pixels("blur-foreground-text"))
+
+        compose.runOnIdle { surface.value = Color.Black }
+        ready("blur-dark-theme")
+        awaitMaterial { it.red < 0.05f && it.blue > 0.2f }
+        awaitNavigationMaterial { it.red < 0.05f && it.blue > 0.1f }
+        assertEquals("主题变化不能移动材质或前景", originalGeometry, geometry())
         assertInkPreserved(originalText, pixels("blur-foreground-text"))
     }
 
@@ -345,8 +385,9 @@ class TopBarBlurUiTest {
     }
 
     @Composable
-    private fun SolidFixture(enabled: Boolean, source: Color, sourcePresent: Boolean = true) {
-        MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
+    private fun SolidFixture(enabled: Boolean, source: Color, sourcePresent: Boolean = true, surface: Color = Color.White) {
+        MaterialTheme(colorScheme = lightColorScheme(surface = surface, surfaceContainerLow = surface,
+            surfaceContainerLowest = surface)) {
             // 毛玻璃始终开启；不提供采样源就是播放器等页面实际走的实色退路。
             val state = if (enabled) rememberTopBarBlurState() else null
             CompositionLocalProvider(LocalTopBarBlurState provides state) {
