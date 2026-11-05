@@ -8,7 +8,7 @@
 
 ### 本次重发
 
-- 本次基于最新代码重新发布 `0.1.1`，Android 版本码提升至 `35`，支持从正式版 `0.1.0` 或旧 `0.1.1` 覆盖升级。已安装旧 `0.1.1` 的用户请[重新下载 APK](https://github.com/li88iioo/Pathfin/releases/download/v0.1.1/Pathfin-arm64-v8a.apk)覆盖安装；同名版本不会触发应用内更新提示。
+- 本次基于最新代码重新发布 `0.1.1`，Android 版本码提升至 `36`，支持从正式版 `0.1.0` 或旧 `0.1.1` 覆盖升级。已安装旧 `0.1.1` 的用户请[重新下载 APK](https://github.com/li88iioo/Pathfin/releases/download/v0.1.1/Pathfin-arm64-v8a.apk)覆盖安装；同名版本不会触发应用内更新提示。
 
 ### 新增
 
@@ -22,6 +22,7 @@
 
 ### 修复
 
+- [修复标题栏毛玻璃下沿的横向接缝](https://github.com/li88iioo/Pathfin/commit/db5385a769489391aa41ecd5a1176f8a4073d9c0)：模糊遮罩和底色渐变统一平缓收尾，改善首页及列表滚动时与背景的衔接。
 - [修复首页与媒体详情页标题的文字闪现和 Logo 叠加](https://github.com/li88iioo/Pathfin/commit/e983f24c1ed3bbd4f52eb6303a6ba0ca9f7c9665)：复用同一剧集的 Logo 资源，并缩短首页背景切换过渡。
 - [修复首页起播时章节等详情不完整](https://github.com/li88iioo/Pathfin/commit/e679afa32291ea61d74a499bf06f1dd97fdd0805)：先解析实际播放的单集，再补齐详情，并保留续播位置。
 - [稳定首页加载与大字体布局](https://github.com/li88iioo/Pathfin/commit/48392c3796c7206c66ced6a1b500f1345ae7d28e)：首轮加载保留展示区空间，空内容刷新不再反复展开占位，并修复放大字体时的文字裁切。
