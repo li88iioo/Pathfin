@@ -187,14 +187,14 @@ private fun BoxScope.TopBarBlurMaterial(
     val end = with(density) { bounds.second.toPx() }.coerceAtLeast(start + 1f)
     val hasToolbar by remember(state) { derivedStateOf { state.hasSecondaryRow } }
     val fadeHeight = with(density) { 28.dp.roundToPx() }
-    val ramp = remember(hasToolbar) {
-        if (hasToolbar) List(17) { index ->
+    val ramp = remember {
+        List(17) { index ->
             val t = index / 16f
             t * t * (3f - 2f * t)
-        } else listOf(0f, 1f)
+        }
     }
     // 工具栏控件后方保留模糊以消除片名细节，只在最后28dp平滑收边。
-    // 遮色独立贯穿整栏渐隐，不能与这个遮罩相乘，否则会重新形成底部浓白雾带。
+    // 模糊与遮色都平缓归零，避免线性尾部在裁切边缘形成横带；遮色仍独立贯穿整栏渐隐。
     val fade = remember(start, end, hasToolbar, fadeHeight, ramp) {
         val colors = ramp.map { Color.Black.copy(alpha = 1f - it) }
         object : ShaderBrush() {
@@ -209,12 +209,12 @@ private fun BoxScope.TopBarBlurMaterial(
             }
         }
     }
-    val veil = remember(canvas, start, end) {
+    val veil = remember(canvas, start, end, ramp) {
         object : ShaderBrush() {
             override fun createShader(size: Size): Shader = LinearGradientShader(
                 from = Offset(0f, start),
                 to = Offset(0f, maxOf(end, size.height)),
-                colors = listOf(canvas, canvas.copy(alpha = 0f)),
+                colors = ramp.map { canvas.copy(alpha = 1f - it) },
             )
         }
     }

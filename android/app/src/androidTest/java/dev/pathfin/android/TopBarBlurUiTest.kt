@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
 import androidx.compose.ui.graphics.RectangleShape
@@ -54,6 +55,7 @@ import dev.pathfin.android.ui.rememberTopBarBlurState
 import dev.pathfin.android.ui.topBarBlurSource
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
@@ -138,10 +140,13 @@ class TopBarBlurUiTest {
 
     @Test
     fun pageTitleBarRevealsTheBodyGraduallyBeforeItsBottomEdge() {
-        compose.setContent { SolidFixture(true, Color.Black) }
+        val visible = mutableStateOf(true)
+        val body = mutableStateOf<Color?>(Color.Black)
+        val surface = mutableStateOf(Color.White)
+        compose.setContent { SolidFixture(true, body.value, surface = surface.value, titleVisible = visible.value) }
         ready("title-bar-bottom-transition")
         awaitMaterial { gray(it) < 0.95f }
-        val image = pixels("blur-fixture")
+        val image = pixels("blur-fixture", snapshotName = "title-edge-solid")
         val middle = gray(materialSample(image, y = 48f / 224f))
         val lower = gray(materialSample(image, y = 80f / 224f))
         val outside = gray(materialSample(image, y = 98f / 224f))
@@ -153,6 +158,25 @@ class TopBarBlurUiTest {
         val profile = (32..96 step 4).map { y -> gray(materialSample(image, y = y / 224f)) }
         assertTrue("底部不能出现集中消退的明暗横带：$profile",
             profile.zipWithNext().all { (above, below) -> above - below < 0.10f })
+        val edge = gray(materialSample(image, y = 92f / 224f))
+        assertTrue("最后4dp应已平缓贴近正文，不能以仍可见的线性尾巴结束：$edge", edge < 0.012f)
+
+        // 用纵向变色的深色背景比对材质开关，防止纯色背景掩盖模糊层下沿的接缝。
+        for (canvas in listOf(Color.White, Color.Black)) {
+            compose.runOnIdle { body.value = null; surface.value = canvas; visible.value = false }
+            ready("title-edge-pattern-control-$canvas")
+            val raw = pixels("blur-fixture")
+            compose.runOnIdle { visible.value = true }
+            ready("title-edge-pattern-material-$canvas")
+            awaitMaterial { abs(gray(it) - gray(materialSample(raw))) > 0.05f }
+            val rendered = pixels("blur-fixture", snapshotName = "title-edge-${if (canvas == Color.White) "light" else "dark"}")
+            for (x in listOf(.2f, .5f, .9f)) {
+                val original = materialSample(raw, x = x, y = 92f / 224f)
+                val actual = materialSample(rendered, x = x, y = 92f / 224f)
+                val difference = maxOf(abs(original.red - actual.red), abs(original.green - actual.green), abs(original.blue - actual.blue))
+                assertTrue("$canvas 主题的材质末端应平滑贴合有颜色的正文：x=$x difference=$difference", difference < 0.012f)
+            }
+        }
     }
 
     @Test
@@ -385,21 +409,25 @@ class TopBarBlurUiTest {
     }
 
     @Composable
-    private fun SolidFixture(enabled: Boolean, source: Color, sourcePresent: Boolean = true, surface: Color = Color.White) {
+    private fun SolidFixture(enabled: Boolean, source: Color?, sourcePresent: Boolean = true, surface: Color = Color.White,
+        titleVisible: Boolean = true) {
         MaterialTheme(colorScheme = lightColorScheme(surface = surface, surfaceContainerLow = surface,
             surfaceContainerLowest = surface)) {
             // 毛玻璃始终开启；不提供采样源就是播放器等页面实际走的实色退路。
             val state = if (enabled) rememberTopBarBlurState() else null
             CompositionLocalProvider(LocalTopBarBlurState provides state) {
                 Box(Modifier.size(300.dp, 224.dp).background(Color.White).testTag("blur-fixture")) {
-                    if (sourcePresent) Box(Modifier.fillMaxSize().topBarBlurSource().background(source))
+                    if (sourcePresent) Canvas(Modifier.fillMaxSize().topBarBlurSource()) {
+                        if (source != null) drawRect(source)
+                        else drawRect(Brush.verticalGradient(listOf(Color(0xFF121C26), Color(0xFF6F503C), Color(0xFF182B35))))
+                    }
                     Box(Modifier.offset(y = 112.dp).fillMaxWidth().height(48.dp)
                         .background(Color(0xFF59C58A)).testTag("blur-first-row")) {
                         Text("第一行内容", Modifier.padding(12.dp), color = Color.Black)
                     }
                     PageTitleBar(
                         modifier = Modifier.fillMaxWidth().height(96.dp).testTag("blur-header"),
-                        height = 96.dp,
+                        height = 96.dp, visible = titleVisible,
                     ) {
                         Column(Modifier.padding(start = 16.dp, top = 12.dp)) {
                             Canvas(Modifier.size(64.dp, 12.dp).testTag("blur-foreground-mark")) { drawStripes() }
@@ -416,7 +444,7 @@ class TopBarBlurUiTest {
 
     private fun ready(stage: String) = VerificationDisplay.awaitWindowReady(compose, stage, compose.onNodeWithTag("blur-fixture"))
 
-    private fun pixels(tag: String): PixelMap {
+    private fun pixels(tag: String, snapshotName: String? = null): PixelMap {
         val node = compose.onNodeWithTag(tag).fetchSemanticsNode()
         // 坐标只在 UI 线程读取，避免截图辅助在测试线程取得瞬态的其他节点范围。
         val region = compose.runOnIdle {
@@ -441,6 +469,11 @@ class TopBarBlurUiTest {
             }, Handler(Looper.getMainLooper()))
             assertTrue("等待窗口像素超时：$tag $region", copied.await(3, TimeUnit.SECONDS))
             assertEquals("窗口像素复制失败：$tag $region", PixelCopy.SUCCESS, result)
+            if (snapshotName != null) {
+                val directory = File(compose.activity.filesDir, "top-bar-blur")
+                check(directory.isDirectory || directory.mkdirs())
+                File(directory, "$snapshotName.png").outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+            }
             return bitmap.asImageBitmap().toPixelMap()
         } finally {
             bitmap.recycle()
