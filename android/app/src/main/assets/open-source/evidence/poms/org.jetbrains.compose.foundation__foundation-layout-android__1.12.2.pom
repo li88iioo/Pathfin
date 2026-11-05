@@ -8,14 +8,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.jetbrains.compose.foundation</groupId>
     <artifactId>foundation-layout-android</artifactId>
-    <version>1.12.0</version>
+    <version>1.12.2</version>
     <packaging>aar</packaging>
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.jetbrains.compose.foundation</groupId>
                 <artifactId>foundation</artifactId>
-                <version>1.12.0</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>androidx.compose.foundation</groupId>
@@ -75,7 +75,7 @@
         <dependency>
             <groupId>androidx.compose.foundation</groupId>
             <artifactId>foundation-layout-android</artifactId>
-            <version>1.12.0</version>
+            <version>1.12.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -87,28 +87,28 @@
         <dependency>
             <groupId>org.jetbrains.compose.runtime</groupId>
             <artifactId>runtime-android</artifactId>
-            <version>1.12.0</version>
+            <version>1.12.2</version>
             <scope>runtime</scope>
             <type>aar</type>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.compose.ui</groupId>
             <artifactId>ui-android</artifactId>
-            <version>1.12.0</version>
+            <version>1.12.2</version>
             <scope>compile</scope>
             <type>aar</type>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.compose.ui</groupId>
             <artifactId>ui-unit-android</artifactId>
-            <version>1.12.0</version>
+            <version>1.12.2</version>
             <scope>runtime</scope>
             <type>aar</type>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.compose.ui</groupId>
             <artifactId>ui-util-android</artifactId>
-            <version>1.12.0</version>
+            <version>1.12.2</version>
             <scope>runtime</scope>
             <type>aar</type>
         </dependency>

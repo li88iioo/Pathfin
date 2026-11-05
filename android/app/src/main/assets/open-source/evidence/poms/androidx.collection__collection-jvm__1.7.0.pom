@@ -8,10 +8,10 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>androidx.collection</groupId>
   <artifactId>collection-jvm</artifactId>
-  <version>1.6.0</version>
+  <version>1.7.0</version>
   <name>collections</name>
   <description>Standalone efficient collections.</description>
-  <url>https://developer.android.com/jetpack/androidx/releases/collection#1.6.0</url>
+  <url>https://developer.android.com/jetpack/androidx/releases/collection#1.7.0</url>
   <inceptionYear>2018</inceptionYear>
   <organization>
     <name>The Android Open Source Project</name>
@@ -37,7 +37,7 @@
       <dependency>
         <groupId>androidx.collection</groupId>
         <artifactId>collection-ktx</artifactId>
-        <version>1.6.0</version>
+        <version>1.7.0</version>
       </dependency>
       <dependency>
         <groupId>org.jetbrains.compose.collection-internal</groupId>

@@ -6,14 +6,16 @@
   <!-- that they should prefer consuming it instead. -->
   <!-- do_not_remove: published-with-gradle-metadata -->
   <modelVersion>4.0.0</modelVersion>
-  <groupId>androidx.tracing</groupId>
-  <artifactId>tracing-ktx</artifactId>
-  <version>1.2.0</version>
-  <packaging>aar</packaging>
-  <name>Android Tracing Runtime Kotlin Extensions</name>
-  <description>Android Tracing</description>
-  <url>https://developer.android.com/jetpack/androidx/releases/tracing#1.2.0</url>
-  <inceptionYear>2020</inceptionYear>
+  <groupId>androidx.collection</groupId>
+  <artifactId>collection-ktx</artifactId>
+  <version>1.7.0</version>
+  <name>Collections Kotlin Extensions</name>
+  <description>Kotlin extensions for 'collection' artifact</description>
+  <url>https://developer.android.com/jetpack/androidx/releases/collection#1.7.0</url>
+  <inceptionYear>2018</inceptionYear>
+  <organization>
+    <name>The Android Open Source Project</name>
+  </organization>
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -33,24 +35,23 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>androidx.tracing</groupId>
-        <artifactId>tracing</artifactId>
-        <version>1.2.0</version>
+        <groupId>androidx.collection</groupId>
+        <artifactId>collection</artifactId>
+        <version>1.7.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
     <dependency>
-      <groupId>androidx.tracing</groupId>
-      <artifactId>tracing</artifactId>
-      <version>[1.2.0]</version>
+      <groupId>androidx.collection</groupId>
+      <artifactId>collection-jvm</artifactId>
+      <version>[1.7.0]</version>
       <scope>compile</scope>
-      <type>aar</type>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
-      <version>1.8.21</version>
+      <version>2.1.20</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>

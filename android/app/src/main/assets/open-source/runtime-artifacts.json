@@ -55,15 +55,15 @@
       "type": "aar"
     },
     {
-      "fileName": "collection-jvm-1.6.0.jar",
-      "id": "androidx.collection:collection-jvm:1.6.0",
-      "sha256": "839fcec147704611a222159fa84e3e062f68eee80caa549ddd1222d5210a13df",
+      "fileName": "collection-jvm-1.7.0.jar",
+      "id": "androidx.collection:collection-jvm:1.7.0",
+      "sha256": "3f53cacff8421a11cd659a0ca5e914ae605cafe6ad72970633b986a152476649",
       "type": "jar"
     },
     {
-      "fileName": "collection-ktx-1.6.0.jar",
-      "id": "androidx.collection:collection-ktx:1.6.0",
-      "sha256": "939b4a8697640e77d83e4e8b4c4a9d18f8130198c5961194af8dd9db9dc7c353",
+      "fileName": "collection-ktx-1.7.0.jar",
+      "id": "androidx.collection:collection-ktx:1.7.0",
+      "sha256": "335a9cd93dcb4afab7c4daa34d5d4e24b38443ccef4ae5fffdfd6cf4f718b01e",
       "type": "jar"
     },
     {
@@ -470,14 +470,14 @@
     },
     {
       "fileName": "tracing.aar",
-      "id": "androidx.tracing:tracing-android:2.0.3",
-      "sha256": "8fffc4b79bf43dd72203e2b3619086eb2668f01d5d704080d3c7e99d19bf42a0",
+      "id": "androidx.tracing:tracing-android:2.0.5",
+      "sha256": "2466e420a2d7e4fa7bbf64205f48aabf3adab0d03c781c5bd260c4d92ff34e09",
       "type": "aar"
     },
     {
-      "fileName": "tracing-ktx-2.0.3.aar",
-      "id": "androidx.tracing:tracing-ktx:2.0.3",
-      "sha256": "9b3b4907bea22ee3de946220159f2ec5106f60538b184b2449b39834b77c0ff3",
+      "fileName": "tracing-ktx-2.0.5.aar",
+      "id": "androidx.tracing:tracing-ktx:2.0.5",
+      "sha256": "a332a8e38a117a4e681a3829c1db089fcf9f7015a641ff318b970aa08fdafa9e",
       "type": "aar"
     },
     {
@@ -560,20 +560,20 @@
     },
     {
       "fileName": "haze.aar",
-      "id": "dev.chrisbanes.haze:haze-android:2.0.1",
-      "sha256": "662f8cbefc9925a1239e0e93179316d0a092425a1f24bffbe84ed42968bbb922",
+      "id": "dev.chrisbanes.haze:haze-android:2.1.0",
+      "sha256": "b55ee8fb8c1d59f7ca6f28c231d39908924e5f3901512d03dfbb66d3e1605f82",
       "type": "aar"
     },
     {
       "fileName": "haze-blur.aar",
-      "id": "dev.chrisbanes.haze:haze-blur-android:2.0.1",
-      "sha256": "1838c0df08dfc5bdb671a704bf22487f91cc4e35f2b744652a980b15d5ff0982",
+      "id": "dev.chrisbanes.haze:haze-blur-android:2.1.0",
+      "sha256": "346db708b7c9dd4c2c78170cdf1a597fd73f932ac2f0231c481e017e9b8935ef",
       "type": "aar"
     },
     {
       "fileName": "haze-utils.aar",
-      "id": "dev.chrisbanes.haze:haze-utils-android:2.0.1",
-      "sha256": "86434e96616bbb9624d6eccdd98b4ad2d343bcf4adc641cc7e0faeb2f2d416a8",
+      "id": "dev.chrisbanes.haze:haze-utils-android:2.1.0",
+      "sha256": "17f4054ea4643a3fc38ed46dd2a8dc906e1b2c2771190b56e18788eee37346e4",
       "type": "aar"
     },
     {
@@ -632,73 +632,73 @@
     },
     {
       "fileName": "animation.aar",
-      "id": "org.jetbrains.compose.animation:animation-android:1.12.1",
+      "id": "org.jetbrains.compose.animation:animation-android:1.12.2",
       "sha256": "d13a4f113b767b62d56a5f5b78ed01e56831c634c41135bd89b4bb991dc750ad",
       "type": "aar"
     },
     {
       "fileName": "animation-core.aar",
-      "id": "org.jetbrains.compose.animation:animation-core-android:1.12.1",
+      "id": "org.jetbrains.compose.animation:animation-core-android:1.12.2",
       "sha256": "db26201d7cb3d407bb98776e937a0fedbe9f3d56425f3a061d0e76dde10238a6",
       "type": "aar"
     },
     {
       "fileName": "foundation.aar",
-      "id": "org.jetbrains.compose.foundation:foundation-android:1.12.1",
+      "id": "org.jetbrains.compose.foundation:foundation-android:1.12.2",
       "sha256": "17c4466ca753a6ce68dcf4333674e0934d15c8246b223653d18f5dbaef0f6c10",
       "type": "aar"
     },
     {
       "fileName": "foundation-layout.aar",
-      "id": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.1",
+      "id": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.2",
       "sha256": "a3bce509f3412b8002c7eb2084f4605e1f8d04a8eff420b7b165d1a396f611df",
       "type": "aar"
     },
     {
       "fileName": "runtime.aar",
-      "id": "org.jetbrains.compose.runtime:runtime-android:1.12.1",
+      "id": "org.jetbrains.compose.runtime:runtime-android:1.12.2",
       "sha256": "5732b59bc214b94c5a0c2c29410eda6ca8a28c52bc57ba20964f0259910bd9fe",
       "type": "aar"
     },
     {
       "fileName": "runtime-saveable.aar",
-      "id": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.1",
+      "id": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.2",
       "sha256": "ac260d459f82f654b7336bc18c9f835c9f0d2b2adc5096dfc729aad386eac5c5",
       "type": "aar"
     },
     {
       "fileName": "ui.aar",
-      "id": "org.jetbrains.compose.ui:ui-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-android:1.12.2",
       "sha256": "8abae416be8db5bf5861b7705a1e1bb03369a45d253f0e54d4215b9e80ac7ed8",
       "type": "aar"
     },
     {
       "fileName": "ui-geometry.aar",
-      "id": "org.jetbrains.compose.ui:ui-geometry-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-geometry-android:1.12.2",
       "sha256": "0efa6af8d9ff9c8d28930deabe9ede9844ce2d8ceab552d9e237ca08412e4120",
       "type": "aar"
     },
     {
       "fileName": "ui-graphics.aar",
-      "id": "org.jetbrains.compose.ui:ui-graphics-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-graphics-android:1.12.2",
       "sha256": "755edf074fc2a455ad7c35308048fb76de1736a620c37d7fe8c3de1486e74abe",
       "type": "aar"
     },
     {
       "fileName": "ui-text.aar",
-      "id": "org.jetbrains.compose.ui:ui-text-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-text-android:1.12.2",
       "sha256": "06eca5c263fac0f7d403e8c0d3c2eb1d683723cd671901d583f1675bd19937e5",
       "type": "aar"
     },
     {
       "fileName": "ui-unit.aar",
-      "id": "org.jetbrains.compose.ui:ui-unit-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-unit-android:1.12.2",
       "sha256": "3478a9d0818fde7de41b84512521d4b8b5536e40abef334c105b07c903f866c3",
       "type": "aar"
     },
     {
       "fileName": "ui-util.aar",
-      "id": "org.jetbrains.compose.ui:ui-util-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-util-android:1.12.2",
       "sha256": "76d359b874d8f0cd4f01717cbefe7cb3cc31ea06a50dca6d4d9a5368e3a42c7b",
       "type": "aar"
     },

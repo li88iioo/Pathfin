@@ -7,20 +7,25 @@
     <!-- do_not_remove: published-with-gradle-metadata -->
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.jetbrains.compose.ui</groupId>
-    <artifactId>ui-graphics-android</artifactId>
-    <version>1.12.1</version>
+    <artifactId>ui-text-android</artifactId>
+    <version>1.12.2</version>
     <packaging>aar</packaging>
     <dependencyManagement>
         <dependencies>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-geometry</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains.compose.ui</groupId>
+                <artifactId>ui-graphics</artifactId>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>androidx.compose.ui</groupId>
@@ -35,12 +40,12 @@
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-test</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-test-junit4</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>androidx.compose.ui</groupId>
@@ -53,11 +58,6 @@
                 <version>1.12.0-beta01</version>
             </dependency>
             <dependency>
-                <groupId>org.jetbrains.compose.ui</groupId>
-                <artifactId>ui-text</artifactId>
-                <version>1.12.1</version>
-            </dependency>
-            <dependency>
                 <groupId>androidx.compose.ui</groupId>
                 <artifactId>ui-text-google-fonts</artifactId>
                 <version>1.12.0-beta01</version>
@@ -65,27 +65,27 @@
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-tooling</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-tooling-data</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-tooling-preview</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-unit</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-util</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
             <dependency>
                 <groupId>androidx.compose.ui</groupId>
@@ -95,12 +95,12 @@
             <dependency>
                 <groupId>org.jetbrains.compose.ui</groupId>
                 <artifactId>ui-backhandler</artifactId>
-                <version>1.12.1</version>
+                <version>1.12.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
-    <name>Compose Graphics</name>
-    <description>Compose graphics</description>
+    <name>Compose UI Text</name>
+    <description>Compose Text primitives and utilities</description>
     <url>https://github.com/JetBrains/compose-multiplatform</url>
     <inceptionYear>2020</inceptionYear>
     <licenses>
@@ -143,42 +143,62 @@
         </dependency>
         <dependency>
             <groupId>androidx.compose.ui</groupId>
-            <artifactId>ui-graphics-android</artifactId>
+            <artifactId>ui-text-android</artifactId>
             <version>1.12.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>androidx.core</groupId>
             <artifactId>core</artifactId>
-            <version>1.12.0</version>
+            <version>1.7.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
-            <groupId>androidx.graphics</groupId>
-            <artifactId>graphics-path</artifactId>
-            <version>1.0.1</version>
+            <groupId>androidx.emoji2</groupId>
+            <artifactId>emoji2</artifactId>
+            <version>1.4.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.compose.runtime</groupId>
             <artifactId>runtime-android</artifactId>
-            <version>1.12.1</version>
+            <version>1.12.2</version>
+            <scope>runtime</scope>
+            <type>aar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.compose.runtime</groupId>
+            <artifactId>runtime-saveable-android</artifactId>
+            <version>1.12.2</version>
             <scope>runtime</scope>
             <type>aar</type>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.compose.ui</groupId>
+            <artifactId>ui-graphics-android</artifactId>
+            <version>1.12.2</version>
+            <scope>compile</scope>
+            <type>aar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.compose.ui</groupId>
             <artifactId>ui-unit-android</artifactId>
-            <version>1.12.1</version>
+            <version>1.12.2</version>
             <scope>compile</scope>
             <type>aar</type>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.compose.ui</groupId>
             <artifactId>ui-util-android</artifactId>
-            <version>1.12.1</version>
+            <version>1.12.2</version>
             <scope>runtime</scope>
             <type>aar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-coroutines-core</artifactId>
+            <version>1.9.0</version>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 </project>

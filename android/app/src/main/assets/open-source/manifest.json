@@ -456,19 +456,19 @@
       "artifact": "collection-jvm",
       "artifacts": [
         {
-          "fileName": "collection-jvm-1.6.0.jar",
-          "id": "androidx.collection:collection-jvm:1.6.0",
-          "sha256": "839fcec147704611a222159fa84e3e062f68eee80caa549ddd1222d5210a13df",
+          "fileName": "collection-jvm-1.7.0.jar",
+          "id": "androidx.collection:collection-jvm:1.7.0",
+          "sha256": "3f53cacff8421a11cd659a0ca5e914ae605cafe6ad72970633b986a152476649",
           "type": "jar"
         }
       ],
       "group": "androidx.collection",
-      "id": "androidx.collection:collection-jvm:1.6.0",
+      "id": "androidx.collection:collection-jvm:1.7.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.collection:collection-jvm:1.6.0",
-          "evidence": "evidence/poms/androidx.collection__collection-jvm__1.6.0.pom",
+          "declaredBy": "androidx.collection:collection-jvm:1.7.0",
+          "evidence": "evidence/poms/androidx.collection__collection-jvm__1.7.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -480,11 +480,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/collection#1.6.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/collection#1.7.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/collection/collection-jvm/1.6.0/collection-jvm-1.6.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/collection/collection-jvm/1.7.0/collection-jvm-1.7.0.pom"
         }
       ],
       "name": "collections",
@@ -500,29 +500,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.collection:collection-jvm:1.6.0/collection-jvm-1.6.0.jar!/META-INF/androidx/collection/collection/LICENSE.txt",
+          "source": "androidx.collection:collection-jvm:1.7.0/collection-jvm-1.7.0.jar!/META-INF/androidx/collection/collection/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     {
       "artifact": "collection-ktx",
       "artifacts": [
         {
-          "fileName": "collection-ktx-1.6.0.jar",
-          "id": "androidx.collection:collection-ktx:1.6.0",
-          "sha256": "939b4a8697640e77d83e4e8b4c4a9d18f8130198c5961194af8dd9db9dc7c353",
+          "fileName": "collection-ktx-1.7.0.jar",
+          "id": "androidx.collection:collection-ktx:1.7.0",
+          "sha256": "335a9cd93dcb4afab7c4daa34d5d4e24b38443ccef4ae5fffdfd6cf4f718b01e",
           "type": "jar"
         }
       ],
       "group": "androidx.collection",
-      "id": "androidx.collection:collection-ktx:1.6.0",
+      "id": "androidx.collection:collection-ktx:1.7.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.collection:collection-ktx:1.6.0",
-          "evidence": "evidence/poms/androidx.collection__collection-ktx__1.6.0.pom",
+          "declaredBy": "androidx.collection:collection-ktx:1.7.0",
+          "evidence": "evidence/poms/androidx.collection__collection-ktx__1.7.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -534,11 +534,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/collection#1.6.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/collection#1.7.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/collection/collection-ktx/1.6.0/collection-ktx-1.6.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/collection/collection-ktx/1.7.0/collection-ktx-1.7.0.pom"
         }
       ],
       "name": "Collections Kotlin Extensions",
@@ -554,11 +554,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.collection:collection-ktx:1.6.0/collection-ktx-1.6.0.jar!/META-INF/androidx/collection/collection-ktx/LICENSE.txt",
+          "source": "androidx.collection:collection-ktx:1.7.0/collection-ktx-1.7.0.jar!/META-INF/androidx/collection/collection-ktx/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.6.0"
+      "version": "1.7.0"
     },
     {
       "artifact": "animation-android",
@@ -3999,18 +3999,18 @@
       "artifacts": [
         {
           "fileName": "tracing.aar",
-          "id": "androidx.tracing:tracing-android:2.0.3",
-          "sha256": "8fffc4b79bf43dd72203e2b3619086eb2668f01d5d704080d3c7e99d19bf42a0",
+          "id": "androidx.tracing:tracing-android:2.0.5",
+          "sha256": "2466e420a2d7e4fa7bbf64205f48aabf3adab0d03c781c5bd260c4d92ff34e09",
           "type": "aar"
         }
       ],
       "group": "androidx.tracing",
-      "id": "androidx.tracing:tracing-android:2.0.3",
+      "id": "androidx.tracing:tracing-android:2.0.5",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.tracing:tracing-android:2.0.3",
-          "evidence": "evidence/poms/androidx.tracing__tracing-android__2.0.3.pom",
+          "declaredBy": "androidx.tracing:tracing-android:2.0.5",
+          "evidence": "evidence/poms/androidx.tracing__tracing-android__2.0.5.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -4022,11 +4022,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/tracing#2.0.3"
+          "url": "https://developer.android.com/jetpack/androidx/releases/tracing#2.0.5"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing-android/2.0.3/tracing-android-2.0.3.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing-android/2.0.5/tracing-android-2.0.5.pom"
         }
       ],
       "name": "Tracing",
@@ -4042,29 +4042,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.tracing:tracing-android:2.0.3/tracing.aar!/META-INF/androidx/tracing/tracing/LICENSE.txt",
+          "source": "androidx.tracing:tracing-android:2.0.5/tracing.aar!/META-INF/androidx/tracing/tracing/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.0.3"
+      "version": "2.0.5"
     },
     {
       "artifact": "tracing-ktx",
       "artifacts": [
         {
-          "fileName": "tracing-ktx-2.0.3.aar",
-          "id": "androidx.tracing:tracing-ktx:2.0.3",
-          "sha256": "9b3b4907bea22ee3de946220159f2ec5106f60538b184b2449b39834b77c0ff3",
+          "fileName": "tracing-ktx-2.0.5.aar",
+          "id": "androidx.tracing:tracing-ktx:2.0.5",
+          "sha256": "a332a8e38a117a4e681a3829c1db089fcf9f7015a641ff318b970aa08fdafa9e",
           "type": "aar"
         }
       ],
       "group": "androidx.tracing",
-      "id": "androidx.tracing:tracing-ktx:2.0.3",
+      "id": "androidx.tracing:tracing-ktx:2.0.5",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.tracing:tracing-ktx:2.0.3",
-          "evidence": "evidence/poms/androidx.tracing__tracing-ktx__2.0.3.pom",
+          "declaredBy": "androidx.tracing:tracing-ktx:2.0.5",
+          "evidence": "evidence/poms/androidx.tracing__tracing-ktx__2.0.5.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -4076,11 +4076,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/tracing#2.0.3"
+          "url": "https://developer.android.com/jetpack/androidx/releases/tracing#2.0.5"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing-ktx/2.0.3/tracing-ktx-2.0.3.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/tracing/tracing-ktx/2.0.5/tracing-ktx-2.0.5.pom"
         }
       ],
       "name": "Tracing Kotlin Extensions",
@@ -4096,11 +4096,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.tracing:tracing-ktx:2.0.3/tracing-ktx-2.0.3.aar!/META-INF/androidx/tracing/tracing-ktx/LICENSE.txt",
+          "source": "androidx.tracing:tracing-ktx:2.0.5/tracing-ktx-2.0.5.aar!/META-INF/androidx/tracing/tracing-ktx/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.0.3"
+      "version": "2.0.5"
     },
     {
       "artifact": "vectordrawable-animated",
@@ -4738,18 +4738,18 @@
       "artifacts": [
         {
           "fileName": "haze.aar",
-          "id": "dev.chrisbanes.haze:haze-android:2.0.1",
-          "sha256": "662f8cbefc9925a1239e0e93179316d0a092425a1f24bffbe84ed42968bbb922",
+          "id": "dev.chrisbanes.haze:haze-android:2.1.0",
+          "sha256": "b55ee8fb8c1d59f7ca6f28c231d39908924e5f3901512d03dfbb66d3e1605f82",
           "type": "aar"
         }
       ],
       "group": "dev.chrisbanes.haze",
-      "id": "dev.chrisbanes.haze:haze-android:2.0.1",
+      "id": "dev.chrisbanes.haze:haze-android:2.1.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "dev.chrisbanes.haze:haze-android:2.0.1",
-          "evidence": "evidence/poms/dev.chrisbanes.haze__haze-android__2.0.1.pom",
+          "declaredBy": "dev.chrisbanes.haze:haze-android:2.1.0",
+          "evidence": "evidence/poms/dev.chrisbanes.haze__haze-android__2.1.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -4765,7 +4765,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/dev/chrisbanes/haze/haze-android/2.0.1/haze-android-2.0.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/dev/chrisbanes/haze/haze-android/2.1.0/haze-android-2.1.0.pom"
         }
       ],
       "name": "Haze",
@@ -4778,25 +4778,25 @@
           "title": "Apache License 2.0"
         }
       ],
-      "version": "2.0.1"
+      "version": "2.1.0"
     },
     {
       "artifact": "haze-blur-android",
       "artifacts": [
         {
           "fileName": "haze-blur.aar",
-          "id": "dev.chrisbanes.haze:haze-blur-android:2.0.1",
-          "sha256": "1838c0df08dfc5bdb671a704bf22487f91cc4e35f2b744652a980b15d5ff0982",
+          "id": "dev.chrisbanes.haze:haze-blur-android:2.1.0",
+          "sha256": "346db708b7c9dd4c2c78170cdf1a597fd73f932ac2f0231c481e017e9b8935ef",
           "type": "aar"
         }
       ],
       "group": "dev.chrisbanes.haze",
-      "id": "dev.chrisbanes.haze:haze-blur-android:2.0.1",
+      "id": "dev.chrisbanes.haze:haze-blur-android:2.1.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "dev.chrisbanes.haze:haze-blur-android:2.0.1",
-          "evidence": "evidence/poms/dev.chrisbanes.haze__haze-blur-android__2.0.1.pom",
+          "declaredBy": "dev.chrisbanes.haze:haze-blur-android:2.1.0",
+          "evidence": "evidence/poms/dev.chrisbanes.haze__haze-blur-android__2.1.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -4812,7 +4812,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/dev/chrisbanes/haze/haze-blur-android/2.0.1/haze-blur-android-2.0.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/dev/chrisbanes/haze/haze-blur-android/2.1.0/haze-blur-android-2.1.0.pom"
         }
       ],
       "name": "Haze Blur",
@@ -4825,25 +4825,25 @@
           "title": "Apache License 2.0"
         }
       ],
-      "version": "2.0.1"
+      "version": "2.1.0"
     },
     {
       "artifact": "haze-utils-android",
       "artifacts": [
         {
           "fileName": "haze-utils.aar",
-          "id": "dev.chrisbanes.haze:haze-utils-android:2.0.1",
-          "sha256": "86434e96616bbb9624d6eccdd98b4ad2d343bcf4adc641cc7e0faeb2f2d416a8",
+          "id": "dev.chrisbanes.haze:haze-utils-android:2.1.0",
+          "sha256": "17f4054ea4643a3fc38ed46dd2a8dc906e1b2c2771190b56e18788eee37346e4",
           "type": "aar"
         }
       ],
       "group": "dev.chrisbanes.haze",
-      "id": "dev.chrisbanes.haze:haze-utils-android:2.0.1",
+      "id": "dev.chrisbanes.haze:haze-utils-android:2.1.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "dev.chrisbanes.haze:haze-utils-android:2.0.1",
-          "evidence": "evidence/poms/dev.chrisbanes.haze__haze-utils-android__2.0.1.pom",
+          "declaredBy": "dev.chrisbanes.haze:haze-utils-android:2.1.0",
+          "evidence": "evidence/poms/dev.chrisbanes.haze__haze-utils-android__2.1.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -4859,7 +4859,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/dev/chrisbanes/haze/haze-utils-android/2.0.1/haze-utils-android-2.0.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/dev/chrisbanes/haze/haze-utils-android/2.1.0/haze-utils-android-2.1.0.pom"
         }
       ],
       "name": "Haze Utils",
@@ -4872,7 +4872,7 @@
           "title": "Apache License 2.0"
         }
       ],
-      "version": "2.0.1"
+      "version": "2.1.0"
     },
     {
       "artifact": "coil-android",
@@ -5323,18 +5323,18 @@
       "artifacts": [
         {
           "fileName": "animation.aar",
-          "id": "org.jetbrains.compose.animation:animation-android:1.12.1",
+          "id": "org.jetbrains.compose.animation:animation-android:1.12.2",
           "sha256": "d13a4f113b767b62d56a5f5b78ed01e56831c634c41135bd89b4bb991dc750ad",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.animation",
-      "id": "org.jetbrains.compose.animation:animation-android:1.12.1",
+      "id": "org.jetbrains.compose.animation:animation-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.animation:animation-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.animation__animation-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.animation:animation-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.animation__animation-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5350,7 +5350,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/animation/animation-android/1.12.1/animation-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/animation/animation-android/1.12.2/animation-android-1.12.2.pom"
         }
       ],
       "name": "Compose Animation",
@@ -5366,29 +5366,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.animation:animation-android:1.12.1/animation.aar!/META-INF/org/jetbrains/compose/animation/animation/LICENSE.txt",
+          "source": "org.jetbrains.compose.animation:animation-android:1.12.2/animation.aar!/META-INF/org/jetbrains/compose/animation/animation/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "animation-core-android",
       "artifacts": [
         {
           "fileName": "animation-core.aar",
-          "id": "org.jetbrains.compose.animation:animation-core-android:1.12.1",
+          "id": "org.jetbrains.compose.animation:animation-core-android:1.12.2",
           "sha256": "db26201d7cb3d407bb98776e937a0fedbe9f3d56425f3a061d0e76dde10238a6",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.animation",
-      "id": "org.jetbrains.compose.animation:animation-core-android:1.12.1",
+      "id": "org.jetbrains.compose.animation:animation-core-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.animation:animation-core-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.animation__animation-core-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.animation:animation-core-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.animation__animation-core-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5404,7 +5404,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/animation/animation-core-android/1.12.1/animation-core-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/animation/animation-core-android/1.12.2/animation-core-android-1.12.2.pom"
         }
       ],
       "name": "Compose Animation Core",
@@ -5420,29 +5420,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.animation:animation-core-android:1.12.1/animation-core.aar!/META-INF/org/jetbrains/compose/animation/animation-core/LICENSE.txt",
+          "source": "org.jetbrains.compose.animation:animation-core-android:1.12.2/animation-core.aar!/META-INF/org/jetbrains/compose/animation/animation-core/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "foundation-android",
       "artifacts": [
         {
           "fileName": "foundation.aar",
-          "id": "org.jetbrains.compose.foundation:foundation-android:1.12.1",
+          "id": "org.jetbrains.compose.foundation:foundation-android:1.12.2",
           "sha256": "17c4466ca753a6ce68dcf4333674e0934d15c8246b223653d18f5dbaef0f6c10",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.foundation",
-      "id": "org.jetbrains.compose.foundation:foundation-android:1.12.1",
+      "id": "org.jetbrains.compose.foundation:foundation-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.foundation:foundation-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.foundation__foundation-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.foundation:foundation-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.foundation__foundation-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5458,7 +5458,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-android/1.12.1/foundation-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-android/1.12.2/foundation-android-1.12.2.pom"
         }
       ],
       "name": "Compose Foundation",
@@ -5474,29 +5474,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.foundation:foundation-android:1.12.1/foundation.aar!/META-INF/org/jetbrains/compose/foundation/foundation/LICENSE.txt",
+          "source": "org.jetbrains.compose.foundation:foundation-android:1.12.2/foundation.aar!/META-INF/org/jetbrains/compose/foundation/foundation/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "foundation-layout-android",
       "artifacts": [
         {
           "fileName": "foundation-layout.aar",
-          "id": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.1",
+          "id": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.2",
           "sha256": "a3bce509f3412b8002c7eb2084f4605e1f8d04a8eff420b7b165d1a396f611df",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.foundation",
-      "id": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.1",
+      "id": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.foundation__foundation-layout-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.foundation__foundation-layout-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5512,7 +5512,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-layout-android/1.12.1/foundation-layout-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/foundation/foundation-layout-android/1.12.2/foundation-layout-android-1.12.2.pom"
         }
       ],
       "name": "Compose Layouts",
@@ -5528,29 +5528,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.1/foundation-layout.aar!/META-INF/org/jetbrains/compose/foundation/foundation-layout/LICENSE.txt",
+          "source": "org.jetbrains.compose.foundation:foundation-layout-android:1.12.2/foundation-layout.aar!/META-INF/org/jetbrains/compose/foundation/foundation-layout/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "runtime-android",
       "artifacts": [
         {
           "fileName": "runtime.aar",
-          "id": "org.jetbrains.compose.runtime:runtime-android:1.12.1",
+          "id": "org.jetbrains.compose.runtime:runtime-android:1.12.2",
           "sha256": "5732b59bc214b94c5a0c2c29410eda6ca8a28c52bc57ba20964f0259910bd9fe",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.runtime",
-      "id": "org.jetbrains.compose.runtime:runtime-android:1.12.1",
+      "id": "org.jetbrains.compose.runtime:runtime-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.runtime:runtime-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.runtime__runtime-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.runtime:runtime-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.runtime__runtime-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5566,7 +5566,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/runtime/runtime-android/1.12.1/runtime-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/runtime/runtime-android/1.12.2/runtime-android-1.12.2.pom"
         }
       ],
       "name": "Compose Runtime",
@@ -5582,29 +5582,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.runtime:runtime-android:1.12.1/runtime.aar!/META-INF/org/jetbrains/compose/runtime/runtime/LICENSE.txt",
+          "source": "org.jetbrains.compose.runtime:runtime-android:1.12.2/runtime.aar!/META-INF/org/jetbrains/compose/runtime/runtime/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "runtime-saveable-android",
       "artifacts": [
         {
           "fileName": "runtime-saveable.aar",
-          "id": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.1",
+          "id": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.2",
           "sha256": "ac260d459f82f654b7336bc18c9f835c9f0d2b2adc5096dfc729aad386eac5c5",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.runtime",
-      "id": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.1",
+      "id": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.runtime__runtime-saveable-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.runtime__runtime-saveable-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5620,7 +5620,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/runtime/runtime-saveable-android/1.12.1/runtime-saveable-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/runtime/runtime-saveable-android/1.12.2/runtime-saveable-android-1.12.2.pom"
         }
       ],
       "name": "Compose Saveable",
@@ -5636,29 +5636,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.1/runtime-saveable.aar!/META-INF/org/jetbrains/compose/runtime/runtime-saveable/LICENSE.txt",
+          "source": "org.jetbrains.compose.runtime:runtime-saveable-android:1.12.2/runtime-saveable.aar!/META-INF/org/jetbrains/compose/runtime/runtime-saveable/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "ui-android",
       "artifacts": [
         {
           "fileName": "ui.aar",
-          "id": "org.jetbrains.compose.ui:ui-android:1.12.1",
+          "id": "org.jetbrains.compose.ui:ui-android:1.12.2",
           "sha256": "8abae416be8db5bf5861b7705a1e1bb03369a45d253f0e54d4215b9e80ac7ed8",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.ui",
-      "id": "org.jetbrains.compose.ui:ui-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.ui:ui-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.ui:ui-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5674,7 +5674,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-android/1.12.1/ui-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-android/1.12.2/ui-android-1.12.2.pom"
         }
       ],
       "name": "Compose UI",
@@ -5690,29 +5690,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.ui:ui-android:1.12.1/ui.aar!/META-INF/org/jetbrains/compose/ui/ui/LICENSE.txt",
+          "source": "org.jetbrains.compose.ui:ui-android:1.12.2/ui.aar!/META-INF/org/jetbrains/compose/ui/ui/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "ui-geometry-android",
       "artifacts": [
         {
           "fileName": "ui-geometry.aar",
-          "id": "org.jetbrains.compose.ui:ui-geometry-android:1.12.1",
+          "id": "org.jetbrains.compose.ui:ui-geometry-android:1.12.2",
           "sha256": "0efa6af8d9ff9c8d28930deabe9ede9844ce2d8ceab552d9e237ca08412e4120",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.ui",
-      "id": "org.jetbrains.compose.ui:ui-geometry-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-geometry-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.ui:ui-geometry-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-geometry-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.ui:ui-geometry-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-geometry-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5728,7 +5728,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-geometry-android/1.12.1/ui-geometry-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-geometry-android/1.12.2/ui-geometry-android-1.12.2.pom"
         }
       ],
       "name": "Compose Geometry",
@@ -5744,29 +5744,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.ui:ui-geometry-android:1.12.1/ui-geometry.aar!/META-INF/org/jetbrains/compose/ui/ui-geometry/LICENSE.txt",
+          "source": "org.jetbrains.compose.ui:ui-geometry-android:1.12.2/ui-geometry.aar!/META-INF/org/jetbrains/compose/ui/ui-geometry/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "ui-graphics-android",
       "artifacts": [
         {
           "fileName": "ui-graphics.aar",
-          "id": "org.jetbrains.compose.ui:ui-graphics-android:1.12.1",
+          "id": "org.jetbrains.compose.ui:ui-graphics-android:1.12.2",
           "sha256": "755edf074fc2a455ad7c35308048fb76de1736a620c37d7fe8c3de1486e74abe",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.ui",
-      "id": "org.jetbrains.compose.ui:ui-graphics-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-graphics-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.ui:ui-graphics-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-graphics-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.ui:ui-graphics-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-graphics-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5782,7 +5782,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-graphics-android/1.12.1/ui-graphics-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-graphics-android/1.12.2/ui-graphics-android-1.12.2.pom"
         }
       ],
       "name": "Compose Graphics",
@@ -5798,29 +5798,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.ui:ui-graphics-android:1.12.1/ui-graphics.aar!/META-INF/org/jetbrains/compose/ui/ui-graphics/LICENSE.txt",
+          "source": "org.jetbrains.compose.ui:ui-graphics-android:1.12.2/ui-graphics.aar!/META-INF/org/jetbrains/compose/ui/ui-graphics/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "ui-text-android",
       "artifacts": [
         {
           "fileName": "ui-text.aar",
-          "id": "org.jetbrains.compose.ui:ui-text-android:1.12.1",
+          "id": "org.jetbrains.compose.ui:ui-text-android:1.12.2",
           "sha256": "06eca5c263fac0f7d403e8c0d3c2eb1d683723cd671901d583f1675bd19937e5",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.ui",
-      "id": "org.jetbrains.compose.ui:ui-text-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-text-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.ui:ui-text-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-text-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.ui:ui-text-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-text-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5836,7 +5836,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-text-android/1.12.1/ui-text-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-text-android/1.12.2/ui-text-android-1.12.2.pom"
         }
       ],
       "name": "Compose UI Text",
@@ -5852,29 +5852,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.ui:ui-text-android:1.12.1/ui-text.aar!/META-INF/org/jetbrains/compose/ui/ui-text/LICENSE.txt",
+          "source": "org.jetbrains.compose.ui:ui-text-android:1.12.2/ui-text.aar!/META-INF/org/jetbrains/compose/ui/ui-text/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "ui-unit-android",
       "artifacts": [
         {
           "fileName": "ui-unit.aar",
-          "id": "org.jetbrains.compose.ui:ui-unit-android:1.12.1",
+          "id": "org.jetbrains.compose.ui:ui-unit-android:1.12.2",
           "sha256": "3478a9d0818fde7de41b84512521d4b8b5536e40abef334c105b07c903f866c3",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.ui",
-      "id": "org.jetbrains.compose.ui:ui-unit-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-unit-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.ui:ui-unit-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-unit-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.ui:ui-unit-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-unit-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5890,7 +5890,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-unit-android/1.12.1/ui-unit-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-unit-android/1.12.2/ui-unit-android-1.12.2.pom"
         }
       ],
       "name": "Compose Unit",
@@ -5906,29 +5906,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.ui:ui-unit-android:1.12.1/ui-unit.aar!/META-INF/org/jetbrains/compose/ui/ui-unit/LICENSE.txt",
+          "source": "org.jetbrains.compose.ui:ui-unit-android:1.12.2/ui-unit.aar!/META-INF/org/jetbrains/compose/ui/ui-unit/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "ui-util-android",
       "artifacts": [
         {
           "fileName": "ui-util.aar",
-          "id": "org.jetbrains.compose.ui:ui-util-android:1.12.1",
+          "id": "org.jetbrains.compose.ui:ui-util-android:1.12.2",
           "sha256": "76d359b874d8f0cd4f01717cbefe7cb3cc31ea06a50dca6d4d9a5368e3a42c7b",
           "type": "aar"
         }
       ],
       "group": "org.jetbrains.compose.ui",
-      "id": "org.jetbrains.compose.ui:ui-util-android:1.12.1",
+      "id": "org.jetbrains.compose.ui:ui-util-android:1.12.2",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "org.jetbrains.compose.ui:ui-util-android:1.12.1",
-          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-util-android__1.12.1.pom",
+          "declaredBy": "org.jetbrains.compose.ui:ui-util-android:1.12.2",
+          "evidence": "evidence/poms/org.jetbrains.compose.ui__ui-util-android__1.12.2.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -5944,7 +5944,7 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-util-android/1.12.1/ui-util-android-1.12.1.pom"
+          "url": "https://repo.maven.apache.org/maven2/org/jetbrains/compose/ui/ui-util-android/1.12.2/ui-util-android-1.12.2.pom"
         }
       ],
       "name": "Compose Util",
@@ -5960,11 +5960,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "org.jetbrains.compose.ui:ui-util-android:1.12.1/ui-util.aar!/META-INF/org/jetbrains/compose/ui/ui-util/LICENSE.txt",
+          "source": "org.jetbrains.compose.ui:ui-util-android:1.12.2/ui-util.aar!/META-INF/org/jetbrains/compose/ui/ui-util/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.12.2"
     },
     {
       "artifact": "kotlin-stdlib",
@@ -6320,13 +6320,13 @@
     },
     {
       "bytes": 2605,
-      "path": "evidence/poms/androidx.collection__collection-jvm__1.6.0.pom",
-      "sha256": "87a94bb3e8b6a1472f3b0ddc177a9f121ef71aa01e1e30491d1a065b57d70712"
+      "path": "evidence/poms/androidx.collection__collection-jvm__1.7.0.pom",
+      "sha256": "fc61220d9d39c428c4ec3c57e5f2fc2297bb6691d362d5a5485d6fcb1512e0a3"
     },
     {
       "bytes": 2273,
-      "path": "evidence/poms/androidx.collection__collection-ktx__1.6.0.pom",
-      "sha256": "3ab4624b71ed2294dedca050ac68437799d1ec3c901b7345942c27db014f6258"
+      "path": "evidence/poms/androidx.collection__collection-ktx__1.7.0.pom",
+      "sha256": "ab0f73bd238e00f1333868d8f2d61c0373ec7e1028911177e1935a44e48e00f6"
     },
     {
       "bytes": 4945,
@@ -6665,13 +6665,13 @@
     },
     {
       "bytes": 2789,
-      "path": "evidence/poms/androidx.tracing__tracing-android__2.0.3.pom",
-      "sha256": "1878522b9212c771148c84282935ec04bd67d3e055a6efbed84740cf3f7ed3a7"
+      "path": "evidence/poms/androidx.tracing__tracing-android__2.0.5.pom",
+      "sha256": "e3d5e0f4d67a92eee2792e7fad92e103e0776a5bf166d9c2aabd85c72aa23c18"
     },
     {
       "bytes": 2407,
-      "path": "evidence/poms/androidx.tracing__tracing-ktx__2.0.3.pom",
-      "sha256": "21be31f9ac728d6560bcfc9e8ede4d3958ebe13e2221ca375895fcbd0d9346cd"
+      "path": "evidence/poms/androidx.tracing__tracing-ktx__2.0.5.pom",
+      "sha256": "6b6fa75ba43c41cfee74dae18b6ff69fab197f5376bb9d9574686147bdccfe9f"
     },
     {
       "bytes": 1798,
@@ -6750,18 +6750,18 @@
     },
     {
       "bytes": 2856,
-      "path": "evidence/poms/dev.chrisbanes.haze__haze-android__2.0.1.pom",
-      "sha256": "529518573941251f2692b4b51580cd0216d9f714823389a6130ee4b46d37fd8c"
+      "path": "evidence/poms/dev.chrisbanes.haze__haze-android__2.1.0.pom",
+      "sha256": "99c31b7aa412b2ac769667be5dd0932128dad8df532736ca874dc86e6258e1d7"
     },
     {
       "bytes": 2827,
-      "path": "evidence/poms/dev.chrisbanes.haze__haze-blur-android__2.0.1.pom",
-      "sha256": "c73ed6b12c7bd42cc7fb064ffd562f00771f10429814c5fc6a65d53749521c60"
+      "path": "evidence/poms/dev.chrisbanes.haze__haze-blur-android__2.1.0.pom",
+      "sha256": "0a8a546657651bb0f1f7b3e16115c60b40e5243bdd31219d9b32c50205630993"
     },
     {
       "bytes": 2100,
-      "path": "evidence/poms/dev.chrisbanes.haze__haze-utils-android__2.0.1.pom",
-      "sha256": "0c48173dcbc67a4ae74438d46905a82d125413fdc4c97e126f08aec959338a21"
+      "path": "evidence/poms/dev.chrisbanes.haze__haze-utils-android__2.1.0.pom",
+      "sha256": "b1c52f8d1f2b0e55a401975bb86cc97de6cdbb0cd6ec9dd91c918cf01538917a"
     },
     {
       "bytes": 1952,
@@ -6810,63 +6810,63 @@
     },
     {
       "bytes": 5801,
-      "path": "evidence/poms/org.jetbrains.compose.animation__animation-android__1.12.1.pom",
-      "sha256": "286d9923d8cc37ba0ba1c5a1a616a5e36fc108ace1f5a30f0451c87e4e1e8cc1"
+      "path": "evidence/poms/org.jetbrains.compose.animation__animation-android__1.12.2.pom",
+      "sha256": "dc8ceb44129bc0ac8bf6116603ca00147fc14a6f12f30eed10fbd45528746514"
     },
     {
       "bytes": 5347,
-      "path": "evidence/poms/org.jetbrains.compose.animation__animation-core-android__1.12.1.pom",
-      "sha256": "daf6c91e053f3dde9692bd143208552b2ef60fb3072fa6abb0e302a26250fed7"
+      "path": "evidence/poms/org.jetbrains.compose.animation__animation-core-android__1.12.2.pom",
+      "sha256": "122a95f67cf53afcd53f4cbea3635487e08e1dc954c1197337f0184d436f421e"
     },
     {
       "bytes": 5442,
-      "path": "evidence/poms/org.jetbrains.compose.foundation__foundation-android__1.12.1.pom",
-      "sha256": "b5a02b41bf3bb9c15e984efcf967af2fd468b9324aac372f4df2a60a9ba6b410"
+      "path": "evidence/poms/org.jetbrains.compose.foundation__foundation-android__1.12.2.pom",
+      "sha256": "79f5a218ac01456fd03a5c6a59675daf1f8f49c951a2ae438c5718dd0685d7dd"
     },
     {
       "bytes": 4774,
-      "path": "evidence/poms/org.jetbrains.compose.foundation__foundation-layout-android__1.12.1.pom",
-      "sha256": "406501c9c44f379f9144649c1e3a535a6aa7deeb9371666ec4832e0f24e05932"
+      "path": "evidence/poms/org.jetbrains.compose.foundation__foundation-layout-android__1.12.2.pom",
+      "sha256": "d6fbcfc87ce813f54d6ff062858313822afe72d270cbf2835777084204368237"
     },
     {
       "bytes": 3799,
-      "path": "evidence/poms/org.jetbrains.compose.runtime__runtime-android__1.12.1.pom",
-      "sha256": "cfe7455d8b5ac05fcae48ba64ec187f83686a4336785d7f6a8bf0445f966be5e"
+      "path": "evidence/poms/org.jetbrains.compose.runtime__runtime-android__1.12.2.pom",
+      "sha256": "e4ee1945da0758b7b1aab1c634ce4cb79ad90e6be74610e8455a7d68e782608b"
     },
     {
       "bytes": 4500,
-      "path": "evidence/poms/org.jetbrains.compose.runtime__runtime-saveable-android__1.12.1.pom",
-      "sha256": "02b441d37cbebe82fd1d8882243e6aac6dfbeabbb8a83407dc163de09003b77f"
+      "path": "evidence/poms/org.jetbrains.compose.runtime__runtime-saveable-android__1.12.2.pom",
+      "sha256": "da93eb257a5ee31e80e90de95e9427da083edb59098a2ded43fb71178f03e033"
     },
     {
       "bytes": 11831,
-      "path": "evidence/poms/org.jetbrains.compose.ui__ui-android__1.12.1.pom",
-      "sha256": "f5ad07583f26fe829c6683616f0b9e38fb74b318756d865029aea0cdc209ac9f"
+      "path": "evidence/poms/org.jetbrains.compose.ui__ui-android__1.12.2.pom",
+      "sha256": "e38e619aece62dfdb792de240e8334e43632e5955ea9f024e7323c7fe714699e"
     },
     {
       "bytes": 6492,
-      "path": "evidence/poms/org.jetbrains.compose.ui__ui-geometry-android__1.12.1.pom",
-      "sha256": "06a38f050540cdc25f4d67a5dba3f61a325617d2bc39de0003ba34623a03220e"
+      "path": "evidence/poms/org.jetbrains.compose.ui__ui-geometry-android__1.12.2.pom",
+      "sha256": "dc585dc17598bb8cfa0286ec811425c820f05f15c942e3285d0cc3e8217613df"
     },
     {
       "bytes": 7574,
-      "path": "evidence/poms/org.jetbrains.compose.ui__ui-graphics-android__1.12.1.pom",
-      "sha256": "a9b76ed0b2e1f5be28f3b0a3bf0ec1d292e2b5a1f52ebb42a318034f978e33fd"
+      "path": "evidence/poms/org.jetbrains.compose.ui__ui-graphics-android__1.12.2.pom",
+      "sha256": "a3103f9c84a61f70a5d0bdf6da433c93647062f49dda28f0b3e0ec01ff41641c"
     },
     {
       "bytes": 8335,
-      "path": "evidence/poms/org.jetbrains.compose.ui__ui-text-android__1.12.1.pom",
-      "sha256": "3fca616b9c98a24f4f61b4fac90dacf27d1d447b223c8ef8d3b8fd625c74c568"
+      "path": "evidence/poms/org.jetbrains.compose.ui__ui-text-android__1.12.2.pom",
+      "sha256": "916cbafa68b79abd6e780883ca7237418467cc070314d6f6bb8edb4928a47b98"
     },
     {
       "bytes": 7386,
-      "path": "evidence/poms/org.jetbrains.compose.ui__ui-unit-android__1.12.1.pom",
-      "sha256": "66b6c3875785220b2577e3f7d4b5a56d3f962eb98fcdc62aaf332dcdc254ca02"
+      "path": "evidence/poms/org.jetbrains.compose.ui__ui-unit-android__1.12.2.pom",
+      "sha256": "22142a75a4a4ff59467bd9f97ee7a6a58c01caa684fcb57ff1717e450b475c73"
     },
     {
       "bytes": 6454,
-      "path": "evidence/poms/org.jetbrains.compose.ui__ui-util-android__1.12.1.pom",
-      "sha256": "669b1ba03b02f6ef42ba485582b0c9ded09b04337c1a6fce88f3e1dca42aa36e"
+      "path": "evidence/poms/org.jetbrains.compose.ui__ui-util-android__1.12.2.pom",
+      "sha256": "c2c341c1a3b6133e7bf9a14f9ead7a62cd21e652c015cab2e70de30453d2901b"
     },
     {
       "bytes": 2301,

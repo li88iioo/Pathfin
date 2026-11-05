@@ -6,13 +6,14 @@
   <!-- that they should prefer consuming it instead. -->
   <!-- do_not_remove: published-with-gradle-metadata -->
   <modelVersion>4.0.0</modelVersion>
-  <groupId>androidx.collection</groupId>
-  <artifactId>collection-jvm</artifactId>
-  <version>1.5.0</version>
-  <name>collections</name>
-  <description>Standalone efficient collections.</description>
-  <url>https://developer.android.com/jetpack/androidx/releases/collection#1.5.0</url>
-  <inceptionYear>2018</inceptionYear>
+  <groupId>androidx.tracing</groupId>
+  <artifactId>tracing-ktx</artifactId>
+  <version>2.0.5</version>
+  <packaging>aar</packaging>
+  <name>Tracing Kotlin Extensions</name>
+  <description>Android Tracing</description>
+  <url>https://developer.android.com/jetpack/androidx/releases/tracing#2.0.5</url>
+  <inceptionYear>2020</inceptionYear>
   <organization>
     <name>The Android Open Source Project</name>
   </organization>
@@ -35,27 +36,28 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>androidx.collection</groupId>
-        <artifactId>collection-ktx</artifactId>
-        <version>1.5.0</version>
+        <groupId>androidx.tracing</groupId>
+        <artifactId>tracing</artifactId>
+        <version>2.0.5</version>
       </dependency>
       <dependency>
-        <groupId>org.jetbrains.kotlin</groupId>
-        <artifactId>kotlin-stdlib</artifactId>
-        <version>1.9.24</version>
+        <groupId>androidx.tracing</groupId>
+        <artifactId>tracing-wire</artifactId>
+        <version>2.0.5</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
     <dependency>
-      <groupId>androidx.annotation</groupId>
-      <artifactId>annotation-jvm</artifactId>
-      <version>1.9.1</version>
+      <groupId>androidx.tracing</groupId>
+      <artifactId>tracing</artifactId>
+      <version>[2.0.5]</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlin</groupId>
       <artifactId>kotlin-stdlib</artifactId>
+      <version>2.1.20</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
