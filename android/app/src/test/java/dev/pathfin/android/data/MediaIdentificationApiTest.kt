@@ -114,7 +114,7 @@ class MediaIdentificationApiTest {
             val item = MediaItem("item", "Synthetic", "Movie")
             val denied = admin.copy(isAdministrator = false)
             assertFalse(MediaIdentificationApi.supports(denied, item))
-            assertEquals(403, expectApiFailure { api.search(denied, item, MediaIdentificationQuery("Synthetic")); Unit }.statusCode)
+            assertEquals(403, expectApiFailure { api.search(denied, item, MediaIdentificationQuery("Synthetic")) }.statusCode)
             for (type in listOf("Episode", "Season", "Folder", "unknown")) {
                 assertFalse(MediaIdentificationApi.supports(admin, item.copy(type = type)))
                 assertThrows(IllegalArgumentException::class.java) { runBlocking { api.search(admin, item.copy(type = type), MediaIdentificationQuery("Synthetic")) } }
@@ -155,8 +155,8 @@ class MediaIdentificationApiTest {
             }
         }) { session -> runBlocking {
             val api = MediaIdentificationApi(); val item = MediaItem("item", "Synthetic", "Movie")
-            assertNotNull(expectApiFailure { api.search(session, item, MediaIdentificationQuery("Synthetic")); Unit })
-            val denied = expectApiFailure { api.search(session, item, MediaIdentificationQuery("Synthetic")); Unit }
+            assertNotNull(expectApiFailure { api.search(session, item, MediaIdentificationQuery("Synthetic")) })
+            val denied = expectApiFailure { api.search(session, item, MediaIdentificationQuery("Synthetic")) }
             assertEquals(403, denied.statusCode)
             assertFalse(denied.message.orEmpty().contains("synthetic-token"))
             assertTrue(api.search(session, item, MediaIdentificationQuery("Synthetic")).isEmpty())

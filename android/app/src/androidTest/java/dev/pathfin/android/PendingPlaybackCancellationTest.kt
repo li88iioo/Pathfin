@@ -532,12 +532,12 @@ class PendingPlaybackCancellationTest {
                     gate?.block()
                     if (forwardedCloudView) {
                         check(method == "GET" && headers["accept"] == "application/json")
-                        val advertised = externalSource!!.toHttpUrl()
+                        val advertised = externalSource.toHttpUrl()
                         check(query["v"] == advertised.queryParameter("v") && query["sig"] == advertised.queryParameter("sig"))
                         val upstream = advertised.newBuilder().encodedQuery(uri.rawQuery).build()
                         if (query["view"] == "variants") cloudVariantRequests.incrementAndGet()
                         else cloudResolutions += requireNotNull(query["quality"])
-                        cloudProxy!!.newCall(Request.Builder().url(upstream).header("Accept", "application/json").build()).execute().use { response ->
+                        cloudProxy.newCall(Request.Builder().url(upstream).header("Accept", "application/json").build()).execute().use { response ->
                             respond(connection, response.code, response.body.bytes(), response.header("Content-Type") ?: "application/json")
                         }
                     } else if (media) {

@@ -221,19 +221,15 @@ class PlaybackFlowTest {
                         }
                     }
                     val root = automation?.rootInActiveWindow
-                    if (root != null) try {
-                        if (!declineAttempted && root.packageName?.toString() == "android") {
-                            val matches = root.findAccessibilityNodeInfosByViewId("android:id/autofill_save_no")
-                            try {
-                                val button = matches.singleOrNull { it.packageName?.toString() == "android" && it.isEnabled && it.isClickable }
-                                if (button != null) {
-                                    declineAttempted = true
-                                    assertTrue("只能取消本次合成凭据的系统保存提示", button.performAction(AccessibilityNodeInfo.ACTION_CLICK))
-                                    Log.i("PathfinPlaybackFlow", "已取消本次合成凭据的 Android 自动填充保存提示")
-                                }
-                            } finally { matches.forEach { it.recycle() } }
+                    if (root != null && !declineAttempted && root.packageName?.toString() == "android") {
+                        val matches = root.findAccessibilityNodeInfosByViewId("android:id/autofill_save_no")
+                        val button = matches.singleOrNull { it.packageName?.toString() == "android" && it.isEnabled && it.isClickable }
+                        if (button != null) {
+                            declineAttempted = true
+                            assertTrue("只能取消本次合成凭据的系统保存提示", button.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                            Log.i("PathfinPlaybackFlow", "已取消本次合成凭据的 Android 自动填充保存提示")
                         }
-                    } finally { root.recycle() }
+                    }
                     false
                 }
             }

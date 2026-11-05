@@ -139,8 +139,8 @@ class MediaManagementApiTest {
             val session = admin.copy(isAdministrator = false)
             val api = MediaManagementApi()
             val operations: List<suspend () -> Unit> = listOf(
-                { api.editableMetadata(session, "film"); Unit },
-                { api.externalIds(session, MediaItem("film", "Film", "Movie")); Unit },
+                { api.editableMetadata(session, "film") },
+                { api.externalIds(session, MediaItem("film", "Film", "Movie")) },
                 { api.uploadImage(session, "film", MediaImageType.PRIMARY, png(), "image/png") },
                 { api.deleteImage(session, "film", MediaImage(MediaImageType.PRIMARY, 0, "poster")) },
                 { api.refreshItem(session, "film") }, { api.scanItem(session, "library") },
@@ -217,7 +217,7 @@ class MediaManagementApiTest {
                 { api.uploadImage(session, "film", MediaImageType.PRIMARY, "<svg/>".toByteArray(), "image/svg+xml") },
                 { api.deleteImage(session, "film", MediaImage(MediaImageType.PRIMARY, -1, "poster")) },
                 { api.deleteImage(session, "film", MediaImage(MediaImageType.PRIMARY, 0, "")) },
-                { api.images(session, "../other"); Unit },
+                { api.images(session, "../other") },
             )
             for (operation in operations) assertThrows(IllegalArgumentException::class.java) { runBlocking { operation() } }
         } }
@@ -325,10 +325,10 @@ class MediaManagementApiTest {
             assertEquals(403, expectApiFailure { api.imageProviders(ordinary, "film") }.statusCode)
             assertEquals(403, expectApiFailure { api.searchImages(ordinary, "film", MediaImageType.PRIMARY) }.statusCode)
             for (operation in listOf<suspend () -> Unit>(
-                { api.searchImages(session, "../other", MediaImageType.PRIMARY); Unit },
-                { api.searchImages(session, "film", MediaImageType.PRIMARY, provider = "bad\nprovider"); Unit },
-                { api.searchImages(session, "film", MediaImageType.PRIMARY, startIndex = -1); Unit },
-                { api.searchImages(session, "film", MediaImageType.PRIMARY, limit = 49); Unit },
+                { api.searchImages(session, "../other", MediaImageType.PRIMARY) },
+                { api.searchImages(session, "film", MediaImageType.PRIMARY, provider = "bad\nprovider") },
+                { api.searchImages(session, "film", MediaImageType.PRIMARY, startIndex = -1) },
+                { api.searchImages(session, "film", MediaImageType.PRIMARY, limit = 49) },
             )) assertThrows(IllegalArgumentException::class.java) { runBlocking { operation() } }
             assertEquals(0, requests.get())
             val selected = api.searchImages(session, "film", MediaImageType.PRIMARY).images.single()

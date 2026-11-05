@@ -124,25 +124,17 @@ class LocalNetworkPermissionPromptTest {
         while (!externalPrompt && SystemClock.elapsedRealtime() < deadline && !nativeAllowClicked) {
             val root = checkNotNull(automation).rootInActiveWindow
             if (root != null) {
-                try {
-                    val controllerPackage = root.packageName?.toString()
-                    if (controllerPackage != null && isSystemPermissionController(context, controllerPackage) &&
-                        app.state.value.localNetworkPermissionRequest != null) {
-                        val allow = findLocalNetworkAllowButton(root, context, controllerPackage)
-                        if (allow != null) {
-                            try {
-                                check(context.packageName == VERIFICATION_PACKAGE && activity.packageName == VERIFICATION_PACKAGE)
-                                check(context.checkSelfPermission(LocalNetworkPermission.PERMISSION) == PackageManager.PERMISSION_DENIED)
-                                check(app.state.value.loginBusy && app.state.value.session == null)
-                                check(app.state.value.localNetworkPermissionRequest != null)
-                                nativeAllowClicked = allow.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                            } finally {
-                                allow.recycle()
-                            }
-                        }
+                val controllerPackage = root.packageName?.toString()
+                if (controllerPackage != null && isSystemPermissionController(context, controllerPackage) &&
+                    app.state.value.localNetworkPermissionRequest != null) {
+                    val allow = findLocalNetworkAllowButton(root, context, controllerPackage)
+                    if (allow != null) {
+                        check(context.packageName == VERIFICATION_PACKAGE && activity.packageName == VERIFICATION_PACKAGE)
+                        check(context.checkSelfPermission(LocalNetworkPermission.PERMISSION) == PackageManager.PERMISSION_DENIED)
+                        check(app.state.value.loginBusy && app.state.value.session == null)
+                        check(app.state.value.localNetworkPermissionRequest != null)
+                        nativeAllowClicked = allow.performAction(AccessibilityNodeInfo.ACTION_CLICK)
                     }
-                } finally {
-                    root.recycle()
                 }
             }
             if (!nativeAllowClicked) SystemClock.sleep(80)
@@ -203,16 +195,14 @@ class LocalNetworkPermissionPromptTest {
                         "$permissionController:id/permission_allow_button",
                         "$permissionController:id/permission_allow_foreground_only_button",
                     )) {
-                    allow = AccessibilityNodeInfo.obtain(node)
+                    allow = node
                 }
             }
             for (index in 0 until node.childCount) node.getChild(index)?.let(pending::addLast)
-            if (node !== root) node.recycle()
         }
         val message = texts.joinToString(" ")
         val networkTerms = listOf("局域网", "本地网络", "网络上的设备", "附近设备", "附近的设备", "local network", "nearby devices")
         if (!message.contains(appLabel, ignoreCase = true) || networkTerms.none { message.contains(it, ignoreCase = true) }) {
-            allow?.recycle()
             return null
         }
         return allow

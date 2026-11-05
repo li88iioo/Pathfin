@@ -258,7 +258,7 @@ class CloudPlaybackApiTest {
             assertEquals("https://cdn.example/opaque?id=2", second.stream.uri)
             assertEquals("application/x-mpegURL", first.stream.mimeType)
             assertEquals("hd", first.cloudPlayback!!.selectedId)
-            assertEquals(536, first.cloudPlayback!!.variant(PlaybackQuality.STANDARD)?.height)
+            assertEquals(536, first.cloudPlayback.variant(PlaybackQuality.STANDARD)?.height)
             assertEquals(PlaybackQuality.STANDARD, first.quality)
             assertEquals("original", original.cloudPlayback!!.selectedId)
             assertEquals("video/mp4", original.stream.mimeType)
@@ -277,7 +277,7 @@ class CloudPlaybackApiTest {
             val api = CloudPlaybackApi(videoSupport = { it.codec != "av1" })
             val initial = request(fixture.baseUrl)
             val unavailable = initial.copy(cloudPlayback = initial.cloudPlayback!!.copy(
-                variants = initial.cloudPlayback!!.variants.map { it.copy(playable = false) }))
+                variants = initial.cloudPlayback.variants.map { it.copy(playable = false) }))
             for (quality in listOf(PlaybackQuality.ORIGINAL, PlaybackQuality.STANDARD)) {
                 assertSafe(expectFailure { api.select(unavailable, quality) })
             }
@@ -293,7 +293,7 @@ class CloudPlaybackApiTest {
                 assertSafe(expectFailure { api.select(initial, PlaybackQuality.STANDARD) })
             }
             assertEquals(6, fixture.requests.size)
-            assertEquals("original", initial.cloudPlayback!!.selectedId)
+            assertEquals("original", initial.cloudPlayback.selectedId)
             fixture.requests.forEach(::assertAnonymous)
         }
     }
@@ -332,7 +332,7 @@ class CloudPlaybackApiTest {
                 assertTrue(calls.first().isCanceled())
                 assertTrue(withContext(Dispatchers.IO) { failed.await(3, TimeUnit.SECONDS) })
                 val replacement = initial.copy(session = session.copy(accessToken = "replacement-token", userId = "other-user"),
-                    cloudPlayback = initial.cloudPlayback!!.copy(sourceUrl = "${initial.cloudPlayback!!.sourceUrl}&generation=current"))
+                    cloudPlayback = initial.cloudPlayback!!.copy(sourceUrl = "${initial.cloudPlayback.sourceUrl}&generation=current"))
                 assertEquals(replacement.session, api.select(replacement, PlaybackQuality.STANDARD).session)
                 release.countDown()
                 assertTrue(withContext(Dispatchers.IO) { finished.await(3, TimeUnit.SECONDS) })

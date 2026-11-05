@@ -161,13 +161,13 @@ class MediaFluxCloudPlaybackFlowTest {
                 val advertised = URI(requireNotNull(request.source.cloudPlaybackUrl))
                 assertEquals("反代广告复现端口丢失", -1, advertised.port)
                 assertEquals("${fixture.origin}${advertised.rawPath}?${advertised.rawQuery}", request.cloudPlayback!!.sourceUrl)
-                assertNotEquals(request.source.path, request.cloudPlayback!!.sourceUrl)
+                assertNotEquals(request.source.path, request.cloudPlayback.sourceUrl)
                 assertTrue(request.stream.headers.isEmpty())
                 assertEquals(PlaybackQuality.STANDARD, request.quality)
                 playback.player!!.pause()
                 playback.player!!.seekTo(3_000)
                 playback.player!!.setPlaybackSpeed(1.5f)
-                request.cloudPlayback!!.sourceUrl
+                request.cloudPlayback.sourceUrl
             }
             await { playback.player?.playbackState == Player.STATE_READY && kotlin.math.abs(playback.player!!.currentPosition - 3_000) < 500 }
             val position = main { playback.player!!.currentPosition }

@@ -66,8 +66,8 @@ class ServerAdministrationApiTest {
         val calls = AtomicInteger()
         withServer({ exchange -> calls.incrementAndGet(); exchange.reply("[]") }) { session -> runBlocking {
             val api = ServerAdministrationApi(); val denied = session.copy(isAdministrator = false)
-            val readsAndWrites: List<suspend () -> Unit> = listOf({ api.info(denied); Unit }, { api.tasks(denied); Unit },
-                { api.activity(denied); Unit }, { api.logs(denied); Unit }, { api.readLog(denied, ServerLogFile("log.txt", null, 0)); Unit },
+            val readsAndWrites: List<suspend () -> Unit> = listOf({ api.info(denied) }, { api.tasks(denied) },
+                { api.activity(denied) }, { api.logs(denied) }, { api.readLog(denied, ServerLogFile("log.txt", null, 0)) },
                 { api.runTask(denied, "task") }, { api.cancelTask(denied, "task") }, { api.restart(denied) })
             readsAndWrites.forEach { assertEquals(403, expectApiFailure(it).statusCode) }
             for (id in listOf("", "../task", "task?secret=x", "task/other")) assertThrows(IllegalArgumentException::class.java) { runBlocking { api.runTask(session, id) } }
@@ -108,7 +108,7 @@ class ServerAdministrationApiTest {
         val calls = AtomicInteger()
         withServer({ exchange -> calls.incrementAndGet(); exchange.reply("{\"detail\":\"synthetic-token private-path\"}", 403) }) { session -> runBlocking {
             val api = ServerAdministrationApi()
-            val operations: List<suspend () -> Unit> = listOf({ api.tasks(session); Unit }, { api.restart(session) })
+            val operations: List<suspend () -> Unit> = listOf({ api.tasks(session) }, { api.restart(session) })
             for (operation in operations) {
                 val error = expectApiFailure(operation); assertEquals(403, error.statusCode)
                 assertFalse(error.message.orEmpty().contains("synthetic-token")); assertFalse(error.message.orEmpty().contains("private-path"))
