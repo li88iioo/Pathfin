@@ -186,7 +186,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             "limit" to limit.coerceIn(1, 100).toString(),
             "fields" to if (posterOnly) {
                 // 季数仅用于节目卡片；电影和合集无需额外让服务器统计 ChildCount。
-                POSTER_FIELDS + if ("Series" in options!!.resultItemTypes) ",ChildCount" else ""
+                POSTER_FIELDS + if ("Series" in options.resultItemTypes) ",ChildCount" else ""
             } else LIST_FIELDS,
             "enableUserData" to "true",
             "imageTypeLimit" to "1",

@@ -24,7 +24,7 @@ class LiveTvApi(private val api: JellyfinApi) {
         val canView = policy?.opt("IsDisabled") != true && policy?.opt("EnableLiveTvAccess") == true
         if (!canView) return LiveTvCapabilities(false, false, false).also { access = Access(session, it) }
         val info = api.authenticatedObject(session, "LiveTv/Info")
-        val result = LiveTvCapabilities(true, policy?.opt("EnableMediaPlayback") == true, info.opt("IsEnabled") == true)
+        val result = LiveTvCapabilities(true, policy.opt("EnableMediaPlayback") == true, info.opt("IsEnabled") == true)
         access = Access(session, result)
         return result
     }

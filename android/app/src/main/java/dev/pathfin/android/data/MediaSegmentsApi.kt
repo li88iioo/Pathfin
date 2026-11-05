@@ -34,10 +34,10 @@ internal fun parseMediaSegments(response: JSONObject, itemId: String): List<Medi
         val key = segmentUuid(id) ?: malformed()
         val associatedId = item.opt("ItemId") as? String ?: malformed()
         if (segmentUuid(associatedId) != expected || !seen.add(key) || item.opt("Type") != "Intro") malformed()
-        fun ticks(name: String): Long = when (val value = item.opt(name)) {
-            is Int -> value.toLong()
-            is Long -> value
-            else -> malformed()
+        fun ticks(name: String): Long {
+            val value = item.opt(name)
+            if (value !is Int && value !is Long) malformed()
+            return value.toLong()
         }
         val start = ticks("StartTicks")
         val end = ticks("EndTicks")
