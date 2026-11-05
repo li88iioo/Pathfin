@@ -69,7 +69,6 @@ import dev.pathfin.android.domain.Session
 import dev.pathfin.android.data.PerformanceTrace
 import dev.pathfin.android.data.PosterImageCache
 import okhttp3.OkHttpClient
-import java.net.URI
 
 internal val LocalPosterLoader = staticCompositionLocalOf<ImageLoader> { error("Poster loader is not configured") }
 internal val LocalNavigationBottomInset = staticCompositionLocalOf<Dp> { 16.dp }
@@ -245,8 +244,6 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
             return Offset.Zero
         }
     } }
-    val profile = state.profiles.firstOrNull { it.id == state.currentProfileId }
-    val serverName = profile?.displayName?.takeIf { it.isNotBlank() } ?: session?.let { runCatching { URI(it.server.baseUrl).host }.getOrNull() }.orEmpty()
     val managerSettings = !insideServer && (route == Route.Settings || route is Route.SettingsPage || route == Route.Downloads)
     val showManager = !insideServer && !managerSettings
     val connecting = showManager && (state.profiles.isEmpty() || state.addingServer)
@@ -405,10 +402,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                             .heightIn(min = 60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             if (route == Route.Home) {
                                 ServerSwitcher(state.profiles, state.currentProfileId, session, !state.canSwitchServer, vm.api, vm::openServer)
-                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                                    Text(serverName, color = LocalContentColor.current,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                }
+                                Spacer(Modifier.weight(1f))
                                 Box {
                                     Box(Modifier.size(44.dp).clip(CircleShape)
                                         .clickable(role = Role.Button) { libraryMenu = true }

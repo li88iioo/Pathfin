@@ -88,7 +88,7 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
     val list = rememberLazyListState()
     val scrollLimitPx = with(LocalDensity.current) { AmbientContentGap.roundToPx() }
     val ambientShown by rememberUpdatedState(showAmbient)
-    // 标题栏中间有服务器名：氛围区内容一开始滑到标题栏下方就恢复毛玻璃底，避免文字叠在一起。
+    // 氛围区内容滑到标题栏下方时恢复毛玻璃底，保持两侧按钮清晰。
     val covered by remember(scrollLimitPx) { derivedStateOf {
         ambientShown && list.firstVisibleItemIndex == 0 && list.firstVisibleItemScrollOffset < scrollLimitPx
     } }
@@ -119,7 +119,8 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
                         library.name, home.libraryItems[library.id].orEmpty(), session, api, onOpen,
                         onMore = { onOpen(library) }, compactHeading = true,
                         loading = !home.libraryItems.containsKey(library.id),
-                        keepEmptySpace = true, leading = { LatestArrivalIcon(libraryTypeIcon(library)) }, leadWide = true,
+                        keepEmptySpace = true, leading = { LatestArrivalIcon(libraryTypeIcon(library)) },
+                        leadWide = library.collectionType.equals("movies", ignoreCase = true),
                         modifier = Modifier.testTag("library-shelf/${library.id}"),
                     )
                 }
@@ -220,7 +221,7 @@ private fun LatestArrivalIcon(type: ImageVector) {
     }
 }
 
-/** 每栏打头的最新一部：与海报同高的横版剧照，压上 Logo，和首页氛围区呼应。 */
+/** 电影库打头的最新一部：与海报同高的横版剧照，压上 Logo，和首页氛围区呼应。 */
 @Composable
 private fun LatestLeadCard(item: MediaItem, session: Session, api: JellyfinApi, onOpen: () -> Unit) {
     val width = LatestLeadWidth

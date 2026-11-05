@@ -343,8 +343,8 @@ class HomePresentationTest {
         compose.runOnIdle { assertEquals(true, covered.last()) }
     }
 
-    @Test fun eachShelfLeadsWithItsNewestBackdropAtPosterHeight() {
-        val library = MediaItem("lead-library", "合成剧集库", "CollectionFolder", collectionType = "tvshows", isFolder = true)
+    @Test fun onlyMovieShelvesLeadWithABackdropWhileSeriesAndMixedKeepUniformPosters() {
+        val library = MediaItem("lead-library", "合成电影库", "CollectionFolder", collectionType = "movies", isFolder = true)
         val lead = movie.copy(id = "lead-movie", name = "最新一部", backdropTag = "synthetic-backdrop")
         val plain = movie.copy(id = "plain-movie", name = "没有剧照")
         val home = mutableStateOf(HomeState(libraries = listOf(library), loaded = true, librariesLoaded = true,
@@ -357,10 +357,26 @@ class HomePresentationTest {
         val plainTitle = layoutBounds(compose.onNodeWithTag("poster-title/${plain.id}", true))
         assertEquals("横版首卡与海报同高，标题在同一行", plainTitle.top, leadTitle.top, 1f)
         assertTrue("横版首卡明显比海报宽", leadTitle.width > plainTitle.width * 2)
+        saveScreenshot("latest-movies")
 
         compose.runOnIdle { home.value = home.value.copy(libraryItems = mapOf(library.id to listOf(plain, lead))) }
         compose.onNodeWithTag("latest-lead/${plain.id}").assertDoesNotExist()
         compose.onNodeWithTag("latest-lead/${lead.id}").assertDoesNotExist()
+
+        for (type in listOf("tvshows", null)) {
+            val category = if (type == "tvshows") "剧集" else "混合"
+            val first = if (type == "tvshows") lead.copy(type = "Series") else lead
+            compose.runOnIdle {
+                home.value = home.value.copy(libraries = listOf(library.copy(collectionType = type, name = "合成${category}库")),
+                    libraryItems = mapOf(library.id to listOf(first, plain)))
+            }
+            compose.onNodeWithTag("latest-lead/${first.id}").assertDoesNotExist()
+            val firstTitle = layoutBounds(compose.onNodeWithTag("poster-title/${first.id}", true))
+            val nextTitle = layoutBounds(compose.onNodeWithTag("poster-title/${plain.id}", true))
+            assertEquals("${category}库首张封面应与后续封面同宽", nextTitle.width, firstTitle.width, 1f)
+            assertEquals("${category}库首张封面应与后续封面同高", nextTitle.top, firstTitle.top, 1f)
+            saveScreenshot("latest-${type ?: "mixed"}")
+        }
     }
 
     /** 库名也出现在顶部库标签上，栏标题按所在栏查找。 */

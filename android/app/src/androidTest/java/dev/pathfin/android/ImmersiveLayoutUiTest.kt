@@ -75,6 +75,9 @@ class ImmersiveLayoutUiTest {
                 loaded = true, librariesLoaded = true, resumeLoaded = true, nextUpLoaded = true, complete = true)))
         val background = "app-floating-navigation"
         val material = "app-dock-surface"
+        compose.onNodeWithText(profile.displayName).assertDoesNotExist()
+        compose.onNodeWithContentDescription("切换服务器").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("home-more").assertVerificationDisplayed(compose)
         assertNavigationBounds(background)
         // 没有观看记录也没有剧照时不显示氛围区：首项是库标签，其后各库一栏，滚到最后一栏。
         compose.onNodeWithTag("home-list").performScrollToIndex(libraries.size)
