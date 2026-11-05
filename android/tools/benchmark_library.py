@@ -4,6 +4,7 @@
 先启动 fixture_server.py --benchmark-items 240 --api-delay-ms 120 --image-delay-ms 60。
 构建 -Ppathfin.verification=true :app:assembleRelease，再将 APK、设备和请求日志传入本工具。
 由 library_benchmark/build.py 同签原 release 与最小 bridge，使用公开 ViewStructure 采样。
+毛玻璃随界面始终开启，无需额外设置。
 进入耗时包含 shell 握手和节点采样，是可见内容出现的上界；不冒充首帧精确计时。
 逐手势采样：手势前 reset，抬手后 dump，保留原始帧数据和分页请求，避免只统计末尾的帧环形缓冲。
 """
@@ -111,7 +112,7 @@ class Benchmark:
         self.reverse_owned = False
         self.results = []
         self.report = {"apkSha256": self.digest, "bridgeSha256": self.bridge_digest, "package": PACKAGE, "rounds": self.results,
-                       "blur": args.blur,
+                       "blur": True,
                        "entryTiming": "public ViewStructure visible-node upper bound, includes shell handshake and sampling",
                        "scrollTiming": "per gesture: reset, 400ms swipe, 180ms settle, framestats dump; no sampling while finger moving"}
 
@@ -416,22 +417,6 @@ class Benchmark:
         self.field("密码", "pathfin")
         self.click("进入媒体库")
         self.wait(LIBRARY)
-        if self.args.blur:
-            for label in ("更多", "设置", "外观"):
-                self.click(label)
-            tree = self.stable_tree("毛玻璃效果")
-            label = self.find(tree, "毛玻璃效果")
-            switch = self.descendant_control(tree, label, "checkable")
-            if not switch.get("checked"):
-                self.tap(switch)
-            def blur_enabled(snapshot):
-                label = self.find(snapshot, "毛玻璃效果")
-                return label is not None and self.descendant_control(snapshot, label, "checkable").get("checked") is True
-            self.wait(predicate=blur_enabled)
-            for _ in range(2):
-                self.shell("input", "keyevent", "KEYCODE_BACK")
-                self.stable_tree()
-            self.wait(LIBRARY)
 
     @staticmethod
     def browser_ready(tree):
@@ -556,7 +541,6 @@ def main():
     parser.add_argument("--requests-log", type=Path, required=True)
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--swipes", type=int, default=16)
-    parser.add_argument("--blur", action="store_true", help="通过正常设置界面开启毛玻璃效果并校验，用相同视觉设置比较")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--adb", type=Path, default=Path.home() / "Android/Sdk/platform-tools/adb")
     parser.add_argument("--aapt2", type=Path, default=Path.home() / "Android/Sdk/build-tools/37.0.0/aapt2")
