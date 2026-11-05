@@ -91,7 +91,7 @@
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4"
+      "version": "submodule of haasn/libplacebo@275f7dea27924cdd34ab2e6c20e448b6bc4fab65"
     },
     {
       "artifact": "ffmpeg",
@@ -180,53 +180,54 @@
         },
         {
           "kind": "notice",
-          "path": "texts/41fe01429c7edddb49c9dd1e4dfcdd015a638e57b754b88ffcad83581fe0558c.txt",
-          "sha256": "41fe01429c7edddb49c9dd1e4dfcdd015a638e57b754b88ffcad83581fe0558c",
+          "path": "texts/cded4ba4f8b44782114e0ca6dbaccec89bf644d0bddd18ae50f69b0815d9534a.txt",
+          "sha256": "cded4ba4f8b44782114e0ca6dbaccec89bf644d0bddd18ae50f69b0815d9534a",
           "source": "https://github.com/Dav1dde/glad/tree/73db193f853e2ee079bf3ca8a64aa2eaf6459043",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4"
+      "version": "submodule of haasn/libplacebo@275f7dea27924cdd34ab2e6c20e448b6bc4fab65"
     },
     {
       "artifact": "libplacebo",
       "group": "native",
-      "id": "native:libplacebo:cee9b076f2c63104ccfd497fa79c39a867293ec4",
+      "id": "native:libplacebo:275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
       "kind": "native",
       "licenseIds": [
-        "LGPL-2.1-or-later"
+        "LGPL-2.1-or-later",
+        "Unlicense"
       ],
       "links": [
         {
           "label": "固定源码提交",
-          "url": "https://github.com/haasn/libplacebo/tree/cee9b076f2c63104ccfd497fa79c39a867293ec4"
+          "url": "https://github.com/haasn/libplacebo/tree/275f7dea27924cdd34ab2e6c20e448b6bc4fab65"
         }
       ],
       "modifications": [],
       "name": "libplacebo GLES renderer",
       "sourceArchive": {
-        "archive": "libplacebo-cee9b076f2c63104ccfd497fa79c39a867293ec4.tar.gz",
-        "commit": "cee9b076f2c63104ccfd497fa79c39a867293ec4",
-        "sha256": "6f8fa218cbafd8e5f50b8a82d918e1d8bbb92f9f980820bc0b34d92e9b79e484",
-        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/cee9b076f2c63104ccfd497fa79c39a867293ec4"
+        "archive": "libplacebo-275f7dea27924cdd34ab2e6c20e448b6bc4fab65.tar.gz",
+        "commit": "275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
+        "sha256": "adbca47395410ada01414bc527e0103c716b9b758be857464c40e5ff0ec695be",
+        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/275f7dea27924cdd34ab2e6c20e448b6bc4fab65"
       },
       "texts": [
         {
           "kind": "license",
           "path": "texts/b3aa400aca6d2ba1f0bd03bd98d03d1fe7489a3bbb26969d72016360af8a5c9d.txt",
           "sha256": "b3aa400aca6d2ba1f0bd03bd98d03d1fe7489a3bbb26969d72016360af8a5c9d",
-          "source": "https://github.com/haasn/libplacebo/blob/cee9b076f2c63104ccfd497fa79c39a867293ec4/LICENSE",
+          "source": "https://github.com/haasn/libplacebo/blob/275f7dea27924cdd34ab2e6c20e448b6bc4fab65/LICENSE",
           "title": "LICENSE"
         },
         {
           "kind": "notice",
-          "path": "texts/5b389f25d72764882f19a1288ba4fd267ddcfa31d1bb16d435767d2147260061.txt",
-          "sha256": "5b389f25d72764882f19a1288ba4fd267ddcfa31d1bb16d435767d2147260061",
-          "source": "https://github.com/haasn/libplacebo/tree/cee9b076f2c63104ccfd497fa79c39a867293ec4",
+          "path": "texts/02280c88b9ca6f9075c6ec67d7050ddbeb147a9b4a7c2323e60b411af4d23401.txt",
+          "sha256": "02280c88b9ca6f9075c6ec67d7050ddbeb147a9b4a7c2323e60b411af4d23401",
+          "source": "https://github.com/haasn/libplacebo/tree/275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "v7.360.1"
+      "version": "v7.387.0"
     },
     {
       "artifact": "media3-decoder-ffmpeg",

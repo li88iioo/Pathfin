@@ -110,7 +110,7 @@
     {
       "artifact": "fribidi",
       "group": "native",
-      "id": "native:fribidi:b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+      "id": "native:fribidi:15393e4937aa95bcf865d92143735746aeb654fa",
       "kind": "native",
       "licenseIds": [
         "LGPL-2.1-or-later"
@@ -118,39 +118,39 @@
       "links": [
         {
           "label": "固定源码提交",
-          "url": "https://github.com/fribidi/fribidi/tree/b93119f5fdc7ea47672cc304c1455ffa6dfe7536"
+          "url": "https://github.com/fribidi/fribidi/tree/15393e4937aa95bcf865d92143735746aeb654fa"
         }
       ],
       "modifications": [],
       "name": "GNU FriBidi",
       "sourceArchive": {
-        "archive": "fribidi-b93119f5fdc7ea47672cc304c1455ffa6dfe7536.tar.gz",
-        "commit": "b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
-        "sha256": "f309091695b3b0f2fd5f9caa7941d906ab08df9ab8f9931bf5ee674bc00b489b",
-        "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/b93119f5fdc7ea47672cc304c1455ffa6dfe7536"
+        "archive": "fribidi-15393e4937aa95bcf865d92143735746aeb654fa.tar.gz",
+        "commit": "15393e4937aa95bcf865d92143735746aeb654fa",
+        "sha256": "3e8c03cf8182ff3570a3696c7efd3c456f1fcf288a509b588abe67fc2ff4f630",
+        "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/15393e4937aa95bcf865d92143735746aeb654fa"
       },
       "texts": [
         {
           "kind": "license",
           "path": "texts/20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95.txt",
           "sha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95",
-          "source": "https://github.com/fribidi/fribidi/blob/b93119f5fdc7ea47672cc304c1455ffa6dfe7536/COPYING",
+          "source": "https://github.com/fribidi/fribidi/blob/15393e4937aa95bcf865d92143735746aeb654fa/COPYING",
           "title": "COPYING"
         },
         {
           "kind": "notice",
           "path": "texts/48d93d1267fec40c949dc138538242e781cd8624d8b17355ee2d49142c487232.txt",
           "sha256": "48d93d1267fec40c949dc138538242e781cd8624d8b17355ee2d49142c487232",
-          "source": "https://github.com/fribidi/fribidi/tree/b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
+          "source": "https://github.com/fribidi/fribidi/tree/15393e4937aa95bcf865d92143735746aeb654fa",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "v1.0.17"
+      "version": "v1.0.18"
     },
     {
       "artifact": "harfbuzz",
       "group": "native",
-      "id": "native:harfbuzz:c7a7457b7385f33178e8cf87615ca077a810bbe7",
+      "id": "native:harfbuzz:3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
       "kind": "native",
       "licenseIds": [
         "MIT-Modern-Variant"
@@ -158,34 +158,34 @@
       "links": [
         {
           "label": "固定源码提交",
-          "url": "https://github.com/harfbuzz/harfbuzz/tree/c7a7457b7385f33178e8cf87615ca077a810bbe7"
+          "url": "https://github.com/harfbuzz/harfbuzz/tree/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372"
         }
       ],
       "modifications": [],
       "name": "HarfBuzz",
       "sourceArchive": {
-        "archive": "harfbuzz-c7a7457b7385f33178e8cf87615ca077a810bbe7.tar.gz",
-        "commit": "c7a7457b7385f33178e8cf87615ca077a810bbe7",
-        "sha256": "10dcea60bd85ff219490d55525630650ac8c57044c4efdc878162f286451775b",
-        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/c7a7457b7385f33178e8cf87615ca077a810bbe7"
+        "archive": "harfbuzz-3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372.tar.gz",
+        "commit": "3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
+        "sha256": "ae2c028546880de8ac2a4616a3d437ecfc50140b31eace909aa61a29d0623cdd",
+        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372"
       },
       "texts": [
         {
           "kind": "license",
           "path": "texts/ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64.txt",
           "sha256": "ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64",
-          "source": "https://github.com/harfbuzz/harfbuzz/blob/c7a7457b7385f33178e8cf87615ca077a810bbe7/COPYING",
+          "source": "https://github.com/harfbuzz/harfbuzz/blob/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372/COPYING",
           "title": "COPYING"
         },
         {
           "kind": "notice",
-          "path": "texts/ae00b71f01caccddac8f3200471f3ef76c2d6a4b55058db027f2294e33b4a1bb.txt",
-          "sha256": "ae00b71f01caccddac8f3200471f3ef76c2d6a4b55058db027f2294e33b4a1bb",
-          "source": "https://github.com/harfbuzz/harfbuzz/tree/c7a7457b7385f33178e8cf87615ca077a810bbe7",
+          "path": "texts/517ad6845aad6f7cc44add8c18ffee91a67cd393dac52638915b8d471412ed92.txt",
+          "sha256": "517ad6845aad6f7cc44add8c18ffee91a67cd393dac52638915b8d471412ed92",
+          "source": "https://github.com/harfbuzz/harfbuzz/tree/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "14.6.0"
+      "version": "15.1.0"
     },
     {
       "artifact": "libass",

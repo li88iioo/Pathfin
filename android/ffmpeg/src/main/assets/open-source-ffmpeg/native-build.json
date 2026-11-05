@@ -28,13 +28,13 @@
     "lcms": false
   },
   "hostTools": {
-    "meson": "1.9.2",
-    "ninja": "1.13.0",
+    "meson": "1.12.1",
+    "ninja": "1.13.2",
     "Jinja2": "3.1.6",
     "MarkupSafe": "3.0.4"
   },
   "staticArchives": {
-    "libplacebo.a": "2f0762316984c98063ecf1405ef3f579a49e77072a2c5cc57f41224af7f81518"
+    "libplacebo.a": "1b79cd0cbc8be252fd7d71f9c6764f45b0186ebf963c5124047275c81e132d6b"
   },
   "sourceInputs": {
     "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
@@ -59,7 +59,7 @@
     "version.h": "6e75a8cd7772f334958ffce859e3e23987963e3b406f12d9ec71650ca437fb92",
     "version_major.h": "436db6c1b56db87e83682639fd0285e8b0138acc4fb572868c70a690eda7bb5e"
   },
-  "libplaceboConfigSha256": "12a3e0c92d498616d0899c55dc2ad5eef6f0f2617df6d144edef9513510cc445",
+  "libplaceboConfigSha256": "8bea5588b23fa28996f8add84022be7901598e37a8d01d8001067b69fbc90d3d",
   "crossFileSha256": "307efa2779f2b5244b14754dac1294ea1304d04688064b9a3b9b90df1e72007b",
   "decoders": [
     "aac",
@@ -86,7 +86,7 @@
     {
       "file": "libavcodec.so",
       "bytes": 3282352,
-      "sha256": "061091142122fe2d5667e1abaf457b42c1a9cba813538e150e3153d37d314a49",
+      "sha256": "bfd1d1c7f14ebaee5193625de28053a41ca6d0b2b2a1035f86bf27eb5ebd76e3",
       "loadAlignments": [
         16384,
         16384,
@@ -101,8 +101,8 @@
     },
     {
       "file": "libavutil.so",
-      "bytes": 729960,
-      "sha256": "6d0b48350bc2734ee609da505d03c2899f9e66c9a811e96bbc5fa1896437a359",
+      "bytes": 729992,
+      "sha256": "8e2816de7a56b17fe13b510ec857f7088fe97608bdbf7bd47505d4363a49b211",
       "loadAlignments": [
         16384,
         16384,
@@ -116,7 +116,7 @@
     {
       "file": "libswresample.so",
       "bytes": 96392,
-      "sha256": "abd8f812ff01756b0b7f40eda32000b69e28924ed9030dd1451e1f4de972bf8e",
+      "sha256": "389474823d38919d7623010988fa069717aac39269da8569d088d1c35c6bd541",
       "loadAlignments": [
         16384,
         16384
@@ -129,8 +129,8 @@
     },
     {
       "file": "libffmpegJNI.so",
-      "bytes": 743024,
-      "sha256": "bec5f4bb9578a071584b0d5e8dd420d83eb793b55a69c94b6203598faf4451fa",
+      "bytes": 763224,
+      "sha256": "ba86be14b78d0f1a2698372dc994c78f942e342fd91b77efd1788bce9e7cf312",
       "loadAlignments": [
         16384,
         16384,
@@ -153,5 +153,5 @@
   "configSha256": "71523b870e57ccb09142a55ff40dd8400caf040e1bd048b3ced6c9d14ed2a397",
   "componentConfigSha256": "4054a9e9425a67f369c0dab792a92cc80dbda9aef92827c2f0f3a52e20c9c37c",
   "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
-  "sourceLockSha256": "82e0ac8851fc32e1fd41670f23f6a49ee56e575f22e0c97221108139100f3555"
+  "sourceLockSha256": "25b8a438b631d0b1f0fe555f2957f252b5a2136254cadf54e0f2c9a3d2e468a9"
 }

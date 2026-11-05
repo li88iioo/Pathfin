@@ -87,17 +87,17 @@
       {
         "name": "libplacebo",
         "repository": "https://github.com/haasn/libplacebo",
-        "ref": "v7.360.1",
-        "commit": "cee9b076f2c63104ccfd497fa79c39a867293ec4",
-        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/cee9b076f2c63104ccfd497fa79c39a867293ec4",
-        "sha256": "6f8fa218cbafd8e5f50b8a82d918e1d8bbb92f9f980820bc0b34d92e9b79e484",
-        "archive": "libplacebo-cee9b076f2c63104ccfd497fa79c39a867293ec4.tar.gz",
-        "bytes": 863019
+        "ref": "v7.387.0",
+        "commit": "275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
+        "url": "https://codeload.github.com/haasn/libplacebo/tar.gz/275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
+        "sha256": "adbca47395410ada01414bc527e0103c716b9b758be857464c40e5ff0ec695be",
+        "archive": "libplacebo-275f7dea27924cdd34ab2e6c20e448b6bc4fab65.tar.gz",
+        "bytes": 973669
       },
       {
         "name": "fast_float",
         "repository": "https://github.com/fastfloat/fast_float",
-        "ref": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "ref": "submodule of haasn/libplacebo@275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
         "commit": "97b54ca9e75f5303507699d27c6b4f4efe4641a1",
         "url": "https://codeload.github.com/fastfloat/fast_float/tar.gz/97b54ca9e75f5303507699d27c6b4f4efe4641a1",
         "sha256": "2b132274539286e41f37857cac22aa8441d21bd86d55de825a3342b149f66801",
@@ -108,7 +108,7 @@
       {
         "name": "glad",
         "repository": "https://github.com/Dav1dde/glad",
-        "ref": "submodule of haasn/libplacebo@cee9b076f2c63104ccfd497fa79c39a867293ec4",
+        "ref": "submodule of haasn/libplacebo@275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
         "commit": "73db193f853e2ee079bf3ca8a64aa2eaf6459043",
         "url": "https://codeload.github.com/Dav1dde/glad/tar.gz/73db193f853e2ee079bf3ca8a64aa2eaf6459043",
         "sha256": "33dbeae44d8315ece57e14eba4b1b4a02ac5406d1c4f49cd20048c91522a6b9a",
@@ -123,8 +123,8 @@
       "mpeg2video"
     ],
     "hostTools": {
-      "meson": "1.9.2",
-      "ninja": "1.13.0",
+      "meson": "1.12.1",
+      "ninja": "1.13.2",
       "Jinja2": "3.1.6",
       "MarkupSafe": "3.0.4"
     },

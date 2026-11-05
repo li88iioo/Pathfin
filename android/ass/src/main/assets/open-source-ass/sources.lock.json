@@ -95,7 +95,7 @@
     },
     {
       "path": "requirements-build.txt",
-      "sha256": "ffc2a85fd561703674a66f94e7e7ed1f2e47015edef8a4b86fec281dc1dbd861"
+      "sha256": "746ea600cc5e102de3f0bce7ab846e08e0963557ae451e9589db03b956f9adfa"
     }
   ],
   "native": {
@@ -126,22 +126,22 @@
       {
         "name": "fribidi",
         "repository": "https://github.com/fribidi/fribidi",
-        "ref": "v1.0.17",
-        "commit": "b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
-        "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/b93119f5fdc7ea47672cc304c1455ffa6dfe7536",
-        "sha256": "f309091695b3b0f2fd5f9caa7941d906ab08df9ab8f9931bf5ee674bc00b489b",
-        "archive": "fribidi-b93119f5fdc7ea47672cc304c1455ffa6dfe7536.tar.gz",
-        "bytes": 2161272
+        "ref": "v1.0.18",
+        "commit": "15393e4937aa95bcf865d92143735746aeb654fa",
+        "url": "https://codeload.github.com/fribidi/fribidi/tar.gz/15393e4937aa95bcf865d92143735746aeb654fa",
+        "sha256": "3e8c03cf8182ff3570a3696c7efd3c456f1fcf288a509b588abe67fc2ff4f630",
+        "archive": "fribidi-15393e4937aa95bcf865d92143735746aeb654fa.tar.gz",
+        "bytes": 2168509
       },
       {
         "name": "harfbuzz",
         "repository": "https://github.com/harfbuzz/harfbuzz",
-        "ref": "14.6.0",
-        "commit": "c7a7457b7385f33178e8cf87615ca077a810bbe7",
-        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/c7a7457b7385f33178e8cf87615ca077a810bbe7",
-        "sha256": "10dcea60bd85ff219490d55525630650ac8c57044c4efdc878162f286451775b",
-        "archive": "harfbuzz-c7a7457b7385f33178e8cf87615ca077a810bbe7.tar.gz",
-        "bytes": 38888629
+        "ref": "15.1.0",
+        "commit": "3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
+        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
+        "sha256": "ae2c028546880de8ac2a4616a3d437ecfc50140b31eace909aa61a29d0623cdd",
+        "archive": "harfbuzz-3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372.tar.gz",
+        "bytes": 39194126
       },
       {
         "name": "unibreak",

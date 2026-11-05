@@ -23,7 +23,8 @@ PRIVATE_NAMES = {"local.properties", "release.properties", "signing.properties",
 PRIVATE_SUFFIXES = {".jks", ".keystore", ".p12", ".pfx", ".key", ".apk", ".aab", ".pyc"}
 LICENSES = {
     "ffmpeg": ("FFmpeg audio/video decoders", ["LGPL-2.1-or-later"], ["LICENSE.md", "COPYING.LGPLv2.1"]),
-    "libplacebo": ("libplacebo GLES renderer", ["LGPL-2.1-or-later"], ["LICENSE"]),
+    # 7.387 起编译 libplacebo 自带的 3rdparty/json.h（Unlicense），其原文由实编译输入版权声明收录。
+    "libplacebo": ("libplacebo GLES renderer", ["LGPL-2.1-or-later", "Unlicense"], ["LICENSE"]),
     "fast_float": ("fast_float", ["MIT"], ["LICENSE-MIT"]),
     "glad": ("glad and Khronos OpenGL/EGL specifications", ["MIT", "Apache-2.0"], ["LICENSE"]),
     "libass": ("libass", ["ISC"], ["COPYING"]),
