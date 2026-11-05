@@ -62,24 +62,18 @@ internal class AssSubtitleParserFactory(
 @UnstableApi
 internal class AssExtractorsFactory(private val controller: AssController) : ExtractorsFactory {
     private val base = DefaultExtractorsFactory().setSubtitleParserFactory(AssSubtitleParserFactory(controller, false))
-    private var transcode = true
     override fun createExtractors(): Array<Extractor> = replace(base.createExtractors())
     override fun createExtractors(uri: Uri, responseHeaders: MutableMap<String, MutableList<String>>): Array<Extractor> =
         replace(base.createExtractors(uri, responseHeaders))
     override fun setSubtitleParserFactory(subtitleParserFactory: SubtitleParser.Factory): ExtractorsFactory = apply {
         base.setSubtitleParserFactory(subtitleParserFactory)
     }
-    @Suppress("DEPRECATION")
-    override fun experimentalSetTextTrackTranscodingEnabled(textTrackTranscodingEnabled: Boolean): ExtractorsFactory = apply {
-        transcode = textTrackTranscodingEnabled
-        base.experimentalSetTextTrackTranscodingEnabled(textTrackTranscodingEnabled)
-    }
     override fun experimentalSetCodecsToParseWithinGopSampleDependencies(codecsToParseWithinGopSampleDependencies: Int): ExtractorsFactory = apply {
         base.experimentalSetCodecsToParseWithinGopSampleDependencies(codecsToParseWithinGopSampleDependencies)
     }
     override fun setParseHagcMetadata(parseHagcMetadata: Boolean): ExtractorsFactory = apply { base.setParseHagcMetadata(parseHagcMetadata) }
     private fun replace(extractors: Array<Extractor>): Array<Extractor> = extractors.map { extractor ->
-        if (transcode && extractor is MatroskaExtractor) {
+        if (extractor is MatroskaExtractor) {
             val parsers = AssSubtitleParserFactory(controller, true)
             RawAssExtractor(FontMatroskaExtractor(parsers, controller), parsers, controller)
         } else extractor

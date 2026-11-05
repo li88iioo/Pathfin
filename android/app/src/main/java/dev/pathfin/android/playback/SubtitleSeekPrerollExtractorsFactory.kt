@@ -36,12 +36,6 @@ internal class SubtitleSeekPrerollExtractorsFactory(
         delegate.setSubtitleParserFactory(subtitleParserFactory)
     }
 
-    @Suppress("DEPRECATION")
-    @Deprecated("Use setSubtitleParserFactory instead")
-    override fun experimentalSetTextTrackTranscodingEnabled(textTrackTranscodingEnabled: Boolean): ExtractorsFactory = apply {
-        delegate.experimentalSetTextTrackTranscodingEnabled(textTrackTranscodingEnabled)
-    }
-
     override fun experimentalSetCodecsToParseWithinGopSampleDependencies(codecsToParseWithinGopSampleDependencies: Int): ExtractorsFactory = apply {
         delegate.experimentalSetCodecsToParseWithinGopSampleDependencies(codecsToParseWithinGopSampleDependencies)
     }
