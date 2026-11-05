@@ -103,6 +103,8 @@ data class HomeState(
     val loaded: Boolean = false,
     /** 本轮必需首页请求全部成功；部分内容可显示不代表可以跳过再次读取。 */
     val complete: Boolean = false,
+    /** 已结束过首轮读取；刷新时保留，区分未知首页与已确认的空首页。 */
+    val initialized: Boolean = complete,
     val error: String? = null,
     val nextUp: List<MediaItem> = emptyList(),
     val nextUpLoaded: Boolean = false,
@@ -112,13 +114,13 @@ data class HomeState(
 
 private fun HomeSnapshot.homeState() = HomeState(
     libraries = libraries, recent = recent, resume = resume, nextUp = nextUp, libraryItems = libraryItems,
-    loaded = loaded, complete = complete, librariesLoaded = librariesLoaded,
+    loaded = loaded, complete = complete, initialized = initialized, librariesLoaded = librariesLoaded,
     resumeLoaded = resumeLoaded, nextUpLoaded = nextUpLoaded,
 )
 
 private fun HomeState.snapshot() = HomeSnapshot(
     libraries = libraries, recent = recent, resume = resume, nextUp = nextUp, libraryItems = libraryItems,
-    loaded = loaded, complete = complete, librariesLoaded = librariesLoaded,
+    loaded = loaded, complete = complete, initialized = initialized, librariesLoaded = librariesLoaded,
     resumeLoaded = resumeLoaded, nextUpLoaded = nextUpLoaded,
 )
 
@@ -1462,7 +1464,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             if (isCurrentRequest()) {
-                mutableState.update { it.copy(home = it.home.copy(loading = false, complete = errors.isEmpty(), error = errors.firstOrNull()?.let(::message))) }
+                mutableState.update { it.copy(home = it.home.copy(loading = false, initialized = true,
+                    complete = errors.isEmpty(), error = errors.firstOrNull()?.let(::message))) }
                 captureHomeSnapshot()
             }
         }

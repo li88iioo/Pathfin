@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,12 +50,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -63,6 +66,7 @@ import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.i18n.tr
+import kotlin.math.roundToInt
 
 internal enum class AmbientKind { RESUME, NEXT_UP, LATEST }
 
@@ -85,9 +89,8 @@ internal fun homeAmbientEntries(home: HomeState): List<AmbientEntry> {
         .distinctBy { it.id }.take(8).map { AmbientEntry(it, AmbientKind.LATEST) }
 }
 
-/** 首次读取续播时先占住氛围区，内容到达后下面各栏不被推走。 */
-internal fun homeAmbientPending(home: HomeState): Boolean = home.loading && homeAmbientEntries(home).isEmpty() &&
-    (!home.resumeLoaded || (home.resume.isEmpty() && !home.nextUpLoaded))
+/** 首轮候选请求全部结束前保持占位；已确认的空首页在暖刷新时不重新占位。 */
+internal fun homeAmbientPending(home: HomeState): Boolean = home.loading && !home.initialized && homeAmbientEntries(home).isEmpty()
 
 /**
  * 氛围首页：整块背景是选中条目的剧照（Android 12 起模糊），切换下面的小图时淡入淡出；
@@ -198,13 +201,21 @@ private fun ambientScrim(canvas: Color, fadeStart: Float): Brush {
 private fun AmbientThumbs(entries: List<AmbientEntry>, shownKind: AmbientKind?, selectedId: String?, session: Session, api: JellyfinApi,
     onGroup: (AmbientKind) -> Unit, onClick: (AmbientEntry) -> Unit) {
     val groups = entries.groupBy { it.kind }
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val textStyle = LocalTextStyle.current
+    // 字体含中文回退；各子项分别取整后相加，与真实布局一致，避免小数密度下少分一像素。
+    val groupHeight = with(density) { (measurer.measure("国Ag", textStyle.copy(fontSize = 13.sp, lineHeight = 17.sp,
+        fontWeight = FontWeight.SemiBold), maxLines = 1).size.height + 4.dp.roundToPx() * 3 + 2.dp.roundToPx()).toDp() }.coerceAtLeast(32.dp)
+    val thumbHeight = with(density) { (measurer.measure("国Ag", textStyle.copy(fontSize = 11.sp, lineHeight = 14.sp),
+        maxLines = 1).size.height + (ThumbWidth.roundToPx() * 9f / 16f).roundToInt() + 6.dp.roundToPx()).toDp() }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.padding(horizontal = 14.dp).height(32.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
+        Row(Modifier.padding(horizontal = 14.dp).height(groupHeight), horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically) {
             groups.forEach { (kind, items) -> AmbientGroupTab(kind, items.size, kind == shownKind, groups.size > 1) { onGroup(kind) } }
         }
         key(shownKind) {
-            LazyRow(Modifier.fillMaxWidth().height(ThumbHeight).testTag("home-ambient-thumbs"),
+            LazyRow(Modifier.fillMaxWidth().height(thumbHeight).testTag("home-ambient-thumbs"),
                 contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(groups[shownKind].orEmpty(), key = { it.item.id }) { entry ->
                     AmbientThumb(entry, entry.item.id == selectedId, session, api) { onClick(entry) }
@@ -274,4 +285,3 @@ private val AmbientHeroHeight = 212.dp
 internal val AmbientContentGap = 56.dp
 private val AmbientFade = 112.dp
 private val ThumbWidth = 112.dp
-private val ThumbHeight = 112.dp * 9f / 16f + 6.dp + 16.dp

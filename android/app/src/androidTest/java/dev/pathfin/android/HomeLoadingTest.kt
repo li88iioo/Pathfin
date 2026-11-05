@@ -96,6 +96,7 @@ class HomeLoadingTest {
                 assertTrue("其它首页请求未完成时加载态仍需保持", available.home.loading)
                 assertTrue("已到达的媒体库必须成为可显示内容", available.home.loaded)
                 assertFalse("库清单就绪不等于首页完整成功", available.home.complete)
+                assertFalse("候选请求未完成，首轮占位仍未确定", available.home.initialized)
                 assertTrue("媒体库结构已由真实响应确认", available.home.librariesLoaded)
                 assertFalse("慢续播未返回时不能把未知状态当成空结果", available.home.resumeLoaded)
                 assertFalse("未返回的第二库不能伪造媒体", available.home.libraryItems[SECOND_LIBRARY].orEmpty().isNotEmpty())
@@ -121,6 +122,7 @@ class HomeLoadingTest {
                 assertEquals(listOf(FIRST_MOVIE), complete.home.libraryItems[FIRST_LIBRARY]?.map { it.id })
                 assertEquals(listOf(RESUME_MOVIE), complete.home.resume.map { it.id })
                 assertTrue("必需请求全部成功后才允许完整缓存复用", complete.home.complete)
+                assertTrue(complete.home.initialized)
                 assertTrue("有媒体库时不应展示冗余全局最近列表", complete.home.recent.isEmpty())
                 assertEquals("整个加载过程中不能发出全局 recent Items 扫描", 0, fixture.globalRecentRequests.get())
                 fixture.assertHealthy()
@@ -491,11 +493,13 @@ class HomeLoadingTest {
         fixture.fallbackLatest.awaitRequest("空库时应真实读取全局 Latest")
         val partial = awaitState(app, fixture, "空库结构响应不能提前标为完整首页") { it.home.librariesLoaded }
         assertFalse(partial.home.complete)
+        assertFalse("全局最近入库仍在途，不能提前结束首轮占位", partial.home.initialized)
         fixture.fallbackLatest.release()
         val failed = awaitState(app, fixture, "fallback 失败必须结束忙态但禁止完整缓存复用", allowHomeError = true) {
             !it.home.loading && it.home.error != null
         }
         assertFalse(failed.home.complete)
+        assertTrue("请求失败也须结束首轮占位", failed.home.initialized)
         fixture.fallbackStatus.set(200)
         val profile = failed.profiles.single { it.id == failed.currentProfileId }
         InstrumentationRegistry.getInstrumentation().runOnMainSync { app.showServers(); app.openServer(profile) }
@@ -503,6 +507,7 @@ class HomeLoadingTest {
             it.home.complete && !it.home.loading && it.home.error == null
         }
         assertTrue(recovered.home.libraries.isEmpty())
+        assertTrue(recovered.home.initialized)
         assertEquals(2, fixture.globalRecentRequests.get())
         val requests = fixture.requestCount()
         InstrumentationRegistry.getInstrumentation().runOnMainSync { app.showServers(); app.openServer(profile) }

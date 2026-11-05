@@ -51,10 +51,17 @@ class HomeSnapshotStoreTest {
         val empty = snapshot().copy(resume = emptyList(), nextUp = emptyList())
         assertTrue(store.save("A", session, empty))
         assertEquals(empty, HomeSnapshotStore(directory).load("A", session))
-        val partial = empty.copy(complete = false, resumeLoaded = false, nextUpLoaded = false,
+        val partial = empty.copy(complete = false, initialized = false, resumeLoaded = false, nextUpLoaded = false,
             libraryItems = mapOf(library.id to emptyList()))
         assertTrue(store.save("A", session, partial))
         assertEquals(partial, HomeSnapshotStore(directory).load("A", session))
+        val refreshingEmpty = empty.copy(complete = false)
+        assertTrue(store.save("A", session, refreshingEmpty))
+        assertTrue("空首页暖刷新中重启仍须知道首轮已结束", store.load("A", session)!!.initialized)
+        val file = directory.listFiles()!!.single()
+        val legacy = JSONObject(file.readText()).put("complete", true).apply { remove("initialized") }
+        file.writeText(legacy.toString())
+        assertTrue("已有完整缓存保留已完成读取事实", store.load("A", session)!!.initialized)
     }
 
     @Test fun profilesUsersServersAddressesCredentialsAndPermissionsCannotReuseAnotherSnapshot() {

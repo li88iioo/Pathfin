@@ -164,8 +164,9 @@ class HomePresentationTest {
     @Test fun loadingEmptyAndLoadedLibraryShelvesKeepTheFollowingHeadingInPlace() {
         val first = MediaItem("first-library", "合成首库", "CollectionFolder", isFolder = true)
         val second = MediaItem("second-library", "合成次库", "CollectionFolder", isFolder = true)
-        // 观看记录已确定为空且条目没有剧照：不显示氛围区，这里只验证各海报栏。
+        // 观看区已有固定内容；这里单独验证各海报栏，避免混入首轮空氛围区收起的高度变化。
         val home = mutableStateOf(HomeState(libraries = listOf(first, second), loading = true, resumeLoaded = true, nextUpLoaded = true,
+            resume = listOf(movie.copy(id = "watching")),
             libraryItems = mapOf(second.id to listOf(movie.copy(id = "second-movie")))))
         showHome(home, fontScale = mutableStateOf(1.6f))
         val anchor = heading(first)
@@ -263,6 +264,54 @@ class HomePresentationTest {
         assertEquals("没有观看记录时改放最近入库，不能收起已有空间", before, layoutBounds(heading))
     }
 
+    @Test fun emptyWatchingWaitsForTheLatestShelfWithoutCollapsingTheAmbientSlot() {
+        val library = MediaItem("delayed-latest-library", "慢速电影库", "CollectionFolder", isFolder = true)
+        val home = mutableStateOf(HomeState(libraries = listOf(library), librariesLoaded = true, loaded = true, loading = true))
+        showHome(home)
+        val heading = heading(library)
+        VerificationDisplay.awaitWindowReady(compose, "home-delayed-latest", heading)
+        val before = layoutBounds(heading).top
+        compose.runOnIdle { home.value = home.value.copy(resumeLoaded = true, nextUpLoaded = true) }
+        compose.onNodeWithTag("home-ambient").assertExists()
+        assertSamePosition(before, layoutBounds(heading).top, "观看记录先返回空结果")
+        val latest = movie.copy(backdropTag = "synthetic-backdrop")
+        compose.runOnIdle { home.value = home.value.copy(libraryItems = mapOf(library.id to listOf(latest)), loading = false) }
+        compose.onNodeWithTag("home-ambient-hero/${latest.id}").assertExists()
+        assertSamePosition(before, layoutBounds(heading).top, "最近入库稍后返回")
+        compose.runOnIdle { home.value = home.value.copy(initialized = true, libraryItems = mapOf(library.id to emptyList())) }
+        compose.onNodeWithTag("home-ambient").assertDoesNotExist()
+        val emptyTop = layoutBounds(heading).top
+        compose.runOnIdle { home.value = home.value.copy(loading = true) }
+        compose.onNodeWithTag("home-ambient").assertDoesNotExist()
+        assertSamePosition(emptyTop, layoutBounds(heading).top, "已确认空首页的暖刷新")
+    }
+
+    @Test fun ambientTextFitsAtLargeFontScalesAndPlaybackRemainsReachable() {
+        val resume = movie.copy(positionTicks = 50_000_000, runTimeTicks = 600_000_000)
+        val home = mutableStateOf(HomeState(resumeLoaded = true, nextUpLoaded = true, loaded = true,
+            resume = listOf(resume), nextUp = listOf(movie.copy(id = "next", type = "Episode"))))
+        val scale = mutableStateOf(1f)
+        var played: MediaItem? = null
+        showHome(home, fontScale = scale, onPlay = { played = it })
+        for (value in listOf(1f, 1.6f, 2f)) {
+            compose.runOnIdle { scale.value = value }
+            val group = compose.onNodeWithText("继续观看 1", useUnmergedTree = true)
+            val thumb = compose.onNode(hasText(movie.name) and hasAnyAncestor(hasTestTag("home-ambient-thumbs")), useUnmergedTree = true)
+            for ((label, node) in listOf("分组" to group, "缩略图标题" to thumb)) {
+                val layouts = mutableListOf<TextLayoutResult>()
+                node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                val layout = layouts.single()
+                assertEquals("$value 氛围区$label 应完整保留一行", 1, layout.lineCount)
+                assertFalse("$value 氛围区$label 不得垂直裁字：size=${layout.size}, paragraphHeight=${layout.multiParagraph.height}", layout.didOverflowHeight)
+                assertFalse("$value 氛围区$label 短文案不应省略", layout.isLineEllipsized(0))
+                // wrap-content Text 的段落测量宽度可以大于最终节点，检查实际文字行而非段落画布。
+                assertTrue("$value 氛围区$label 文字必须在节点内", layout.getLineRight(0) <= layout.size.width + 1f)
+            }
+            compose.onNodeWithTag("home-ambient-play").assertVerificationDisplayed(compose).performVerificationClick(compose)
+            compose.runOnIdle { assertSame(resume, played); played = null }
+        }
+    }
+
     @Test fun ambientThumbsSelectThenOpenWhilePlayAndTitleBarCoverFollowTheSelection() {
         fun watching(id: String, series: String) = MediaItem(id, "第 3 集", "Episode", seriesId = series, seriesName = series,
             parentIndexNumber = 1, indexNumber = 3, runTimeTicks = 27_600_000_000L, positionTicks = 6_000_000_000L)
@@ -354,7 +403,8 @@ class HomePresentationTest {
         assertEquals("$label 应只有一行", 1, layout.lineCount)
         assertFalse("$label 不得垂直裁字：size=${layout.size}, paragraph=${layout.multiParagraph.width}x${layout.multiParagraph.height}, line=${layout.getLineTop(0)}..${layout.getLineBottom(0)}, right=${layout.getLineRight(0)}, ellipsis=${layout.isLineEllipsized(0)}, exceeded=${layout.multiParagraph.didExceedMaxLines}", layout.didOverflowHeight)
         assertFalse("$label 的完整短文案不应省略", layout.isLineEllipsized(0))
-        assertFalse("$label 不得超出可绘制范围", layout.hasVisualOverflow)
+        assertFalse("$label 不得超出可绘制范围：size=${layout.size}, paragraph=${layout.multiParagraph.width}x${layout.multiParagraph.height}, " +
+            "widthOverflow=${layout.didOverflowWidth}, heightOverflow=${layout.didOverflowHeight}", layout.hasVisualOverflow)
     }
 
     private fun assertSamePosition(before: Float, after: Float, stage: String) =

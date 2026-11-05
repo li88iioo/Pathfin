@@ -48,6 +48,20 @@ class HomeAmbientEntriesTest {
         assertEquals(recent.take(8).map { it.id }, entries.map { it.item.id })
     }
 
+    @Test fun emptyWatchingKeepsTheSlotWhileLatestShelvesAreStillLoading() {
+        val home = HomeState(loading = true, resumeLoaded = true, nextUpLoaded = true)
+        assertTrue("媒体库尚未返回时不能提前撤掉占位", homeAmbientPending(home))
+        val shelvesPending = home.copy(librariesLoaded = true, loaded = true, libraries = listOf(movies, shows))
+        assertTrue("观看记录为空时还要等待最近入库", homeAmbientPending(shelvesPending))
+        assertTrue("先返回的空库不能撤掉占位", homeAmbientPending(shelvesPending.copy(libraryItems = mapOf(movies.id to emptyList()))))
+        assertFalse("所有库已确定为空，暖刷新不再占位", homeAmbientPending(shelvesPending.copy(
+            initialized = true, libraryItems = mapOf(movies.id to emptyList(), shows.id to emptyList()))))
+        assertTrue("没有库时仍等待全局最近入库", homeAmbientPending(home.copy(librariesLoaded = true, loaded = true)))
+        assertFalse("无库空首页暖刷新也不插入占位", homeAmbientPending(home.copy(
+            librariesLoaded = true, loaded = true, initialized = true)))
+        assertFalse("失败或空结果结束时不保留占位", homeAmbientPending(home.copy(loading = false)))
+    }
+
     private fun episode(id: String, series: String) = MediaItem(id, id, "Episode", seriesId = series, seriesName = series)
     private fun media(id: String, type: String, backdrop: Boolean = true) =
         MediaItem(id, id, type, backdropTag = if (backdrop) "backdrop-$id" else null)

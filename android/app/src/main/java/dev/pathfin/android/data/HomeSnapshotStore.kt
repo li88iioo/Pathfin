@@ -23,6 +23,8 @@ internal data class HomeSnapshot(
     val librariesLoaded: Boolean,
     val resumeLoaded: Boolean,
     val nextUpLoaded: Boolean,
+    /** 已结束过一轮读取（含空结果和失败）；暖刷新不清除。 */
+    val initialized: Boolean = complete,
 )
 
 /** 在既有存储 IO 队列使用；整份原子替换，已加载的空分组也必须保存。 */
@@ -48,6 +50,7 @@ internal class HomeSnapshotStore(private val directory: File) {
                 librariesLoaded = json.getBoolean("librariesLoaded"),
                 resumeLoaded = json.getBoolean("resumeLoaded"),
                 nextUpLoaded = json.getBoolean("nextUpLoaded"),
+                initialized = json.optBoolean("initialized", json.getBoolean("complete")),
             )
         } catch (_: Exception) {
             file.delete()
@@ -65,7 +68,7 @@ internal class HomeSnapshotStore(private val directory: File) {
                 .put("libraryItems", JSONObject().apply { snapshot.libraryItems.forEach { (id, media) -> put(id, MediaSnapshotJson.items(media)) } })
                 .put("loaded", snapshot.loaded).put("complete", snapshot.complete)
                 .put("librariesLoaded", snapshot.librariesLoaded).put("resumeLoaded", snapshot.resumeLoaded)
-                .put("nextUpLoaded", snapshot.nextUpLoaded)
+                .put("nextUpLoaded", snapshot.nextUpLoaded).put("initialized", snapshot.initialized)
             val encoded = json.toString().toByteArray(Charsets.UTF_8)
             if (encoded.size > MaxSnapshotBytes) return false
             temporary = File.createTempFile("home-", ".tmp", directory)

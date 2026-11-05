@@ -176,13 +176,13 @@ internal fun PosterShelf(
     session: Session,
     api: JellyfinApi,
     onOpen: (MediaItem) -> Unit,
+    modifier: Modifier = Modifier,
     onMore: (() -> Unit)? = null,
     loading: Boolean = false,
     keepEmptySpace: Boolean = false,
     compactHeading: Boolean = false,
     leading: (@Composable () -> Unit)? = null,
     leadWide: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     val rowHeight = compactPosterHeight()
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
