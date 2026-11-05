@@ -36,9 +36,9 @@ internal object PlaybackClientCleanup {
                 try {
                     operation()
                 } catch (error: Exception) {
-                    if (failure == null) failure = error else failure!!.addSuppressed(error)
+                    if (failure == null) failure = error else failure.addSuppressed(error)
                     try { onFailure(stage, error) }
-                    catch (reportingError: Exception) { failure!!.addSuppressed(reportingError) }
+                    catch (reportingError: Exception) { failure.addSuppressed(reportingError) }
                 }
             }
             // 一个步骤失败也要尝试余下释放，失败结果可观察且有脱敏阶段日志。
