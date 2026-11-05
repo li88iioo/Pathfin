@@ -2,7 +2,10 @@ package dev.pathfin.android.casting
 
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import dev.pathfin.android.data.LocalNetworkPermission
 import dev.pathfin.android.data.LocalNetworkPermissionDenied
@@ -14,6 +17,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.SocketTimeoutException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -33,14 +37,8 @@ internal class SsdpDiscovery {
     suspend fun discover(context: Context): List<CastDevice> = withContext(Dispatchers.IO) {
         if (!LocalNetworkPermission.isGranted(context)) throw LocalNetworkPermissionDenied()
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
-        val candidate = connectivity.allNetworks.asSequence().mapNotNull { network ->
-            val capabilities = connectivity.getNetworkCapabilities(network) ?: return@mapNotNull null
-            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) return@mapNotNull null
-            val local = connectivity.getLinkProperties(network)?.linkAddresses?.map { it.address }
-                ?.filterIsInstance<Inet4Address>()?.firstOrNull { localIpv4(it.hostAddress.orEmpty()) != null } ?: return@mapNotNull null
-            network to local
-        }.firstOrNull() ?: throw CastException(tr("请连接与电视相同的 Wi-Fi 或有线局域网；目前仅支持 IPv4 发现"))
+        val candidate = localNetwork(connectivity)
+            ?: throw CastException(tr("请连接与电视相同的 Wi-Fi 或有线局域网；目前仅支持 IPv4 发现"))
         val (network, local) = candidate
         val lock = (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager)
             ?.createMulticastLock("pathfin-dlna-discovery")?.apply { setReferenceCounted(false) }
@@ -78,6 +76,24 @@ internal class SsdpDiscovery {
     companion object {
         const val MAX_PACKET = 8192
         const val MAX_DESCRIPTION = 256 * 1024
+
+        /** 单次发现只等首个可用局域网；不依赖默认网络，VPN 开启时仍可找到物理网络。 */
+        internal suspend fun localNetwork(connectivity: ConnectivityManager): Pair<Network, Inet4Address>? {
+            val found = CompletableDeferred<Pair<Network, Inet4Address>>()
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onLinkPropertiesChanged(network: Network, properties: LinkProperties) {
+                    properties.linkAddresses.asSequence().map { it.address }.filterIsInstance<Inet4Address>()
+                        .firstOrNull { localIpv4(it.hostAddress.orEmpty()) != null }?.let { found.complete(network to it) }
+                }
+            }
+            val request = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET).addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED).build()
+            connectivity.registerNetworkCallback(request, callback)
+            return try { withTimeoutOrNull(2_000) { found.await() } }
+            finally { connectivity.unregisterNetworkCallback(callback) }
+        }
 
         /** 生产固定组播目标；回环目标仅由同模块合成 UDP 测试注入。 */
         internal suspend fun search(socket: DatagramSocket, target: InetSocketAddress,

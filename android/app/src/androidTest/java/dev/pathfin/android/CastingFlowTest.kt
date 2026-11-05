@@ -3,7 +3,6 @@ package dev.pathfin.android
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
-import android.net.NetworkCapabilities
 import android.system.ErrnoException
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
@@ -15,8 +14,8 @@ import dev.pathfin.android.casting.CastDevice
 import dev.pathfin.android.casting.CastState
 import dev.pathfin.android.casting.CastStatus
 import dev.pathfin.android.casting.DlnaCasting
+import dev.pathfin.android.casting.SsdpDiscovery
 import dev.pathfin.android.casting.UpnpXml
-import dev.pathfin.android.casting.localIpv4
 import dev.pathfin.android.data.LocalNetworkPermission
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.ServerConfig
@@ -26,9 +25,7 @@ import dev.pathfin.android.ui.CastSheetContent
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.io.Closeable
-import java.io.DataInputStream
 import java.io.IOException
-import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -41,12 +38,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.buffer
+import okio.source
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -71,6 +73,16 @@ class CastingFlowTest {
         }
     } }
     @get:Rule val rules: TestRule = RuleChain.outerRule(verificationOnly).around(compose)
+
+    @Test fun completedOrCancelledNetworkSelectionReleasesCallbacksBeforeAnotherDiscovery() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        // 超过系统每 UID 的 100 个在途回调上限；若取消时未注销，重复发现会真正抛异常。
+        repeat(101) {
+            val selection = launch(start = CoroutineStart.UNDISPATCHED) { SsdpDiscovery.localNetwork(connectivity) }
+            selection.cancelAndJoin()
+        }
+    }
 
     @Test fun permissionAndEmptyDiscoveryCanActuallyPullWithoutNetwork() {
         val permission = mutableStateOf(false)
@@ -176,15 +188,10 @@ class CastingFlowTest {
         assumeTrue("真实前台投屏回归需已允许 LAN；不由测试授予系统权限", LocalNetworkPermission.isGranted(context))
         assumeTrue("不打断其它验证会话", !DlnaCasting.state.value.active)
         val connectivity = context.getSystemService(ConnectivityManager::class.java)
-        val candidate = connectivity.allNetworks.firstNotNullOfOrNull { network ->
-            val capabilities = connectivity.getNetworkCapabilities(network) ?: return@firstNotNullOfOrNull null
-            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) ||
-                !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) return@firstNotNullOfOrNull null
-            connectivity.getLinkProperties(network)?.linkAddresses?.map { it.address }?.filterIsInstance<Inet4Address>()
-                ?.firstOrNull { localIpv4(it.hostAddress.orEmpty()) != null }?.let { network to requireNotNull(it.hostAddress) }
-        }
+        val candidate = runBlocking { SsdpDiscovery.localNetwork(connectivity) }
         assumeTrue("实际 socket 回归需要本机 Wi-Fi/Ethernet 私网 IPv4", candidate != null)
-        val (network, address) = requireNotNull(candidate)
+        val (network, local) = requireNotNull(candidate)
+        val address = requireNotNull(local.hostAddress)
         val profileId = "pathfin-dlna-fixture-${UUID.randomUUID()}"
         Renderer(address, network).use { fixture ->
             val profile = ServerProfile(profileId, Session(ServerConfig(fixture.origin, true), "fixture-jf-token", "fixture-user", "DLNA fixture", "fixture-device"), "DLNA fixture")
@@ -248,13 +255,13 @@ class CastingFlowTest {
         }
         private fun serve(socket: Socket) {
             socket.soTimeout = 15_000
-            val input = DataInputStream(socket.getInputStream())
-            val request = requireNotNull(input.readLine()).split(' ')
+            val input = socket.getInputStream().source().buffer()
+            val request = input.readUtf8LineStrict().split(' ')
             val headers = linkedMapOf<String, String>()
-            while (true) { val line = input.readLine() ?: break; if (line.isEmpty()) break; headers[line.substringBefore(':').lowercase()] = line.substringAfter(':').trim() }
+            while (true) { val line = input.readUtf8LineStrict(); if (line.isEmpty()) break; headers[line.substringBefore(':').lowercase()] = line.substringAfter(':').trim() }
             val size = headers["content-length"]?.toIntOrNull() ?: 0
             check(size in 0..(256 * 1024))
-            val body = ByteArray(size); input.readFully(body)
+            val body = input.readByteArray(size.toLong())
             val path = request[1].substringBefore('?')
             when (path) {
                 "/Items", "/Items/castitem/PlaybackInfo", "/Sessions/Playing", "/Sessions/Playing/Progress", "/Sessions/Playing/Stopped" -> {

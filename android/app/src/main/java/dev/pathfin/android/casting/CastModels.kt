@@ -4,6 +4,7 @@ import android.net.Network
 import java.net.Inet4Address
 import java.net.InetAddress
 
+@ConsistentCopyVisibility
 data class CastDevice internal constructor(
     val id: String,
     val name: String,
