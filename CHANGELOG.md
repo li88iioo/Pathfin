@@ -4,6 +4,19 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.2] - 2026-11-06
+
+### 优化
+
+- [统一浮层毛玻璃](https://github.com/li88iioo/Pathfin/commit/cb78f0ddbae2b661a118631e7e16773ee6ef417b)：底部导航、菜单与抽屉改用更通透的毛玻璃并配细描边；分隔线、拖动手柄与筛选胶囊随玻璃自动调整，浅色模式下导航图标和手柄更清晰。
+- [首页标题栏改用深色玻璃](https://github.com/li88iioo/Pathfin/commit/cb78f0ddbae2b661a118631e7e16773ee6ef417b)：压在展示区剧照上时不再出现浅色灰带和分界线。
+- [重做下拉刷新指示器](https://github.com/li88iioo/Pathfin/commit/cb78f0ddbae2b661a118631e7e16773ee6ef417b)：玻璃圆标随下拉渐显、放大，从标题栏下方自然滑出，不再被裁切。
+- [刷新失败改为浮出通知](https://github.com/li88iioo/Pathfin/commit/ffb37afc8f740d689a6f1d8add3dfb5321455808)：页面已有内容时保留内容，在底部提示并可直接重试；整页没有内容时显示带重试按钮的失败状态，表单和分区内的错误改为轻量提示条。
+
+### 修复
+
+- [修复直播节目单读取失败时同时显示“暂无节目信息”](https://github.com/li88iioo/Pathfin/commit/ffb37afc8f740d689a6f1d8add3dfb5321455808)，失败后可在节目单内直接重试。
+
 ## [0.1.1] - 2026-11-06
 
 ### 本次重发
@@ -66,5 +79,6 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.2]: https://github.com/li88iioo/Pathfin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/li88iioo/Pathfin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/li88iioo/Pathfin/releases/tag/v0.1.0
