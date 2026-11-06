@@ -367,8 +367,12 @@ private fun ColumnScope.LiveTvPrograms(session: Session, service: LiveTvApi, cha
     RefreshablePage(loading, { load() }, Modifier.weight(1f).fillMaxWidth(), refreshOnEntry = false) {
         LazyColumn(Modifier.fillMaxSize().testTag("live-tv-program-list"), state = list,
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            error?.let { message -> item("error") { ErrorPanel(message) } }
-            if (programs.isEmpty()) item("empty") { EmptyPanel(if (!loaded && error == null) tr("正在读取节目单") else tr("暂无节目信息"),
+            // 节目单在独立窗口的抽屉里，错误留在抽屉内，避免应用级通知被遮挡。
+            error?.let { message -> item("error") {
+                val errorModifier = Modifier.testTag("live-tv-program-error")
+                if (programs.isEmpty()) ErrorPanel(message, errorModifier, retry = { load() }) else InlineError(message, errorModifier)
+            } }
+            if (programs.isEmpty() && error == null) item("empty") { EmptyPanel(if (!loaded) tr("正在读取节目单") else tr("暂无节目信息"),
                 if (!loaded && error == null) tr("读取所选频道的当日节目。") else tr("服务器没有提供这一天的节目，仍可直接观看直播。"), loading = !loaded && error == null) }
             items(programs, key = { "program/${it.id}" }) { program ->
                 val airing = program.isAiring(now)

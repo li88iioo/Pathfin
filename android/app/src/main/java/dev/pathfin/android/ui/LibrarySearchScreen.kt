@@ -80,6 +80,8 @@ internal fun LibrarySearchScreen(
         val resultsSource = if (editing) Modifier else Modifier.topBarBlurSource()
         BoxWithConstraints(Modifier.fillMaxSize().then(resultsSource).background(PathfinAppearance.canvas)) {
             val columns = BrowserColumns.resolve(state.style, maxWidth.value, LocalDensity.current.fontScale)
+            RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },
+                settled = !state.content.loading, retry = onRefresh)
             RefreshablePage(state.content.loading || state.content.loadingMore, onRefresh, Modifier.fillMaxSize(),
                 enabled = state.query.searchTerm.isNotBlank(), refreshOnEntry = refreshOnEntry,
                 indicatorTopInset = headerHeight) {
@@ -87,14 +89,16 @@ internal fun LibrarySearchScreen(
                     contentPadding = PaddingValues(start = BrowserColumns.horizontalPaddingDp.dp, end = BrowserColumns.horizontalPaddingDp.dp,
                         top = headerHeight + 8.dp, bottom = LocalNavigationBottomInset.current),
                     verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(BrowserColumns.spacingDp.dp)) {
-                    state.content.error?.takeUnless { state.content.retryAppend }?.let { error -> item(key = "search-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error) } }
+                    state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isEmpty() }?.let { error ->
+                        item(key = "search-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error, retry = onRefresh) }
+                    }
                     items(state.content.items, key = { it.id }) { item ->
                         BrowserMediaCard(item, session, api, state.style, Modifier.fillMaxWidth(), libraryStyle = true) { onOpen(item) }
                     }
                     if (state.query.searchTerm.isNotBlank() && !state.content.loading && state.content.items.isEmpty() && state.content.error == null)
                         item(key = "search-empty", span = { GridItemSpan(maxLineSpan) }) { EmptyPanel(tr("没有找到内容"), tr("试试其他片名。")) }
                     state.content.error?.takeIf { state.content.retryAppend }?.let { error ->
-                        item(key = "search-append-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error) }
+                        item(key = "search-append-error", span = { GridItemSpan(maxLineSpan) }) { InlineError(error) }
                     }
                 }
             }

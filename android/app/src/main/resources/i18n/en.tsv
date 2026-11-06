@@ -290,6 +290,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 剩余时间低于此值时显示	Shown when the remaining time drops below this
 加快播放速度	Speed up playback
 加速倍率	Speed multiplier
+加载失败	Couldn't load
 动态范围	Dynamic range
 升序排序	Sort ascending
 单声道	Mono

@@ -512,8 +512,8 @@ private fun RemoteImageSearchSheet(management: MediaManagementApi, session: Sess
                 Text(tr("%1\$s 项", if (displayedQuery == query) page?.totalCount ?: 0 else 0), fontSize = 12.sp,
                     color = PathfinAppearance.textMuted, modifier = Modifier.testTag("remote-image-count"))
             }
-            providersError?.let { ErrorPanel(it, modifier = Modifier.padding(horizontal = 16.dp)) }
-            error?.let { ErrorPanel(it, modifier = Modifier.padding(horizontal = 16.dp)) }
+            providersError?.let { InlineError(it, modifier = Modifier.padding(horizontal = 16.dp)) }
+            error?.let { InlineError(it, modifier = Modifier.padding(horizontal = 16.dp)) }
             RefreshablePage(loading, { refreshVersion++ }, Modifier.weight(1f).fillMaxWidth(), refreshOnEntry = false) {
                 LazyVerticalGrid(GridCells.Fixed(3), state = grid,
                     modifier = Modifier.fillMaxSize().testTag("remote-image-results"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalNavigationBottomInset.current),
@@ -655,7 +655,7 @@ private fun MetadataEditor(document: EditableMediaMetadata, person: Boolean, ext
         }
         if (idFields.isNotEmpty() || externalIdsError != null) {
             item(key = "metadata-ids-label") { Eyebrow(tr("外部编号"), Modifier.padding(start = 6.dp, top = 4.dp, bottom = 8.dp)) }
-            externalIdsError?.let { message -> item(key = "metadata-ids-error") { ErrorPanel(message) } }
+            externalIdsError?.let { message -> item(key = "metadata-ids-error") { InlineError(message) } }
             itemsIndexed(idFields, key = { _, field -> "metadata-id/${field.key}" }) { index, field ->
                 val position = when {
                     idFields.size == 1 -> GroupPosition.SINGLE

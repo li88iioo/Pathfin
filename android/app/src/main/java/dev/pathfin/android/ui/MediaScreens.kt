@@ -97,6 +97,8 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
         ambientShown && first != null && first.index == 0 && first.offset + first.size > coverLimitPx
     } }
     LaunchedEffect(covered) { onAmbientCovered(covered) }
+    val hasContent = ambient.isNotEmpty() || home.libraries.isNotEmpty() || home.recent.isNotEmpty()
+    RefreshFailureNotice(home.error?.takeIf { hasContent }, settled = !home.loading, retry = retry)
     RefreshablePage(home.loading, retry, Modifier.fillMaxSize(), refreshOnEntry = home.loaded || home.error != null) {
         LazyColumn(
             Modifier.fillMaxSize().testTag("home-list"),
@@ -132,8 +134,8 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
             if (home.recent.isNotEmpty() && home.libraries.isEmpty()) item(key = "home-recent") {
                 PosterShelf(tr("最近入库"), home.recent, session, api, onOpen, compactHeading = true)
             }
-            home.error?.let { error ->
-                item(key = "home-error") { ErrorPanel(error, modifier = Modifier.padding(horizontal = 16.dp)) }
+            home.error?.takeUnless { hasContent }?.let { error ->
+                item(key = "home-error") { ErrorPanel(error, modifier = Modifier.padding(horizontal = 16.dp), retry = retry) }
             }
         }
     }
@@ -246,6 +248,7 @@ private val LatestLeadWidth = 112.dp * 1.5f * 16f / 9f
 @Composable
 internal fun LibrariesScreen(home: HomeState, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, retry: () -> Unit) {
     val bottomInset = LocalNavigationBottomInset.current
+    RefreshFailureNotice(home.error?.takeIf { home.libraries.isNotEmpty() }, settled = !home.loading, retry = retry)
     RefreshablePage(home.loading, retry, Modifier.fillMaxSize(), refreshOnEntry = home.loaded || home.error != null) {
     LazyVerticalGrid(
         GridCells.Adaptive(152.dp),
@@ -254,7 +257,9 @@ internal fun LibrariesScreen(home: HomeState, session: Session, api: JellyfinApi
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        home.error?.let { error -> item(span = { GridItemSpan(maxLineSpan) }, key = "libraries-error") { ErrorPanel(error) } }
+        home.error?.takeIf { home.libraries.isEmpty() }?.let { error ->
+            item(span = { GridItemSpan(maxLineSpan) }, key = "libraries-error") { ErrorPanel(error, retry = retry) }
+        }
         gridItems(home.libraries, key = { it.id }) { library ->
             LibraryCoverCard(library, libraryCover(library, home.libraryItems[library.id].orEmpty()), session, api, Modifier.fillMaxWidth()) { onOpen(library) }
         }
@@ -406,6 +411,7 @@ internal fun MediaGrid(content: ContentState, session: Session, api: JellyfinApi
     val bottomInset = LocalNavigationBottomInset.current
     val grid = rememberLazyGridState()
     AutomaticGridPagination(grid, content.pagination, content.queryKey, onMore)
+    RefreshFailureNotice(content.error?.takeIf { !content.retryAppend && content.items.isNotEmpty() }, settled = !content.loading, retry = onRetry)
     RefreshablePage(content.loading || content.loadingMore, onRetry, modifier.fillMaxSize()) {
     LazyVerticalGrid(
         GridCells.Adaptive(if (fontScale >= 1.5f) 144.dp else 104.dp),
@@ -415,7 +421,9 @@ internal fun MediaGrid(content: ContentState, session: Session, api: JellyfinApi
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        content.error?.takeUnless { content.retryAppend }?.let { error -> item(span = { GridItemSpan(maxLineSpan) }, key = "media-error") { ErrorPanel(error) } }
+        content.error?.takeIf { !content.retryAppend && content.items.isEmpty() }?.let { error ->
+            item(span = { GridItemSpan(maxLineSpan) }, key = "media-error") { ErrorPanel(error, retry = onRetry) }
+        }
         gridItems(content.items, key = { it.id }) { item -> PosterCard(item, session, api, Modifier.fillMaxWidth()) { onOpen(item) } }
         if (content.items.isEmpty() && content.error == null) item(span = { GridItemSpan(maxLineSpan) }, key = "media-empty") {
             Column {
@@ -423,7 +431,7 @@ internal fun MediaGrid(content: ContentState, session: Session, api: JellyfinApi
             }
         }
         content.error?.takeIf { content.retryAppend }?.let { error ->
-            item(span = { GridItemSpan(maxLineSpan) }, key = "media-append-error") { ErrorPanel(error) }
+            item(span = { GridItemSpan(maxLineSpan) }, key = "media-append-error") { InlineError(error) }
         }
     }
     }
@@ -604,10 +612,14 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
     val onPlay = { if (hasChildren) vm.playSeries(item) else vm.preparePlayback(item) }
     val onStart = { if (hasChildren) vm.playSeries(item, true) else vm.preparePlayback(item, true) }
     val seasonRows = if (item.type == "Series") children.items.chunked(3) else emptyList()
+    // 详情已显示时，刷新详情、季列表或推荐失败都浮出提示；只有季列表整页为空时原地显示错误。
+    val childrenInlineError = children.error?.takeIf { !children.retryAppend && children.items.isEmpty() }
+    RefreshFailureNotice(state.detailError, settled = !state.detailLoading)
+    RefreshFailureNotice(children.error?.takeIf { item.type == "Series" && !children.retryAppend && children.items.isNotEmpty() }, settled = !children.loading)
+    RefreshFailureNotice(extras?.error, settled = extras?.loading == false)
     if (item.type == "Series") {
-        val seasonStart = 2 + (if (state.playbackError != null) 1 else 0) +
-            (if (state.detailError != null) 1 else 0) +
-            (if (children.error != null && !children.retryAppend) 1 else 0)
+        // 季行之前依次是详情头图、季标题，以及季列表为空时原地显示的错误卡片。
+        val seasonStart = 2 + (if (childrenInlineError != null) 1 else 0)
         AutomaticListPagination(listState, children.pagination, item.id, { vm.loadFolder(item.id, true) },
             endIndex = seasonStart + seasonRows.lastIndex)
     }
@@ -627,17 +639,13 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
                 onWatched = { vm.togglePlayed(item) }, actionBusy = state.actionBusy,
                 onSeries = { vm.openSeries(item) }.takeIf { item.type in setOf("Episode", "Season") && !item.seriesId.isNullOrBlank() })
         }
-        // 播放失败由全局的重试对话框提示，详情页不再重复一张同样的错误卡片。
-        state.detailError?.let { error -> item(key = "detail-error") {
-            ErrorPanel(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
-        } }
         if (hasChildren) {
             if (item.type == "Series") {
                 item(key = "children-title") { Box(Modifier.windowInsetsPadding(horizontalSafeArea)) {
                     SectionTitle(tr("季"), count = children.total.takeIf { it > 0 } ?: item.childCount?.takeIf { it > 0 })
                 } }
-                children.error?.takeUnless { children.retryAppend }?.let { error -> item(key = "children-error") {
-                    ErrorPanel(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
+                childrenInlineError?.let { error -> item(key = "children-error") {
+                    InlineError(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
                 } }
                 items(seasonRows, key = { "season-row/${it.first().id}" }) { row ->
                     DetailSeasonRow(row, session, vm.api, vm::open,
@@ -647,7 +655,7 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
                     EmptyPanel(tr("暂无可见季"), tr("请检查 Jellyfin 中的媒体与访问权限。"))
                 }
                 children.error?.takeIf { children.retryAppend }?.let { error -> item(key = "children-append-error") {
-                    ErrorPanel(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
+                    InlineError(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
                 } }
             } else item(key = "children-episodes") {
                 DetailEpisodePicker(item, children.items, children.total, children.nextIndex, children.loading, children.loadingMore,
@@ -697,9 +705,6 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
                 PosterShelf(tr("推荐"), extras?.similar.orEmpty(), session, vm.api, vm::open)
             }
         }
-        extras?.error?.let { error -> item(key = "detail-extras-error") {
-            ErrorPanel(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
-        } }
     }
 }
 

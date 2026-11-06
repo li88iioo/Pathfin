@@ -3,7 +3,9 @@ package dev.pathfin.android
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +45,9 @@ import dev.pathfin.android.ui.HomeScreen
 import dev.pathfin.android.ui.HomeState
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalPosterLoader
+import dev.pathfin.android.ui.LibrariesScreen
+import dev.pathfin.android.ui.LocalNoticeHost
+import dev.pathfin.android.ui.PathfinSnackbarHost
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.io.File
@@ -348,6 +353,29 @@ class HomePresentationTest {
         compose.runOnIdle { assertEquals("剧照滚出标题栏后恢复底色", false, covered.last()) }
         compose.onNodeWithTag("home-list").performScrollToIndex(0)
         compose.runOnIdle { assertEquals(true, covered.last()) }
+    }
+
+    @Test fun librariesKeepTheirPositionAndExposeRetryWhenRefreshingExistingContentFails() {
+        val host = SnackbarHostState()
+        val library = MediaItem("library", "合成媒体库", "CollectionFolder", isFolder = true)
+        val home = mutableStateOf(HomeState(libraries = listOf(library), loaded = true, librariesLoaded = true))
+        var retries = 0
+        compose.setContent {
+            PathfinTheme(ThemePreference.LIGHT) {
+                CompositionLocalProvider(LocalPosterLoader provides loader, LocalNoticeHost provides host) {
+                    Box(Modifier.fillMaxSize()) {
+                        LibrariesScreen(home.value, session, api, {}, retry = { retries++ })
+                        PathfinSnackbarHost(host)
+                    }
+                }
+            }
+        }
+        val before = layoutBounds(compose.onNodeWithText(library.name))
+        compose.runOnIdle { home.value = home.value.copy(error = "合成媒体库刷新失败") }
+        compose.onNodeWithText("合成媒体库刷新失败").assertVerificationDisplayed(compose)
+        assertEquals("刷新错误不能挤动现有媒体库", before, layoutBounds(compose.onNodeWithText(library.name)))
+        compose.onNodeWithText("重试").performVerificationClick(compose)
+        compose.runOnIdle { assertEquals(1, retries) }
     }
 
     @Test fun onlyMovieShelvesLeadWithABackdropWhileSeriesAndMixedKeepUniformPosters() {

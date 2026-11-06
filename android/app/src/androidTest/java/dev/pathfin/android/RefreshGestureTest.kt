@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,10 @@ import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.ui.HomeScreen
 import dev.pathfin.android.ui.HomeState
 import dev.pathfin.android.ui.LocalAppPreferences
+import dev.pathfin.android.ui.LocalNoticeHost
+import dev.pathfin.android.ui.LocalPageActive
+import dev.pathfin.android.ui.PathfinSnackbarHost
+import dev.pathfin.android.ui.RefreshFailureNotice
 import dev.pathfin.android.ui.LocalTopBarBlurState
 import dev.pathfin.android.ui.rememberTopBarBlurState
 import dev.pathfin.android.ui.RefreshablePage
@@ -143,6 +148,37 @@ class RefreshGestureTest {
         assertTrue(loading.value)
         resumeActivity()
         assertEquals("自动重试未完成时不能重复请求", 1, requests.get())
+    }
+
+    @Test fun refreshFailureWaitsForCompletionAndLeavesTheSharedHostWhenItsPageIsInactive() {
+        val host = SnackbarHostState()
+        val error = mutableStateOf<String?>("合成刷新失败")
+        loading.value = true
+        compose.setContent {
+            PathfinTheme(ThemePreference.LIGHT) {
+                CompositionLocalProvider(LocalNoticeHost provides host, LocalPageActive provides active.value) {
+                    RefreshFailureNotice(error.value, settled = !loading.value) {
+                        requests.incrementAndGet()
+                        loading.value = true
+                    }
+                    PathfinSnackbarHost(host)
+                }
+            }
+        }
+        compose.runOnIdle { assertNull("刷新未结束时不弹旧错误", host.currentSnackbarData); loading.value = false }
+        compose.waitUntil(5_000) { host.currentSnackbarData != null }
+        compose.onNodeWithText("合成刷新失败").assertVerificationDisplayed(compose)
+        compose.runOnIdle { active.value = false }
+        compose.waitUntil(5_000) { host.currentSnackbarData == null }
+        compose.runOnIdle { active.value = true }
+        compose.onNodeWithText("重试").performVerificationClick(compose)
+        compose.waitUntil(5_000) { requests.get() == 1 && host.currentSnackbarData == null }
+        // 同一请求再次报相同文字，仍要给用户重试机会。
+        compose.runOnIdle { loading.value = false }
+        compose.waitUntil(5_000) { host.currentSnackbarData != null }
+        compose.onNodeWithText("合成刷新失败").assertVerificationDisplayed(compose)
+        compose.runOnIdle { error.value = null }
+        compose.waitUntil(5_000) { host.currentSnackbarData == null }
     }
 
     private fun show(refreshOnEntry: Boolean = true) {

@@ -242,7 +242,7 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
         // 错误与操作结果固定在页头下方：无论列表滚到哪里都看得到，列表本身不被程序滚动。
         if (session.isAdministrator && (error != null || notice != null)) Column(Modifier.fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            error?.let { message -> ErrorPanel(message, modifier = Modifier.testTag("server-administration-error")) }
+            error?.let { message -> InlineError(message, modifier = Modifier.testTag("server-administration-error")) }
             notice?.let { message -> AdministrationNotice(message) }
         }
         RefreshablePage(loading, { load() }, Modifier.weight(1f).fillMaxWidth(), refreshOnEntry = false,

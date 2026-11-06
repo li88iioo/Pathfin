@@ -50,14 +50,14 @@ internal fun PersonDetailContent(state: AppState, item: MediaItem, session: Sess
     LaunchedEffect(collapsed) { onScrolled(collapsed) }
     val movies = extras?.movies
     val series = extras?.series
+    // 人物页已显示时刷新失败浮出提示；只有参演作品整栏为空时原地显示错误。
+    RefreshFailureNotice(state.detailError, settled = !state.detailLoading)
+    RefreshFailureNotice(extras?.error?.takeUnless { movies?.items.isNullOrEmpty() && series?.items.isNullOrEmpty() }, settled = extras?.loading == false)
     LazyColumn(Modifier.fillMaxSize().testTag("detail-content"), state = listState,
         contentPadding = PaddingValues(bottom = LocalNavigationBottomInset.current), verticalArrangement = Arrangement.spacedBy(22.dp)) {
         item(key = "person-hero") {
             PersonHero(item, session, vm.api, movies?.totalCount ?: 0, series?.totalCount ?: 0)
         }
-        state.detailError?.let { error -> item(key = "detail-error") {
-            ErrorPanel(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
-        } }
         listOf("Movie" to (tr("电影") to movies), "Series" to (tr("剧集") to series)).forEach { (type, section) ->
             val (title, page) = section
             if (page != null && page.items.isNotEmpty()) item(key = "person-credits/$type") {
@@ -71,8 +71,8 @@ internal fun PersonDetailContent(state: AppState, item: MediaItem, session: Sess
         if (extras != null && !extras.loading && extras.error == null && movies?.items.isNullOrEmpty() && series?.items.isNullOrEmpty()) {
             item(key = "person-credits-empty") { EmptyPanel(tr("暂无参演作品"), tr("当前账号可见的媒体库中没有这位人物的作品。")) }
         }
-        extras?.error?.let { error -> item(key = "detail-extras-error") {
-            ErrorPanel(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
+        extras?.error?.takeIf { movies?.items.isNullOrEmpty() && series?.items.isNullOrEmpty() }?.let { error -> item(key = "detail-extras-error") {
+            InlineError(error, modifier = Modifier.windowInsetsPadding(horizontalSafeArea).padding(horizontal = 16.dp))
         } }
     }
 }

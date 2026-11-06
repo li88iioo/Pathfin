@@ -406,6 +406,10 @@ class LiveTvUiTest {
             list.performScrollToIndex(0)
             pullPageToRefresh(compose, page = list, stage = "live-tv-failed-range-$programs")
             compose.waitUntil(WAIT_MS) { probe.requests.size == 5 }
+            if (programs) {
+                list.performScrollToIndex(0)
+                compose.onNodeWithTag("live-tv-program-error").assertVerificationDisplayed(compose)
+            }
             list.performScrollToNode(hasTestTag("$prefix${size * 2 - 1}"))
             compose.onNodeWithTag("$prefix${size * 2 - 1}").assertVerificationDisplayed(compose)
             list.performScrollToNode(hasTestTag("${prefix}0"))

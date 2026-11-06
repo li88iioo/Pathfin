@@ -5,10 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
@@ -47,10 +51,12 @@ import dev.pathfin.android.ui.EmptyPanel
 import dev.pathfin.android.ui.FavoritesContent
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalNavigationBottomInset
+import dev.pathfin.android.ui.LocalNoticeHost
 import dev.pathfin.android.ui.LocalPageActive
 import dev.pathfin.android.ui.LocalPageTopInset
 import dev.pathfin.android.ui.LocalPosterLoader
 import dev.pathfin.android.ui.LocalTopBarBlurState
+import dev.pathfin.android.ui.PathfinSnackbarHost
 import dev.pathfin.android.ui.SearchContent
 import dev.pathfin.android.ui.SearchState
 import dev.pathfin.android.ui.rememberTopBarBlurState
@@ -297,14 +303,19 @@ class DiscoveryScreensUiTest {
 
     @Test fun errorsRemainVisibleWithoutCreatingAnEmptyCategory() {
         var retries = 0
-        val state = DiscoveryState(requested = true, sections = mapOf(
+        val state = mutableStateOf(DiscoveryState(requested = true, sections = mapOf(
             DiscoveryCategory.MOVIES to page(movie),
-            DiscoveryCategory.SERIES to ContentState(error = "服务器暂时不可用"),
-        ))
-        show { FavoritesContent(state, session, api, { retries++ }, {}, {}) }
+        )))
+        show { FavoritesContent(state.value, session, api, { retries++ }, {}, {}) }
+        val firstCard = bounds("discovery-item/MOVIES/movie")
+        compose.runOnIdle {
+            state.value = state.value.copy(sections = state.value.sections +
+                (DiscoveryCategory.SERIES to ContentState(error = "服务器暂时不可用")))
+        }
         assertVisible("discovery-error-movies", compose.onNodeWithTag("discovery-section/MOVIES", true))
         compose.onNodeWithTag("discovery-section/SERIES", true).assertDoesNotExist()
         assertVisible("discovery-error-message", compose.onNodeWithText("剧集：服务器暂时不可用"))
+        assertEquals("刷新失败不能移动已有卡片", firstCard, bounds("discovery-item/MOVIES/movie"))
         touch("discovery-error-retry", compose.onNodeWithText("重试"))
         compose.runOnIdle { assertEquals(1, retries) }
     }
@@ -364,10 +375,19 @@ class DiscoveryScreensUiTest {
     ) {
         compose.setContent {
             val density = LocalDensity.current.density
+            val snackbar = remember { SnackbarHostState() }
             CompositionLocalProvider(LocalDensity provides Density(density, fontScale),
                 LocalPosterLoader provides loader, LocalAppPreferences provides AppPreferences(),
-                LocalPageTopInset provides 24.dp, LocalNavigationBottomInset provides 88.dp) {
-                PathfinTheme(theme) { Surface(Modifier.fillMaxSize()) { content() } }
+                LocalPageTopInset provides 24.dp, LocalNavigationBottomInset provides 88.dp,
+                LocalNoticeHost provides snackbar) {
+                PathfinTheme(theme) {
+                    Surface(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxSize()) {
+                            content()
+                            PathfinSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 88.dp))
+                        }
+                    }
+                }
             }
         }
     }

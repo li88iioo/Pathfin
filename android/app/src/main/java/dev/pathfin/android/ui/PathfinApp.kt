@@ -184,7 +184,8 @@ fun PathfinApp(
     ReleaseDepartedPageStates(state, savedState)
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(state.notice) { state.notice?.let { snackbar.showSnackbar(it); vm.dismissNotice() } }
-    CompositionLocalProvider(LocalPosterLoader provides posterLoader, LocalAppPreferences provides state.preferences) {
+    CompositionLocalProvider(LocalPosterLoader provides posterLoader, LocalAppPreferences provides state.preferences,
+        LocalNoticeHost provides snackbar) {
         AppBackHandler(enabled = insideServer || state.routes.size > 1 || route != Route.Home,
             contentKey = state.currentProfileId to route, onBack = vm::back,
             modifier = Modifier.fillMaxSize(), testTag = "browser-back-motion") {

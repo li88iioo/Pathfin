@@ -161,6 +161,7 @@ internal fun SearchContent(
 private fun SearchSuggestions(state: SearchState, onRefresh: () -> Unit, topInset: Dp, onSelect: (MediaItem) -> Unit) {
     val suggestions = state.suggestions
     val items = suggestions.items.filter { item -> state.categories.isEmpty() || state.categories.any { it.itemType == item.type } }
+    RefreshFailureNotice(suggestions.error?.takeIf { items.isNotEmpty() }, settled = !suggestions.loading, retry = onRefresh)
     RefreshablePage(suggestions.loading, onRefresh, Modifier.fillMaxSize(),
         refreshOnEntry = state.suggestionsLoaded || suggestions.error != null, indicatorTopInset = topInset) {
         LazyColumn(
@@ -169,7 +170,7 @@ private fun SearchSuggestions(state: SearchState, onRefresh: () -> Unit, topInse
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (items.isNotEmpty()) item(key = "suggestions") { SearchSuggestionChips(tr("推荐搜索"), items, onSelect) }
-            suggestions.error?.let { error -> item(key = "suggestions-error") { ErrorPanel(error, retry = onRefresh) } }
+            suggestions.error?.takeIf { items.isEmpty() }?.let { error -> item(key = "suggestions-error") { ErrorPanel(error, retry = onRefresh) } }
         }
     }
 }
@@ -204,6 +205,7 @@ private fun DiscoveryResults(
         .mapNotNull { category -> state.sections[category]?.takeIf { it.items.isNotEmpty() }?.let { category to it } }
     val errors = categories.mapNotNull { category -> state.sections[category]?.error?.let { tr("%1\$s：%2\$s", category.label, it) } }
     val loading = categories.any { state.sections[it]?.loading == true }
+    RefreshFailureNotice(errors.joinToString("\n").takeIf { errors.isNotEmpty() && visible.isNotEmpty() }, settled = !loading, retry = onRefresh)
     RefreshablePage(loading, onRefresh, Modifier.fillMaxSize().background(PathfinAppearance.canvas),
         refreshOnEntry = state.requested, indicatorTopInset = topInset) {
         LazyColumn(
@@ -214,7 +216,7 @@ private fun DiscoveryResults(
             items(visible, key = { it.first.name }, contentType = { "discovery-section" }) { (category, content) ->
                 DiscoverySection(category, content, session, api, { onShowAll(category) }, onOpen)
             }
-            if (errors.isNotEmpty()) item(key = "discovery-error") {
+            if (errors.isNotEmpty() && visible.isEmpty()) item(key = "discovery-error") {
                 ErrorPanel(errors.joinToString("\n"), modifier = Modifier.padding(horizontal = 16.dp), retry = onRefresh)
             }
             if (state.requested && !loading && visible.isEmpty() && errors.isEmpty()) item(key = "discovery-empty") {
@@ -284,6 +286,7 @@ internal fun DiscoveryGridContent(
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val style = if (category.isLandscape) PosterStyle.BACKDROP else PosterStyle.POSTER
         val columns = BrowserColumns.resolve(style, maxWidth.value, LocalDensity.current.fontScale)
+        RefreshFailureNotice(content.error?.takeIf { content.items.isNotEmpty() }, settled = !content.loading, retry = onRefresh)
         RefreshablePage(content.loading || content.loadingMore, onRefresh,
             Modifier.fillMaxSize().background(PathfinAppearance.canvas), refreshOnEntry = content.queryKey != null) {
             LazyVerticalGrid(GridCells.Fixed(columns), state = grid,
@@ -296,7 +299,7 @@ internal fun DiscoveryGridContent(
                         DiscoveryMediaCard(category, item, session, api, Modifier.fillMaxWidth(), maxWidth, onOpen)
                     }
                 }
-                content.error?.let { error -> item(key = "discovery-grid-error", span = { GridItemSpan(maxLineSpan) }) {
+                content.error?.takeIf { content.items.isEmpty() }?.let { error -> item(key = "discovery-grid-error", span = { GridItemSpan(maxLineSpan) }) {
                     ErrorPanel(error, retry = onRefresh)
                 } }
                 if (content.items.isEmpty() && !content.loading && content.error == null && content.queryKey != null) {

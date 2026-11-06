@@ -142,6 +142,8 @@ internal fun BrowserScreen(
         }
         Box(Modifier.fillMaxSize().background(PathfinAppearance.canvas)) {
             Box(Modifier.fillMaxSize()) {
+                RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },
+                    settled = !state.content.loading, retry = onRetry)
                 RefreshablePage(state.content.loading || state.content.loadingMore, onRetry,
                     Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas), enabled = sheet == null,
                     indicatorTopInset = topInset + toolbarHeight) {
@@ -151,7 +153,9 @@ internal fun BrowserScreen(
                             top = topInset + toolbarHeight + 4.dp, bottom = LocalNavigationBottomInset.current),
                         verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(BrowserColumns.spacingDp.dp),
                     ) {
-                        state.content.error?.takeUnless { state.content.retryAppend }?.let { error -> item(key = "browser-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error) } }
+                        state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isEmpty() }?.let { error ->
+                            item(key = "browser-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error, retry = onRetry) }
+                        }
                         gridItemsIndexed(state.content.items, key = { _, item -> item.id }) { index, item ->
                             // 目录和分类是导航入口，避免影片批量操作递归修改整个目录。
                             val selectable = !genresPage && !peoplePage && item.type !in setOf("Genre", "Person", "Folder", "CollectionFolder")
@@ -173,7 +177,7 @@ internal fun BrowserScreen(
                             )
                         }
                         state.content.error?.takeIf { state.content.retryAppend }?.let { error ->
-                            item(key = "browser-append-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error) }
+                            item(key = "browser-append-error", span = { GridItemSpan(maxLineSpan) }) { InlineError(error) }
                         }
                     }
                 }
@@ -468,7 +472,7 @@ private fun FilterSheet(state: BrowserUiState, onDismiss: () -> Unit, onRetry: (
                     contentPadding = PaddingValues(top = 14.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
-                    state.filtersError?.let { error -> item(key = "filters-error") { ErrorPanel(error, modifier = Modifier.padding(horizontal = 16.dp)) } }
+                    state.filtersError?.let { error -> item(key = "filters-error") { InlineError(error, modifier = Modifier.padding(horizontal = 16.dp)) } }
                     item("played") { FilterChoices(tr("已观看"), listOf(null to tr("全部"), true to tr("已观看"), false to tr("未观看")), draft.played) { draft = draft.copy(played = it) } }
                     if (state.query.tab != LibraryTab.FAVORITES) item("favorite") {
                         FilterChoices(tr("收藏"), listOf(null to tr("全部"), true to tr("已收藏"), false to tr("未收藏")), draft.favorite) { draft = draft.copy(favorite = it) }

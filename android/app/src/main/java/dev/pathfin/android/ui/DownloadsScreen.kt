@@ -124,11 +124,11 @@ fun DownloadsScreen(profileId: String?) {
                 }
             }
             if (loadFailed && visible != null) item(key = "load-error") {
-                ErrorPanel(tr("无法读取下载任务"))
+                InlineError(tr("无法读取下载任务"))
             }
             when {
                 visible == null -> item(key = "initial-loading") {
-                    Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().heightIn(min = 160.dp), contentAlignment = Alignment.Center) {
                         if (loadFailed) ErrorPanel(tr("无法读取下载任务"))
                         else if (loadingVisible) PathfinSpinner(PathfinAppearance.accent, Modifier.size(24.dp))
                     }

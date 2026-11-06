@@ -124,7 +124,7 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
             } else if (resultsPage) LazyColumn(Modifier.fillMaxSize().testTag("identification-results"),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = LocalNavigationBottomInset.current),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                error?.let { message -> item { ErrorPanel(message, modifier = Modifier.testTag("identification-error")) } }
+                error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
                 if (applied) item { AppliedBanner() }
                 items(results, key = { it.key }) { result ->
                     IdentificationResultCard(result, person, canApply) { selected = result; replaceImages = false }
@@ -152,7 +152,7 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
                         fontSize = 12.sp, lineHeight = 17.sp,
                         color = if (validYear) PathfinAppearance.textMuted else MaterialTheme.colorScheme.error)
                 }
-                idFieldsError?.let { message -> item { ErrorPanel(message) } }
+                idFieldsError?.let { message -> item { InlineError(message) } }
                 item {
                     val canSearch = !searching && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
                     InkButton(::search, Modifier.fillMaxWidth().testTag("identification-search"), enabled = canSearch, muted = !canSearch) {
@@ -162,7 +162,7 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
                         }
                     }
                 }
-                error?.let { message -> item { ErrorPanel(message, modifier = Modifier.testTag("identification-error")) } }
+                error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
                 if (applied) item { AppliedBanner() }
                 // 已有结果时可直接回到结果页，不必重新搜索。
                 if (results.isNotEmpty() && resultForm == form) item {
