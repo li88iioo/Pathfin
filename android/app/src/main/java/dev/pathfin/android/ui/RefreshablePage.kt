@@ -9,7 +9,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.pulltorefresh.pullToRefresh
@@ -17,6 +16,9 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -29,11 +31,14 @@ import androidx.compose.ui.unit.Velocity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import dev.chrisbanes.haze.ExperimentalHazeApi
+import dev.chrisbanes.haze.hazeSource
 import dev.pathfin.android.i18n.tr
 
 internal val LocalPageRefreshEnabled = compositionLocalOf { true }
 
 /** 刷新只覆盖指示器，不替换列表，也不为后台请求占据页面高度。 */
+@OptIn(ExperimentalHazeApi::class)
 @Composable
 internal fun RefreshablePage(
     refreshing: Boolean,
@@ -47,6 +52,8 @@ internal fun RefreshablePage(
     val pullEnabled = LocalAppPreferences.current.pullToRefreshEnabled
     val canRefresh = enabled && LocalPageRefreshEnabled.current
     val pullState = rememberPullToRefreshState()
+    val indicatorBlur = if (frostedEnabled) rememberTopBarBlurState() else null
+    val pulling by remember(pullState) { derivedStateOf { pullState.distanceFraction > 0f } }
     var requested by remember { mutableStateOf(false) }
     val currentBusy by rememberUpdatedState(refreshing)
     val currentRefresh by rememberUpdatedState(onRefresh)
@@ -95,24 +102,41 @@ internal fun RefreshablePage(
         .semantics {
             if (pullEnabled && canRefresh) customActions = listOf(CustomAccessibilityAction(tr("刷新内容")) { request(); true })
         }) {
-        content()
-        if (pullEnabled && canRefresh) RefreshIndicator(pullState, gestureRefreshing,
-            Modifier.align(Alignment.TopCenter).padding(top = indicatorTopInset))
+        // 指示器独占采样源，正文继续继承页面状态，避免弹层前景混入标题栏和面板的背景。
+        Box(Modifier.fillMaxSize().then(if (pullEnabled && canRefresh && indicatorBlur != null)
+            Modifier.hazeSource(indicatorBlur.source) else Modifier),
+            content = content)
+        // 未下拉时不挂载效果，Haze 会释放无人采样的整页图层。
+        if (pullEnabled && canRefresh && (gestureRefreshing || pulling)) {
+            CompositionLocalProvider(LocalTopBarBlurState provides indicatorBlur) {
+                RefreshIndicator(pullState, gestureRefreshing, Modifier.align(Alignment.TopCenter).padding(top = indicatorTopInset))
+            }
+        }
     }
 }
 
 /**
- * 下拉指示器：细线进度环随下拉量画满，刷新中换成细线转圈。它位于页面采样源内部无法采样自身，
- * 毛玻璃开启时改为半透明卡片底加细描边、去掉投影，与周围的毛玻璃控件同一质感。
+ * 下拉指示器：毛玻璃小圆加细描边，细线进度环随下拉量画满，刷新中换成细线转圈。
+ * 从标题栏下方原位淡入：跟手下滑并由小放大，收起时原路缩小淡出，不做顶边裁切。
  */
 @Composable
 private fun RefreshIndicator(state: PullToRefreshState, refreshing: Boolean, modifier: Modifier) {
-    val frosted = frostedEnabled
-    val card = PathfinAppearance.card
-    PullToRefreshDefaults.IndicatorBox(state, refreshing, modifier.testTag("pull-refresh-indicator"), shape = CircleShape,
-        containerColor = if (frosted) card.copy(alpha = 0.72f) else card,
-        elevation = if (frosted) 0.dp else PullToRefreshDefaults.Elevation) {
-        Box(Modifier.matchParentSize().border(PathfinAppearance.cardBorder, CircleShape))
+    Box(
+        modifier.padding(top = 8.dp)
+            .graphicsLayer {
+                val fraction = (if (refreshing) 1f else state.distanceFraction).coerceIn(0f, 1f)
+                translationY = fraction * 52.dp.toPx()
+                alpha = fraction
+                scaleX = 0.72f + 0.28f * fraction
+                scaleY = scaleX
+            }
+            .size(38.dp)
+            .clip(CircleShape)
+            .frostedControl()
+            .border(PathfinAppearance.glassBorder, CircleShape)
+            .testTag("pull-refresh-indicator"),
+        contentAlignment = Alignment.Center,
+    ) {
         if (refreshing) PathfinSpinner(PathfinAppearance.accent, Modifier.size(20.dp))
         else PathfinProgressRing(state.distanceFraction, Modifier.size(20.dp))
     }

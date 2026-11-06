@@ -89,6 +89,7 @@ internal fun TopBarBlurSurface(
     height: Dp,
     visible: Boolean = true,
     secondaryRow: Boolean = false,
+    dark: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val state = LocalTopBarBlurState.current
@@ -110,7 +111,7 @@ internal fun TopBarBlurSurface(
     Box(modifier) {
         if (visible) {
             if (state != null) {
-                TopBarBlurMaterial(state, topOffset, knownBottom)
+                TopBarBlurMaterial(state, topOffset, knownBottom, dark)
             } else {
                 Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surface))
             }
@@ -124,7 +125,7 @@ internal fun TopBarBlurSurface(
 @Composable
 internal fun NavigationBarSurface(
     modifier: Modifier = Modifier,
-    tintAlpha: Float = 0.80f,
+    tintAlpha: Float = 0.50f,
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(modifier) {
@@ -174,8 +175,11 @@ private fun BoxScope.TopBarBlurMaterial(
     state: TopBarBlurState,
     topOffset: Dp,
     knownBottom: Dp,
+    dark: Boolean,
 ) {
-    val canvas = MaterialTheme.colorScheme.surface
+    // 深色玻璃用于压在深色剧照上：遮色换成半透明暗色，避免浅色底在深图上形成灰带和分界线。
+    val canvas = if (dark) DarkGlass else MaterialTheme.colorScheme.surface
+    val veilStrength = if (dark) 0.55f else 1f
     val density = LocalDensity.current
     val bounds by remember(state, topOffset, knownBottom) {
         derivedStateOf {
@@ -209,12 +213,13 @@ private fun BoxScope.TopBarBlurMaterial(
             }
         }
     }
-    val veil = remember(canvas, start, end, ramp) {
+    val veil = remember(canvas, veilStrength, start, end, ramp) {
+        val colors = ramp.map { canvas.copy(alpha = veilStrength * (1f - it)) }
         object : ShaderBrush() {
             override fun createShader(size: Size): Shader = LinearGradientShader(
                 from = Offset(0f, start),
                 to = Offset(0f, maxOf(end, size.height)),
-                colors = ramp.map { canvas.copy(alpha = 1f - it) },
+                colors = colors,
             )
         }
     }
@@ -240,3 +245,5 @@ private fun BoxScope.TopBarBlurMaterial(
             .drawBehind { drawRect(veil) },
     )
 }
+
+private val DarkGlass = Color(0xFF0E0F13)

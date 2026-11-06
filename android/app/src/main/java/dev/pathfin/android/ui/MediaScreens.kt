@@ -89,11 +89,12 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
     val ambient = remember(home) { homeAmbientEntries(home) }
     val showAmbient = ambient.isNotEmpty() || homeAmbientPending(home)
     val list = rememberLazyListState()
-    val scrollLimitPx = with(LocalDensity.current) { AmbientContentGap.roundToPx() }
+    val coverLimitPx = with(LocalDensity.current) { (topInset + AmbientFade).roundToPx() }
     val ambientShown by rememberUpdatedState(showAmbient)
-    // 氛围区内容滑到标题栏下方时恢复毛玻璃底，保持两侧按钮清晰。
-    val covered by remember(scrollLimitPx) { derivedStateOf {
-        ambientShown && list.firstVisibleItemIndex == 0 && list.firstVisibleItemScrollOffset < scrollLimitPx
+    // 剧照的深色部分还在标题栏下方时用深色玻璃白字；只剩渐隐进底色的尾巴时换回浅色玻璃。
+    val covered by remember(coverLimitPx) { derivedStateOf {
+        val first = list.layoutInfo.visibleItemsInfo.firstOrNull()
+        ambientShown && first != null && first.index == 0 && first.offset + first.size > coverLimitPx
     } }
     LaunchedEffect(covered) { onAmbientCovered(covered) }
     RefreshablePage(home.loading, retry, Modifier.fillMaxSize(), refreshOnEntry = home.loaded || home.error != null) {

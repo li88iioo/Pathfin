@@ -288,5 +288,6 @@ internal fun LibraryPill(library: MediaItem, onClick: () -> Unit) {
 private val AmbientHeroHeight = 212.dp
 /** 标题栏与氛围区第一行内容之间的留白；滚过这段，内容就会滑到标题栏下方。 */
 internal val AmbientContentGap = 56.dp
-private val AmbientFade = 112.dp
+/** 氛围区底部渐隐进页面底色的高度；这一段压不住白字，标题栏到这里换回浅色玻璃。 */
+internal val AmbientFade = 112.dp
 private val ThumbWidth = 112.dp

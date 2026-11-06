@@ -52,6 +52,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -212,9 +213,14 @@ internal val GroupTextInset = 60.dp
 @Composable
 internal fun GroupCard(modifier: Modifier = Modifier, container: Color = PathfinAppearance.card, frosted: Boolean = false,
     content: @Composable ColumnScope.() -> Unit) {
+    // 放在玻璃抽屉里时用半透明底，透出抽屉身后的模糊；其他页面保持实色。
+    val fill = if (LocalOnGlass.current) container.copy(alpha = container.alpha * 0.55f) else container
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius))
-        .then(if (frosted) Modifier.frostedControl(container) else Modifier.background(container)), content = content)
+        .then(if (frosted) Modifier.frostedControl(container) else Modifier.background(fill)), content = content)
 }
+
+/** 当前内容是否画在半透明玻璃面板（抽屉、菜单）上，由 AppModalBottomSheet 与 AppDropdownMenu 提供。 */
+internal val LocalOnGlass = staticCompositionLocalOf { false }
 
 
 /** 行与行之间的细线，起点对齐文字；每组首行不画，避免贴着卡片顶边出现双线。 */
@@ -319,11 +325,13 @@ internal data class DockItem(val label: String, val icon: ImageVector, val selec
 internal fun PathfinDock(items: List<DockItem>, modifier: Modifier = Modifier) {
     NavigationBarSurface(
         modifier.shadow(24.dp, CircleShape, ambientColor = Color.Black.copy(alpha = 0.06f), spotColor = Color.Black.copy(alpha = 0.08f))
-            .clip(CircleShape).border(PathfinAppearance.cardBorder, CircleShape).testTag("app-dock-surface"),
+            .clip(CircleShape).border(PathfinAppearance.glassBorder, CircleShape).testTag("app-dock-surface"),
     ) {
         // 毛玻璃胶囊上，实色画布片会像贴了一块白纸；改为点缀色的淡玻璃片，透出底下的模糊。
         val frosted = frostedEnabled
         val accent = PathfinAppearance.accent
+        // 半透明玻璃背后常是中间色调的海报，未选中图标要比普通弱化文字更深（深色模式更亮）才看得清。
+        val idle = if (PathfinAppearance.isDark()) PathfinAppearance.textSub else PathfinAppearance.textMain.copy(alpha = 0.7f)
         Row(Modifier.padding(horizontal = 5.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items.forEach { item ->
                 Box(
@@ -336,7 +344,7 @@ internal fun PathfinDock(items: List<DockItem>, modifier: Modifier = Modifier) {
                         .selectable(item.selected, role = Role.Tab, onClick = item.onClick).semantics { contentDescription = item.label },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(item.icon, null, Modifier.size(22.dp), tint = if (item.selected) PathfinAppearance.accent else PathfinAppearance.textMuted)
+                    Icon(item.icon, null, Modifier.size(22.dp), tint = if (item.selected) PathfinAppearance.accent else idle)
                 }
             }
         }

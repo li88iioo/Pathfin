@@ -49,6 +49,7 @@ import androidx.test.filters.SdkSuppress
 import dev.pathfin.android.ui.LocalTopBarBlurState
 import dev.pathfin.android.ui.NavigationBarSurface
 import dev.pathfin.android.ui.PageTitleBar
+import dev.pathfin.android.ui.RefreshablePage
 import dev.pathfin.android.ui.TopBarBlurSurface
 import dev.pathfin.android.ui.frostedCard
 import dev.pathfin.android.ui.rememberTopBarBlurState
@@ -143,7 +144,8 @@ class TopBarBlurUiTest {
         val visible = mutableStateOf(true)
         val body = mutableStateOf<Color?>(Color.Black)
         val surface = mutableStateOf(Color.White)
-        compose.setContent { SolidFixture(true, body.value, surface = surface.value, titleVisible = visible.value) }
+        val dark = mutableStateOf(false)
+        compose.setContent { SolidFixture(true, body.value, surface = surface.value, titleVisible = visible.value, dark = dark.value) }
         ready("title-bar-bottom-transition")
         awaitMaterial { gray(it) < 0.95f }
         val image = pixels("blur-fixture", snapshotName = "title-edge-solid")
@@ -177,6 +179,40 @@ class TopBarBlurUiTest {
                 assertTrue("$canvas 主题的材质末端应平滑贴合有颜色的正文：x=$x difference=$difference", difference < 0.012f)
             }
         }
+        compose.runOnIdle { body.value = Color.Black; surface.value = Color.White; dark.value = true }
+        ready("title-dark-glass-over-ambient")
+        awaitMaterial { gray(it) < 0.08f }
+        val darkImage = pixels("blur-fixture", snapshotName = "title-ambient-dark-glass")
+        assertTrue("浅色主题的深色剧照上不能重新蒙白雾", gray(materialSample(darkImage, y = 48f / 224f)) < 0.08f)
+        assertTrue("深色玻璃下沿也必须贴合正文", gray(materialSample(darkImage, y = 92f / 224f)) < 0.012f)
+    }
+
+    @Test fun refreshSamplingDoesNotChangeThePagesTranslucentBackdrop() {
+        val refreshable = mutableStateOf(false)
+        compose.setContent {
+            MaterialTheme(colorScheme = lightColorScheme(surface = Color.White)) {
+                val state = rememberTopBarBlurState()
+                CompositionLocalProvider(LocalTopBarBlurState provides state) {
+                    Box(Modifier.size(300.dp, 224.dp).background(Color.White).testTag("blur-fixture")) {
+                        Box(Modifier.fillMaxSize().topBarBlurSource()) {
+                            val body: @Composable () -> Unit = {
+                                Canvas(Modifier.fillMaxSize()) { drawRect(Color.Red.copy(alpha = .45f)) }
+                            }
+                            if (refreshable.value) RefreshablePage(false, {}, Modifier.fillMaxSize()) { body() }
+                            else body()
+                        }
+                        PageTitleBar(Modifier.fillMaxWidth().height(96.dp), height = 96.dp) {}
+                    }
+                }
+            }
+        }
+        ready("refresh-source-baseline")
+        awaitMaterial { it.red - it.green > .1f }
+        val baseline = materialSample(pixels("blur-fixture"), y = 70f / 224f)
+        compose.runOnIdle { refreshable.value = true }
+        ready("refresh-source-isolated")
+        val actual = materialSample(pixels("blur-fixture"), y = 70f / 224f)
+        assertEquals("添加下拉刷新不能让半透明正文被标题栏重复合成", baseline.green, actual.green, .012f)
     }
 
     @Test
@@ -410,7 +446,7 @@ class TopBarBlurUiTest {
 
     @Composable
     private fun SolidFixture(enabled: Boolean, source: Color?, sourcePresent: Boolean = true, surface: Color = Color.White,
-        titleVisible: Boolean = true) {
+        titleVisible: Boolean = true, dark: Boolean = false) {
         MaterialTheme(colorScheme = lightColorScheme(surface = surface, surfaceContainerLow = surface,
             surfaceContainerLowest = surface)) {
             // 毛玻璃始终开启；不提供采样源就是播放器等页面实际走的实色退路。
@@ -427,7 +463,7 @@ class TopBarBlurUiTest {
                     }
                     PageTitleBar(
                         modifier = Modifier.fillMaxWidth().height(96.dp).testTag("blur-header"),
-                        height = 96.dp, visible = titleVisible,
+                        height = 96.dp, visible = titleVisible, dark = dark,
                     ) {
                         Column(Modifier.padding(start = 16.dp, top = 12.dp)) {
                             Canvas(Modifier.size(64.dp, 12.dp).testTag("blur-foreground-mark")) { drawStripes() }

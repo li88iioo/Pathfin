@@ -393,10 +393,9 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                 ) {}
             }
             // 标题栏自己接住点击，不再穿透到下面的海报；双击发出“回到顶部”。
-            if (hasHeader) CompositionLocalProvider(LocalContentColor provides if (homeOverAmbient) Color.White else LocalContentColor.current) {
-            PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
+            if (hasHeader) PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
                 .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scrollToTopRequests.intValue++ }) }, height = headerInset,
-                visible = !homeOverAmbient) {
+                dark = homeOverAmbient) {
                         Row(Modifier.fillMaxWidth()
                             .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
                             .heightIn(min = 60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -459,7 +458,6 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                 } else if (libraryPage) Spacer(Modifier.width(48.dp))
                             }
                         }
-            }
             }
             if (isDetail) {
                 CompositionLocalProvider(LocalContentColor provides if (detailScrolled) MaterialTheme.colorScheme.onSurface else Color.White) {

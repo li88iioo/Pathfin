@@ -79,7 +79,8 @@ internal fun SheetDragHandle(modifier: Modifier = Modifier) {
         Box(
             Modifier.size(width = 36.dp, height = 4.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(PathfinAppearance.divider),
+                // 把手要比分隔线明显，玻璃抽屉上浅色实灰条会发白看不见。
+                .background(PathfinAppearance.textMain.copy(alpha = 0.22f)),
         )
     }
 }
@@ -104,18 +105,20 @@ internal fun AppModalBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // 底色画在内容列上（毛玻璃或实色），面板本身透明；把手和安全区留白都放进这一列，手势条下也是同一材质。
+    // 与菜单同一档玻璃：深色 50%，浅色 72%（浅色玻璃压在深色画面上会被染成中灰）。
     val insets = contentWindowInsets()
+    val tint = if (PathfinAppearance.isDark()) 0.50f else 0.72f
     ModalBottomSheet(onDismissRequest, modifier, sheetState, sheetMaxWidth, sheetGesturesEnabled,
         shape, Color.Transparent, contentColor, tonalElevation, scrimColor, dragHandle = null,
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) }, properties = properties) {
         AppSystemBars()
         // 普通内容与把手也通过嵌套滚动派发手势；只移动 sheet，不改变内容尺寸或位置。
-        Column(Modifier.fillMaxWidth().frostedPanel(containerColor)
+        Column(Modifier.fillMaxWidth().frostedCard(tint, containerColor, 32.dp)
             .nestedScroll(KeepExpandedSheetInPlace)
             .scrollable(rememberScrollableState { 0f }, Orientation.Vertical, enabled = sheetGesturesEnabled)
             .windowInsetsPadding(insets)) {
             dragHandle?.let { handle -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { handle() } }
-            Column(content = content)
+            CompositionLocalProvider(LocalOnGlass provides frostedEnabled) { Column(content = content) }
         }
     }
 }
@@ -283,14 +286,15 @@ internal fun AppDropdownMenu(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // 菜单面板本身透明，底色画在内容列上（含上下留白），由面板形状裁切；毛玻璃时阴影会透出灰边，改用细描边。
-    // 菜单是要读的文字列表，浓度与底栏一致：压在彩色剧照上也是干净的卡片色，不会被底色染脏。
+    // 半透明玻璃配极淡细边。深色与底栏同为 50%；浅色玻璃压在深色画面上会被染成中灰，提到 72% 保证文字对比。
     val frosted = frostedEnabled
+    val tint = if (PathfinAppearance.isDark()) 0.50f else 0.72f
     DropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest,
-        modifier = modifier.frostedCard(0.80f, PathfinAppearance.card, 32.dp, fallback = containerColor), shape = shape,
+        modifier = modifier.frostedCard(tint, PathfinAppearance.card, 32.dp, fallback = containerColor), shape = shape,
         containerColor = Color.Transparent,
         shadowElevation = if (frosted) 0.dp else MenuDefaults.ShadowElevation,
-        border = if (frosted) PathfinAppearance.cardBorder else null) {
+        border = if (frosted) PathfinAppearance.glassBorder else null) {
         AppSystemBars()
-        content()
+        CompositionLocalProvider(LocalOnGlass provides frosted) { content() }
     }
 }

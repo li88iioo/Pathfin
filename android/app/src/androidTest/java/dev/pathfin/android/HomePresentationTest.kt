@@ -27,6 +27,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -327,7 +329,10 @@ class HomePresentationTest {
         val covered = mutableListOf<Boolean>()
         showHome(home, onOpen = { opened = it }, onPlay = { played = it }, onAmbientCovered = { covered += it })
         compose.onNodeWithTag("home-ambient-hero/${first.id}").assertExists()
-        compose.runOnIdle { assertEquals("氛围区在标题栏下方时通知外壳透明标题栏", true, covered.lastOrNull()) }
+        compose.runOnIdle {
+            assertEquals("首页首次覆盖状态不能先报浅色、下一帧再切深色", true, covered.firstOrNull())
+            assertEquals("氛围区在标题栏下方时使用深色玻璃", true, covered.lastOrNull())
+        }
 
         compose.onNodeWithTag("home-ambient-thumb/${second.id}").performVerificationClick(compose)
         compose.onNodeWithTag("home-ambient-hero/${second.id}").assertExists()
@@ -337,6 +342,8 @@ class HomePresentationTest {
         compose.onNodeWithTag("home-ambient-play").assertTextEquals("继续播放").performVerificationClick(compose)
         compose.runOnIdle { assertSame("播放键播放当前选中的一集", second, played) }
 
+        compose.onNodeWithTag("home-list").performTouchInput { swipeUp(startY = height * .65f, endY = height * .55f, durationMillis = 1_000) }
+        compose.runOnIdle { assertEquals("内容滚入标题栏后，深色剧照仍覆盖时保持深色玻璃", true, covered.last()) }
         compose.onNodeWithTag("home-list").performScrollToKey("library-shelf/${libraries.last().id}")
         compose.runOnIdle { assertEquals("剧照滚出标题栏后恢复底色", false, covered.last()) }
         compose.onNodeWithTag("home-list").performScrollToIndex(0)

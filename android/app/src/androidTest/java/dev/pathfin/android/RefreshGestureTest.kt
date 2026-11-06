@@ -29,6 +29,8 @@ import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.ui.HomeScreen
 import dev.pathfin.android.ui.HomeState
 import dev.pathfin.android.ui.LocalAppPreferences
+import dev.pathfin.android.ui.LocalTopBarBlurState
+import dev.pathfin.android.ui.rememberTopBarBlurState
 import dev.pathfin.android.ui.RefreshablePage
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
@@ -146,7 +148,8 @@ class RefreshGestureTest {
     private fun show(refreshOnEntry: Boolean = true) {
         compose.setContent {
             PathfinTheme(ThemePreference.LIGHT) {
-                CompositionLocalProvider(LocalAppPreferences provides preferences.value) {
+                CompositionLocalProvider(LocalAppPreferences provides preferences.value,
+                    LocalTopBarBlurState provides rememberTopBarBlurState()) {
                     Surface(Modifier.fillMaxSize()) {
                         RefreshablePage(loading.value, {
                             requests.incrementAndGet()
