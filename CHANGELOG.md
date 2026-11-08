@@ -4,6 +4,15 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.3] - 2026-11-08
+
+### 优化
+
+- [详情页优先显示标题 Logo](https://github.com/li88iioo/Pathfin/commit/35d4a9ef075b7687ea3da952cec8df57d6e0c885)：进入详情时直接读取并淡入 Logo，不再先显示文字再切换；没有 Logo 的媒体直接显示文字标题。
+- 平滑[图片加载](https://github.com/li88iioo/Pathfin/commit/35d4a9ef075b7687ea3da952cec8df57d6e0c885)：封面、剧照与章节缩略图读取中改用随主题的浅色占位并淡入，不再闪出深色方块；缺图或[读取失败](https://github.com/li88iioo/Pathfin/commit/1bcee5330bb128886e9a535573230f2d9b0f9933)时显示缺图图标，换图后正常恢复。
+- [详情简介读取完成前留空](https://github.com/li88iioo/Pathfin/commit/35d4a9ef075b7687ea3da952cec8df57d6e0c885)，不再先闪出“暂无简介”再替换为正文。
+- [选集抽屉的集数格适配毛玻璃](https://github.com/li88iioo/Pathfin/commit/dc56f4128917a464f941fc8a7e5543b2b7e2204c)，与抽屉材质保持一致。
+
 ## [0.1.2] - 2026-11-06
 
 ### 优化
@@ -79,6 +88,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.3]: https://github.com/li88iioo/Pathfin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/li88iioo/Pathfin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/li88iioo/Pathfin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/li88iioo/Pathfin/releases/tag/v0.1.0
