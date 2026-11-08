@@ -239,8 +239,11 @@ private fun EpisodeNumberRow(page: ContentState, enabled: Boolean, onOpen: (Medi
 
 @Composable
 private fun EpisodeNumberCell(episode: MediaItem, tag: String, modifier: Modifier, onOpen: () -> Unit) {
-    Box(modifier.clip(RoundedCornerShape(12.dp)).background(PathfinAppearance.card)
-        .border(PathfinAppearance.cardBorder, RoundedCornerShape(12.dp))
+    // 抽屉里与分组卡同一规则：半透明底透出玻璃，细玻璃描边；正文里保持实色卡片。
+    val onGlass = LocalOnGlass.current
+    val card = PathfinAppearance.card
+    Box(modifier.clip(RoundedCornerShape(12.dp)).background(if (onGlass) card.copy(alpha = card.alpha * 0.55f) else card)
+        .border(if (onGlass) PathfinAppearance.glassBorder else PathfinAppearance.cardBorder, RoundedCornerShape(12.dp))
         .testTag(tag).semantics { stateDescription = episodeWatchState(episode) }
         .clickable(role = Role.Button, onClickLabel = tr("打开%1\$s详情", episode.name), onClick = onOpen),
         contentAlignment = Alignment.Center) {
