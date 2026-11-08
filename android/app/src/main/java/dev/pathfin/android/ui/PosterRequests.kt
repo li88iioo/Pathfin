@@ -5,6 +5,7 @@ import androidx.compose.ui.unit.IntSize
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import coil3.size.Precision
 import coil3.size.Scale
 import dev.pathfin.android.data.JellyfinApi
@@ -14,6 +15,9 @@ import dev.pathfin.android.domain.Session
 
 /** 卡片共用 URL、鉴权、缓存键和真实解码尺寸，避免相同封面重复请求或解码。 */
 internal object PosterRequests {
+    /** 首次读到的图从占位淡入；内存缓存命中时 Coil 不做过渡，回滚列表不会闪。 */
+    const val FADE_MS = 200
+
     fun url(api: JellyfinApi, session: Session, item: MediaItem, width: Int,
             type: String, imageIndex: Int = 0): String? = width.takeIf { it > 0 }?.let {
         api.imageUrl(session, item, width = PosterImageCache.requestWidth(it), type = type, imageIndex = imageIndex)
@@ -31,7 +35,7 @@ internal object PosterRequests {
         val headers = NetworkHeaders.Builder().apply {
             api.imageHeaders(session).forEach { (name, value) -> set(name, value) }
         }.build()
-        return ImageRequest.Builder(context).data(url).httpHeaders(headers)
+        return ImageRequest.Builder(context).data(url).httpHeaders(headers).crossfade(FADE_MS)
             .scale(Scale.FILL).precision(Precision.INEXACT)
             .apply {
                 if (size.width > 0 && size.height > 0) size(size.width, size.height)

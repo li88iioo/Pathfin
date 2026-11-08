@@ -730,7 +730,7 @@ class JellyfinLibraryApiTest {
             val type = query.queryParameter("includeItemTypes")
             if (type in setOf("Movie", "Series")) {
                 assertEquals(setOf("MediaSourceCount", "PrimaryImageAspectRatio") + if (type == "Series") setOf("ChildCount") else emptySet<String>(), fields)
-                assertEquals("Primary,Backdrop", query.queryParameter("enableImageTypes"))
+                assertEquals("Primary,Backdrop,Logo", query.queryParameter("enableImageTypes"))
             } else assertTrue(fields.contains("Overview"))
             exchange.json("""{"Items":[{"Id":"item","Type":"${type ?: "Series"}","ChildCount":${if ("ChildCount" in fields) "5" else "null"},"Overview":"${if ("Overview" in fields) "Full synopsis" else ""}"}],"TotalRecordCount":1}""")
         }) { session -> runBlocking {

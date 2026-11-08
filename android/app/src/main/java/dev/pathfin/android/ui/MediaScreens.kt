@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +68,7 @@ import coil3.compose.SubcomposeAsyncImageContent
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.data.PosterImageCache
 import dev.pathfin.android.data.PerformanceTrace
@@ -453,7 +455,8 @@ internal fun WatchProgress(item: MediaItem, modifier: Modifier = Modifier) {
 }
 
 @Composable
-internal fun PosterImage(item: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, wide: Boolean = false, shape: Shape = RoundedCornerShape(12.dp), imageType: String? = null, imageIndex: Int = 0, displayWidth: Dp? = null, displayAspectRatio: Float? = null) {
+internal fun PosterImage(item: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, wide: Boolean = false, shape: Shape = RoundedCornerShape(12.dp), imageType: String? = null, imageIndex: Int = 0, displayWidth: Dp? = null, displayAspectRatio: Float? = null,
+    loadingFill: Color = PathfinAppearance.imageLoading) {
     val context = LocalContext.current
     val preferences = LocalAppPreferences.current
     val restricted = preferences.blurAdultCovers && AdultContentRatings.matches(item.officialRating)
@@ -470,11 +473,15 @@ internal fun PosterImage(item: MediaItem, session: Session, api: JellyfinApi, mo
     // 同一位置换内容（切季、换演员）时，新图到达前先垫着上一张成功加载的图，到达后淡入替换，不闪占位块。
     var shownRequest by remember { mutableStateOf<ImageRequest?>(null) }
     var currentLoaded by remember(request) { mutableStateOf(false) }
+    // 有图但还在读取时用随主题的浅占位、不画图标，图到后淡入；真正缺图或读取失败才是深色底加图标。
+    val available = remember(session, item, type, imageIndex) { api.imageUrl(session, item, width = 1, type = type, imageIndex = imageIndex) != null }
+    var failed by remember(request) { mutableStateOf(false) }
+    val missing = !available || failed
     val previous = shownRequest?.takeIf { it !== request && !currentLoaded }
     Box(modifier.onSizeChanged { size ->
         if (size.width > 0 && size.height > 0) displaySize = size
-    }.clip(shape).background(MediaImagePlaceholder), contentAlignment = Alignment.Center) {
-        if (previous == null && !currentLoaded) Icon(when (item.type) {
+    }.clip(shape).background(if (missing) MediaImagePlaceholder else loadingFill), contentAlignment = Alignment.Center) {
+        if (missing && previous == null && !currentLoaded) Icon(when (item.type) {
             "Person" -> PathfinIcons.User
             "Folder", "CollectionFolder" -> PathfinIcons.Folder
             else -> MediaNavigationIcons.Movies
@@ -500,7 +507,7 @@ internal fun PosterImage(item: MediaItem, session: Session, api: JellyfinApi, mo
                     PerformanceTrace.imageReady(it.result.dataSource.name)
                     currentLoaded = true
                     shownRequest = request
-                })
+                }, onError = { if (imageUrl != null) failed = true })
         }
     }
 }
@@ -530,7 +537,7 @@ internal fun ChapterThumbnail(chapter: MediaChapter, item: MediaItem, session: S
     val imageUrl = requestWidth.takeIf { it > 0 }?.let { api.chapterImageUrl(session, item, chapter.imageIndex, chapter.imageTag, it) }
     val request = remember(context, session, imageUrl) {
         val headers = NetworkHeaders.Builder().apply { api.imageHeaders(session).forEach { (key, value) -> set(key, value) } }.build()
-        ImageRequest.Builder(context).data(imageUrl).httpHeaders(headers).apply {
+        ImageRequest.Builder(context).data(imageUrl).httpHeaders(headers).crossfade(PosterRequests.FADE_MS).apply {
             imageUrl?.let { url ->
                 val key = PosterImageCache.requestKey(session, url)
                 memoryCacheKey(key)
@@ -539,10 +546,10 @@ internal fun ChapterThumbnail(chapter: MediaChapter, item: MediaItem, session: S
         }.build()
     }
     Box(modifier.onSizeChanged { size -> if (size.width > 0) requestWidth = PosterImageCache.requestWidth(size.width) }
-        .clip(RoundedCornerShape(8.dp)).background(MediaImagePlaceholder)
+        .clip(RoundedCornerShape(8.dp)).background(if (chapter.hasThumbnail()) PathfinAppearance.imageLoading else MediaImagePlaceholder)
         .testTag("chapter-thumbnail/${item.id}/${chapter.imageIndex}"), contentAlignment = Alignment.Center) {
-        Icon(MediaNavigationIcons.Movies, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = .6f))
-        if (chapter.hasThumbnail()) AsyncImage(request, null, imageLoader = LocalPosterLoader.current,
+        if (!chapter.hasThumbnail()) Icon(MediaNavigationIcons.Movies, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = .6f))
+        else AsyncImage(request, null, imageLoader = LocalPosterLoader.current,
             modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop,
             onSuccess = { PerformanceTrace.imageReady(it.result.dataSource.name) })
     }
@@ -637,7 +644,8 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
                 onFavorite = { vm.toggleFavorite(item) },
                 onDownload = if (session.canDownload && item.canDownload != false && item.type in setOf("Movie", "Episode", "Video", "Audio")) ({ vm.prepareDownload(item) }) else null,
                 onWatched = { vm.togglePlayed(item) }, actionBusy = state.actionBusy,
-                onSeries = { vm.openSeries(item) }.takeIf { item.type in setOf("Episode", "Season") && !item.seriesId.isNullOrBlank() })
+                onSeries = { vm.openSeries(item) }.takeIf { item.type in setOf("Episode", "Season") && !item.seriesId.isNullOrBlank() },
+                detailPending = state.detailLoading)
         }
         if (hasChildren) {
             if (item.type == "Series") {
@@ -711,7 +719,8 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
 @Composable
 internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, busy: Boolean, playable: Boolean, hasResume: Boolean,
     playTarget: MediaItem?, onPlay: () -> Unit, onStart: () -> Unit, onCast: (() -> Unit)? = null,
-    onFavorite: () -> Unit, onDownload: (() -> Unit)?, onWatched: () -> Unit, actionBusy: Set<String>, onSeries: (() -> Unit)? = null) {
+    onFavorite: () -> Unit, onDownload: (() -> Unit)?, onWatched: () -> Unit, actionBusy: Set<String>, onSeries: (() -> Unit)? = null,
+    detailPending: Boolean = false) {
     val surface = MaterialTheme.colorScheme.surface
     val safeArea = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
     val season = item.type == "Season"
@@ -750,7 +759,7 @@ internal fun DetailHero(item: MediaItem, session: Session, api: JellyfinApi, bus
             item.seriesName?.takeIf { item.type == "Episode" && it.isNotBlank() }?.let { series ->
                 SeriesLink(series, onSeries)
             }
-            DetailSynopsis(item)
+            DetailSynopsis(item, detailPending)
         }
     }
     }
@@ -793,13 +802,16 @@ internal fun DetailTitle(item: MediaItem, session: Session, api: JellyfinApi, co
             // 同一快照决定文字和 Logo 的绘制，避免图片先更新、文字晚一帧隐藏。
             val state by painter.state.collectAsState()
             val logo = (state as? AsyncImagePainter.State.Success)?.painter
+            // 已在内存里的 Logo 首帧即为 1 不做动画；网络读到的从留白处淡入，不突然蹦出。
+            val logoAlpha by animateFloatAsState(if (logo != null) 1f else 0f, tween(220), label = "detail-logo")
             Box(Modifier.fillMaxWidth().heightIn(min = titleSlot),
                 contentAlignment = if (compact) Alignment.TopStart else Alignment.BottomStart) {
                 Text(item.name, Modifier.fillMaxWidth().padding(bottom = 4.dp)
                     .alpha(if (request == null || state is AsyncImagePainter.State.Error) 1f else 0f),
                     fontSize = 25.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 if (request != null) this@SubcomposeAsyncImage.SubcomposeAsyncImageContent(painter = logo ?: ColorPainter(Color.Transparent),
-                    modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().height(titleSlot).testTag("$tag-logo/${item.id}")
+                    modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth().height(titleSlot).graphicsLayer { alpha = logoAlpha }
+                        .testTag("$tag-logo/${item.id}")
                         .semantics { stateDescription = if (logo != null) tr("已加载") else tr("正在加载") })
             }
         }
@@ -882,5 +894,5 @@ internal fun compactDuration(ms: Long): String {
 }
 internal fun ratingText(value: Double): String = String.format(Locale.ROOT, "%.1f", value)
 
-/** 媒体缺图沿用参考的深中性底，不随浅色主题变成不可辨识的亮灰块。 */
+/** 媒体缺图沿用参考的深中性底，不随浅色主题变成不可辨识的亮灰块；读取中的占位见 PathfinAppearance.imageLoading。 */
 internal val MediaImagePlaceholder = Color(0xff3d3d3d)

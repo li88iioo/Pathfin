@@ -142,13 +142,16 @@ private fun DetailIconAction(label: String, enabled: Boolean, onClick: () -> Uni
 }
 
 @Composable
-internal fun DetailSynopsis(item: MediaItem) {
+internal fun DetailSynopsis(item: MediaItem, pending: Boolean = false) {
     var expanded by rememberSaveable(item.id) { mutableStateOf(false) }
+    // 列表卡片不带简介：详情读完前留空三行，不先写“暂无简介”再换成正文；读完过一次后刷新不再隐藏。
+    var settled by remember(item.id) { mutableStateOf(!pending) }
+    LaunchedEffect(pending) { if (!pending) settled = true }
     var overflow by remember(item.id, item.overview) { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth().testTag("detail-synopsis")
         .clickable(enabled = item.overview.isNotBlank(), role = Role.Button) { expanded = true }
         .semantics { contentDescription = tr("查看完整简介") }) {
-        Text(item.overview.ifBlank { tr("暂无简介") }, fontSize = 14.sp, lineHeight = 22.sp, minLines = 3, maxLines = 3,
+        Text(item.overview.ifBlank { if (settled) tr("暂无简介") else "" }, fontSize = 14.sp, lineHeight = 22.sp, minLines = 3, maxLines = 3,
             overflow = TextOverflow.Ellipsis, onTextLayout = { overflow = it.hasVisualOverflow })
         if (overflow) Text(tr("… 更多"), Modifier.align(Alignment.BottomEnd).background(MaterialTheme.colorScheme.surface).padding(start = 6.dp),
             color = PathfinAppearance.accent, fontSize = 14.sp, lineHeight = 22.sp)

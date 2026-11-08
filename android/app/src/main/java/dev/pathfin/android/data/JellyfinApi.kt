@@ -190,7 +190,8 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             } else LIST_FIELDS,
             "enableUserData" to "true",
             "imageTypeLimit" to "1",
-            "enableImageTypes" to if (posterOnly) "Primary,Backdrop" else IMAGE_TYPES,
+            // 带上 Logo 标签，进详情时标题直接请求 Logo，不先画文字再换。
+            "enableImageTypes" to if (posterOnly) "Primary,Backdrop,Logo" else IMAGE_TYPES,
         )
         if (!parentId.isNullOrBlank()) parameters["parentId"] = parentId
         if (searchTerm != null) parameters["searchTerm"] = searchTerm

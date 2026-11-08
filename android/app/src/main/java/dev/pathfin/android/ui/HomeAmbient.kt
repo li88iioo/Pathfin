@@ -119,7 +119,7 @@ internal fun HomeAmbient(
                 contentKey = { item -> item?.let { api.imageUrl(session, it, type = "Backdrop") } }) { item ->
                 if (item != null) PosterImage(item, session, api, Modifier.fillMaxSize()
                     .then(if (Build.VERSION.SDK_INT >= 31) Modifier.blur(12.dp, BlurredEdgeTreatment.Rectangle) else Modifier),
-                    wide = true, shape = RectangleShape, imageType = "Backdrop")
+                    wide = true, shape = RectangleShape, imageType = "Backdrop", loadingFill = MediaImagePlaceholder)
             }
             Box(Modifier.fillMaxSize().drawWithCache {
                 val brush = ambientScrim(canvas, ((size.height - AmbientFade.toPx()) / size.height).coerceIn(.5f, .95f))

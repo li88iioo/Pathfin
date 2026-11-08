@@ -50,6 +50,12 @@ internal object PathfinAppearance {
         isDark() -> Color(0xFF232327)
         else -> Color(0xFFEEF0F3)
     }
+    /** 图片读取中的占位：与页面同一色调的浅块，玻璃面板里换成半透明填充。 */
+    val imageLoading: Color @Composable get() = when {
+        LocalOnGlass.current -> softFill
+        isDark() -> Color(0xFF26272C)
+        else -> Color(0xFFE6E8EC)
+    }
     val segmentTrack: Color @Composable get() = if (isDark()) Color(0xFF2C2C31) else Color(0xFFE5E7EB)
     val accentSoft: Color @Composable get() = MaterialTheme.colorScheme.primaryContainer
     val accentWash: Color @Composable get() = LocalAccentPalette.current.accentWash
