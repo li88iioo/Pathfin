@@ -41,6 +41,7 @@ import dev.pathfin.android.domain.MediaChapter
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
+import dev.pathfin.android.ui.ChapterThumbnail
 import dev.pathfin.android.ui.DetailActions
 import dev.pathfin.android.ui.DetailBackgroundImage
 import dev.pathfin.android.ui.DetailChaptersShelf
@@ -49,15 +50,20 @@ import dev.pathfin.android.ui.LocalPosterLoader
 import dev.pathfin.android.ui.PlaybackChaptersSheet
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** 只在 verification 使用自制内存图像；不连接个人服务器，不读写日常账号。 */
+/** 只在 verification 使用合成图像与响应；不连接个人服务器，不读写日常账号。 */
 @RunWith(AndroidJUnit4::class)
 class DetailMediaPreferencesUiTest {
     @get:Rule val compose = createVerificationComposeRule<ComponentActivity>()
@@ -181,6 +187,68 @@ class DetailMediaPreferencesUiTest {
             compose.runOnIdle { assertSame(imageChapter, selected); busy.value = true }
             compose.onNodeWithTag("detail-chapter/1").assertIsNotEnabled()
         } finally { loader.shutdown() }
+    }
+
+    @Test fun chapterFailureShowsMissingImageAndChangingTheImageRecoversWithoutMoving() {
+        checkVerification()
+        val releaseFailure = CountDownLatch(1)
+        val releaseSuccess = CountDownLatch(1)
+        val failureStarted = CountDownLatch(1)
+        val successStarted = CountDownLatch(1)
+        val png = ByteArrayOutputStream().use { output ->
+            val image = solid(android.graphics.Color.GREEN)
+            try { image.compress(Bitmap.CompressFormat.PNG, 100, output); output.toByteArray() }
+            finally { image.recycle() }
+        }
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            val success = chain.request().url.queryParameter("tag") == "fresh"
+            (if (success) successStarted else failureStarted).countDown()
+            check((if (success) releaseSuccess else releaseFailure).await(10, TimeUnit.SECONDS))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1)
+                .code(if (success) 200 else 404).message("Synthetic chapter response")
+                .body((if (success) png else ByteArray(0)).toResponseBody()).build()
+        }.build()
+        val loader = PosterImageCache.createMemoryLoader(context, client)
+        val chapter = mutableStateOf(MediaChapter("请求中的图片", 0, "stale", 0))
+        val item = MediaItem("chapter-recovery", "合成章节", "Movie")
+        val tag = "chapter-thumbnail/${item.id}/0"
+        val missingTag = "chapter-thumbnail/${item.id}/1"
+        fun pixels(target: String) = compose.onNodeWithTag(target, true).captureToImage().toPixelMap()
+        fun background(target: String): Float = pixels(target).let { it[it.width / 8, it.height / 2].green }
+        try {
+            compose.setContent {
+                PathfinTheme(ThemePreference.LIGHT) {
+                    CompositionLocalProvider(LocalPosterLoader provides loader) {
+                        Surface { Column {
+                            ChapterThumbnail(chapter.value, item, session, api, Modifier.size(120.dp, 80.dp))
+                            ChapterThumbnail(MediaChapter("缺图", 0, imageIndex = 1), item, session, api, Modifier.size(120.dp, 80.dp))
+                        } }
+                    }
+                }
+            }
+            compose.waitUntil(5_000) { failureStarted.count == 0L }
+            val bounds = compose.onNodeWithTag(tag).readVerificationNode(compose) { it.boundsInRoot }
+            val loading = background(tag)
+            val missing = background(missingTag)
+            assertTrue("等待响应时应显示加载底色", loading > missing + .2f)
+            releaseFailure.countDown()
+            compose.waitUntil(5_000) { kotlin.math.abs(background(tag) - missing) < .02f }
+            val failed = pixels(tag)
+            assertTrue("404 后应显示缺图图标", (failed.height / 4 until failed.height * 3 / 4).any { y ->
+                (failed.width / 4 until failed.width * 3 / 4).any { x -> failed[x, y].green > missing + .2f }
+            })
+            assertEquals(bounds, compose.onNodeWithTag(tag).readVerificationNode(compose) { it.boundsInRoot })
+            compose.runOnIdle { chapter.value = chapter.value.copy(imageTag = "fresh") }
+            compose.waitUntil(5_000) { successStarted.count == 0L }
+            assertEquals("新图片请求不能沿用旧失败状态", loading, background(tag), .02f)
+            assertEquals(bounds, compose.onNodeWithTag(tag).readVerificationNode(compose) { it.boundsInRoot })
+            releaseSuccess.countDown()
+            awaitColor(tag, Color.Green)
+            assertEquals(bounds, compose.onNodeWithTag(tag).readVerificationNode(compose) { it.boundsInRoot })
+        } finally {
+            releaseFailure.countDown(); releaseSuccess.countDown()
+            loader.shutdown(); client.dispatcher.executorService.shutdownNow(); client.connectionPool.evictAll()
+        }
     }
 
     @Test fun chapterSheetEmptyStateAndPrimaryPlaybackActionAreReal() {

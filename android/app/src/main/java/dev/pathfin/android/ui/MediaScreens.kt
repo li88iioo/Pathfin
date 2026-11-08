@@ -545,13 +545,16 @@ internal fun ChapterThumbnail(chapter: MediaChapter, item: MediaItem, session: S
             }
         }.build()
     }
+    var failed by remember(request) { mutableStateOf(false) }
+    val missing = !chapter.hasThumbnail() || failed
     Box(modifier.onSizeChanged { size -> if (size.width > 0) requestWidth = PosterImageCache.requestWidth(size.width) }
-        .clip(RoundedCornerShape(8.dp)).background(if (chapter.hasThumbnail()) PathfinAppearance.imageLoading else MediaImagePlaceholder)
+        .clip(RoundedCornerShape(8.dp)).background(if (missing) MediaImagePlaceholder else PathfinAppearance.imageLoading)
         .testTag("chapter-thumbnail/${item.id}/${chapter.imageIndex}"), contentAlignment = Alignment.Center) {
-        if (!chapter.hasThumbnail()) Icon(MediaNavigationIcons.Movies, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = .6f))
+        if (missing) Icon(MediaNavigationIcons.Movies, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = .6f))
         else AsyncImage(request, null, imageLoader = LocalPosterLoader.current,
             modifier = Modifier.matchParentSize(), contentScale = ContentScale.Crop,
-            onSuccess = { PerformanceTrace.imageReady(it.result.dataSource.name) })
+            onSuccess = { PerformanceTrace.imageReady(it.result.dataSource.name) },
+            onError = { if (imageUrl != null) failed = true })
     }
 }
 
