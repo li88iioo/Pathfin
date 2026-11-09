@@ -122,10 +122,11 @@ class DetailEpisodesUiTest {
         openSheet()
         compose.onNodeWithTag("detail-episode-sheet-layout").performVerificationClick(compose)
         compose.onNodeWithTag("detail-episode-sheet-grid").assertVerificationDisplayed(compose)
-        compose.onNodeWithTag("detail-episode-numbers").assertVerificationDisplayed(compose)
-        compose.onNodeWithTag("detail-episode-cards").assertDoesNotExist()
         compose.onNodeWithTag("detail-episode-sheet-number/${secondEpisode.id}").performVerificationClick(compose)
         compose.onNodeWithTag("detail-episode-sheet").assertDoesNotExist()
+        // 抽屉打开时底页语义被隐藏；关闭后再验证正文已经同步为数字形态。
+        compose.onNodeWithTag("detail-episode-numbers").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("detail-episode-cards").assertDoesNotExist()
         compose.runOnIdle { assertSame(secondEpisode, opened) }
     }
 

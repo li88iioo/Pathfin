@@ -122,12 +122,11 @@ private fun FileInformationCard(source: MediaSource, tag: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MediaInformationSheet(item: MediaItem, onDismiss: () -> Unit) {
     // 高度随内容，最多九成屏；只有一个短版本时不再留出大片空白。
     val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
-    AppModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    AppModalBottomSheet(onDismissRequest = onDismiss,
         modifier = Modifier.testTag("detail-media-info-sheet"), dragHandle = null,
         // 弹窗以画布灰作底，里面的白色信息卡片才分得出层次。
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), containerColor = PathfinAppearance.canvas) {

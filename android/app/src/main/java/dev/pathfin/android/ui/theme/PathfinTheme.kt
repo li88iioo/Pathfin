@@ -15,6 +15,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import dev.pathfin.android.ui.SheetHost
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -133,6 +134,8 @@ fun PathfinTheme(mode: ThemePreference, accentColor: AccentColor = AccentColor.P
         ) to palette
     }
     MaterialTheme(colorScheme = scheme, shapes = PathfinShapes, typography = PathfinTypography) {
-        CompositionLocalProvider(LocalAccentPalette provides palette, LocalIndication provides SoftPressIndication, content = content)
+        CompositionLocalProvider(LocalAccentPalette provides palette, LocalIndication provides SoftPressIndication) {
+            SheetHost(content)
+        }
     }
 }

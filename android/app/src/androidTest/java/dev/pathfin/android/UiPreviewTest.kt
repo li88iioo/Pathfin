@@ -27,7 +27,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.AnnotatedString
@@ -372,7 +371,8 @@ class UiPreviewTest {
                 "image-provider" -> compose.onNodeWithTag("remote-image-provider/Fixture Studio")
                 null, "detail-lower", "index", "home-scroll", "servers-scroll", "detail-scrolled", "metadata-scroll", "grid-scroll", "search-scroll" -> compose.onRoot()
                 "server-switcher", "home-menu" -> compose.onNode(isPopup())
-                else -> compose.onNode(isDialog())
+                // 底部抽屉画在主窗口内，等主窗口完成一次真实绘制即可截图。
+                else -> compose.onRoot()
             }
             VerificationDisplay.awaitWindowReady(compose, "preview/${next.name}", visibleWindow)
             if (next.action == "detail-scrolled") compose.runOnIdle {

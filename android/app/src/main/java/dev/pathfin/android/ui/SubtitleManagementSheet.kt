@@ -31,7 +31,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -116,7 +115,6 @@ private class SubtitleVerification(
     var job: Job? = null
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SubtitleManagementContent(session: Session, item: MediaItem, api: JellyfinApi, onDismiss: () -> Unit,
     onChanged: (MediaItem) -> Unit, verificationScope: CoroutineScope, onAuthExpired: () -> Unit, sourceId: String?, playerMode: Boolean) {
@@ -481,7 +479,7 @@ private fun SubtitleManagementContent(session: Session, item: MediaItem, api: Je
     if (playerMode) PlayerSidePanel(title, { if (!writing) onDismiss() }, closeLabel = tr("关闭在线搜索"), closeTag = "subtitle-management-close") {
         Box(Modifier.weight(1f)) { body() }
     } else AppModalBottomSheet(onDismissRequest = { if (!writing) onDismiss() },
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), sheetGesturesEnabled = !writing,
+        dismissEnabled = !writing,
         dragHandle = null, containerColor = PathfinAppearance.canvas, contentWindowInsets = { WindowInsets(0, 0, 0, 0) }) {
         // 高度不依赖状态栏和数据量；权限读取、操作反馈均不改变弹层锚点。
         Box(Modifier.fillMaxWidth().fillMaxHeight(.92f).windowInsetsPadding(AppSafeDrawingInsets)) { body() }

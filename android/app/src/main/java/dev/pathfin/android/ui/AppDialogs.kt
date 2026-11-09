@@ -10,10 +10,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +18,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,35 +28,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ProvideTextStyle
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.MenuDefaults
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.contentColorFor
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -83,56 +66,6 @@ internal fun SheetDragHandle(modifier: Modifier = Modifier) {
                 .background(PathfinAppearance.textMain.copy(alpha = 0.22f)),
         )
     }
-}
-
-/** App 内所有底部弹层通过此入口拥有其系统栏策略。 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun AppModalBottomSheet(
-    onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier,
-    sheetState: SheetState = rememberModalBottomSheetState(),
-    sheetMaxWidth: Dp = BottomSheetDefaults.SheetMaxWidth,
-    sheetGesturesEnabled: Boolean = true,
-    shape: Shape = BottomSheetDefaults.ExpandedShape,
-    containerColor: Color = BottomSheetDefaults.ContainerColor,
-    contentColor: Color = contentColorFor(containerColor),
-    tonalElevation: Dp = 0.dp,
-    scrimColor: Color = BottomSheetDefaults.ScrimColor,
-    dragHandle: @Composable (() -> Unit)? = { BottomSheetDefaults.DragHandle() },
-    contentWindowInsets: @Composable () -> WindowInsets = { AppSafeDrawingInsets },
-    properties: ModalBottomSheetProperties = ModalBottomSheetProperties(),
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    // 底色画在内容列上（毛玻璃或实色），面板本身透明；把手和安全区留白都放进这一列，手势条下也是同一材质。
-    // 与菜单同一档玻璃：深色 50%，浅色 72%（浅色玻璃压在深色画面上会被染成中灰）。
-    val insets = contentWindowInsets()
-    val tint = if (PathfinAppearance.isDark()) 0.50f else 0.72f
-    ModalBottomSheet(onDismissRequest, modifier, sheetState, sheetMaxWidth, sheetGesturesEnabled,
-        shape, Color.Transparent, contentColor, tonalElevation, scrimColor, dragHandle = null,
-        contentWindowInsets = { WindowInsets(0, 0, 0, 0) }, properties = properties) {
-        AppSystemBars()
-        // 普通内容与把手也通过嵌套滚动派发手势；只移动 sheet，不改变内容尺寸或位置。
-        Column(Modifier.fillMaxWidth().frostedCard(tint, containerColor, 32.dp)
-            .nestedScroll(KeepExpandedSheetInPlace)
-            .scrollable(rememberScrollableState { 0f }, Orientation.Vertical, enabled = sheetGesturesEnabled)
-            .windowInsetsPadding(insets)) {
-            dragHandle?.let { handle -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { handle() } }
-            CompositionLocalProvider(LocalOnGlass provides frostedEnabled) { Column(content = content) }
-        }
-    }
-}
-
-/**
- * 内容滚到底后剩下的上推位移与惯性不交给 sheet，避免 M3 松手时带速度的弹簧动画越过展开锚点。
- * 普通内容、把手与真正的滚动列表共用此边界；向下的剩余量照常交给 sheet，下拉关闭不受影响。
- */
-private val KeepExpandedSheetInPlace = object : NestedScrollConnection {
-    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
-        Offset(0f, available.y.coerceAtMost(0f))
-
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity =
-        Velocity(0f, available.y.coerceAtMost(0f))
 }
 
 /**

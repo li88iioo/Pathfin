@@ -272,7 +272,7 @@ class BrowserToolbarUiTest {
             "browser-filter" -> "browser-filter-sheet"
             else -> error("未知浏览抽屉")
         }
-        // ModalBottomSheet 拥有独立窗口；宿主 toolbar 的就绪不能代替新弹层首绘与焦点。
+        // 抽屉在下一帧才挂到顶层并开始滑入；宿主 toolbar 的就绪不能代替抽屉自身的首绘。
         val anchor = compose.onNodeWithTag(anchorTag)
         VerificationDisplay.awaitWindowReady(compose, "$button-dialog", anchor)
         anchor.assertVerificationDisplayed(compose)

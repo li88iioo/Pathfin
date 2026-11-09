@@ -459,7 +459,7 @@ private fun RemoteImageSearchSheet(management: MediaManagementApi, session: Sess
         }.distinctUntilChanged().collect { cursor -> if (cursor != null) load(true) }
     }
 
-    AppModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    AppModalBottomSheet(onDismissRequest = onDismiss,
         containerColor = PathfinAppearance.card, dragHandle = null, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         contentWindowInsets = { WindowInsets(0, 0, 0, 0) }) {
         // 先固定外高，再在内部避让安全区；动态顶部 inset 不再改变展开锚点。

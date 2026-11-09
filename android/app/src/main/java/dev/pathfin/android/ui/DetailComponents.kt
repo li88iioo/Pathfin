@@ -156,7 +156,7 @@ internal fun DetailSynopsis(item: MediaItem, pending: Boolean = false) {
         if (overflow) Text(tr("… 更多"), Modifier.align(Alignment.BottomEnd).background(MaterialTheme.colorScheme.surface).padding(start = 6.dp),
             color = PathfinAppearance.accent, fontSize = 14.sp, lineHeight = 22.sp)
     }
-    if (expanded) AppModalBottomSheet(onDismissRequest = { expanded = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    if (expanded) AppModalBottomSheet(onDismissRequest = { expanded = false },
         containerColor = PathfinAppearance.card, dragHandle = null, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.7f).testTag("detail-synopsis-sheet")) {
             SheetDragHandle()

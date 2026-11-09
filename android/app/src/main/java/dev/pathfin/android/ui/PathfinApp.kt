@@ -486,7 +486,6 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                             tint = LocalContentColor.current, size = 48.dp)
                         // 管理操作收进一张分组卡，删除单独成组并整行标红，与设置页同一语言。
                         if (detailMenu) AppModalBottomSheet(onDismissRequest = { detailMenu = false },
-                            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                             containerColor = PathfinAppearance.card, dragHandle = null,
                             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
                             Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState())
@@ -541,8 +540,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     }
     if (imageEditor && detail != null && session != null) {
         AppModalBottomSheet(onDismissRequest = { if (!imageEditorBusy) imageEditor = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
-                confirmValueChange = { it != SheetValue.Hidden || !imageEditorBusy }),
+            dismissEnabled = !imageEditorBusy,
             containerColor = PathfinAppearance.card, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             contentWindowInsets = { WindowInsets(0, 0, 0, 0) }, dragHandle = null) {
             Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)

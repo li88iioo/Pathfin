@@ -327,7 +327,6 @@ private fun categoryIcon(tab: LibraryTab): ImageVector = when (tab) {
 private fun CategorySheet(query: LibraryQuery, tabs: List<LibraryTab>, onDismiss: () -> Unit, onChoose: (LibraryQuery) -> Unit) {
     AppModalBottomSheet(
         onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = PathfinAppearance.card,
@@ -398,7 +397,6 @@ private fun SortSheet(query: LibraryQuery, onDismiss: () -> Unit, onChoose: (Lib
         LibrarySort.entries.filterNot { it == LibrarySort.DATE_ADDED }).distinct()
     AppModalBottomSheet(
         onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = PathfinAppearance.card,
@@ -458,7 +456,6 @@ private fun FilterSheet(state: BrowserUiState, onDismiss: () -> Unit, onRetry: (
     val options = state.filterOptions
     AppModalBottomSheet(
         onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         dragHandle = null,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         containerColor = PathfinAppearance.card,

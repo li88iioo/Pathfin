@@ -81,7 +81,6 @@ internal fun DetailSeasonRow(
 }
 
 /** 季和单集都由调用方提供；点击只打开真实单集详情，不在组件内发起播放或伪造当前集。 */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DetailEpisodePicker(
     season: MediaItem,
@@ -135,7 +134,6 @@ internal fun DetailEpisodePicker(
     }
     if (sheetOpen) {
         AppModalBottomSheet(onDismissRequest = { sheetOpen = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             dragHandle = null, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             containerColor = PathfinAppearance.card) {
             val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }

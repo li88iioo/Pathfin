@@ -141,7 +141,6 @@ class LiveTvState(val session: Session, val api: JellyfinApi, private val scope:
 
 enum class LiveTvLoad { Refresh, Append, All }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> Unit, preparingId: String? = null) = with(state) {
     val snackbar = remember(state) { SnackbarHostState() }
@@ -220,7 +219,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
         }
     }
     selected?.let { channel ->
-        AppModalBottomSheet(onDismissRequest = { selected = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        AppModalBottomSheet(onDismissRequest = { selected = null },
             containerColor = PathfinAppearance.canvas, dragHandle = null,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
             LiveTvGuide(session, service, channel, now, access?.canPlay == true, preparingId, onPlay = { onPlay(channel.item) }, onAuthExpired = onAuthExpired,
