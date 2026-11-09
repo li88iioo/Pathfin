@@ -35,7 +35,7 @@ internal fun RefreshFailureNotice(error: String?, settled: Boolean, retry: (() -
         if (!active || error == null || !settled) return@LaunchedEffect
         val action = currentRetry
         val result = host.showSnackbar(error, actionLabel = if (action != null) tr("重试") else null,
-            withDismissAction = action == null, duration = SnackbarDuration.Long)
+            withDismissAction = action == null, duration = SnackbarDuration.Short)
         if (result == SnackbarResult.ActionPerformed) action?.invoke()
     }
 }

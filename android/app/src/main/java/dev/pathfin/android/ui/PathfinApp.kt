@@ -183,6 +183,8 @@ fun PathfinApp(
     }
     ReleaseDepartedPageStates(state, savedState)
     val snackbar = remember { SnackbarHostState() }
+    // 换页时收起上一页的提示，不跟到新页面；必须先于下面的发布效果启动，随换页同时发出的新提示照常显示。
+    LaunchedEffect(state.showServers, state.route.key) { snackbar.currentSnackbarData?.dismiss() }
     LaunchedEffect(state.notice) { state.notice?.let { snackbar.showSnackbar(it); vm.dismissNotice() } }
     CompositionLocalProvider(LocalPosterLoader provides posterLoader, LocalAppPreferences provides state.preferences,
         LocalNoticeHost provides snackbar) {
