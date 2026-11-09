@@ -263,9 +263,12 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     // 在组合中读取滚动状态：只在SideEffect里读会漏掉详情子树独立重组后的前景切换。
     // 首页氛围区在标题栏下方时，标题栏与状态栏都按深色剧照使用白色前景。
     val homeOverAmbient = route == Route.Home && homeAmbientCovered
-    val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !homeOverAmbient
-    SideEffect {
-        if (pageActive) (context as? Activity)?.let { activity -> WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = lightStatusBars }
+    // 详情滚过头图只重组这个小作用域与下面的详情标题栏，不带动整页内容重组。
+    RecomposeScope {
+        val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !homeOverAmbient
+        SideEffect {
+            if (pageActive) (context as? Activity)?.let { activity -> WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = lightStatusBars }
+        }
     }
 
     val discoveryPage = insideServer && (route == Route.Search || route == Route.Favorites)
@@ -463,61 +466,63 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                         }
             }
             if (isDetail) {
-                CompositionLocalProvider(LocalContentColor provides if (detailScrolled) MaterialTheme.colorScheme.onSurface else Color.White) {
-                PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
-                    .pointerInput(Unit) { detectTapGestures { } },
-                    height = 56.dp + AppSafeDrawingInsets.asPaddingValues().calculateTopPadding(), visible = detailScrolled) {
-                Row(Modifier.fillMaxWidth()
-                    .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PathfinIconButton(PathfinIcons.Back, tr("返回"), { vm.back() }, tint = LocalContentColor.current, size = 48.dp)
-                    Text(if (detailScrolled) detail?.name.orEmpty() else "", Modifier.weight(1f), color = LocalContentColor.current,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 17.sp)
-                    // 人物没有播放区，收藏放在顶栏“更多”左侧。
-                    if (detail?.type == "Person") {
-                        val busy = "favorite/${detail.id}" in state.actionBusy
-                        PathfinIconButton(if (detail.isFavorite) PathfinIcons.HeartFilled else PathfinIcons.Heart,
-                            if (detail.isFavorite) tr("取消收藏") else tr("收藏人物"), { vm.toggleFavorite(detail) }, Modifier.testTag("person-favorite"),
-                            enabled = !busy, tint = if (detail.isFavorite) PathfinAppearance.accent else LocalContentColor.current, size = 48.dp)
-                    }
-                    // 人物条目不提供删除：删除只针对媒体文件。
-                    if (detail != null && (session.isAdministrator || (session.canDelete && detail.canDelete != false && detail.type != "Person") ||
-                            detail.type in setOf("Movie", "Episode", "Video"))) {
-                        PathfinIconButton(MediaNavigationIcons.More, tr("更多操作"), { detailMenu = true }, Modifier.testTag("detail-more"),
-                            tint = LocalContentColor.current, size = 48.dp)
-                        // 管理操作收进一张分组卡，删除单独成组并整行标红，与设置页同一语言。
-                        if (detailMenu) AppModalBottomSheet(onDismissRequest = { detailMenu = false },
-                            containerColor = PathfinAppearance.card, dragHandle = null,
-                            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
-                            Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState())
-                                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                SheetDragHandle()
-                                if (session.isAdministrator) GroupCard(container = PathfinAppearance.canvas) {
-                                    val identify = dev.pathfin.android.data.MediaIdentificationApi.supports(session, detail)
-                                    if (identify) DetailOperation(if (detail.type == "Person") tr("识别人物") else tr("识别媒体"), PathfinIcons.Search,
-                                        { detailMenu = false; vm.openIdentification(detail) })
-                                    DetailOperation(tr("刷新元数据"), PathfinIcons.Refresh, { detailMenu = false; refreshConfirmation = true },
-                                        modifier = Modifier.testTag("detail-refresh"), enabled = "refresh/${detail.id}" !in state.actionBusy,
-                                        divider = identify)
-                                    DetailOperation(tr("编辑元数据"), PathfinIcons.Edit, { detailMenu = false; vm.openMediaTools(detail) },
-                                        modifier = Modifier.testTag("detail-edit-metadata"), divider = true)
-                                    DetailOperation(tr("编辑图片"), PathfinIcons.Image, { detailMenu = false; imageEditor = true },
-                                        modifier = Modifier.testTag("detail-edit-images"), divider = true)
-                                }
-                                if (detail.type in setOf("Movie", "Episode", "Video")) GroupCard(container = PathfinAppearance.canvas) {
-                                    DetailOperation(tr("编辑字幕"), PathfinIcons.Subtitles, { detailMenu = false; vm.openSubtitles(detail) },
-                                        modifier = Modifier.testTag("detail-edit-subtitles"))
-                                }
-                                if (session.canDelete && detail.canDelete != false && detail.type != "Person") GroupCard(container = PathfinAppearance.canvas) {
-                                    DetailOperation(tr("删除媒体"), PathfinIcons.Trash,
-                                        { detailMenu = false; deleteConfirmation = true }, destructive = true,
-                                        modifier = Modifier.testTag("detail-delete"), enabled = "delete/${detail.id}" !in state.actionBusy)
+                RecomposeScope {
+                    CompositionLocalProvider(LocalContentColor provides if (detailScrolled) MaterialTheme.colorScheme.onSurface else Color.White) {
+                    PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
+                        .pointerInput(Unit) { detectTapGestures { } },
+                        height = 56.dp + AppSafeDrawingInsets.asPaddingValues().calculateTopPadding(), visible = detailScrolled) {
+                    Row(Modifier.fillMaxWidth()
+                        .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)).heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PathfinIconButton(PathfinIcons.Back, tr("返回"), { vm.back() }, tint = LocalContentColor.current, size = 48.dp)
+                        Text(if (detailScrolled) detail?.name.orEmpty() else "", Modifier.weight(1f), color = LocalContentColor.current,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 17.sp)
+                        // 人物没有播放区，收藏放在顶栏“更多”左侧。
+                        if (detail?.type == "Person") {
+                            val busy = "favorite/${detail.id}" in state.actionBusy
+                            PathfinIconButton(if (detail.isFavorite) PathfinIcons.HeartFilled else PathfinIcons.Heart,
+                                if (detail.isFavorite) tr("取消收藏") else tr("收藏人物"), { vm.toggleFavorite(detail) }, Modifier.testTag("person-favorite"),
+                                enabled = !busy, tint = if (detail.isFavorite) PathfinAppearance.accent else LocalContentColor.current, size = 48.dp)
+                        }
+                        // 人物条目不提供删除：删除只针对媒体文件。
+                        if (detail != null && (session.isAdministrator || (session.canDelete && detail.canDelete != false && detail.type != "Person") ||
+                                detail.type in setOf("Movie", "Episode", "Video"))) {
+                            PathfinIconButton(MediaNavigationIcons.More, tr("更多操作"), { detailMenu = true }, Modifier.testTag("detail-more"),
+                                tint = LocalContentColor.current, size = 48.dp)
+                            // 管理操作收进一张分组卡，删除单独成组并整行标红，与设置页同一语言。
+                            if (detailMenu) AppModalBottomSheet(onDismissRequest = { detailMenu = false },
+                                containerColor = PathfinAppearance.card, dragHandle = null,
+                                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)) {
+                                Column(Modifier.fillMaxWidth().heightIn(max = 600.dp).verticalScroll(rememberScrollState())
+                                    .padding(start = 16.dp, end = 16.dp, bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    SheetDragHandle()
+                                    if (session.isAdministrator) GroupCard(container = PathfinAppearance.canvas) {
+                                        val identify = dev.pathfin.android.data.MediaIdentificationApi.supports(session, detail)
+                                        if (identify) DetailOperation(if (detail.type == "Person") tr("识别人物") else tr("识别媒体"), PathfinIcons.Search,
+                                            { detailMenu = false; vm.openIdentification(detail) })
+                                        DetailOperation(tr("刷新元数据"), PathfinIcons.Refresh, { detailMenu = false; refreshConfirmation = true },
+                                            modifier = Modifier.testTag("detail-refresh"), enabled = "refresh/${detail.id}" !in state.actionBusy,
+                                            divider = identify)
+                                        DetailOperation(tr("编辑元数据"), PathfinIcons.Edit, { detailMenu = false; vm.openMediaTools(detail) },
+                                            modifier = Modifier.testTag("detail-edit-metadata"), divider = true)
+                                        DetailOperation(tr("编辑图片"), PathfinIcons.Image, { detailMenu = false; imageEditor = true },
+                                            modifier = Modifier.testTag("detail-edit-images"), divider = true)
+                                    }
+                                    if (detail.type in setOf("Movie", "Episode", "Video")) GroupCard(container = PathfinAppearance.canvas) {
+                                        DetailOperation(tr("编辑字幕"), PathfinIcons.Subtitles, { detailMenu = false; vm.openSubtitles(detail) },
+                                            modifier = Modifier.testTag("detail-edit-subtitles"))
+                                    }
+                                    if (session.canDelete && detail.canDelete != false && detail.type != "Person") GroupCard(container = PathfinAppearance.canvas) {
+                                        DetailOperation(tr("删除媒体"), PathfinIcons.Trash,
+                                            { detailMenu = false; deleteConfirmation = true }, destructive = true,
+                                            modifier = Modifier.testTag("detail-delete"), enabled = "delete/${detail.id}" !in state.actionBusy)
+                                    }
                                 }
                             }
                         }
                     }
+                    }
                 }
                 }
-            }
             }
             if (showManagerNavigation) {
                 ManagerDock(managerSettings, onServers = vm::showServers, onSettings = { vm.selectTab(Route.Settings) },
@@ -639,3 +644,7 @@ private fun ManagerDock(settingsSelected: Boolean, onServers: () -> Unit, onSett
         ))
     }
 }
+
+/** 给内部读到的状态单独一个重组作用域：状态变化只重放这段，不重组外层整页。 */
+@Composable
+private fun RecomposeScope(content: @Composable () -> Unit) = content()
