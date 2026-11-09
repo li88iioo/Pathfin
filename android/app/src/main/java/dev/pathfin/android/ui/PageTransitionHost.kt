@@ -63,7 +63,10 @@ internal fun PageTransitionHost(state: AppState, content: @Composable (AppState)
         }
         SideEffect { entry.snapshot = state }
         val transition = updateTransition(entry, label = "page-navigation")
-        val settled = remember(transition) { derivedStateOf { !transition.isRunning } }
+        // 第一帧开始前 isRunning 也为 false，必须同时确认已到达目标页。
+        val settled = remember(transition) { derivedStateOf {
+            transition.currentState == transition.targetState && !transition.isRunning
+        } }
         transition.AnimatedContent(
             modifier = Modifier.fillMaxSize().clipToBounds(),
             contentKey = { it.key },

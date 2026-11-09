@@ -13,8 +13,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
@@ -26,8 +28,11 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.ui.AppState
+import dev.pathfin.android.ui.LocalPageSettled
 import dev.pathfin.android.ui.PageTransitionHost
 import dev.pathfin.android.ui.Route
+import dev.pathfin.android.ui.awaitSettled
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -185,7 +190,80 @@ class PageTransitionHostTest {
         } finally { compose.mainClock.autoAdvance = true }
     }
 
-    private fun show(listOnHome: Boolean = false) {
+    @Test fun asynchronousContentWaitsThroughTheFirstFrameAndIsNotDelayedAfterArrival() {
+        var response = CompletableDeferred<Unit>()
+        var entered = false
+        var published = false
+        show(onPageEntry = { route, settled ->
+            if (route == Route.Settings) {
+                entered = true
+                response.await()
+                settled.awaitSettled()
+                published = true
+            }
+        })
+        compose.mainClock.autoAdvance = false
+        try {
+            // 分别覆盖首帧前已就绪、动画中返回、动画结束后才返回。
+            for (responseDelay in listOf(0L, 64L, 400L)) {
+                compose.runOnIdle {
+                    response = CompletableDeferred()
+                    entered = false
+                    published = false
+                    if (responseDelay == 0L) response.complete(Unit)
+                    state.value = state.value.copy(routes = listOf(Route.Home, Route.Settings))
+                }
+                compose.mainClock.advanceTimeByFrame()
+                compose.waitForIdle()
+                compose.runOnIdle {
+                    assertTrue("新页读取应立即开始，不等待动画", entered)
+                    assertFalse("首帧前不能把尚未开始播放误判为动画结束", published)
+                }
+                if (responseDelay > 0L) {
+                    compose.mainClock.advanceTimeBy(responseDelay)
+                    compose.runOnIdle { response.complete(Unit) }
+                    compose.waitForIdle()
+                }
+                compose.runOnIdle {
+                    assertEquals("数据只能在动画结束后回填：responseDelay=$responseDelay", responseDelay >= 280L, published)
+                }
+                finishTransition()
+                compose.runOnIdle { assertTrue("动画结束后必须回填", published) }
+                navigate(listOf(Route.Home))
+                finishTransition()
+            }
+        } finally { compose.mainClock.autoAdvance = true }
+    }
+
+    @Test fun changingAccountCancelsContentWaitingForThePageToSettle() {
+        val response = CompletableDeferred<Unit>()
+        var published = false
+        var cancelled = false
+        show(onPageEntry = { route, settled ->
+            if (route == Route.Settings) try {
+                response.await()
+                settled.awaitSettled()
+                published = true
+            } finally { if (!published) cancelled = true }
+        })
+        compose.mainClock.autoAdvance = false
+        try {
+            navigate(listOf(Route.Home, Route.Settings))
+            compose.runOnIdle { response.complete(Unit) }
+            compose.waitForIdle()
+            compose.runOnIdle {
+                assertFalse("等待动画时不能提前回填", published)
+                state.value = AppState(currentProfileId = "another-transition-profile")
+            }
+            finishTransition()
+            compose.runOnIdle {
+                assertTrue("账号切换必须取消旧页等待", cancelled)
+                assertFalse("旧页数据不能回填到新账号", published)
+            }
+        } finally { compose.mainClock.autoAdvance = true }
+    }
+
+    private fun show(listOnHome: Boolean = false, onPageEntry: (suspend (Route, State<Boolean>) -> Unit)? = null) {
         check(InstrumentationRegistry.getInstrumentation().targetContext.packageName == "dev.pathfin.android.verification")
         compose.setContent {
             val savedState = rememberSaveableStateHolder()
@@ -195,6 +273,10 @@ class PageTransitionHostTest {
             }
             Box(Modifier.size(320.dp, 300.dp).testTag(CANVAS)) {
                 PageTransitionHost(state.value) { snapshot ->
+                    if (onPageEntry != null) {
+                        val settled = LocalPageSettled.current
+                        LaunchedEffect(snapshot.currentProfileId, snapshot.route) { onPageEntry(snapshot.route, settled) }
+                    }
                     savedState.SaveableStateProvider("${snapshot.currentProfileId}/${snapshot.route.key}") {
                         Box(Modifier.fillMaxSize().testTag("page/${snapshot.route.key}")
                             .background(if (snapshot.route == Route.Home) Color.LightGray else Color.White)
