@@ -4,6 +4,22 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.4] - 2026-11-09
+
+### 优化
+
+- [底部抽屉改为在主窗口内绘制](https://github.com/li88iioo/Pathfin/commit/2daf78be9c8606b0fc3d5c4b7016672beec01ae8)：打开与关闭不再新建系统窗口，选集、排序、筛选等抽屉开关时的停顿明显减少，外观与手势保持不变。
+- [浮层毛玻璃改为降采样模糊](https://github.com/li88iioo/Pathfin/commit/28592a8a0eb446f309872dbfba701a3dcfb68a85)，抽屉、菜单与底栏滑动时的 GPU 开销更低。
+- [识别媒体与编辑元数据页](https://github.com/li88iioo/Pathfin/commit/c199b06f1573c4530d17bcee29b793ae1bbd98e4)的表单等页面[滑入完成](https://github.com/li88iioo/Pathfin/commit/43cf251ed7c0aed90748961aa3177c387fbf8d66)后再铺开，进入时不再在动画中途卡顿。
+- [识别媒体页](https://github.com/li88iioo/Pathfin/commit/b62e2b77409370e3b0f456d4c4adb70960afe7e8)的搜索按钮固定在底部，条件表单改为双列。
+- [选集绘制更轻](https://github.com/li88iioo/Pathfin/commit/813db57dd9d8f5eb0a83d4378fd8b93f607475ed)，集数较多时抽屉打开更快，数字与列表布局切换更顺畅。
+- 详情页[滚过头图时只更新标题栏](https://github.com/li88iioo/Pathfin/commit/ebaea478be0d55e02ce42f9198ef9585914480e1)，不再带动整页重组。
+- [封面换图过渡统一](https://github.com/li88iioo/Pathfin/commit/dd790122b110ec859db7bde68667210cea201205)，并减少列表卡片重复构建图片请求。
+
+### 修复
+
+- [浮出通知](https://github.com/li88iioo/Pathfin/commit/d278566ba4fdeb63309f61d1bc986e4e08921653)显示时间缩短为 4 秒，离开页面时自动收起，不再跟到新页面。
+
 ## [0.1.3] - 2026-11-08
 
 ### 优化
@@ -88,6 +104,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.4]: https://github.com/li88iioo/Pathfin/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/li88iioo/Pathfin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/li88iioo/Pathfin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/li88iioo/Pathfin/compare/v0.1.0...v0.1.1
