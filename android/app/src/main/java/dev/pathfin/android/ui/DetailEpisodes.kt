@@ -23,6 +23,23 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +52,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,6 +120,10 @@ internal fun DetailEpisodePicker(
     // 父详情的 presentationKey 在切季时保持；sheet和显示模式也应保持。
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     var cards by rememberSaveable { mutableStateOf(false) }
+    // 切换抽屉布局时不重建遮罩后的正文；关闭后应用同一份显示偏好。
+    val inlineCards = remember(sheetOpen) { cards }
+    // 正文数字行与抽屉网格共用：排版结果按集数缓存，再次打开抽屉不重新排版。
+    val cellPaint = rememberEpisodeCellPaint()
     val episodes = items.distinctBy { it.id }
     val page = ContentState(items = episodes, total = totalCount, nextIndex = nextIndex,
         loading = loading, loadingMore = loadingMore, error = error)
@@ -126,9 +146,9 @@ internal fun DetailEpisodePicker(
         }
         EpisodeSeasonTabs(season.id, tabs, onSeasonSelected, page = seasonsPage,
             onMore = onLoadSeasonsMore, enabled = !sheetOpen, switchEnabled = seasonSwitchEnabled)
-        key(season.id, cards) {
-            if (cards) EpisodeCardRow(page, session, api, !sheetOpen, onEpisodeOpen, onLoadMore, season.id)
-            else EpisodeNumberRow(page, !sheetOpen, onEpisodeOpen, onLoadMore, season.id, placeholderCount = season.childCount)
+        key(season.id, inlineCards) {
+            if (inlineCards) EpisodeCardRow(page, session, api, !sheetOpen, onEpisodeOpen, onLoadMore, season.id)
+            else EpisodeNumberRow(page, cellPaint, !sheetOpen, onEpisodeOpen, onLoadMore, season.id, placeholderCount = season.childCount)
         }
         EpisodePageMessage(page, Modifier.padding(horizontal = 16.dp))
     }
@@ -160,7 +180,7 @@ internal fun DetailEpisodePicker(
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             gridItems(episodes, key = { it.id }) { episode ->
-                                EpisodeNumberCell(episode, "detail-episode-sheet-number/${episode.id}", Modifier.aspectRatio(1f)) {
+                                EpisodeNumberCell(episode, "detail-episode-sheet-number/${episode.id}", cellPaint, Modifier.aspectRatio(1f)) {
                                     sheetOpen = false; onEpisodeOpen(episode)
                                 }
                             }
@@ -219,7 +239,7 @@ private fun EpisodeSeasonTabs(selectedId: String, seasons: List<MediaItem>, onSe
 }
 
 @Composable
-private fun EpisodeNumberRow(page: ContentState, enabled: Boolean, onOpen: (MediaItem) -> Unit, onMore: () -> Unit, seasonId: String,
+private fun EpisodeNumberRow(page: ContentState, cellPaint: EpisodeCellPaint, enabled: Boolean, onOpen: (MediaItem) -> Unit, onMore: () -> Unit, seasonId: String,
     placeholderCount: Int? = null) {
     val list = rememberLazyListState()
     AutomaticListPagination(list, page.pagination, seasonId, onMore, enabled = enabled)
@@ -230,28 +250,65 @@ private fun EpisodeNumberRow(page: ContentState, enabled: Boolean, onOpen: (Medi
             Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(PathfinAppearance.softFill))
         }
         items(page.items, key = { it.id }) { episode ->
-            EpisodeNumberCell(episode, "detail-episode-number/${episode.id}", Modifier.size(48.dp)) { onOpen(episode) }
+            EpisodeNumberCell(episode, "detail-episode-number/${episode.id}", cellPaint, Modifier.size(48.dp)) { onOpen(episode) }
         }
     }
 }
 
+/** 集数格共用的排版缓存与勾选图标：抽屉一次铺几十格，逐格建 Text/Icon 节点并排版是打开时卡顿的大头。 */
+private class EpisodeCellPaint(val measurer: TextMeasurer, val check: Painter)
+
 @Composable
-private fun EpisodeNumberCell(episode: MediaItem, tag: String, modifier: Modifier, onOpen: () -> Unit) {
+private fun rememberEpisodeCellPaint(): EpisodeCellPaint {
+    val measurer = rememberTextMeasurer(cacheSize = 256)
+    val check = rememberVectorPainter(PathfinIcons.Check)
+    return remember(measurer, check) { EpisodeCellPaint(measurer, check) }
+}
+
+private val EpisodeCellShape = RoundedCornerShape(12.dp)
+
+/** 一格只是一个节点：底色、描边、集数与已看勾一次画完；语义与原先的文字、图标描述一致。 */
+@Composable
+private fun EpisodeNumberCell(episode: MediaItem, tag: String, paint: EpisodeCellPaint, modifier: Modifier, onOpen: () -> Unit) {
     // 抽屉里与分组卡同一规则：半透明底透出玻璃，细玻璃描边；正文里保持实色卡片。
     val onGlass = LocalOnGlass.current
     val card = PathfinAppearance.card
-    Box(modifier.clip(RoundedCornerShape(12.dp)).background(if (onGlass) card.copy(alpha = card.alpha * 0.55f) else card)
-        .border(if (onGlass) PathfinAppearance.glassBorder else PathfinAppearance.cardBorder, RoundedCornerShape(12.dp))
-        .testTag(tag).semantics { stateDescription = episodeWatchState(episode) }
-        .clickable(role = Role.Button, onClickLabel = tr("打开%1\$s详情", episode.name), onClick = onOpen),
-        contentAlignment = Alignment.Center) {
-        // 看过的集数字降为弱色并带一个小勾，未看的保持主文字色，一眼分出进度。
-        Text(episode.indexNumber?.toString() ?: episode.name, Modifier.padding(horizontal = 3.dp),
-            fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            color = if (episode.played) PathfinAppearance.textMuted else PathfinAppearance.textMain)
-        if (episode.played) Icon(PathfinIcons.Check, tr("已观看"), Modifier.align(Alignment.TopEnd).padding(4.dp).size(11.dp),
-            tint = PathfinAppearance.accent)
-    }
+    val fill = if (onGlass) card.copy(alpha = card.alpha * 0.55f) else card
+    val border = if (onGlass) PathfinAppearance.glassBorder else PathfinAppearance.cardBorder
+    val label = episode.indexNumber?.toString() ?: episode.name
+    // 看过的集数字降为弱色并带一个小勾，未看的保持主文字色，一眼分出进度。
+    val style = LocalTextStyle.current.merge(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium,
+        color = if (episode.played) PathfinAppearance.textMuted else PathfinAppearance.textMain)
+    val checkTint = PathfinAppearance.accent
+    val played = episode.played
+    Box(modifier.clip(EpisodeCellShape)
+        .drawWithCache {
+            val radius = 12.dp.toPx()
+            val stroke = border.width.toPx()
+            val padding = 3.dp.toPx()
+            val text = paint.measurer.measure(label, style, TextOverflow.Ellipsis, maxLines = 1,
+                constraints = Constraints(maxWidth = (size.width - padding * 2).toInt().coerceAtLeast(0)))
+            val textOffset = Offset((size.width - text.size.width) / 2, (size.height - text.size.height) / 2)
+            val mark = 11.dp.toPx()
+            val inset = 4.dp.toPx()
+            val checkX = if (layoutDirection == LayoutDirection.Ltr) size.width - inset - mark else inset
+            onDrawBehind {
+                drawRoundRect(fill, cornerRadius = CornerRadius(radius))
+                drawRoundRect(border.brush, topLeft = Offset(stroke / 2, stroke / 2), size = Size(size.width - stroke, size.height - stroke),
+                    cornerRadius = CornerRadius(radius - stroke / 2), style = Stroke(stroke))
+                drawText(text, topLeft = textOffset)
+                if (played) translate(checkX, inset) {
+                    with(paint.check) { draw(Size(mark, mark), colorFilter = ColorFilter.tint(checkTint)) }
+                }
+            }
+        }
+        .testTag(tag)
+        .semantics {
+            text = AnnotatedString(label)
+            stateDescription = episodeWatchState(episode)
+            if (played) contentDescription = tr("已观看")
+        }
+        .clickable(role = Role.Button, onClickLabel = tr("打开%1\$s详情", episode.name), onClick = onOpen))
 }
 
 @Composable

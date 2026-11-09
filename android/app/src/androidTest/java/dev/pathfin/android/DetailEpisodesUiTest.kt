@@ -1,5 +1,10 @@
 package dev.pathfin.android
 
+import android.graphics.Bitmap
+import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,8 +15,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -28,7 +36,10 @@ import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalPosterLoader
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.roundToInt
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
@@ -115,6 +126,8 @@ class DetailEpisodesUiTest {
         compose.runOnIdle { assertSame(secondEpisode, opened); opened = null }
         // 正文与抽屉共用形态：抽屉选了列表，正文即为卡片。
         compose.onNodeWithTag("detail-episode-cards").assertVerificationDisplayed(compose)
+        val inlineCards = compose.onNodeWithTag("detail-episode-cards").fetchSemanticsNode()
+        val inlineCardsBounds = compose.runOnIdle { inlineCards.boundsInRoot }
         compose.onNodeWithTag("detail-episode-card/${secondEpisode.id}").performVerificationClick(compose)
         compose.runOnIdle { assertSame(secondEpisode, opened); opened = null }
         // 正文没有第二个切换入口，切回数字只能在抽屉里。
@@ -122,6 +135,11 @@ class DetailEpisodesUiTest {
         openSheet()
         compose.onNodeWithTag("detail-episode-sheet-layout").performVerificationClick(compose)
         compose.onNodeWithTag("detail-episode-sheet-grid").assertVerificationDisplayed(compose)
+        // 抽屉隐藏正文语义，检查打开前的布局节点仍在原位；关闭后再验证最新偏好。
+        compose.runOnIdle {
+            assertTrue("切换抽屉形态不能卸载遮罩后的正文卡片", inlineCards.layoutInfo.isPlaced)
+            assertEquals(inlineCardsBounds, inlineCards.boundsInRoot)
+        }
         compose.onNodeWithTag("detail-episode-sheet-number/${secondEpisode.id}").performVerificationClick(compose)
         compose.onNodeWithTag("detail-episode-sheet").assertDoesNotExist()
         // 抽屉打开时底页语义被隐藏；关闭后再验证正文已经同步为数字形态。
@@ -170,6 +188,26 @@ class DetailEpisodesUiTest {
         compose.onNodeWithTag("detail-episode-error").assertTextEquals("合成分页暂时不可用")
         assertEquals(before, bounds(tag))
         compose.onNodeWithText("加载更多").assertDoesNotExist()
+    }
+
+    @Test fun watchedCheckStaysAtTheEndCornerWhenLayoutDirectionChanges() {
+        val direction = mutableStateOf(LayoutDirection.Ltr)
+        val selected = season(1)
+        val watched = episode(3, selected).copy(played = true)
+        show {
+            CompositionLocalProvider(LocalLayoutDirection provides direction.value) {
+                DetailEpisodePicker(selected, listOf(watched), 1, 1, false, false, null, listOf(selected),
+                    session, api, {}, {}, {})
+            }
+        }
+        val tag = "detail-episode-number/${watched.id}"
+        val ltr = watchedCheckPixels(tag)
+        assertTrue("LTR 的已观看勾应在右上角：$ltr", ltr.second > 20 && ltr.first == 0)
+        compose.runOnIdle { direction.value = LayoutDirection.Rtl }
+        val rtl = watchedCheckPixels(tag)
+        assertTrue("RTL 的已观看勾应镜像到左上角：$rtl", rtl.first > 20 && rtl.second == 0)
+        compose.onNodeWithTag(tag).assertTextEquals("3")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "已观看"))
     }
 
     @Test fun numberRowAutomaticallyPagesOncePerCursorAndStopsOnErrorUntilRefresh() {
@@ -302,6 +340,34 @@ class DetailEpisodesUiTest {
     }
 
     private fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).readVerificationNode(compose) { it.boundsInRoot }
+    private fun watchedCheckPixels(tag: String): Pair<Int, Int> {
+        val target = compose.onNodeWithTag(tag, useUnmergedTree = true)
+        VerificationDisplay.awaitWindowReady(compose, "episode-check-$tag", target)
+        val area = target.readVerificationNode(compose) { node ->
+            val origin = IntArray(2).also((node.root as ViewRootForTest).view::getLocationInWindow)
+            val bounds = node.boundsInRoot
+            Rect(bounds.left.roundToInt() + origin[0], bounds.top.roundToInt() + origin[1],
+                bounds.right.roundToInt() + origin[0], bounds.bottom.roundToInt() + origin[1])
+        }
+        val bitmap = Bitmap.createBitmap(area.width(), area.height(), Bitmap.Config.ARGB_8888)
+        try {
+            val copied = CountDownLatch(1)
+            var status = PixelCopy.ERROR_UNKNOWN
+            PixelCopy.request(compose.activity.window, area, bitmap, { status = it; copied.countDown() }, Handler(Looper.getMainLooper()))
+            assertTrue("集数格真实窗口像素应可读取", copied.await(3, TimeUnit.SECONDS))
+            assertEquals(PixelCopy.SUCCESS, status)
+            var left = 0
+            var right = 0
+            for (y in 0 until bitmap.height / 2) for (x in 0 until bitmap.width) {
+                val color = bitmap.getPixel(x, y)
+                if (android.graphics.Color.blue(color) - android.graphics.Color.red(color) > 35 &&
+                    android.graphics.Color.blue(color) - android.graphics.Color.green(color) > 15) {
+                    if (x < bitmap.width / 2) left++ else right++
+                }
+            }
+            return left to right
+        } finally { bitmap.recycle() }
+    }
     private fun season(number: Int) = MediaItem("season-$number", "第${number}季", "Season", indexNumber = number,
         seriesId = "synthetic-series", isFolder = true)
     private fun episode(number: Int, season: MediaItem) = MediaItem("${season.id}-episode-$number", "合成第${number}集", "Episode",
