@@ -115,9 +115,15 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     val reportBusy by rememberUpdatedState(onBusyChanged)
     SideEffect { reportBusy(busy) }
     DisposableEffect(Unit) { onDispose { reportBusy(false) } }
+    // 编辑表单与编号清单常在切页滑动中途到达：等滑动结束再写入，整页表单不在动画中途组合。
+    val settled = LocalPageSettled.current
     if (initialPage == "metadata") LaunchedEffect(session, item.id, reloadVersion) {
         externalIdsError = null
-        try { externalIdFields = management.externalIds(session, item) } catch (failure: Exception) {
+        try {
+            val fields = management.externalIds(session, item)
+            settled.awaitSettled()
+            externalIdFields = fields
+        } catch (failure: Exception) {
             if (failure is CancellationException) throw failure
             if (failure is ApiException && failure.statusCode == 401) onAuthExpired()
             externalIdsError = tr("外部编号清单读取失败，下拉刷新可重试。已有编号仍可编辑。")
@@ -138,6 +144,7 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
         val latestCapabilities = latestDocument?.capabilities ?: management.readCapabilities(session, item.id)
         val latestImages = if (targetPage == "images" && latestCapabilities.canEditImages)
             management.images(session, item.id) else null
+        settled.awaitSettled()
         // 保存/上传或新草稿产生后，整次旧读取不能覆盖更新后的元数据和图片。
         if (revision != contentRevision || page != targetPage) return
         capabilities = latestCapabilities

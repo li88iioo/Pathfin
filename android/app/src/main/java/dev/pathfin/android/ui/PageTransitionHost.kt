@@ -19,8 +19,21 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import kotlinx.coroutines.flow.first
 
 internal val LocalPageActive = compositionLocalOf { true }
+
+/**
+ * 切页滑动期间为 false。异步内容在滑动中途到达时，先等滑动结束再落到界面上，
+ * 免得一整块表单在动画中途一次性组合，造成“顿一下再进入”。没有切页宿主时视为已就位。
+ */
+internal val LocalPageSettled = staticCompositionLocalOf<State<Boolean>> { SettledPage }
+private val SettledPage = mutableStateOf(true)
+
+/** 本页已就位时立即返回，否则挂起到切页动画结束；网络请求照常先发，只推迟写入界面。 */
+internal suspend fun State<Boolean>.awaitSettled() {
+    if (!value) snapshotFlow { value }.first { it }
+}
 
 private class PageEntry(val key: String, val depth: Int, val direction: Int, var snapshot: AppState)
 
@@ -50,6 +63,7 @@ internal fun PageTransitionHost(state: AppState, content: @Composable (AppState)
         }
         SideEffect { entry.snapshot = state }
         val transition = updateTransition(entry, label = "page-navigation")
+        val settled = remember(transition) { derivedStateOf { !transition.isRunning } }
         transition.AnimatedContent(
             modifier = Modifier.fillMaxSize().clipToBounds(),
             contentKey = { it.key },
@@ -68,8 +82,10 @@ internal fun PageTransitionHost(state: AppState, content: @Composable (AppState)
         ) { page ->
             val active = page === entry
             val displayed = if (active) state else page.snapshot
-            if (displayed.isRootTab) RootTabPages(displayed, active, content)
-            else PageContent(displayed, active, content)
+            CompositionLocalProvider(LocalPageSettled provides settled) {
+                if (displayed.isRootTab) RootTabPages(displayed, active, content)
+                else PageContent(displayed, active, content)
+            }
         }
         // 已提交的返回正在离场时，再次返回不能越过刚露出的页面。
         BackHandler(transition.isRunning && entry.direction < 0) { }

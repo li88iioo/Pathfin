@@ -97,13 +97,19 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
     }
     BackHandler(enabled = LocalPageActive.current && applying) { }
     // 读不到编号清单时仍可按名称搜索，不扩大服务器提供程序的范围。
+    // 清单常在切页滑动中途到达：等滑动结束再铺开整组输入框，滑入不被打断。
+    val settled = LocalPageSettled.current
     LaunchedEffect(item.id, session) {
-        if (enabled) idFields = try { MediaManagementApi(api).externalIds(session, item) } catch (exception: Exception) {
+        if (!enabled) return@LaunchedEffect
+        val fields = try { MediaManagementApi(api).externalIds(session, item) } catch (exception: Exception) {
             if (exception is CancellationException) throw exception
             if (exception is ApiException && exception.statusCode == 401) onAuthExpired()
+            settled.awaitSettled()
             idFieldsError = tr("外部编号清单读取失败，仍可使用名称搜索。")
             emptyList()
         }
+        settled.awaitSettled()
+        idFields = fields
     }
 
     // 搜索成功后进入独立的结果页（带海报/头像，便于区分同名条目）；返回键回到表单修改条件。
