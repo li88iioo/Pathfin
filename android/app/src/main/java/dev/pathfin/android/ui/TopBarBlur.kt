@@ -165,7 +165,8 @@ internal fun Modifier.frostedCard(tintAlpha: Float = 0.80f, card: Color = Pathfi
                 mask(null)
             }
         },
-        performanceMode = HazePerformanceMode.Quality,
+        // 32dp 大半径下降采样与全分辨率看不出差别；全分辨率时抽屉滑动每帧都按新尺寸重新分配模糊纹理。
+        performanceMode = HazePerformanceMode.Balanced,
     ) else background(fallback)
 }
 
