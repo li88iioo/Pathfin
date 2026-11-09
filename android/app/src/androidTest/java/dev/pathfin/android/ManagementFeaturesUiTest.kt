@@ -10,6 +10,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.*
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import dev.pathfin.android.createVerificationComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -75,14 +78,54 @@ class ManagementFeaturesUiTest {
     }
 
     @Test fun identificationRequiresConfirmationAndBlocksBackOnlyWhileApplying() {
-        Fixture().use { fixture ->
+        Fixture(holdExternalIds = true, holdSearch = true).use { fixture ->
             val shown = mutableStateOf(true); val changed = AtomicInteger(); val backs = AtomicInteger()
             val api = JellyfinApi(); val session = fixture.session()
             compose.setContent { ManagementContent {
-                if (shown.value) MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Movie"), session, api,
+                if (shown.value) MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Movie", year = 2024), session, api,
                     onBack = { backs.incrementAndGet(); shown.value = false }, onChanged = { changed.incrementAndGet() })
             } }
-            search(fixture)
+            assertTrue("必须在外部编号请求尚未完成时检查布局", fixture.externalIdsStarted.await(5, TimeUnit.SECONDS))
+            VerificationDisplay.awaitWindowReady(compose, "identification-fields-pending", compose.onNodeWithTag("identification-search"))
+            compose.onNodeWithTag("identification-id/Imdb").assertDoesNotExist()
+            val pendingSearchBounds = identificationBounds("identification-search")
+            fixture.allowExternalIds.countDown()
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("identification-id/Imdb") }
+            assertEquals("外部编号到达不能移动搜索按钮", pendingSearchBounds, identificationBounds("identification-search"))
+            val name = identificationBounds("identification-name")
+            val year = identificationBounds("identification-year")
+            val tmdb = identificationBounds("identification-id/Tmdb")
+            val imdb = identificationBounds("identification-id/Imdb")
+            assertEquals("年份和首个外部编号应在同一行", year.top, tmdb.top, 1f)
+            assertEquals("名称占满一行", name.width, year.width + tmdb.width, 1f)
+            assertTrue("同一行的字段不能重叠", year.right <= tmdb.left + 1f)
+            assertTrue("奇数余下字段放到下一行", imdb.top >= year.bottom - 1f)
+            assertEquals("末行单个字段仍保持半宽", year.width, imdb.width, 1f)
+            assertEquals("末行字段沿起始侧对齐", year.left, imdb.left, 1f)
+            val longId = "tt" + "1234567890".repeat(8)
+            compose.onNodeWithTag("identification-id/Imdb").performTextReplacement(longId)
+            compose.onNodeWithTag("identification-id/Imdb").assertTextContains(longId)
+            scrollIdentification("identification-search")
+            // 先结束输入法的避让动画，区分键盘收起与搜索按钮自身的加载状态变化。
+            compose.runOnUiThread {
+                WindowCompat.getInsetsController(compose.activity.window, compose.activity.window.decorView)
+                    .hide(WindowInsetsCompat.Type.ime())
+            }
+            compose.waitUntil(WAIT_MS) {
+                !compose.runOnUiThread {
+                    ViewCompat.getRootWindowInsets(compose.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime()) == true
+                } && identificationBounds("identification-search") == pendingSearchBounds
+            }
+            val readySearchBounds = identificationBounds("identification-search")
+            compose.onNodeWithTag("identification-search").performVerificationClick(compose)
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.searches.get() == 1 }
+            compose.onNodeWithTag("identification-search").assertIsNotEnabled()
+            assertEquals("搜索中切换加载图标不能改变按钮尺寸或位置", readySearchBounds, identificationBounds("identification-search"))
+            fixture.allowSearch.countDown()
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("identification-results") }
+            val info = requireNotNull(fixture.lastSearchInfo.get())
+            assertEquals(2024, info.getInt("Year"))
+            assertEquals("半宽输入不能截断实际提交的编号", longId, info.getJSONObject("ProviderIds").getString("Imdb"))
             scrollIdentification("identification-result")
             compose.onNodeWithTag("identification-result").performVerificationClick(compose)
             compose.onNodeWithText("应用识别结果？").assertVerificationDisplayed(compose)
@@ -160,6 +203,12 @@ class ManagementFeaturesUiTest {
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("identification-id/Imdb") }
             compose.onNodeWithText("识别人物").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("identification-year").assertDoesNotExist()
+            val name = identificationBounds("identification-name")
+            val tmdb = identificationBounds("identification-id/Tmdb")
+            val imdb = identificationBounds("identification-id/Imdb")
+            assertEquals("人物编号也应每行两项", tmdb.top, imdb.top, 1f)
+            assertEquals(name.width, tmdb.width + imdb.width, 1f)
+            assertEquals(tmdb.width, imdb.width, 1f)
             scrollIdentification("identification-id/Tmdb")
             compose.onNodeWithTag("identification-id/Tmdb").assertTextContains("85718")
             scrollIdentification("identification-id/Imdb")
@@ -738,6 +787,7 @@ class ManagementFeaturesUiTest {
         compose.waitUntil(WAIT_MS) { runCatching { compose.onNodeWithTag("server-task-task").assertIsEnabled(); true }.getOrDefault(false) }
     }
     private fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+    private fun identificationBounds(tag: String) = compose.onNodeWithTag(tag).readVerificationNode(compose) { it.boundsInRoot }
     private fun awaitDialog(tag: String, stage: String) {
         compose.waitUntil(WAIT_MS) { exists(tag) }
         VerificationDisplay.awaitWindowReady(compose, stage, compose.onNodeWithTag(tag))
@@ -758,6 +808,10 @@ class ManagementFeaturesUiTest {
     private fun scrollIdentification(tag: String) {
         val formTag = tag in setOf("identification-name", "identification-year", "identification-search") || tag.startsWith("identification-id/")
         if (formTag && exists("identification-results")) { compose.onNodeWithTag("identification-back").performVerificationClick(compose); compose.waitForIdle() }
+        if (tag == "identification-search") {
+            compose.onNodeWithTag(tag).assertVerificationDisplayed(compose)
+            return
+        }
         val list = if (exists("identification-results")) "identification-results" else "identification-list"
         compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag))
     }
@@ -781,8 +835,12 @@ class ManagementFeaturesUiTest {
         }
     }
 
-    private class Fixture(private val activityCount: Int = 31, private val secondLog: Boolean = false) : Closeable {
+    private class Fixture(private val activityCount: Int = 31, private val secondLog: Boolean = false,
+        holdExternalIds: Boolean = false, holdSearch: Boolean = false) : Closeable {
         val total = AtomicInteger(); val searches = AtomicInteger(); val applies = AtomicInteger()
+        val externalIdsStarted = CountDownLatch(1)
+        val allowExternalIds = CountDownLatch(if (holdExternalIds) 1 else 0)
+        val allowSearch = CountDownLatch(if (holdSearch) 1 else 0)
         val infoReads = AtomicInteger(); val infoStatus = AtomicInteger(200)
         val serverName = AtomicReference("Synthetic Jellyfin")
         val holdNextInfoRead = AtomicBoolean(); val allowCancelledResponse = AtomicBoolean()
@@ -848,12 +906,15 @@ class ManagementFeaturesUiTest {
                 }
                 path.endsWith("/ExternalIdInfos") -> {
                     assertEquals("GET", method)
+                    externalIdsStarted.countDown()
+                    check(allowExternalIds.await(15, TimeUnit.SECONDS))
                     body = """[{"Name":"TheMovieDb","Key":"Tmdb"},{"Name":"IMDb","Key":"Imdb"}]"""
                 }
                 path.startsWith("/proxy/Items/RemoteSearch/") -> {
                     assertEquals("POST", method); searches.incrementAndGet()
                     lastQuery.set(JSONObject(bytes.decodeToString()).getJSONObject("SearchInfo").getString("Name"))
                     lastSearchInfo.set(JSONObject(bytes.decodeToString()).getJSONObject("SearchInfo"))
+                    check(allowSearch.await(15, TimeUnit.SECONDS))
                     if (failSearch.get()) { code = 503; body = "{}" } else body = JSONArray().put(JSONObject()
                         .put("Name", candidateName.get()).put("ProductionYear", 2024).put("ProviderIds", JSONObject().put("Tmdb", "42"))
                         .put("ImageUrl", "https://image.invalid/poster.jpg")).toString()
@@ -937,6 +998,7 @@ class ManagementFeaturesUiTest {
             }
         }
         override fun close() {
+            allowExternalIds.countDown(); allowSearch.countDown()
             closed = true; allowApply.countDown(); releaseActivityRefresh.countDown(); releaseActivityRemainder.countDown(); releaseTaskPoll.countDown(); releaseInfoRead.countDown(); releaseLogRead.countDown(); server.close()
             synchronized(sockets) { sockets.toList() }.forEach { runCatching { it.close() } }; executor.shutdownNow()
             assertHealthy()

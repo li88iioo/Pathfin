@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -64,6 +65,10 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
     val validYear = !byYear || year.isBlank() || year.toIntOrNull()?.let { it in 1..9999 } == true
     val enabled = MediaIdentificationApi.supports(session, item)
     val fields = idFields.orEmpty()
+    // null 是年份；其余项保留服务器顺序，按行组合，屏外的输入框不必首帧全部创建。
+    val fieldRows = remember(fields, byYear) {
+        buildList<ExternalIdField?> { if (byYear) add(null); addAll(fields) }.chunked(2)
+    }
     fun providerValue(key: String) = providerIds[key] ?: providerIds.entries.firstOrNull { it.key.equals(key, ignoreCase = true) }?.value.orEmpty()
     // 请求只带服务器提供的编号；完整表单快照单独用于判断用户是否修改了条件。
     // 清单晚到只补充输入框，不会让已经取得的名称搜索结果无故失效。
@@ -132,42 +137,53 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
                 if (results.isEmpty() && !searching && error == null) item {
                     EmptyPanel(tr("没有找到匹配结果"), tr("返回修改%1\$s或外部编号，并检查服务器是否配置了可用的元数据提供程序。", if (person) tr("姓名") else tr("名称、年份")))
                 }
-            } else LazyColumn(Modifier.fillMaxSize().testTag("identification-list"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalNavigationBottomInset.current),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // 与服务器表单同一语言：名称、年份（人物与合集没有）、各提供程序的外部编号在一张分组卡片里。
-                item {
-                    GroupCard {
+            } else LazyColumn(Modifier.fillMaxSize().testTag("identification-list"),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)) {
+                item(key = "identification-name") {
+                    SettingsGroupItem(if (fieldRows.isEmpty()) GroupPosition.SINGLE else GroupPosition.TOP, dividerStartPadding = GroupTextInset) {
                         GroupField(name, { name = it }, if (person) tr("姓名") else tr("名称"),
                             if (person) tr("人物姓名") else tr("片名或剧名"), PathfinIcons.Type, Modifier.testTag("identification-name"),
                             divider = false, readOnly = searching || applying)
-                        if (byYear) GroupField(year, { year = it }, tr("年份"), tr("可选"), PathfinIcons.Calendar, Modifier.testTag("identification-year"),
-                            readOnly = searching || applying, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                        // 每个已启用的元数据提供程序一行，用条目已有的编号预填，与 Jellyfin 官方识别表单一致。
-                        fields.forEach { field ->
-                            GroupField(providerValue(field.key), { providerIds = providerIds + (field.key to it) }, field.name, tr("可选"), PathfinIcons.Hash,
-                                Modifier.testTag("identification-id/${field.key}"), readOnly = searching || applying)
+                    }
+                }
+                itemsIndexed(fieldRows, key = { _, row -> row.first()?.let { "identification-ids/${it.key}" } ?: "identification-year-row" }) { index, row ->
+                    SettingsGroupItem(if (index == fieldRows.lastIndex) GroupPosition.BOTTOM else GroupPosition.MIDDLE, dividerStartPadding = GroupTextInset) {
+                        Row(Modifier.fillMaxWidth()) {
+                            row.forEach { field -> key(field?.key) {
+                                if (field == null) GroupField(year, { year = it }, tr("年份"), tr("可选"), PathfinIcons.Calendar,
+                                    Modifier.weight(1f).testTag("identification-year"), divider = false, readOnly = searching || applying,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                                else GroupField(providerValue(field.key), { providerIds = providerIds + (field.key to it) }, field.name, tr("可选"), PathfinIcons.Hash,
+                                    Modifier.weight(1f).testTag("identification-id/${field.key}"), divider = false, readOnly = searching || applying)
+                            } }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
-                    Text(if (validYear) tr("可填写外部编号以缩小匹配范围") else tr("年份应为 1 到 9999"), Modifier.padding(start = 6.dp, top = 8.dp),
+                }
+                item(key = "identification-hint") {
+                    Text(if (validYear) tr("可填写外部编号以缩小匹配范围") else tr("年份应为 1 到 9999"), Modifier.padding(start = 6.dp, bottom = 12.dp),
                         fontSize = 12.sp, lineHeight = 17.sp,
                         color = if (validYear) PathfinAppearance.textMuted else MaterialTheme.colorScheme.error)
                 }
-                idFieldsError?.let { message -> item { InlineError(message) } }
-                item {
-                    val canSearch = !searching && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
-                    InkButton(::search, Modifier.fillMaxWidth().testTag("identification-search"), enabled = canSearch, muted = !canSearch) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (searching) PathfinSpinner(LocalContentColor.current, Modifier.size(18.dp)) else Icon(PathfinIcons.Search, null, Modifier.size(18.dp))
-                            ButtonLabel(tr("搜索"))
-                        }
-                    }
-                }
-                error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
-                if (applied) item { AppliedBanner() }
+                idFieldsError?.let { message -> item(key = "identification-fields-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp)) } }
+                error?.let { message -> item(key = "identification-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp).testTag("identification-error")) } }
+                if (applied) item(key = "identification-applied") { Box(Modifier.padding(bottom = 12.dp)) { AppliedBanner() } }
                 // 已有结果时可直接回到结果页，不必重新搜索。
                 if (results.isNotEmpty() && resultForm == form) item {
                     QuietButton(tr("查看 %1\$s 个匹配结果", results.size), { resultsPage = true }, Modifier.fillMaxWidth().testTag("identification-show-results"),
                         color = PathfinAppearance.accent)
+                }
+            }
+        }
+        // 编号清单异步到达只增补可滚动的字段，搜索动作始终固定，避免按钮随表单高度跳动。
+        if (enabled && !resultsPage) {
+            val canSearch = !searching && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
+            Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                InkButton(::search, Modifier.fillMaxWidth().testTag("identification-search"), enabled = canSearch, muted = !canSearch) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (searching) PathfinSpinner(LocalContentColor.current, Modifier.size(18.dp)) else Icon(PathfinIcons.Search, null, Modifier.size(18.dp))
+                        ButtonLabel(tr("搜索"))
+                    }
                 }
             }
         }
