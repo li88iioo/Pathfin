@@ -625,7 +625,23 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         execute(session.server, endpoint, headers = PlaybackHeaders.serverHeaders(session), body = body)
     }
 
+    /** 只判断条目有没有这类图，不拼 URL；列表卡片首帧据此决定占位样式。 */
+    fun hasImage(item: MediaItem, type: String = "Primary", imageIndex: Int = 0): Boolean = imageSource(item, type, imageIndex) != null
+
     fun imageUrl(session: Session, item: MediaItem, width: Int = 420, type: String = "Primary", imageIndex: Int = 0): String? {
+        val (imageId, imagePath, imageTag) = imageSource(item, type, imageIndex) ?: return null
+        return ServerUrls.endpoint(session.server, "Items/$imageId/Images/$imagePath").toHttpUrl().newBuilder()
+            .addQueryParameter("maxWidth", width.coerceIn(48, 2048).toString())
+            .addQueryParameter("quality", "80")
+            .addQueryParameter("format", "Webp")
+            .addQueryParameter("tag", imageTag)
+            .build().toString()
+    }
+
+    fun imageHeaders(session: Session): Map<String, String> = PlaybackHeaders.serverHeaders(session)
+
+    /** 按类型选出实际可用的图片（条目 ID、图片路径、tag）；没有可用图时为 null。 */
+    private fun imageSource(item: MediaItem, type: String, imageIndex: Int): Triple<String, String, String>? {
         if (type !in setOf("Primary", "Backdrop", "Banner", "Logo") || imageIndex < 0) return null
         val backdropTag = if (imageIndex == 0) item.backdropTag else item.backdropTags.getOrNull(imageIndex)?.takeIf(String::isNotBlank)
         val (imageId, imagePath, imageTag) = when {
@@ -636,15 +652,8 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             else -> Triple(item.primaryImageItemId ?: item.id, "Primary", item.imageTag)
         }
         if (imageTag.isNullOrBlank() || !validIdentifier(imageId)) return null
-        return ServerUrls.endpoint(session.server, "Items/$imageId/Images/$imagePath").toHttpUrl().newBuilder()
-            .addQueryParameter("maxWidth", width.coerceIn(48, 2048).toString())
-            .addQueryParameter("quality", "80")
-            .addQueryParameter("format", "Webp")
-            .addQueryParameter("tag", imageTag)
-            .build().toString()
+        return Triple(imageId, imagePath, imageTag)
     }
-
-    fun imageHeaders(session: Session): Map<String, String> = PlaybackHeaders.serverHeaders(session)
 
     fun chapterImageUrl(session: Session, item: MediaItem, index: Int, tag: String?, width: Int = 320): String? {
         if (!validIdentifier(item.id) || index !in 0..100_000 || tag.isNullOrBlank() || tag.length > 512 || tag.any(Char::isISOControl)) return null

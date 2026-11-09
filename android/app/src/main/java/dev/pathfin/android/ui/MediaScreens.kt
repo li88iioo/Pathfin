@@ -4,7 +4,6 @@ package dev.pathfin.android.ui
 
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.animateFloatAsState
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
@@ -466,22 +465,21 @@ internal fun PosterImage(item: MediaItem, session: Session, api: JellyfinApi, mo
         ?.let { (initialWidth / it).roundToInt() } ?: 0
     // 固定宽卡片首组合即使用真实尺寸；其余场景按测量结果裁切，避免横图复用小海报解码。
     var displaySize by remember(initialWidth, initialHeight) { mutableStateOf(IntSize(initialWidth, initialHeight)) }
-    val imageUrl = PosterRequests.url(api, session, item, displaySize.width, type, imageIndex)
+    val imageUrl = remember(session, item, type, imageIndex, displaySize) {
+        PosterRequests.url(api, session, item, displaySize.width, type, imageIndex)
+    }
     val request = remember(context, session, imageUrl, displaySize) {
         PosterRequests.build(context, session, api, imageUrl, displaySize)
     }
-    // 同一位置换内容（切季、换演员）时，新图到达前先垫着上一张成功加载的图，到达后淡入替换，不闪占位块。
-    var shownRequest by remember { mutableStateOf<ImageRequest?>(null) }
-    var currentLoaded by remember(request) { mutableStateOf(false) }
     // 有图但还在读取时用随主题的浅占位、不画图标，图到后淡入；真正缺图或读取失败才是深色底加图标。
-    val available = remember(session, item, type, imageIndex) { api.imageUrl(session, item, width = 1, type = type, imageIndex = imageIndex) != null }
+    val available = remember(item, type, imageIndex) { api.hasImage(item, type, imageIndex) }
     var failed by remember(request) { mutableStateOf(false) }
     val missing = !available || failed
-    val previous = shownRequest?.takeIf { it !== request && !currentLoaded }
     Box(modifier.onSizeChanged { size ->
-        if (size.width > 0 && size.height > 0) displaySize = size
+        // 实测与首帧估算常差一两个像素：同一请求档位且高度相近时不回写，免得每张卡片重组一次并重建请求。
+        if (size.width > 0 && size.height > 0 && size.needsNewRequest(displaySize)) displaySize = size
     }.clip(shape).background(if (missing) MediaImagePlaceholder else loadingFill), contentAlignment = Alignment.Center) {
-        if (missing && previous == null && !currentLoaded) Icon(when (item.type) {
+        if (missing) Icon(when (item.type) {
             "Person" -> PathfinIcons.User
             "Folder", "CollectionFolder" -> PathfinIcons.Folder
             else -> MediaNavigationIcons.Movies
@@ -496,21 +494,21 @@ internal fun PosterImage(item: MediaItem, session: Session, api: JellyfinApi, mo
                 Text(tr("已遮盖"), color = Color.White.copy(alpha = .85f), fontSize = 11.sp, maxLines = 1)
             }
         } else {
-            if (previous != null) AsyncImage(previous, null, imageLoader = LocalPosterLoader.current,
-                modifier = Modifier.matchParentSize().then(if (restricted) Modifier.blur(24.dp) else Modifier), contentScale = ContentScale.Crop)
-            val fadeIn by animateFloatAsState(if (currentLoaded || shownRequest == null) 1f else 0f,
-                if (shownRequest == null) snap() else tween(180), label = "poster-swap")
             AsyncImage(request, null, imageLoader = LocalPosterLoader.current,
                 modifier = Modifier.matchParentSize().then(if (restricted) Modifier.blur(24.dp).testTag("poster-image-blurred/${item.id}")
                     .semantics { contentDescription = tr("此分级封面已模糊") } else Modifier.testTag("poster-image-clear/${item.id}")),
-                contentScale = ContentScale.Crop, alpha = fadeIn, onSuccess = {
+                contentScale = ContentScale.Crop, onSuccess = {
                     PerformanceTrace.imageReady(it.result.dataSource.name)
-                    currentLoaded = true
-                    shownRequest = request
                 }, onError = { if (imageUrl != null) failed = true })
         }
     }
 }
+
+/** 宽度换档或高度变化超过一成才需要按新尺寸重新请求与解码。 */
+private fun IntSize.needsNewRequest(current: IntSize): Boolean =
+    current.width <= 0 || current.height <= 0 ||
+        PosterImageCache.requestWidth(width) != PosterImageCache.requestWidth(current.width) ||
+        kotlin.math.abs(height - current.height) * 10 > current.height
 
 /** 详情背景与继续观看集图分别配置；继承的剧集海报不能误作本集截图。 */
 @Composable

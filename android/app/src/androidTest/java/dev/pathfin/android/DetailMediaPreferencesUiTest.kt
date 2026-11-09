@@ -94,7 +94,16 @@ class DetailMediaPreferencesUiTest {
                 }
             }
             awaitColor("detail-background/episode", Color.Red)
-            compose.runOnIdle { preferences.value = preferences.value.copy(preferEpisodeImages = true, preferEpisodeBackgrounds = false) }
+            val tag = "detail-background/episode"
+            VerificationDisplay.awaitWindowReady(compose, "cached-background-before-switch", compose.onNodeWithTag(tag, true))
+            compose.mainClock.autoAdvance = false
+            try {
+                compose.runOnUiThread { preferences.value = preferences.value.copy(preferEpisodeImages = true, preferEpisodeBackgrounds = false) }
+                repeat(15) { frame ->
+                    compose.mainClock.advanceTimeByFrame()
+                    assertTrue("缓存换图第 ${frame + 1} 帧必须保持新图，不能闪回浅色占位", windowPixels(tag).all { it >= 250 })
+                }
+            } finally { compose.mainClock.autoAdvance = true }
             awaitColor("detail-background/episode", Color.Blue)
             compose.runOnIdle {
                 // 模型可能继承剧集 Primary；即使“优先本集截图”开启，也不能用继承海报冒充本集截图。
@@ -105,6 +114,47 @@ class DetailMediaPreferencesUiTest {
             compose.runOnIdle { item.value = episode.copy(imageTag = null) }
             awaitColor("detail-background/episode", Color.Blue)
         } finally { loader.shutdown() }
+    }
+
+    @Test fun backgroundKeepsItsImageWhileLoadingAndClearsItAfterFailureOrMissingImage() {
+        checkVerification()
+        val original = MediaItem("retained", "合成背景", "Movie", backdropTag = "original")
+        val item = mutableStateOf(original)
+        val arrived = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            arrived.countDown()
+            check(release.await(10, TimeUnit.SECONDS))
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(404).message("Not Found")
+                .body(ByteArray(0).toResponseBody()).build()
+        }.build()
+        val loader = PosterImageCache.createMemoryLoader(context, client)
+        cache(loader, requireNotNull(api.imageUrl(session, original, requestWidth(240), "Backdrop")), solid(android.graphics.Color.BLUE))
+        val tag = "detail-background/retained"
+        try {
+            compose.setContent {
+                PathfinTheme(ThemePreference.LIGHT) {
+                    CompositionLocalProvider(LocalPosterLoader provides loader, LocalAppPreferences provides AppPreferences()) {
+                        Surface(Modifier.fillMaxSize()) { Box(Modifier.fillMaxSize()) {
+                            DetailBackgroundImage(item.value, session, api, Modifier.size(240.dp, 135.dp))
+                        } }
+                    }
+                }
+            }
+            awaitColor(tag, Color.Blue)
+            compose.runOnIdle { item.value = original.copy(backdropTag = "failing") }
+            compose.waitUntil(5_000) { arrived.count == 0L }
+            assertTrue("新图未返回时应保留旧图", windowPixels(tag).all { it >= 250 })
+            release.countDown()
+            compose.waitUntil(5_000) { windowPixels(tag).average() < 100 }
+            compose.runOnIdle { item.value = original }
+            awaitColor(tag, Color.Blue)
+            compose.runOnIdle { item.value = original.copy(backdropTag = null) }
+            compose.waitUntil(5_000) { windowPixels(tag).average() < 100 }
+        } finally {
+            release.countDown()
+            loader.shutdown(); client.dispatcher.executorService.shutdownNow(); client.connectionPool.evictAll()
+        }
     }
 
     @Test fun backgroundBlurChangesRealPixelsAndKeepsForegroundAtTheSamePosition() {

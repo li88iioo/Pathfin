@@ -2,6 +2,8 @@ package dev.pathfin.android.ui
 
 import android.content.Context
 import androidx.compose.ui.unit.IntSize
+import coil3.annotation.ExperimentalCoilApi
+import coil3.compose.useExistingImageAsPlaceholder
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
 import coil3.request.ImageRequest
@@ -31,11 +33,14 @@ internal object PosterRequests {
             ImageRequest.Builder(context).data(url).httpHeaders(headers).memoryCacheKey(key).diskCacheKey(key).build()
         }
 
+    @OptIn(ExperimentalCoilApi::class)
     fun build(context: Context, session: Session, api: JellyfinApi, url: String?, size: IntSize): ImageRequest {
         val headers = NetworkHeaders.Builder().apply {
             api.imageHeaders(session).forEach { (name, value) -> set(name, value) }
         }.build()
         return ImageRequest.Builder(context).data(url).httpHeaders(headers).crossfade(FADE_MS)
+            // 换图期间保留当前画面，过渡统一交给 Coil；内存命中直接显示，失败/缺图正常清空。
+            .useExistingImageAsPlaceholder(true)
             .scale(Scale.FILL).precision(Precision.INEXACT)
             .apply {
                 if (size.width > 0 && size.height > 0) size(size.width, size.height)
