@@ -54,15 +54,30 @@ class BrowserUserDataChangeTest {
     }
 
     @Test fun favoriteAndPlaybackResponsesDoNotImplyAnExplicitRecursivePlayedOperation() {
-        val series = MediaItem("series", "Series", "Series")
         val data = MediaUserData(isFavorite = true, played = true, playCount = 1, unplayedItemCount = 0)
-        for (kind in listOf(Kind.FAVORITE, Kind.PLAYBACK)) {
-            val change = BrowserUserDataChange(series, data, kind)
+        for (type in listOf("Series", "Folder")) for (kind in listOf(Kind.FAVORITE, Kind.PLAYBACK)) {
+            val parent = MediaItem("parent", "Parent", type, isFolder = true)
+            val change = BrowserUserDataChange(parent, data, kind)
             assertFalse(change.invalidates(LibraryQuery(itemTypes = setOf("Episode"))))
             assertFalse(change.invalidates(LibraryQuery(itemTypes = setOf("Season"))))
             assertFalse(change.invalidates(LibraryQuery(tab = LibraryTab.RESUME, itemTypes = setOf("Series"))))
-            assertTrue(change.invalidates(LibraryQuery(itemTypes = setOf("Series"), favorite = true)))
-            assertEquals(data.applyTo(series), change.apply(series))
+            assertFalse(change.invalidates(normal))
+            assertTrue(change.invalidates(LibraryQuery(itemTypes = setOf(type), favorite = true)))
+            assertEquals(data.applyTo(parent), change.apply(parent))
+        }
+    }
+
+    @Test fun explicitFolderPlayedOperationsInvalidateAllDescendantTypesEvenIfTheParentStateIsUnchanged() {
+        val queries = listOf(
+            MediaItem("folder", "Folder", "Folder").defaultLibraryQuery(),
+            normal, normal.copy(played = false), normal.copy(tab = LibraryTab.RESUME),
+            LibraryQuery(itemTypes = setOf("Series")), LibraryQuery(itemTypes = setOf("Episode")),
+            LibraryQuery(itemTypes = setOf("Audio")),
+        )
+        for (played in listOf(false, true)) {
+            val folder = MediaItem("folder", "Folder", "Folder", isFolder = true, played = played)
+            val change = BrowserUserDataChange(folder, MediaUserData(played = played), Kind.PLAYED)
+            queries.forEach { assertTrue("文件夹显式标记必须重验子项: $it", change.invalidates(it)) }
         }
     }
 
@@ -77,7 +92,7 @@ class BrowserUserDataChangeTest {
         assertFalse("混合续播与 Web 一致仅请求 Movie/Series", episode.invalidates(mixed.copy(tab = LibraryTab.RESUME)))
         assertTrue(BrowserUserDataChange(movie, MediaUserData(positionTicks = 100), Kind.PLAYBACK)
             .invalidates(mixed.copy(tab = LibraryTab.RESUME)))
-        assertFalse(BrowserUserDataChange(movie.copy(type = "Folder"), MediaUserData(played = true), Kind.PLAYED)
+        assertTrue(BrowserUserDataChange(movie.copy(type = "Folder"), MediaUserData(played = true), Kind.PLAYED)
             .invalidates(mixed.copy(tab = LibraryTab.MEDIA, played = false)))
     }
 

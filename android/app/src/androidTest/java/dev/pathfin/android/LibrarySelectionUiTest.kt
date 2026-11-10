@@ -35,6 +35,7 @@ import dev.pathfin.android.ui.rememberPosterLoader
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -166,6 +167,33 @@ class LibrarySelectionUiTest {
         }
     }
 
+    @Test fun foldersInMixedLibrariesCanBeSelectedAndDeletingThemWarnsAboutTheirContents() {
+        show()
+        compose.runOnIdle {
+            browser.value = BrowserUiState(content = ContentState(items = ITEMS + MediaItem("folder", "Folder A", "Folder", isFolder = true),
+                total = ITEMS.size + 1))
+        }
+        title("Folder A").performVerificationTouchInput(compose) { longClick() }
+        compose.onNodeWithTag("library-selection-count").assertTextEquals("已选择 1 项")
+        title("Alpha").performVerificationClick(compose)
+        compose.runOnIdle {
+            assertEquals(setOf("folder", "alpha"), selection.value)
+            assertTrue("选择态点按文件夹不进入目录", opened.isEmpty())
+        }
+        openMenu()
+        compose.onNodeWithTag("library-selection-delete").performVerificationClick(compose)
+        compose.onNodeWithText("其中包含文件夹，文件夹内的全部媒体与文件会一并删除。", substring = true).assertExists()
+        compose.onNodeWithTag("library-selection-delete-confirm").performVerificationClick(compose)
+        compose.runOnIdle { assertEquals(BatchMediaAction.Delete, actions.last()) }
+
+        // 只选普通条目时不出现文件夹说明。
+        compose.runOnIdle { selection.value = setOf("alpha") }
+        openMenu()
+        compose.onNodeWithTag("library-selection-delete").performVerificationClick(compose)
+        compose.onNodeWithText("确认删除已选的 1 项？", substring = true).assertExists()
+        compose.onNodeWithText("其中包含文件夹", substring = true).assertDoesNotExist()
+    }
+
     private fun title(name: String) = compose.onAllNodesWithText(name, substring = false).onFirst()
 
     private fun openMenu() {
@@ -184,7 +212,7 @@ class LibrarySelectionUiTest {
                     Surface(Modifier.fillMaxSize()) {
                         Column {
                             if (pageSelection.value.isNotEmpty()) Row(Modifier.fillMaxWidth()) {
-                                LibrarySelectionBar(pageSelection.value.size, busy = false, canDelete = canDelete.value,
+                                LibrarySelectionBar(browser.value.content.items.filter { it.id in pageSelection.value }, busy = false, canDelete = canDelete.value,
                                     canRefresh = canRefresh.value, onCancel = { pageSelection.value = emptySet() }) { action ->
                                     pageSelection.value = emptySet(); actions += action
                                 }

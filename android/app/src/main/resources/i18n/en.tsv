@@ -1061,6 +1061,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 确认删除	Confirm delete
 确认删除“%1$s”？此操作会删除服务器中的媒体及对应文件，无法撤销。	Delete “%1$s”? This deletes the media and its files on the server and can't be undone.
 确认删除已选的 %1$s 项？此操作会删除服务器中的媒体及对应文件，无法撤销。	Delete the %1$s selected items? This deletes the media and their files on the server and can't be undone.
+其中包含文件夹，文件夹内的全部媒体与文件会一并删除。	This includes folders; all media and files inside them will be deleted too.
 确认取消	Confirm cancel
 确认应用	Apply
 确认新密码	Confirm new password

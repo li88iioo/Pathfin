@@ -168,27 +168,30 @@ class BrowserSnapshotStoreTest {
         assertEquals(listOf(defaultKey.query), queries)
     }
 
-    @Test fun resettingAPartlyWatchedSeriesCannotRestoreOldResumeOrEpisodeSnapshotsAfterRestart() {
-        val directory = temporary.newFolder()
-        val store = BrowserSnapshotStore(directory)
-        val resume = key(LibraryQuery(tab = LibraryTab.RESUME, itemTypes = setOf("Series")))
-        val episodes = key(LibraryQuery(itemTypes = setOf("Episode")))
-        val other = key(resume.query, profileId = "B")
-        val movies = key(LibraryQuery(itemTypes = setOf("Movie")))
-        val moviePage = MediaPage(listOf(MediaItem("movie", "Movie", "Movie")), 1)
-        listOf(resume, episodes, other).forEach { assertTrue(store.save(session, it, page)) }
-        assertTrue(store.save(session, movies, moviePage))
-        val series = MediaItem("series", "Series", "Series", played = false, unplayedItemCount = 9)
-        val change = BrowserUserDataChange(series, MediaUserData(played = false, unplayedItemCount = 10),
-            BrowserUserDataChange.Kind.PLAYED)
+    @Test fun recursivePlayedChangesCannotRestoreOldDescendantSnapshotsAfterRestart() {
+        for (type in listOf("Series", "Folder")) {
+            val directory = temporary.newFolder()
+            val store = BrowserSnapshotStore(directory)
+            val resume = key(LibraryQuery(tab = LibraryTab.RESUME, itemTypes = setOf("Series")))
+            val episodes = key(LibraryQuery(itemTypes = setOf("Episode")))
+            val other = key(resume.query, profileId = "B")
+            val movies = key(LibraryQuery(itemTypes = setOf("Movie")))
+            val moviePage = MediaPage(listOf(MediaItem("movie", "Movie", "Movie")), 1)
+            listOf(resume, episodes, other).forEach { assertTrue(store.save(session, it, page)) }
+            assertTrue(store.save(session, movies, moviePage))
+            val parent = MediaItem("parent", "Parent", type, isFolder = true, played = false, unplayedItemCount = 9)
+            val change = BrowserUserDataChange(parent, MediaUserData(played = false, unplayedItemCount = 10),
+                BrowserUserDataChange.Kind.PLAYED)
 
-        BrowserSnapshotStore(directory).update(session, "A", change::apply, change::invalidates)
+            BrowserSnapshotStore(directory).update(session, "A", change::apply, change::invalidates)
 
-        val restarted = BrowserSnapshotStore(directory)
-        assertNull("重启后不能恢复整剧重置之前的续播集", restarted.load(session, resume))
-        assertNull(restarted.load(session, episodes))
-        assertEquals(page, restarted.load(session, other))
-        assertEquals(moviePage, restarted.load(session, movies))
+            val restarted = BrowserSnapshotStore(directory)
+            assertNull("重启后不能恢复 $type 重置之前的续播集", restarted.load(session, resume))
+            assertNull(restarted.load(session, episodes))
+            assertEquals(page, restarted.load(session, other))
+            if (type == "Folder") assertNull("文件夹还会影响影片，整剧不会", restarted.load(session, movies))
+            else assertEquals(moviePage, restarted.load(session, movies))
+        }
     }
 
     @Test fun removeProfileDeletesAllQueriesAddressesAndTokensButKeepsOtherProfiles() {

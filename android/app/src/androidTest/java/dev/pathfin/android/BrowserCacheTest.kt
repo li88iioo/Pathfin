@@ -22,6 +22,8 @@ import dev.pathfin.android.domain.ProfileHomeKey
 import dev.pathfin.android.domain.favoriteDiscoveryCategories
 import dev.pathfin.android.ui.AppState
 import dev.pathfin.android.ui.AppViewModel
+import dev.pathfin.android.ui.BATCH_KEY
+import dev.pathfin.android.ui.BatchMediaAction
 import dev.pathfin.android.ui.BrowserUiState
 import dev.pathfin.android.ui.ContentState
 import dev.pathfin.android.ui.DiscoveryState
@@ -313,6 +315,29 @@ class BrowserCacheTest {
             val item = app.state.value.browsers.getValue(key).content.items.single()
             assertTrue("$key 的已看和收藏应原地更新", item.played && item.isFavorite)
         }
+    }
+
+    @Test
+    fun batchFolderPlayedReloadsCachedChildrenAndUnplayedMovieResultsOnReentry() = withApp { app, fixture ->
+        val folder = MediaItem(FOLDER_A, "缓存文件夹", "Folder", isFolder = true)
+        onMain { app.open(folder) }
+        val children = awaitBrowser(app, fixture, FOLDER_A)
+        assertFalse(children.content.items.single().played)
+        val unplayedKey = "folder-unplayed"
+        val unplayedQuery = LibraryQuery(itemTypes = setOf("Movie"), played = false)
+        onMain { app.configureBrowser(unplayedKey, FOLDER_A, unplayedQuery) }
+        val unplayed = awaitBrowser(app, fixture, unplayedKey)
+        assertEquals(listOf(MOVIE_A), unplayed.content.items.map { it.id })
+        val beforeMark = fixture.counts()
+
+        onMain { app.selectTab(Route.Home); app.runBatch(listOf(folder), BatchMediaAction.Played(true)) }
+        awaitState(app, fixture, "文件夹批量标记必须完成") { BATCH_KEY !in it.actionBusy }
+        onMain { app.open(folder) }
+        val refreshed = awaitBrowser(app, fixture, FOLDER_A) { it.content.items.singleOrNull()?.played == true }
+        assertEquals(listOf(MOVIE_A), refreshed.content.items.map { it.id })
+        onMain { app.configureBrowser(unplayedKey, FOLDER_A, unplayedQuery) }
+        awaitBrowser(app, fixture, unplayedKey) { it.content.items.isEmpty() }
+        fixture.assertCounts(beforeMark.plus(items = 2))
     }
 
     @Test
@@ -1424,7 +1449,8 @@ class BrowserCacheTest {
                 request.path.startsWith("/UserPlayedItems/") -> {
                     check(request.method in setOf("POST", "DELETE"))
                     val id = request.path.substringAfter("/UserPlayedItems/")
-                    if (request.method == "POST") playedItems.add(id) else playedItems.remove(id)
+                    val affected = if (id == FOLDER_A) listOf(id, MOVIE_A) else listOf(id)
+                    if (request.method == "POST") playedItems.addAll(affected) else playedItems.removeAll(affected)
                     userData(id)
                 }
                 else -> error("浏览 fixture 未定义路由：${request.method} ${request.path}")
@@ -1460,7 +1486,7 @@ class BrowserCacheTest {
                 return JSONObject().put("Items", JSONArray(items)).put("TotalRecordCount", PAGED_ITEM_COUNT)
             }
             var items = when (query["parentId"]) {
-                LIBRARY_A -> listOf(movie(MOVIE_A))
+                LIBRARY_A, FOLDER_A -> listOf(movie(MOVIE_A))
                 LIBRARY_B -> listOf(movie(MOVIE_B))
                 EMPTY_LIBRARY -> emptyList()
                 else -> listOf(movie(MOVIE_A), movie(MOVIE_B))
@@ -1505,6 +1531,7 @@ class BrowserCacheTest {
         const val LIBRARY_A = "cache-library-a"
         const val LIBRARY_B = "cache-library-b"
         const val EMPTY_LIBRARY = "cache-library-empty"
+        const val FOLDER_A = "cache-folder-a"
         const val PAGED_LIBRARY = "cache-library-paged"
         const val PARENT_LIBRARY = "cache-library-playback-parent"
         const val PAGED_ITEM_COUNT = 45

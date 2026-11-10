@@ -212,6 +212,22 @@ class BrowserPageCacheTest {
         assertEquals(page(), cache[key])
     }
 
+    @Test fun markingFolderPlayedEvictsChildPagesAndUnplayedResultsOnlyForItsProfile() {
+        val cache = BrowserPageCache(nowMs = { 0L })
+        val folder = MediaItem("folder", "Folder", "Folder", isFolder = true)
+        val child = key.copy(browserId = folder.id, parentId = folder.id, query = folder.defaultLibraryQuery())
+        val unplayed = key.copy(query = key.query.copy(played = false))
+        val other = unplayed.copy(scope = scope.copy(profileId = "other"))
+        val original = page()
+        listOf(child, unplayed, other).forEach { cache.put(it, original) }
+
+        cache.update(scope, BrowserUserDataChange(folder, MediaUserData(played = true), BrowserUserDataChange.Kind.PLAYED))
+
+        assertNull("进入已缓存子目录时必须重取播放标记", cache[child])
+        assertNull("跨目录的未播放筛选也必须重算成员", cache[unplayed])
+        assertEquals("其他资料不受影响", original, cache[other])
+    }
+
     @Test fun fortyItemsRemainBoundedWithoutLosingTheServerTotalAndLargerPagesAreRejected() {
         val cache = BrowserPageCache(nowMs = { 0L })
         val valid = page(count = 40, totalCount = 2_000)

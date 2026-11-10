@@ -12,9 +12,11 @@ data class BrowserUserDataChange(val item: MediaItem, val data: MediaUserData, v
 
     fun invalidates(query: LibraryQuery): Boolean {
         val types = query.resultItemTypes
-        // 显式标记整剧/整季会改变子项，即使父项 played 不变；收藏响应附带的播放字段不代表级联操作。
-        val cascade = kind == Kind.PLAYED && item.type in setOf("Series", "Season")
-        if (cascade && (types.isEmpty() || types.any { it in setOf("Episode", "Season") })) return true
+        // 文件夹可含任意媒体且列表缺少完整祖先关系；显式标记时重验当前资料的浏览缓存。
+        // 整剧/整季只级联到季与集；父项 played 未变也不代表子项未变。
+        val cascade = item.type == "Folder" || item.type in setOf("Series", "Season") &&
+            (types.isEmpty() || types.any { it in setOf("Episode", "Season") })
+        if (kind == Kind.PLAYED && cascade) return true
         if (types.isNotEmpty() && item.type !in types) return false
         return favoriteChanged && (query.favorite != null || query.tab == LibraryTab.FAVORITES) ||
             playbackChanged && (query.played != null || query.tab == LibraryTab.RESUME || query.sort == LibrarySort.DATE_PLAYED)

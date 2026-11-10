@@ -435,7 +435,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                 }
                             } else if (browserKey != null && librarySelection.isNotEmpty()) {
                                 val selected = state.browsers[browserKey]?.content?.items.orEmpty().filter { it.id in librarySelection }
-                                LibrarySelectionBar(selected.size, busy = BATCH_KEY in state.actionBusy,
+                                LibrarySelectionBar(selected, busy = BATCH_KEY in state.actionBusy,
                                     canDelete = session?.canDelete == true && selected.any { it.canDelete != false },
                                     canRefresh = session?.isAdministrator == true,
                                     onCancel = { librarySelection = emptySet() }) { action ->

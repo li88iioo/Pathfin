@@ -157,8 +157,8 @@ internal fun BrowserScreen(
                             item(key = "browser-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error, retry = onRetry) }
                         }
                         gridItemsIndexed(state.content.items, key = { _, item -> item.id }) { index, item ->
-                            // 目录和分类是导航入口，避免影片批量操作递归修改整个目录。
-                            val selectable = !genresPage && !peoplePage && item.type !in setOf("Genre", "Person", "Folder", "CollectionFolder")
+                            // 类型、人物与媒体库根目录是导航入口；混合库里的文件夹与剧集一样可批量操作，删除时另行提示会连同内容一起删除。
+                            val selectable = !genresPage && !peoplePage && item.type !in setOf("Genre", "Person", "CollectionFolder")
                             BrowserMediaCard(item, session, api, state.style, Modifier.fillMaxWidth(),
                                 imageWidth = imageWidths[index % columns].takeIf { it > 0.dp }, libraryStyle = true,
                                 selected = if (selecting && selectable) item.id in selection else null,

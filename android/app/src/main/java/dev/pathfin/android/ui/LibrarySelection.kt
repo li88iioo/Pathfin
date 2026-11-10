@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.MetadataRefreshOptions
 import dev.pathfin.android.domain.MetadataRefreshScope
 import dev.pathfin.android.i18n.tr
@@ -25,13 +26,16 @@ import dev.pathfin.android.i18n.tr
 /** 媒体库多选时替换标题栏：左侧取消，右侧更多菜单承载批量操作。 */
 @Composable
 internal fun RowScope.LibrarySelectionBar(
-    count: Int,
+    selected: List<MediaItem>,
     busy: Boolean,
     canDelete: Boolean,
     canRefresh: Boolean,
     onCancel: () -> Unit,
     onAction: (BatchMediaAction) -> Unit,
 ) {
+    val count = selected.size
+    // 删除文件夹会连同其中全部媒体与文件一起删除，影响远大于单个条目，确认时单独说明。
+    val includesFolders = selected.any { it.type == "Folder" }
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var refreshDialog by remember { mutableStateOf(false) }
@@ -61,7 +65,8 @@ internal fun RowScope.LibrarySelectionBar(
     if (confirmDelete) AppAlertDialog(
         onDismissRequest = { confirmDelete = false },
         title = { Text(tr("删除媒体")) },
-        text = { Text(tr("确认删除已选的 %1\$s 项？此操作会删除服务器中的媒体及对应文件，无法撤销。", count)) },
+        text = { Text(tr("确认删除已选的 %1\$s 项？此操作会删除服务器中的媒体及对应文件，无法撤销。", count) +
+            if (includesFolders) "\n\n" + tr("其中包含文件夹，文件夹内的全部媒体与文件会一并删除。") else "") },
         confirmButton = { DialogAction(tr("确认删除"), { confirmDelete = false; onAction(BatchMediaAction.Delete) },
             Modifier.testTag("library-selection-delete-confirm"), role = DialogActionRole.Danger) },
         dismissButton = { DialogAction(tr("取消"), { confirmDelete = false }) },
