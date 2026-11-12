@@ -64,6 +64,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -389,7 +390,10 @@ internal fun MenuDivider() {
     Hairline(Modifier.padding(horizontal = 18.dp, vertical = 4.dp))
 }
 
-/** 全站统一的搜索框：白底圆角卡片配常驻细描边，聚焦只让放大镜变色、不加彩色外框；清空位常驻，避免输入首字时文字区跳动。 */
+/**
+ * 全站统一的搜索框：白底圆角卡片配常驻细描边，聚焦只让放大镜变色、不加彩色外框；清空位常驻，避免输入首字时文字区跳动。
+ * frosted 用于压在毛玻璃页头里的搜索框：底子取页面模糊，深色页头（白色前景）上换成浅白玻璃与白字。
+ */
 @Composable
 internal fun PathfinSearchField(
     query: String,
@@ -398,36 +402,45 @@ internal fun PathfinSearchField(
     onClear: () -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
+    frosted: Boolean = false,
 ) {
     val interactions = remember { MutableInteractionSource() }
     val focused by interactions.collectIsFocusedAsState()
     val shape = RoundedCornerShape(CardRadius)
+    val onDark = frosted && LocalContentColor.current.luminance() > 0.5f
+    val text = if (onDark) Color.White else PathfinAppearance.textMain
+    val muted = if (onDark) Color.White.copy(alpha = 0.62f) else PathfinAppearance.textMuted
+    val surface = when {
+        onDark -> Modifier.frostedCard(0.14f, Color.White, 32.dp, fallback = Color.White.copy(alpha = 0.14f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.16f), shape)
+        frosted -> Modifier.frostedControl().border(PathfinAppearance.glassBorder, shape)
+        else -> Modifier.background(PathfinAppearance.card).border(PathfinAppearance.cardBorder, shape)
+    }
     BasicTextField(
         query, onChange,
         modifier,
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.5.sp, lineHeight = 22.sp, color = PathfinAppearance.textMain),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.5.sp, lineHeight = 22.sp, color = text),
         cursorBrush = SolidColor(PathfinAppearance.accent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
         interactionSource = interactions,
         decorationBox = { inner ->
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 54.dp).clip(shape).background(PathfinAppearance.card)
-                    .border(PathfinAppearance.cardBorder, shape)
+                Modifier.fillMaxWidth().heightIn(min = 54.dp).clip(shape).then(surface)
                     .padding(start = 16.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(PathfinIcons.Search, null, Modifier.size(19.dp), tint = if (focused) PathfinAppearance.accent else PathfinAppearance.textMuted)
+                Icon(PathfinIcons.Search, null, Modifier.size(19.dp), tint = if (focused && !onDark) PathfinAppearance.accent else muted)
                 Box(Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 14.dp)) {
                     if (query.isEmpty()) Text(placeholder, fontSize = 15.5.sp, lineHeight = 22.sp,
-                        color = PathfinAppearance.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        color = muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     inner()
                 }
                 // 清空位始终保留，首字输入不会缩短文本区或挤动占位文字。
                 Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
                     if (query.isNotEmpty()) PathfinIconButton(PathfinIcons.Close, tr("清空搜索"), onClear,
-                        Modifier.testTag("search-clear"), tint = PathfinAppearance.textMuted)
+                        Modifier.testTag("search-clear"), tint = muted)
                 }
             }
         },

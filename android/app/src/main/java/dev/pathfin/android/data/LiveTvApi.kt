@@ -1,6 +1,7 @@
 package dev.pathfin.android.data
 
 import dev.pathfin.android.domain.LiveTvCapabilities
+import dev.pathfin.android.domain.LiveTvCategory
 import dev.pathfin.android.domain.LiveTvChannel
 import dev.pathfin.android.domain.LiveTvPage
 import dev.pathfin.android.domain.LiveTvProgram
@@ -43,7 +44,9 @@ class LiveTvApi(private val api: JellyfinApi) {
             if (!IDENTIFIER.matches(media.id)) invalid(tr("频道标识"))
             val channel = media.copy(name = media.name.take(512), overview = media.overview.take(20_000),
                 type = when (media.type) { "TvChannel", "LiveTvChannel" -> media.type; else -> "TvChannel" }, positionTicks = 0, runTimeTicks = 0)
-            LiveTvChannel(channel, text(item, "ChannelNumber"), item.optJSONObject("CurrentProgram")?.let { program(it, media.id) })
+            LiveTvChannel(channel, text(item, "ChannelNumber"), item.optJSONObject("CurrentProgram")?.let { program(it, media.id) },
+                // 上次观看只是辅助入口，格式异常时忽略，不让整页频道读取失败。
+                item.optJSONObject("UserData")?.let { text(it, "LastPlayedDate") }?.let { runCatching { Instant.parse(it) }.getOrNull() })
         }.also { page -> if (page.items.map { it.id }.distinct().size != page.items.size) invalid(tr("重复频道")) }
     }
 
@@ -90,7 +93,8 @@ class LiveTvApi(private val api: JellyfinApi) {
         val end = date(json, "EndDate")
         if (start != null && end != null && end <= start) invalid(tr("节目起止时间"))
         return LiveTvProgram(id, channelId, (text(json, "Name") ?: tr("未命名节目")).take(512), text(json, "EpisodeTitle")?.take(512),
-            text(json, "Overview").orEmpty().take(20_000), start, end, json.opt("IsRepeat") == true)
+            text(json, "Overview").orEmpty().take(20_000), start, end, json.opt("IsRepeat") == true,
+            LiveTvCategory.entries.filterTo(mutableSetOf()) { json.opt(it.jsonKey) == true })
     }
 
     private fun <T> page(json: JSONObject, startIndex: Int, limit: Int, map: (JSONObject) -> T): LiveTvPage<T> {

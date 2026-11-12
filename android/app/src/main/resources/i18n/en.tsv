@@ -614,7 +614,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 搜索字幕	Search subtitles
 搜索已加载的 %1$s 个频道，可继续搜索全部频道	Searching %1$s loaded channels; you can search all channels
 搜索当前媒体库	Search this library
-搜索直播频道或当前节目	Search live channels or current programs
 搜索组件、版本或许可	Search components, versions or licenses
 搜索缺少的元数据	Search for missing metadata
 搜索背景图	Search backdrops
@@ -736,7 +735,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 时长未知	Unknown duration
 时间	Time
 时间偏移	Time offset
-时间未知	Unknown time
 明天	Tomorrow
 是	Yes
 显示上次播放时间	Show last played time
@@ -1042,13 +1040,9 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 目录不可用，请重新选择	The folder is unavailable. Choose again
 目标文件不可用，请重新选择本地保存位置	The destination file is unavailable. Choose a local save location again
 直接播放频道的直播源地址，不经服务器转码；设备不支持其编码时可能无法播放	Play the channel's live source directly without server transcoding; may not play if the device doesn't support its codec
-直播中	Live
 直播列表分页范围无效	Invalid live list page range
 直播源直连	Direct live source
 直播电视	Live TV
-直播电视 · %1$s 个频道	Live TV · %1$s channels
-直播电视 · 已载入 %1$s / %2$s 个频道	Live TV · %1$s / %2$s channels loaded
-直播频道	Live channels
 直连直播源	Direct live source
 相关条目	Related items
 码率	Bitrate
@@ -1381,9 +1375,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 音频解码	Audio decoding
 音频解码、硬件解码与 ASS 字幕扩展	Audio decoding, hardware decoding & ASS subtitle extension
 预告片	Trailers
-频道 %1$s	Channel %1$s
 频道 %1$s · 节目单	Channel %1$s · Guide
-频道与节目单来自当前 Jellyfin 服务器	Channels and guide come from the current Jellyfin server
 频道列表已变化，请下拉刷新重试	The channel list changed. Pull down to refresh and retry
 频道标识	Channel ID
 频道标识无效	Invalid channel ID
@@ -1508,3 +1500,15 @@ GitHub 请求过于频繁，请稍后重试	Too many requests to GitHub. Please 
 已选中	Selected
 下一集 %1$s	Next episodes %1$s
 深色模式、主题色、导航与状态栏	Dark mode, accent color, navigation and status bar
+体育	Sports
+新闻	News
+少儿	Kids
+%1$s 个	%1$s
+全部频道	All channels
+其他频道	Other channels
+已载入 %1$s / %2$s	%1$s of %2$s loaded
+搜索频道、节目或台号	Search channels, programs or numbers
+上次观看	Last watched
+继续看	Resume
+重播	Rerun
+搜索频道	Search channels

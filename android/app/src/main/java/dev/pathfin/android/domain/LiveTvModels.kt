@@ -14,6 +14,8 @@ data class LiveTvChannel(
     val item: MediaItem,
     val number: String? = null,
     val currentProgram: LiveTvProgram? = null,
+    /** 服务器记录的本账号上次观看时间，用于「上次观看」入口。 */
+    val lastPlayedAt: Instant? = null,
 ) {
     val id: String get() = item.id
     val name: String get() = item.name
@@ -28,6 +30,7 @@ data class LiveTvProgram(
     val start: Instant? = null,
     val end: Instant? = null,
     val isRepeat: Boolean = false,
+    val categories: Set<LiveTvCategory> = emptySet(),
 ) {
     fun isAiring(now: Instant): Boolean = start != null && end != null && end > start && now >= start && now < end
 
@@ -42,6 +45,9 @@ data class LiveTvProgram(
             (total.seconds.toDouble() + total.nano / 1_000_000_000.0)).coerceIn(0.0, 1.0).toFloat()
     }
 }
+
+/** 节目单提供的节目类型，频道按正在播出的节目归类筛选。 */
+enum class LiveTvCategory(val jsonKey: String) { MOVIE("IsMovie"), SPORTS("IsSports"), NEWS("IsNews"), KIDS("IsKids") }
 
 /** 分页游标按服务端原始返回条数推进，不使用 UI 去重后的列表长度。 */
 data class LiveTvPage<T>(val items: List<T>, val totalCount: Int, val startIndex: Int) {

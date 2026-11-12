@@ -27,6 +27,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.longClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.JellyfinApi
@@ -80,11 +81,13 @@ class LiveTvUiTest {
         val played = AtomicReference<MediaItem?>()
         show(fixture) { played.set(it) }
         waitFor("live-tv-channel-seagull")
+        openSearch()
         compose.onNodeWithTag("live-tv-search").performTextInput("海鸥")
         compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
-        compose.onNodeWithTag("live-tv-play-seagull").performVerificationClick(compose)
+        // 整行点按即播放。
+        compose.onNodeWithTag("live-tv-channel-seagull").performVerificationClick(compose)
         compose.runOnIdle { assertEquals("seagull", played.get()?.id); assertEquals("TvChannel", played.get()?.type) }
-        compose.onNodeWithTag("live-tv-guide-seagull").performVerificationClick(compose)
+        openGuide("seagull")
         waitFor("live-tv-program-current")
         compose.onNodeWithTag("live-tv-watch-program-current").assertExists()
         compose.onNodeWithTag("live-tv-program-future").performScrollTo().assertVerificationDisplayed(compose)
@@ -118,7 +121,7 @@ class LiveTvUiTest {
         show(fixture)
         compose.waitUntil(5_000) { compose.onAllNodesWithText("没有直播电视权限").fetchSemanticsNodes().size == 1 }
         compose.onNodeWithText("没有直播电视权限").assertVerificationDisplayed(compose)
-        compose.onNodeWithTag("live-tv-play-harbour").assertDoesNotExist()
+        compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
         assertEquals(listOf("/proxy/Users/Me"), fixture.paths.toList())
     }
 
@@ -130,6 +133,7 @@ class LiveTvUiTest {
             scrollEnd("live-tv-channel-list", "live-tv-channel-channel-39")
             compose.waitUntil(WAIT_MS) { fixture.channelPages.heldStarted.count == 0L }
             // 先关闭自动追加再释放第二页，固定已读范围；收起输入法后比较返回位置。
+            openSearch()
             compose.onNodeWithTag("live-tv-search").performTextInput("合成频道")
             compose.onNodeWithTag("live-tv-search").performImeAction()
             fixture.channelPages.releaseHeld.countDown()
@@ -219,6 +223,7 @@ class LiveTvUiTest {
                 scrollEnd("live-tv-channel-list", "live-tv-channel-channel-39")
                 compose.waitUntil(WAIT_MS) { probe.heldStarted.count == 0L }
                 // 保留同样的结果集合，同时禁止追加完成后的自动分页干扰待验证的整段刷新。
+                openSearch()
                 val search = compose.onNodeWithTag("live-tv-search")
                 search.performTextInput("合成频道")
                 search.performImeAction()
@@ -265,7 +270,7 @@ class LiveTvUiTest {
             host.clock.addAndGet(60_001)
             reenter(host)
             compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("live-tv-channel-harbour").fetchSemanticsNodes().isEmpty() }
-            compose.onNodeWithTag("live-tv-play-harbour").assertDoesNotExist()
+            compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
             assertNoNewRequests(denied.channelPages, 2)
             assertEquals(0, host.authExpired.get())
 
@@ -309,11 +314,54 @@ class LiveTvUiTest {
     @Test fun guideAppendsOnScrollAndRefreshKeepsTheReadRangeAfterAnAppendFailure() =
         exercisePagination(programs = true)
 
+    @Test fun overviewResumesLastWatchedPinsFavoritesAndFiltersByWhatIsOnNow() {
+        val fixture = Fixture(rich = true)
+        val played = AtomicReference<MediaItem?>()
+        show(fixture) { played.set(it) }
+        waitFor("live-tv-resume")
+        compose.onNodeWithText("上次观看").assertVerificationDisplayed(compose)
+        // 收藏既是筛选项也是置顶分组的标题。
+        assertEquals(2, compose.onAllNodesWithText("收藏").fetchSemanticsNodes().size)
+        // 只列出当前有频道可归入的筛选项。
+        listOf("all", "favorites", "sports", "news").forEach { compose.onNodeWithTag("live-tv-filter-$it").assertExists() }
+        listOf("movie", "kids").forEach { compose.onNodeWithTag("live-tv-filter-$it").assertDoesNotExist() }
+        compose.onNodeWithTag("live-tv-resume-play").performVerificationClick(compose)
+        compose.runOnIdle { assertEquals("harbour", played.get()?.id) }
+        compose.onNodeWithTag("live-tv-filter-news").performVerificationClick(compose)
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("live-tv-channel-harbour").fetchSemanticsNodes().isEmpty() }
+        compose.onNodeWithTag("live-tv-channel-seagull").assertVerificationDisplayed(compose)
+        compose.onNodeWithTag("live-tv-resume").assertDoesNotExist()
+        compose.onNodeWithTag("live-tv-filter-all").performVerificationClick(compose)
+        waitFor("live-tv-channel-harbour")
+        waitFor("live-tv-resume")
+    }
+
+    @Test fun longPressOpensTheGuideWithoutPlaying() {
+        val played = AtomicReference<MediaItem?>()
+        show(Fixture()) { played.set(it) }
+        waitFor("live-tv-channel-seagull")
+        compose.onNodeWithTag("live-tv-channel-seagull").performVerificationTouchInput(compose) { longClick() }
+        waitFor("live-tv-program-current")
+        compose.runOnIdle { assertEquals(null, played.get()) }
+    }
+
+    @Test fun rowsWithoutPlaybackRightsOpenTheGuideInsteadOfPlaying() {
+        val played = AtomicReference<MediaItem?>()
+        show(Fixture(playable = false)) { played.set(it) }
+        waitFor("live-tv-channel-seagull")
+        compose.onNodeWithText("未获播放权限", substring = true).assertExists()
+        compose.onNodeWithTag("live-tv-channel-seagull").performVerificationClick(compose)
+        waitFor("live-tv-program-current")
+        compose.onNodeWithTag("live-tv-watch-program-current").assertExists()
+        compose.runOnIdle { assertEquals(null, played.get()) }
+    }
+
     @Test fun channelSearchExplainsItsLoadedScopeAndOnlyExplicitlySearchesTheWholeLibrary() {
         Fixture(paginated = true).use { fixture ->
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             assertEquals(listOf(0), fixture.channelPages.requests.map { it.startIndex })
+            openSearch()
             compose.onNodeWithTag("live-tv-search").performTextInput("远方频道")
             compose.onNodeWithText("搜索已加载的", substring = true).assertVerificationDisplayed(compose)
             compose.onNodeWithText("没有匹配的频道").assertVerificationDisplayed(compose)
@@ -347,6 +395,7 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             fixture.channelPages.holdAt.set(40)
+            openSearch()
             compose.onNodeWithTag("live-tv-search").performTextInput("远方频道")
             compose.onNodeWithTag("live-tv-more").performScrollTo().performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.channelPages.heldStarted.count == 0L }
@@ -368,7 +417,7 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             if (programs) {
-                compose.onNodeWithTag("live-tv-guide-channel-0").performVerificationClick(compose)
+                openGuide("channel-0")
                 waitFor("live-tv-program-program-0")
             }
             val size = if (programs) 80 else 40
@@ -387,7 +436,7 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             if (programs) {
-                compose.onNodeWithTag("live-tv-guide-channel-0").performVerificationClick(compose)
+                openGuide("channel-0")
                 waitFor("live-tv-program-program-0")
             }
             val probe = if (programs) fixture.programPages else fixture.channelPages
@@ -426,9 +475,9 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             if (programs) {
-                val guide = compose.onNodeWithTag("live-tv-guide-channel-0")
+                val guide = compose.onNodeWithTag("live-tv-channel-channel-0")
                 VerificationDisplay.awaitWindowReady(compose, "live-tv-open-guide", guide)
-                guide.performVerificationClick(compose)
+                openGuide("channel-0")
                 waitFor("live-tv-program-program-0")
             }
             val probe = if (programs) fixture.programPages else fixture.channelPages
@@ -517,6 +566,16 @@ class LiveTvUiTest {
         assertEquals(before.bottom.value, after.bottom.value, .5f)
     }
 
+    /** 宫格里没有节目单按钮，长按频道打开。 */
+    private fun openGuide(channelId: String) =
+        compose.onNodeWithTag("live-tv-channel-$channelId").performVerificationTouchInput(compose) { longClick() }
+
+    /** 搜索框默认收起成按钮，输入前先展开。 */
+    private fun openSearch() {
+        compose.onNodeWithTag("live-tv-search-open").performVerificationClick(compose)
+        waitFor("live-tv-search")
+    }
+
     private fun waitFor(tag: String) = compose.waitUntil(5_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
 
     private class ScreenHost(fixture: Fixture) {
@@ -589,7 +648,7 @@ class LiveTvUiTest {
     }
 
     private class Fixture(allowed: Boolean = true, blockRefresh: Boolean = false, private val paginated: Boolean = false,
-        private val empty: Boolean = false,
+        private val empty: Boolean = false, private val rich: Boolean = false, playable: Boolean = true,
         val session: Session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User", "device"),
         private val channelPrefix: String = "") : Closeable {
         val paths = CopyOnWriteArrayList<String>()
@@ -604,7 +663,7 @@ class LiveTvUiTest {
             val now = Instant.now()
             var code = 200
             val body = when (path) {
-                "/proxy/Users/Me" -> JSONObject().put("Id", session.userId).put("Policy", JSONObject().put("IsDisabled", false).put("EnableLiveTvAccess", allowed).put("EnableMediaPlayback", true))
+                "/proxy/Users/Me" -> JSONObject().put("Id", session.userId).put("Policy", JSONObject().put("IsDisabled", false).put("EnableLiveTvAccess", allowed).put("EnableMediaPlayback", playable))
                 "/proxy/LiveTv/Info" -> JSONObject().put("IsEnabled", true)
                 "/proxy/LiveTv/Channels" -> {
                     val request = channelPages.read(chain.request().url)
@@ -615,6 +674,12 @@ class LiveTvUiTest {
                         val sourceIndex = if (channelPages.repeatBoundary.get() && request.startIndex in 1 until 80 && index == request.startIndex) index - 1 else index
                         channel("channel-$sourceIndex", channelName(sourceIndex, channelPages.refreshed))
                     }
+                    else if (rich) page(
+                        // 港湾：收藏、正在播体育、上次看过；海鸥：正在播新闻；灯塔：没有节目信息。
+                        channel("harbour", "港湾电视").put("UserData", JSONObject().put("IsFavorite", true).put("LastPlayedDate", now.minusSeconds(3600).toString()))
+                            .put("CurrentProgram", program("harbour-now", now.minusSeconds(600), now.plusSeconds(600), "harbour").put("IsSports", true)),
+                        channel("seagull", "海鸥电视").put("CurrentProgram", program("seagull-now", now.minusSeconds(300), now.plusSeconds(900)).put("IsNews", true)),
+                        channel("lighthouse", "灯塔电视"))
                     else page(channel("${channelPrefix}harbour", (if (channelPages.refreshed) "刷新 · " else "") + "港湾电视"),
                         channel("${channelPrefix}seagull", (if (channelPages.refreshed) "刷新 · " else "") + "海鸥电视"))
                 }

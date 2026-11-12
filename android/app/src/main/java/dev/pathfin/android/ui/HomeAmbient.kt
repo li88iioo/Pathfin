@@ -162,19 +162,19 @@ private fun AmbientHero(entry: AmbientEntry, session: Session, api: JellyfinApi,
                 .fillMaxWidth((item.positionTicks.toFloat() / item.runTimeTicks).coerceIn(0f, 1f)).background(Color.White))
         }
         // 详情从点击剧照区或再次点击已选中的小图进入，这里只留播放。
-        if (onPlay != null) PlayButton(if (item.positionTicks > 0) tr("继续播放") else tr("播放"), preparing,
+        if (onPlay != null) AmbientPlayButton(if (item.positionTicks > 0) tr("继续播放") else tr("播放"), preparing,
             Modifier.padding(top = 6.dp)) { onPlay(item) }
     }
 }
 
-/** 压在剧照上的播放键：白色实心胶囊，两套主题相同。 */
+/** 压在剧照上的播放键：白色实心胶囊，两套主题相同；首页与直播沉浸区共用。 */
 @Composable
-private fun PlayButton(label: String, busy: Boolean, modifier: Modifier, onClick: () -> Unit) {
+internal fun AmbientPlayButton(label: String, busy: Boolean, modifier: Modifier, tag: String = "home-ambient-play", onClick: () -> Unit) {
     val content = Color(0xFF16171B)
     Row(modifier.heightIn(min = 44.dp).clip(CircleShape).background(Color.White)
         .clickable(enabled = !busy, role = Role.Button, onClick = onClick)
         .semantics { if (busy) stateDescription = tr("正在准备播放") }
-        .padding(horizontal = 20.dp).testTag("home-ambient-play"),
+        .padding(horizontal = 20.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (busy) PathfinSpinner(content, Modifier.size(18.dp))
         else Icon(PathfinIcons.Play, null, Modifier.size(18.dp), tint = content)
@@ -186,7 +186,7 @@ private fun PlayButton(label: String, busy: Boolean, modifier: Modifier, onClick
  * 剧照上的遮罩：顶部压暗托住状态栏，中段轻、标题处再加深；最后一段黑色逐渐退掉、页面底色逐渐盖上，
  * 剧照本身的颜色直接淡进底色，浅色模式下不会先变成一段灰。
  */
-private fun ambientScrim(canvas: Color, fadeStart: Float): Brush {
+internal fun ambientScrim(canvas: Color, fadeStart: Float): Brush {
     fun smooth(value: Float) = value.coerceIn(0f, 1f).let { it * it * (3f - 2f * it) }
     fun mix(from: Float, to: Float, t: Float) = from + (to - from) * smooth(t)
     val stops = Array(64) { index ->

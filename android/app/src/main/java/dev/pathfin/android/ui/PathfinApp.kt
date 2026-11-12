@@ -230,7 +230,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     var imageEditor by remember(session, route) { mutableStateOf(false) }
     var imageEditorBusy by remember(session, route) { mutableStateOf(false) }
     var detailScrolled by remember(route) { mutableStateOf(false) }
-    var homeAmbientCovered by remember(route) { mutableStateOf(false) }
+    var ambientCovered by remember(route) { mutableStateOf(false) }
     var navigationVisible by remember { mutableStateOf(true) }
     val pageActive = LocalPageActive.current
     LaunchedEffect(route, pageActive) {
@@ -261,19 +261,19 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     val navigationBottomInset = (if (hasBottomNavigation) 88.dp else 16.dp) + navigationBarHeight
     val lightSurface = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     // 在组合中读取滚动状态：只在SideEffect里读会漏掉详情子树独立重组后的前景切换。
-    // 首页氛围区在标题栏下方时，标题栏与状态栏都按深色剧照使用白色前景。
-    val homeOverAmbient = route == Route.Home && homeAmbientCovered
+    // 首页与直播的氛围区在标题栏下方时，标题栏与状态栏都按深色背景使用白色前景。
+    val overAmbient = (route == Route.Home || route == Route.LiveTv) && ambientCovered
     // 详情滚过头图只重组这个小作用域与下面的详情标题栏，不带动整页内容重组。
     RecomposeScope {
-        val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !homeOverAmbient
+        val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !overAmbient
         SideEffect {
             if (pageActive) (context as? Activity)?.let { activity -> WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = lightStatusBars }
         }
     }
 
     val discoveryPage = insideServer && (route == Route.Search || route == Route.Favorites)
-    // 搜索、元数据编辑、识别与控制台各自绘制毛玻璃顶栏，这里只留出状态栏。
-    val toolOwnsTopBar = route is Route.MediaTools || route is Route.Identification || route == Route.ServerAdministration
+    // 搜索、元数据编辑、识别、直播电视与控制台各自绘制毛玻璃顶栏，这里只留出状态栏。
+    val toolOwnsTopBar = route is Route.MediaTools || route is Route.Identification || route == Route.LiveTv || route == Route.ServerAdministration
     val ownTopBar = discoveryPage || route is Route.LibrarySearch || toolOwnsTopBar
     val hasHeader = !isDetail && !showManager && !standaloneTool && !ownTopBar
     val headerInset = when {
@@ -337,7 +337,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                             onChanged = { vm.mediaChanged(session, route.item.id) }, onAuthExpired = { vm.authenticationExpired(session) })
                     } else if (route == Route.LiveTv && session != null) {
                         state.liveTv?.let { liveTv -> LiveTvScreen(liveTv, onBack = { vm.back() }, onPlay = { vm.preparePlayback(it, true) },
-                            preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }) }
+                            preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }, onAmbientCovered = { ambientCovered = it }) }
                     } else if (route == Route.ServerAdministration && session != null) {
                         state.administration?.let { ServerAdministrationScreen(it, onBack = { vm.back() }) }
                     } else savedState.SaveableStateProvider(state.savedPageKey()) {
@@ -357,7 +357,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                     HomeScreen(visibleHome, session, vm.api, vm::open, vm::refreshHomeFromPage,
                                         onPlay = { vm.preparePlayback(it, loadDetails = true) },
                                         preparingIds = setOfNotNull(preparing?.id, preparing?.seriesId),
-                                        onAmbientCovered = { homeAmbientCovered = it })
+                                        onAmbientCovered = { ambientCovered = it })
                                 }
                                 Route.Libraries -> LibrariesScreen(state.home.copy(libraries = state.home.libraries.filterNot { it.collectionType == "livetv" }),
                                     session, vm.api, vm::open, vm::refreshHomeFromPage)
@@ -403,7 +403,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
             // 标题栏自己接住点击，不再穿透到下面的海报；双击发出“回到顶部”。
             if (hasHeader) PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
                 .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scrollToTopRequests.intValue++ }) }, height = headerInset,
-                dark = homeOverAmbient) {
+                dark = overAmbient) {
                         Row(Modifier.fillMaxWidth()
                             .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
                             .heightIn(min = 60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
