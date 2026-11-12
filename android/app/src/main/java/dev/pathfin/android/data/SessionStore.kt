@@ -151,7 +151,6 @@ class SessionStore(context: Context) {
                     id = json.getString("id"),
                     session = parseSession(json.getJSONObject("session")),
                     displayName = json.getString("displayName"),
-                    icon = json.optString("icon", ""),
                     showUserName = json.optBoolean("showUserName", true),
                     showLastPlayed = json.optBoolean("showLastPlayed", true),
                     lastPlayedAt = json.optLong("lastPlayedAt", 0),
@@ -188,7 +187,7 @@ class SessionStore(context: Context) {
             }
             array.put(JSONObject()
                 .put("id", profile.id).put("session", sessionJson(profile.session))
-                .put("displayName", profile.displayName).put("icon", profile.icon)
+                .put("displayName", profile.displayName)
                 .put("showUserName", profile.showUserName).put("showLastPlayed", profile.showLastPlayed)
                 .put("lastPlayedAt", profile.lastPlayedAt).put("addresses", addresses).put("autoAddress", profile.autoAddress))
         }

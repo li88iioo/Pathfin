@@ -129,7 +129,7 @@ class SoftPressIndicationTest {
     @Test fun actualServerCardKeepsCoverEdgesAndMoreStaysIndependent() {
         val profile = ServerProfile("synthetic-press-profile",
             Session(ServerConfig("https://fixture.invalid"), "synthetic-token", "synthetic-user", "Synthetic", "synthetic-device"),
-            "合成按压服务器", icon = "S", showUserName = false, showLastPlayed = false)
+            "合成按压服务器", showUserName = false, showLastPlayed = false)
         val resume = MediaItem("synthetic-resume", "合成续播", "Movie", runTimeTicks = 54_000_000_000L, positionTicks = 6_000_000_000L)
         val api = JellyfinApi()
         // 空海报、无 image tag 的续播与自定义账号图标不会产生图片 URL 或网络请求。

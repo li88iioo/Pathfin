@@ -119,10 +119,10 @@ class UiPreviewTest {
             libraryItems = mapOf(libraries[0].id to movies.take(5), libraries[1].id to movies.drop(3), libraries[2].id to movies.reversed().take(4)),
             loaded = true,
         )
-        val profiles = listOf(ServerProfile("preview-local", session, "本地测试片库", icon = "🎬"), ServerProfile("preview-other", session.copy(userName = "备用测试账号"), "备用测试片库", icon = "📺", lastPlayedAt = System.currentTimeMillis() - 3600000))
+        val profiles = listOf(ServerProfile("preview-local", session, "本地测试片库"), ServerProfile("preview-other", session.copy(userName = "备用测试账号"), "备用测试片库", lastPlayedAt = System.currentTimeMillis() - 3600000))
         val scrollingProfiles = profiles + List(10) { index -> ServerProfile("preview-scroll-$index",
             session.copy(userId = "preview-scroll-user-$index", userName = "合成账号 ${index + 1}"),
-            "家庭片库 ${index + 1}", icon = if (index % 2 == 0) "🎞️" else "🎧") }
+            "家庭片库 ${index + 1}") }
         val browser = BrowserUiState(content = ContentState(items = movies, total = movies.size, nextIndex = movies.size),
             query = LibraryQuery(itemTypes = setOf("Movie", "Series")), filterOptions = LibraryFilterOptions(genres = listOf("剧情", "冒险"), years = listOf(2024, 2025, 2026), officialRatings = listOf("PG-13")))
         val base = AppState(session = session, home = home, theme = ThemePreference.LIGHT, preferences = AppPreferences(), profiles = profiles, currentProfileId = profiles.first().id,

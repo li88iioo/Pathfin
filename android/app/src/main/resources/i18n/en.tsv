@@ -362,7 +362,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 在播放控制栏显示电量百分比	Show battery percentage on the playback controls
 在播放控制栏显示章节入口	Show a chapters button on the playback controls
 在播放控制栏显示系统时间	Show the system time on the playback controls
-在服务器列表中替代账号头像	Replaces the account avatar in the server list
 在本机显示为	Shown on this device as
 在浏览与详情页加载海报与背景图	Load posters and backdrops on browse and details pages
 在浏览器打开%1$s	Open %1$s in browser
@@ -1141,7 +1140,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 自动跳过片头	Auto-skip intros
 自动选择	Auto select
 自定义分级	Custom rating
-自定义图标	Custom icon
 色彩原色	Color primaries
 色彩空间	Color space
 色彩范围	Color range
@@ -1404,7 +1402,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 鸢尾	Iris
 默认	Default
 默认使用服务器名称	Uses the server name by default
-默认图标	Default icon
 默认蓝	Default blue
 （	 (
 （%1$s）	 (%1$s)

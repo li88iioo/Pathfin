@@ -86,7 +86,7 @@ class ServerProfilesFlowTest {
     @Test
     fun sharedBackendProfilesSurviveRepeatedSwitchesVmRestoreAndSameAddressRelogin() = withServers { env ->
         val first = login(env, env.first, "合成服务器 A").copy(
-            icon = "A", showUserName = false, showLastPlayed = false, lastPlayedAt = 111_000,
+            showUserName = false, showLastPlayed = false, lastPlayedAt = 111_000,
         ).also { updateProfile(env, it) }
         // 备用地址仍属于 A；以后显式添加 B 不能因此把两份资料合并。
         val originalFirst = first.copy(addresses = listOf(env.second.config))
@@ -97,7 +97,7 @@ class ServerProfilesFlowTest {
         assertTrue(env.second.publicProbes.get() > 0)
         assertTrue(env.second.validations.get() > 0)
         val originalSecond = login(env, env.second, "合成服务器 B").copy(
-            icon = "B", showUserName = true, showLastPlayed = false, lastPlayedAt = 222_000,
+            showUserName = true, showLastPlayed = false, lastPlayedAt = 222_000,
         ).also { updateProfile(env, it) }
         assertNotEquals(originalFirst.id, originalSecond.id)
         assertEquals(originalFirst.session.serverId, originalSecond.session.serverId)
@@ -213,7 +213,7 @@ class ServerProfilesFlowTest {
 
     @Test
     fun reauthenticationCannotReplaceAProfileWithAnotherUserOrServer() = withServers { env ->
-        val first = login(env, env.first, "合成服务器 A").copy(icon = "A", showUserName = false)
+        val first = login(env, env.first, "合成服务器 A").copy(showUserName = false)
             .also { updateProfile(env, it) }
         val second = login(env, env.second, "合成服务器 B")
         val expected = listOf(first, second)
@@ -579,9 +579,9 @@ class ServerProfilesFlowTest {
             assertEquals(second, api.validateSession(second))
             first to second
         }
-        val first = ServerProfile("synthetic-legacy-a", sessions.first, "旧资料 A", icon = "A",
+        val first = ServerProfile("synthetic-legacy-a", sessions.first, "旧资料 A",
             showUserName = false, showLastPlayed = false, lastPlayedAt = 333_000, addresses = listOf(env.second.config))
-        val second = ServerProfile("synthetic-legacy-b", sessions.second, "旧资料 B", icon = "B",
+        val second = ServerProfile("synthetic-legacy-b", sessions.second, "旧资料 B",
             showUserName = true, showLastPlayed = false, lastPlayedAt = 444_000, addresses = listOf(env.first.config))
         SessionStore(context()).apply {
             upsertProfile(first); upsertProfile(second); selectProfile(if (activeFirst) first.id else second.id)

@@ -1,5 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalAnimationApi::class,
-    androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalAnimationApi::class)
 
 package dev.pathfin.android.ui
 
@@ -199,26 +198,6 @@ internal fun ServerManagementScreen(
             }
             "name" -> target?.let { profile ->
                 DisplayNameDialog(profile, api, dismiss) { name -> onUpdate(profile.copy(displayName = name)); dialog = null }
-            }
-            "icon" -> target?.let { profile ->
-                AppDialog(dismiss, tr("自定义图标"), subtitle = tr("在服务器列表中替代账号头像"), actions = cancel) {
-                    FlowRow(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf("", "🎬", "📺", "🍿", "🎞️", "🌟", "🌊", "🏠", "🌙", "🚀", "🐱", "🎧").forEach { icon ->
-                            val selected = profile.icon == icon
-                            val shape = RoundedCornerShape(12.dp)
-                            Box(
-                                Modifier.size(48.dp).clip(shape).background(PathfinAppearance.softFill)
-                                    .border(1.5.dp, if (selected) PathfinAppearance.accent else Color.Transparent, shape)
-                                    .clickable(role = Role.Button) { onUpdate(profile.copy(icon = icon)); dialog = null },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (icon.isBlank()) Icon(PathfinIcons.User, tr("默认图标"), Modifier.size(20.dp),
-                                    tint = if (selected) PathfinAppearance.accent else PathfinAppearance.textSub)
-                                else Text(icon, fontSize = 22.sp)
-                            }
-                        }
-                    }
-                }
             }
             "password" -> target?.let { profile ->
                 var current by remember { mutableStateOf("") }
@@ -796,16 +775,9 @@ private fun ServerLine(profile: ServerProfile, api: JellyfinApi, onOpen: () -> U
 }
 
 @Composable
-private fun ServerAvatar(profile: ServerProfile, api: JellyfinApi, size: Dp) {
-    val shape = RoundedCornerShape(size / 4)
-    if (profile.icon.isBlank()) {
-        AccountAvatar(profile.session, api, Modifier.size(size), shape)
-        return
-    }
-    Box(Modifier.size(size).clip(shape).background(PathfinAppearance.softFill), contentAlignment = Alignment.Center) {
-        Text(profile.icon, fontSize = (size.value * 0.5f).sp)
-    }
-}
+private fun ServerAvatar(profile: ServerProfile, api: JellyfinApi, size: Dp) =
+    AccountAvatar(profile.session, api, Modifier.size(size), RoundedCornerShape(size / 4))
+
 @Composable
 private fun ErrorLine(message: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val error = MaterialTheme.colorScheme.error
@@ -846,7 +818,6 @@ private fun ServerActionSheet(
             }
             SheetGroup {
                 SheetRow(PathfinIcons.Type, tr("显示名称"), divider = false) { onAction("name") }
-                SheetRow(PathfinIcons.Smile, tr("自定义图标")) { onAction("icon") }
                 SheetRow(PathfinIcons.Edit, tr("编辑连接")) { onAction("edit") }
                 SheetRow(PathfinIcons.Route, tr("添加备用地址")) { onAction("address") }
                 if (profile.connectionAddresses.size > 1) SheetRow(PathfinIcons.Link, tr("连接地址"),

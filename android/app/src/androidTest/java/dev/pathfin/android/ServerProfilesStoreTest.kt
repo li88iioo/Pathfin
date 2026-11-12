@@ -79,7 +79,7 @@ class ServerProfilesStoreTest {
     fun sameServerAndUserAtTwoAddressesSurviveSaveRestoreAndTokenRefresh() {
         val firstSession = session(1)
         store.save(firstSession)
-        val first = store.loadProfiles().single().copy(displayName = "保留的旧名称", icon = "🎬",
+        val first = store.loadProfiles().single().copy(displayName = "保留的旧名称",
             showUserName = false, showLastPlayed = false, lastPlayedAt = 123L,
             addresses = listOf(ServerConfig("https://backup.invalid/jellyfin")))
         store.upsertProfile(first)
@@ -106,7 +106,7 @@ class ServerProfilesStoreTest {
 
     @Test
     fun selectedLegacyProfileIdWinsWhenTwoExistingRecordsMatchTheSameEndpoint() {
-        val first = ServerProfile("existing-first-id", session(1), "旧资料一", icon = "🎬")
+        val first = ServerProfile("existing-first-id", session(1), "旧资料一")
         val selected = ServerProfile("existing-selected-id", first.session.copy(accessToken = "synthetic-selected-token"),
             "旧资料二", showUserName = false, addresses = listOf(ServerConfig("https://backup.invalid/jellyfin")))
         store.upsertProfile(first)
@@ -147,7 +147,7 @@ class ServerProfilesStoreTest {
     fun sameEndpointReloginWithNewServerMetadataPreservesLegacyIdAndPreferences() {
         val legacy = session(1).copy(serverId = "")
         store.save(legacy)
-        val profile = store.loadProfiles().single().copy(displayName = "自定义名称", icon = "🏠", lastPlayedAt = 456L,
+        val profile = store.loadProfiles().single().copy(displayName = "自定义名称", lastPlayedAt = 456L,
             addresses = listOf(ServerConfig("https://backup.invalid/jellyfin")))
         store.upsertProfile(profile)
         val refreshed = legacy.copy(serverId = "known-server", accessToken = "synthetic-refreshed-token")

@@ -69,11 +69,6 @@ internal object PathfinIcons {
         moveTo(5f, 7.5f); lineTo(5f, 5f); lineTo(19f, 5f); lineTo(19f, 7.5f)
         moveTo(12f, 5f); lineTo(12f, 19f); moveTo(9f, 19f); lineTo(15f, 19f)
     } }
-    val Smile by lazy { strokeIcon("Smile") {
-        circle(12f, 12f, 9f)
-        moveTo(8.5f, 14.5f); curveTo(10f, 16.5f, 14f, 16.5f, 15.5f, 14.5f)
-        dot(9f, 9.75f); dot(15f, 9.75f)
-    } }
     val Route by lazy { strokeIcon("Route") {
         moveTo(6f, 3f); lineTo(6f, 15f); circle(6f, 18f, 2.5f)
         circle(18f, 6f, 2.5f)

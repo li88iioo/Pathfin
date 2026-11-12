@@ -67,7 +67,7 @@ class ImmersiveLayoutUiTest {
 
     @Test fun floatingNavigationReachesTheWindowBottomAndKeepsTabsAboveSystemGestures() {
         val session = Session(ServerConfig("https://layout.fixture.invalid"), "synthetic-token", "synthetic-user", "布局测试", "synthetic-device")
-        val profile = ServerProfile(id = "synthetic-profile", displayName = "布局测试", session = session, icon = "🎬")
+        val profile = ServerProfile(id = "synthetic-profile", displayName = "布局测试", session = session)
         val libraries = List(4) { index -> MediaItem("layout-library-$index", "测试媒体库 $index", "CollectionFolder", isFolder = true) }
         val movies = libraries.mapIndexed { index, _ -> MediaItem("layout-movie-$index", "测试影片 $index", "Movie", year = 2026) }
         val state = showApp(AppState(session = session, profiles = listOf(profile), currentProfileId = profile.id,
@@ -89,7 +89,7 @@ class ImmersiveLayoutUiTest {
     @Test fun managerNavigationLeavesTheLastServerReachableWithVisibleAndHiddenSystemBars() {
         val session = Session(ServerConfig("https://layout.fixture.invalid"), "synthetic-token", "synthetic-user", "布局测试", "synthetic-device")
         val profiles = List(12) { index -> ServerProfile(id = "layout-server-$index", displayName = "测试服务器 $index",
-            session = session.copy(userId = "synthetic-user-$index"), icon = "🎬") }
+            session = session.copy(userId = "synthetic-user-$index")) }
         val state = showApp(AppState(showServers = true, session = session, profiles = profiles, currentProfileId = profiles.first().id,
             home = HomeState(loaded = true, librariesLoaded = true)))
         val lastTag = "server-row/${profiles.last().id}"

@@ -7,7 +7,6 @@ data class ServerProfile(
     val id: String,
     val session: Session,
     val displayName: String,
-    val icon: String = "",
     val showUserName: Boolean = true,
     val showLastPlayed: Boolean = true,
     val lastPlayedAt: Long = 0,
