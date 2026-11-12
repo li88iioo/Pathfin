@@ -4,6 +4,25 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.5] - 2026-11-12
+
+### 新增
+
+- [同一服务器支持局域网与公网地址自动切换](https://github.com/li88iioo/Pathfin/commit/a1e3ff1ac11d6e1b57e1ef9578bbe60c3840ed92)：网络变化时优先选择可用的局域网地址，保留页面与缓存，也可手动固定地址；起播准备或选源期间换址时，按原片源、起播位置与画质在新地址重新准备。
+- [媒体库文件夹支持批量操作](https://github.com/li88iioo/Pathfin/commit/d542a1cf6e77a4d167dfed6b1cefe58be9ff1cb4)：混合库中的文件夹可参与多选，删除确认明确包含内部内容，标记已播放或未播放后同步更新子项缓存。
+
+### 优化
+
+- [重新设计直播电视页](https://github.com/li88iioo/Pathfin/commit/8529647f06a383e8eaf21860bbbc15c239914943)：采用频道宫格，提供上次观看、收藏置顶、节目分类筛选与时间轴节目单。
+- [控制台、识别媒体和下载任务页适配毛玻璃标题栏](https://github.com/li88iioo/Pathfin/commit/efc92e9118c1909083140b1cf61e97eb238b808e)，滚动内容与标题栏衔接保持一致。
+- [服务器列表统一显示 Jellyfin 账号头像](https://github.com/li88iioo/Pathfin/commit/61c6b8eed62d3af11c7a4bbf6b1c9064f3fc9982)，移除自定义图标；[修改密码说明](https://github.com/li88iioo/Pathfin/commit/7bc4327350beb807f8241089ca7808c9f9d79ec4)明确作用于 Jellyfin 服务器上的账号。
+
+### 修复
+
+- [修复直播分类筛选后无法继续加载频道](https://github.com/li88iioo/Pathfin/commit/a4bdc56bef3ed69f81f469782cbe29da236f9116)：体育、收藏等筛选可跨过没有匹配结果的分页继续读取，加载失败后等待手动刷新重试。
+- [成人封面模糊排除普通年龄分级](https://github.com/li88iioo/Pathfin/commit/c4eac0677f245e8e06d1a7ca7ec6e21706a596ab)：TV-MA、18+、NC-17 等分级不再触发模糊，减少普通电影和剧集被误判，设置说明同步更新。
+- [修复控制台操作提示常驻](https://github.com/li88iioo/Pathfin/commit/a1b2da771ebb00419928b2969b5bd047d1b9d222)：提示短暂显示后收起，离开页面时清除；服务器重启等仍需确认的状态继续保留说明。
+
 ## [0.1.4] - 2026-11-09
 
 ### 优化
@@ -104,6 +123,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.5]: https://github.com/li88iioo/Pathfin/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/li88iioo/Pathfin/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/li88iioo/Pathfin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/li88iioo/Pathfin/compare/v0.1.1...v0.1.2
