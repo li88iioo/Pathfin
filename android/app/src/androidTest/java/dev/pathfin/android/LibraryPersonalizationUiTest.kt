@@ -58,7 +58,7 @@ class LibraryPersonalizationUiTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         check(context.packageName == "dev.pathfin.android.verification")
         val api = JellyfinApi()
-        val item = mutableStateOf(MediaItem("pattern", "不会被模糊的标题", "Movie", year = 2026, imageTag = "own-pattern", officialRating = "TV-MA"))
+        val item = mutableStateOf(MediaItem("pattern", "不会被模糊的标题", "Movie", year = 2026, imageTag = "own-pattern", officialRating = "XXX"))
         val preferences = mutableStateOf(AppPreferences())
         val bitmap = Bitmap.createBitmap(1024, 1536, Bitmap.Config.ARGB_8888)
         val pixels = IntArray(1024 * 1536) { index -> if (((index % 1024) / 16 + (index / 1024) / 16) % 2 == 0) android.graphics.Color.WHITE else android.graphics.Color.BLACK }
@@ -96,13 +96,15 @@ class LibraryPersonalizationUiTest {
             assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).readVerificationNode(compose) { it.boundsInRoot })
             compose.onNodeWithText("不会被模糊的标题", true).assertExists()
             compose.onNodeWithText("2026", true).assertExists()
-            compose.runOnIdle { item.value = item.value.copy(officialRating = "PG-13") }
-            compose.onNodeWithTag(clearTag, true).assertExists()
-            Thread.sleep(150)
-            assertTrue("启用成人模糊时 PG-13 仍须保持真实清晰图片", variance(pixels(clearTag)) > 3000)
-            assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).readVerificationNode(compose) { it.boundsInRoot })
+            for (rating in listOf("PG-13", "NC-17")) {
+                compose.runOnIdle { item.value = item.value.copy(officialRating = rating) }
+                compose.onNodeWithTag(clearTag, true).assertExists()
+                Thread.sleep(150)
+                assertTrue("启用成人模糊时 $rating 仍须保持真实清晰图片", variance(pixels(clearTag)) > 3000)
+                assertEquals(originalTextBounds, compose.onNodeWithTag("poster-title/pattern", true).readVerificationNode(compose) { it.boundsInRoot })
+            }
             compose.runOnIdle {
-                item.value = item.value.copy(officialRating = "TV-MA")
+                item.value = item.value.copy(officialRating = "XXX")
                 preferences.value = preferences.value.copy(blurAdultCovers = false)
             }
             compose.onNodeWithTag(clearTag, true).assertExists()

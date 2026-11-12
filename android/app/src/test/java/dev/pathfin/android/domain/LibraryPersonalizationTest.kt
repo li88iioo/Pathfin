@@ -14,14 +14,17 @@ class LibraryPersonalizationTest {
     @Test fun explicitAdultRatingsMatchRegardlessOfCaseOrKnownRegionPrefix() {
         for (locale in listOf(Locale.ENGLISH, Locale.SIMPLIFIED_CHINESE, Locale.ENGLISH)) {
             Locale.setDefault(locale)
-            listOf("18", "18+", "18A", "R18+", "R-18", "X18+", "FSK 18", "FSK ab 18",
-                "TV-MA", " nc-17 ", "成人", "限制级", "18禁", "CN:成人", "19+", "GB-18", "UK:18", "DE:FSK-18", "US:tv-ma", "AU-R18+")
+            listOf("X", "xxx", "AO", "X18+", "X-18", "成人", "18禁", "CN:成人", "US-X", "AU-X18+", "JP-18+", "jp:18+")
                 .forEach { assertTrue("$locale 应识别成人分级：$it", AdultContentRatings.matches(it)) }
         }
     }
 
-    @Test fun youngerUnknownOrAmbiguousRatingsNeverBlurBySubstring() {
-        listOf("PG-13", "TV-14", "13", "13+", "15", "15+", "16", "16+", "FSK 16", "R", "NR", "UR", "PG", "G",
+    @Test fun ordinaryAgeRatingsAndAmbiguousValuesNeverBlur() {
+        // 18+ 年龄分级大量用于普通犯罪、惊悚剧集与电影，只是不适合未成年人，不属于成人内容。
+        listOf("18", "18+", "18A", "R18+", "R-18", "FSK 18", "FSK ab 18", "TV-MA", "TVMA", "限制级", "19", "19+",
+            "NC-17", "NC17", " nc-17 ", "NC–17", "US: nc-17 ", "US-NC17", "US-NC-17",
+            "GB-18", "UK:18", "DE:FSK-18", "US:tv-ma", "AU-R18+", "KR-19", "JP-R18+", "JP-R15+",
+            "PG-13", "TV-14", "13", "13+", "15", "15+", "16", "16+", "FSK 16", "R", "NR", "UR", "PG", "G",
             "US-PG-13", "DE:16", "18 months", "118", "218+", "rating18", "unrated adult", "XX:18", "", "   ", "x".repeat(65))
             .forEach { assertFalse("不得误伤分级：$it", AdultContentRatings.matches(it)) }
         assertFalse(AdultContentRatings.matches(null))

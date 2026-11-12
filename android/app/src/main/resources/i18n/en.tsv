@@ -564,8 +564,8 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 恢复默认	Reset to default
 成人	Adult
 成人分级封面模糊	Blur covers with adult ratings
-成人及 18+ 分级	Adult and 18+ ratings
-成人及 18+ 分级使用遮盖	Mask adult and 18+ ratings
+仅成人内容分级，如 XXX、X18+	Adult-content ratings only, such as XXX or X18+
+仅成人内容分级，如 XXX、X18+，使用遮盖	Mask adult-content ratings only, such as XXX or X18+
 截图	Screenshot
 截图保存失败，请重试	Couldn't save the screenshot. Please retry
 截图尺寸不可用	Screenshot size unavailable

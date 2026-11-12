@@ -11,7 +11,7 @@ import dev.pathfin.android.i18n.tr
 internal fun LibraryPersonalizationRows(preferences: AppPreferences, onPreferences: (AppPreferences) -> Unit) {
     Column {
         SettingsSwitch(tr("成人分级封面模糊"), preferences.blurAdultCovers,
-            if (Build.VERSION.SDK_INT >= 31) tr("成人及 18+ 分级") else tr("成人及 18+ 分级使用遮盖"),
+            if (Build.VERSION.SDK_INT >= 31) tr("仅成人内容分级，如 XXX、X18+") else tr("仅成人内容分级，如 XXX、X18+，使用遮盖"),
             tag = "settings-blur-adult-covers", position = GroupPosition.SINGLE) {
             onPreferences(preferences.copy(blurAdultCovers = it))
         }
