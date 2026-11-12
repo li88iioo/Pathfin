@@ -232,7 +232,8 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     val others = if (favorites.isEmpty()) filtered else filtered.filterNot { it.item.isFavorite }
     val resume = if (overview) channels.firstOrNull { it.id == watchedId }
         ?: channels.filter { it.lastPlayedAt != null }.maxByOrNull { it.lastPlayedAt!! } else null
-    AutomaticGridPagination(grid, PaginationStatus(channels.size, nextIndex, total,
+    // 触底按可见频道计数，页脚始终占一项；筛选为空也能继续读下一页，服务器游标仍用 nextIndex。
+    AutomaticGridPagination(grid, PaginationStatus(filtered.size + 1, nextIndex, total,
         refreshing = loadKind == LiveTvLoad.Refresh, appending = appending, failed = error != null, hasMore = hasMore),
         session, { load(LiveTvLoad.Append) }, enabled = search.isEmpty() && selected == null)
 

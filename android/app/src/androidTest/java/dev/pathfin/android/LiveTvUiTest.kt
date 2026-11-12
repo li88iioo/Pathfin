@@ -36,6 +36,7 @@ import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.LiveTvScreen
 import dev.pathfin.android.ui.LiveTvState
+import dev.pathfin.android.ui.LiveTvFilter
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.time.Instant
@@ -245,7 +246,7 @@ class LiveTvUiTest {
                 compose.waitUntil(WAIT_MS) { probe.refreshStarted.count == 0L }
                 // 已完成的追加必须先发布，随后只重读一次此前已载入的完整80条范围。
                 assertEquals(listOf(0, 40, 0), probe.requests.map { it.startIndex })
-                compose.onNodeWithText("搜索已加载的 80 个频道", substring = true).assertVerificationDisplayed(compose)
+                compose.runOnIdle { assertEquals("追加结果必须在后台刷新前发布", 80, host.state.channels.size) }
                 compose.onNodeWithText(fixture.originalName(false, 39)).assertVerificationDisplayed(compose)
                 assertSameBounds(before, channelBounds("live-tv-channel-channel-39"))
                 compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
@@ -345,11 +346,49 @@ class LiveTvUiTest {
         compose.runOnIdle { assertEquals(null, played.get()) }
     }
 
+    @Test fun sportsFilterLoadsLaterMatchesAcrossAnUnmatchedPage() =
+        exerciseFilteredPagination(LiveTvFilter.SPORTS, firstPageMatches = true)
+
+    @Test fun retainedFavoritesFilterLoadsLaterMatchesWithNoInitialMatches() =
+        exerciseFilteredPagination(LiveTvFilter.FAVORITES, firstPageMatches = false)
+
+    @Test fun filteredAppendFailureWaitsForExplicitRefresh() =
+        exerciseFilteredPagination(LiveTvFilter.SPORTS, firstPageMatches = true, failAppend = true)
+
+    private fun exerciseFilteredPagination(filter: LiveTvFilter, firstPageMatches: Boolean, failAppend: Boolean = false) {
+        Fixture(paginated = true, featured = if (firstPageMatches) setOf(0, 80) else setOf(80)).use { fixture ->
+            if (failAppend) fixture.channelPages.failAt.set(40)
+            // 先保持搜索态禁用预取，使用例不依赖设备一屏能显示几个频道。
+            val host = show(fixture, initialQuery = "合成频道", initialFilter = if (firstPageMatches) LiveTvFilter.ALL else filter)
+            compose.waitUntil(WAIT_MS) { host.state.loaded && host.state.loadKind == null }
+            assertEquals(listOf(0), fixture.channelPages.requests.map { it.startIndex })
+            compose.onNodeWithTag("live-tv-filter-${filter.name.lowercase()}").performVerificationClick(compose)
+            if (!firstPageMatches) compose.onNodeWithText("没有匹配的频道").assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("live-tv-search-close").performVerificationClick(compose)
+            val list = compose.onNodeWithTag("live-tv-channel-list")
+            if (failAppend) {
+                compose.waitUntil(WAIT_MS) { host.state.error != null && host.state.loadKind == null }
+                repeat(2) { list.performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
+                assertNoNewRequests(fixture.channelPages, 2)
+                fixture.channelPages.failAt.set(-1)
+                list.performScrollToIndex(0)
+                pullPageToRefresh(compose, page = list, stage = "live-tv-filter-retry")
+            }
+            waitFor("live-tv-channel-channel-80")
+            compose.onNodeWithTag("live-tv-channel-channel-80").assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("live-tv-channel-channel-40").assertDoesNotExist()
+            compose.waitUntil(WAIT_MS) { host.state.loadKind == null }
+            assertEquals(if (failAppend) listOf(0, 40, 0, 40, 80) else listOf(0, 40, 80),
+                fixture.channelPages.requests.map { it.startIndex })
+            assertNoNewRequests(fixture.channelPages, if (failAppend) 5 else 3)
+        }
+    }
+
     @Test fun rowsWithoutPlaybackRightsOpenTheGuideInsteadOfPlaying() {
         val played = AtomicReference<MediaItem?>()
         show(Fixture(playable = false)) { played.set(it) }
         waitFor("live-tv-channel-seagull")
-        compose.onNodeWithText("未获播放权限", substring = true).assertExists()
+        compose.onNodeWithTag("live-tv-channel-seagull").assertTextContains("未获播放权限")
         compose.onNodeWithTag("live-tv-channel-seagull").performVerificationClick(compose)
         waitFor("live-tv-program-current")
         compose.onNodeWithTag("live-tv-watch-program-current").assertExists()
@@ -358,11 +397,9 @@ class LiveTvUiTest {
 
     @Test fun channelSearchExplainsItsLoadedScopeAndOnlyExplicitlySearchesTheWholeLibrary() {
         Fixture(paginated = true).use { fixture ->
-            show(fixture)
-            waitFor("live-tv-channel-channel-0")
+            show(fixture, initialQuery = "远方频道")
+            waitFor("live-tv-more")
             assertEquals(listOf(0), fixture.channelPages.requests.map { it.startIndex })
-            openSearch()
-            compose.onNodeWithTag("live-tv-search").performTextInput("远方频道")
             compose.onNodeWithText("搜索已加载的", substring = true).assertVerificationDisplayed(compose)
             compose.onNodeWithText("没有匹配的频道").assertVerificationDisplayed(compose)
             repeat(3) { compose.onNodeWithTag("live-tv-channel-list").performVerificationTouchInput(compose) { swipeUp() }; compose.waitForIdle() }
@@ -392,11 +429,9 @@ class LiveTvUiTest {
 
     @Test fun stoppingExplicitWholeChannelSearchDoesNotRequestTheFollowingPage() {
         Fixture(paginated = true).use { fixture ->
-            show(fixture)
-            waitFor("live-tv-channel-channel-0")
             fixture.channelPages.holdAt.set(40)
-            openSearch()
-            compose.onNodeWithTag("live-tv-search").performTextInput("远方频道")
+            show(fixture, initialQuery = "远方频道")
+            waitFor("live-tv-more")
             compose.onNodeWithTag("live-tv-more").performScrollTo().performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.channelPages.heldStarted.count == 0L }
             val stop = compose.onNodeWithTag("live-tv-cancel-search").performScrollTo()
@@ -579,19 +614,22 @@ class LiveTvUiTest {
     private fun waitFor(tag: String) = compose.waitUntil(5_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
 
     private class ScreenHost(fixture: Fixture) {
+        lateinit var state: LiveTvState
         var fixture by mutableStateOf(fixture)
         var visible by mutableStateOf(true)
         val clock = AtomicLong(1_000)
         val authExpired = AtomicInteger()
     }
 
-    private fun show(fixture: Fixture, onPlay: (MediaItem) -> Unit = {}): ScreenHost {
+    private fun show(fixture: Fixture, initialQuery: String = "", initialFilter: LiveTvFilter = LiveTvFilter.ALL,
+        onPlay: (MediaItem) -> Unit = {}): ScreenHost {
         val host = ScreenHost(fixture)
         compose.setContent {
             val scope = rememberCoroutineScope()
             val current = host.fixture
             val state = remember(current) {
                 LiveTvState(current.session, current.api, scope, { host.authExpired.incrementAndGet() }, clock = host.clock::get)
+                    .also { it.query = initialQuery; it.filter = initialFilter; host.state = it }
             }
             DisposableEffect(state) { onDispose { state.cancel() } }
             PathfinTheme(ThemePreference.LIGHT) { Surface {
@@ -649,6 +687,7 @@ class LiveTvUiTest {
 
     private class Fixture(allowed: Boolean = true, blockRefresh: Boolean = false, private val paginated: Boolean = false,
         private val empty: Boolean = false, private val rich: Boolean = false, playable: Boolean = true,
+        private val featured: Set<Int> = emptySet(),
         val session: Session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User", "device"),
         private val channelPrefix: String = "") : Closeable {
         val paths = CopyOnWriteArrayList<String>()
@@ -672,7 +711,13 @@ class LiveTvUiTest {
                     else if (empty) page()
                     else if (paginated) page(request, channelPages.total(request, 81)) { index ->
                         val sourceIndex = if (channelPages.repeatBoundary.get() && request.startIndex in 1 until 80 && index == request.startIndex) index - 1 else index
-                        channel("channel-$sourceIndex", channelName(sourceIndex, channelPages.refreshed))
+                        channel("channel-$sourceIndex", channelName(sourceIndex, channelPages.refreshed)).apply {
+                            if (sourceIndex in featured) {
+                                put("UserData", JSONObject().put("IsFavorite", true))
+                                put("CurrentProgram", program("sports-$sourceIndex", now.minusSeconds(600), now.plusSeconds(600), "channel-$sourceIndex")
+                                    .put("IsSports", true))
+                            }
+                        }
                     }
                     else if (rich) page(
                         // 港湾：收藏、正在播体育、上次看过；海鸥：正在播新闻；灯塔：没有节目信息。
