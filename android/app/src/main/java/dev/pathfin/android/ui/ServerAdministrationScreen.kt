@@ -19,6 +19,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Color
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -234,37 +246,19 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
         page, { load(append = true) },
         enabled = page == "activity" && !writing && session.isAdministrator)
 
-    Column(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-        .testTag("server-administration-screen")) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            PathfinIconButton(PathfinIcons.Back, tr("返回"), ::back, Modifier.testTag("server-administration-back"), enabled = !writing,
-                tint = PathfinAppearance.textMain, size = 44.dp)
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(when (page) { "logs" -> tr("系统日志"); "log" -> logFile?.name ?: tr("系统日志"); "activity" -> tr("活动日志"); "tasks" -> tr("计划任务"); else -> tr("媒体库控制台") },
-                    fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold, color = PathfinAppearance.textMain,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(when (page) {
-                    "tasks" -> tr("%1\$s 个任务", tasks.size)
-                    "activity" -> if (activityTotal > 0) tr("共 %1\$s 条记录", activityTotal) else tr("服务器活动记录")
-                    "logs" -> tr("%1\$s 个日志文件", logs.size)
-                    "log" -> tr("最多显示前 512 KiB / 10000 行；账号凭据已隐藏")
-                    else -> info?.name ?: tr("Jellyfin 服务器")
-                }, fontSize = 12.5.sp, lineHeight = 17.sp, color = PathfinAppearance.textSub, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        // 错误与操作结果固定在页头下方：无论列表滚到哪里都看得到，列表本身不被程序滚动。
-        if (session.isAdministrator && (error != null || notice != null)) Column(Modifier.fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            error?.let { message -> InlineError(message, modifier = Modifier.testTag("server-administration-error")) }
-            notice?.let { message -> AdministrationNotice(message) }
-        }
-        RefreshablePage(loading, { load() }, Modifier.weight(1f).fillMaxWidth(), refreshOnEntry = false,
-            enabled = !writing && session.isAdministrator) {
-            if (!session.isAdministrator) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    val topInset = LocalPageTopInset.current
+    val density = LocalDensity.current
+    // 正文按页头实测高度让位，滚到页头下方时透出毛玻璃；提示另行浮在页头下方，不改变页头高度。
+    var headerHeight by remember { mutableStateOf(60.dp) }
+    val contentTop = topInset + headerHeight
+    Box(Modifier.fillMaxSize().testTag("server-administration-screen")) {
+        RefreshablePage(loading, { load() }, Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas),
+            refreshOnEntry = false, enabled = !writing && session.isAdministrator, indicatorTopInset = contentTop) {
+            if (!session.isAdministrator) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
                 EmptyPanel(tr("需要管理员权限"), tr("请使用服务器管理员账号管理服务器。"), PathfinIcons.Lock)
             } else {
                 LazyColumn(Modifier.fillMaxSize().testTag("server-administration-list"), state = list,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = LocalNavigationBottomInset.current + 8.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 8.dp, bottom = LocalNavigationBottomInset.current + 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (page == "overview") {
                         item("server") { AdministrationServerCard(info) }
@@ -328,6 +322,31 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
                 }
             }
         }
+        PageTitleBar(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }, height = contentTop) {
+            Row(Modifier.fillMaxWidth().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
+                .heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                PathfinIconButton(PathfinIcons.Back, tr("返回"), ::back, Modifier.testTag("server-administration-back"), enabled = !writing,
+                    tint = PathfinAppearance.textMain, size = 44.dp)
+                Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                    Text(when (page) { "logs" -> tr("系统日志"); "log" -> logFile?.name ?: tr("系统日志"); "activity" -> tr("活动日志"); "tasks" -> tr("计划任务"); else -> tr("媒体库控制台") },
+                        fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold, color = PathfinAppearance.textMain,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(when (page) {
+                        "tasks" -> tr("%1\$s 个任务", tasks.size)
+                        "activity" -> if (activityTotal > 0) tr("共 %1\$s 条记录", activityTotal) else tr("服务器活动记录")
+                        "logs" -> tr("%1\$s 个日志文件", logs.size)
+                        "log" -> tr("最多显示前 512 KiB / 10000 行；账号凭据已隐藏")
+                        else -> info?.name ?: tr("Jellyfin 服务器")
+                    }, fontSize = 12.5.sp, lineHeight = 17.sp, color = PathfinAppearance.textSub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        // 错误与操作结果浮在页头下方：列表滚到哪里都看得到，出现或消失都不推动列表；两条各自淡入淡出。
+        if (session.isAdministrator) Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, top = contentTop + 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FloatingMessage(error) { message -> InlineError(message, modifier = Modifier.testTag("server-administration-error")) }
+            FloatingMessage(notice) { message -> AdministrationNotice(message, container = Color.Transparent) }
+        }
     }
 
     pendingTask?.let { task ->
@@ -388,11 +407,23 @@ private fun AdministrationAction(label: String, icon: androidx.compose.ui.graphi
 }
 
 @Composable
-private fun AdministrationNotice(message: String) {
-    GroupCard {
+private fun AdministrationNotice(message: String, container: Color = PathfinAppearance.card) {
+    GroupCard(container = container) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(6.dp).clip(CircleShape).background(PathfinAppearance.accent))
             Text(message, Modifier.padding(start = 12.dp), fontSize = 13.5.sp, lineHeight = 19.sp, color = PathfinAppearance.textMain)
+        }
+    }
+}
+
+/** 浮在列表上的提示用毛玻璃底，压在内容上仍清晰可读；淡出期间保留原文。 */
+@Composable
+private fun FloatingMessage(message: String?, content: @Composable (String) -> Unit) {
+    AnimatedContent(message, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(180)) using SizeTransform(clip = false) },
+        label = "administration-message") { shown ->
+        if (shown != null) {
+            val shape = RoundedCornerShape(CardRadius)
+            Box(Modifier.fillMaxWidth().clip(shape).frostedPanel().border(PathfinAppearance.glassBorder, shape)) { content(shown) }
         }
     }
 }

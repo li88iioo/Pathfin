@@ -21,6 +21,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -115,69 +119,79 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
     // 搜索成功后进入独立的结果页（带海报/头像，便于区分同名条目）；返回键回到表单修改条件。
     BackHandler(enabled = LocalPageActive.current && resultsPage && !applying) { resultsPage = false }
     val person = item.type == "Person"
-    Column(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets).testTag("identification-screen")) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            PathfinIconButton(PathfinIcons.Back, if (resultsPage) tr("返回搜索条件") else tr("返回"), { if (resultsPage) resultsPage = false else onBack() },
-                Modifier.testTag("identification-back"), enabled = !applying, tint = PathfinAppearance.textMain, size = 44.dp)
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(if (resultsPage) tr("选择匹配结果") else if (person) tr("识别人物") else tr("识别媒体"), fontSize = 19.sp, lineHeight = 25.sp,
-                    fontWeight = FontWeight.SemiBold, color = PathfinAppearance.textMain)
-                Text(if (resultsPage) tr("「%1\$s」· %2\$s 个结果", resultForm?.name?.ifBlank { null } ?: item.name, results.size) else item.name,
-                    fontSize = 12.5.sp, lineHeight = 17.sp, color = PathfinAppearance.textSub, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        RefreshablePage(searching, ::search, Modifier.weight(1f).fillMaxWidth(), refreshOnEntry = false,
-            enabled = enabled && searched && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty())) {
-            if (!enabled) {
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    EmptyPanel(tr("无法识别此媒体"), if (!session.isAdministrator) tr("需要服务器管理员权限。") else tr("此类型没有可用的远程识别接口。"))
-                }
-            } else if (resultsPage) LazyColumn(Modifier.fillMaxSize().testTag("identification-results"),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = LocalNavigationBottomInset.current),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
-                if (applied) item { AppliedBanner() }
-                items(results, key = { it.key }) { result ->
-                    IdentificationResultCard(result, person, canApply) { selected = result; replaceImages = false }
-                }
-                if (results.isEmpty() && !searching && error == null) item {
-                    EmptyPanel(tr("没有找到匹配结果"), tr("返回修改%1\$s或外部编号，并检查服务器是否配置了可用的元数据提供程序。", if (person) tr("姓名") else tr("名称、年份")))
-                }
-            } else LazyColumn(Modifier.fillMaxSize().testTag("identification-list"),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)) {
-                item(key = "identification-name") {
-                    SettingsGroupItem(if (fieldRows.isEmpty()) GroupPosition.SINGLE else GroupPosition.TOP, dividerStartPadding = GroupTextInset) {
-                        GroupField(name, { name = it }, if (person) tr("姓名") else tr("名称"),
-                            if (person) tr("人物姓名") else tr("片名或剧名"), PathfinIcons.Type, Modifier.testTag("identification-name"),
-                            divider = false, readOnly = searching || applying)
+    val topInset = LocalPageTopInset.current
+    val density = LocalDensity.current
+    // 标题悬浮成毛玻璃页头，表单与结果滚动时从下方透出；搜索按钮仍固定在底部。
+    var headerHeight by remember { mutableStateOf(60.dp) }
+    val contentTop = topInset + headerHeight
+    Column(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Bottom)).testTag("identification-screen")) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            RefreshablePage(searching, ::search, Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas), refreshOnEntry = false,
+                enabled = enabled && searched && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty()), indicatorTopInset = contentTop) {
+                if (!enabled) {
+                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
+                        EmptyPanel(tr("无法识别此媒体"), if (!session.isAdministrator) tr("需要服务器管理员权限。") else tr("此类型没有可用的远程识别接口。"))
                     }
-                }
-                itemsIndexed(fieldRows, key = { _, row -> row.first()?.let { "identification-ids/${it.key}" } ?: "identification-year-row" }) { index, row ->
-                    SettingsGroupItem(if (index == fieldRows.lastIndex) GroupPosition.BOTTOM else GroupPosition.MIDDLE, dividerStartPadding = GroupTextInset) {
-                        Row(Modifier.fillMaxWidth()) {
-                            row.forEach { field -> key(field?.key) {
-                                if (field == null) GroupField(year, { year = it }, tr("年份"), tr("可选"), PathfinIcons.Calendar,
-                                    Modifier.weight(1f).testTag("identification-year"), divider = false, readOnly = searching || applying,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                                else GroupField(providerValue(field.key), { providerIds = providerIds + (field.key to it) }, field.name, tr("可选"), PathfinIcons.Hash,
-                                    Modifier.weight(1f).testTag("identification-id/${field.key}"), divider = false, readOnly = searching || applying)
-                            } }
-                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                } else if (resultsPage) LazyColumn(Modifier.fillMaxSize().testTag("identification-results"),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 8.dp, bottom = LocalNavigationBottomInset.current),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
+                    if (applied) item { AppliedBanner() }
+                    items(results, key = { it.key }) { result ->
+                        IdentificationResultCard(result, person, canApply) { selected = result; replaceImages = false }
+                    }
+                    if (results.isEmpty() && !searching && error == null) item {
+                        EmptyPanel(tr("没有找到匹配结果"), tr("返回修改%1\$s或外部编号，并检查服务器是否配置了可用的元数据提供程序。", if (person) tr("姓名") else tr("名称、年份")))
+                    }
+                } else LazyColumn(Modifier.fillMaxSize().testTag("identification-list"),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 16.dp, bottom = 8.dp)) {
+                    item(key = "identification-name") {
+                        SettingsGroupItem(if (fieldRows.isEmpty()) GroupPosition.SINGLE else GroupPosition.TOP, dividerStartPadding = GroupTextInset) {
+                            GroupField(name, { name = it }, if (person) tr("姓名") else tr("名称"),
+                                if (person) tr("人物姓名") else tr("片名或剧名"), PathfinIcons.Type, Modifier.testTag("identification-name"),
+                                divider = false, readOnly = searching || applying)
                         }
                     }
+                    itemsIndexed(fieldRows, key = { _, row -> row.first()?.let { "identification-ids/${it.key}" } ?: "identification-year-row" }) { index, row ->
+                        SettingsGroupItem(if (index == fieldRows.lastIndex) GroupPosition.BOTTOM else GroupPosition.MIDDLE, dividerStartPadding = GroupTextInset) {
+                            Row(Modifier.fillMaxWidth()) {
+                                row.forEach { field -> key(field?.key) {
+                                    if (field == null) GroupField(year, { year = it }, tr("年份"), tr("可选"), PathfinIcons.Calendar,
+                                        Modifier.weight(1f).testTag("identification-year"), divider = false, readOnly = searching || applying,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                                    else GroupField(providerValue(field.key), { providerIds = providerIds + (field.key to it) }, field.name, tr("可选"), PathfinIcons.Hash,
+                                        Modifier.weight(1f).testTag("identification-id/${field.key}"), divider = false, readOnly = searching || applying)
+                                } }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+                    item(key = "identification-hint") {
+                        Text(if (validYear) tr("可填写外部编号以缩小匹配范围") else tr("年份应为 1 到 9999"), Modifier.padding(start = 6.dp, bottom = 12.dp),
+                            fontSize = 12.sp, lineHeight = 17.sp,
+                            color = if (validYear) PathfinAppearance.textMuted else MaterialTheme.colorScheme.error)
+                    }
+                    idFieldsError?.let { message -> item(key = "identification-fields-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp)) } }
+                    error?.let { message -> item(key = "identification-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp).testTag("identification-error")) } }
+                    if (applied) item(key = "identification-applied") { Box(Modifier.padding(bottom = 12.dp)) { AppliedBanner() } }
+                    // 已有结果时可直接回到结果页，不必重新搜索。
+                    if (results.isNotEmpty() && resultForm == form) item {
+                        QuietButton(tr("查看 %1\$s 个匹配结果", results.size), { resultsPage = true }, Modifier.fillMaxWidth().testTag("identification-show-results"),
+                            color = PathfinAppearance.accent)
+                    }
                 }
-                item(key = "identification-hint") {
-                    Text(if (validYear) tr("可填写外部编号以缩小匹配范围") else tr("年份应为 1 到 9999"), Modifier.padding(start = 6.dp, bottom = 12.dp),
-                        fontSize = 12.sp, lineHeight = 17.sp,
-                        color = if (validYear) PathfinAppearance.textMuted else MaterialTheme.colorScheme.error)
-                }
-                idFieldsError?.let { message -> item(key = "identification-fields-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp)) } }
-                error?.let { message -> item(key = "identification-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp).testTag("identification-error")) } }
-                if (applied) item(key = "identification-applied") { Box(Modifier.padding(bottom = 12.dp)) { AppliedBanner() } }
-                // 已有结果时可直接回到结果页，不必重新搜索。
-                if (results.isNotEmpty() && resultForm == form) item {
-                    QuietButton(tr("查看 %1\$s 个匹配结果", results.size), { resultsPage = true }, Modifier.fillMaxWidth().testTag("identification-show-results"),
-                        color = PathfinAppearance.accent)
+            }
+            PageTitleBar(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }, height = contentTop) {
+                Row(Modifier.fillMaxWidth().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
+                    .heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PathfinIconButton(PathfinIcons.Back, if (resultsPage) tr("返回搜索条件") else tr("返回"), { if (resultsPage) resultsPage = false else onBack() },
+                        Modifier.testTag("identification-back"), enabled = !applying, tint = PathfinAppearance.textMain, size = 44.dp)
+                    Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                        Text(if (resultsPage) tr("选择匹配结果") else if (person) tr("识别人物") else tr("识别媒体"), fontSize = 19.sp, lineHeight = 25.sp,
+                            fontWeight = FontWeight.SemiBold, color = PathfinAppearance.textMain)
+                        Text(if (resultsPage) tr("「%1\$s」· %2\$s 个结果", resultForm?.name?.ifBlank { null } ?: item.name, results.size) else item.name,
+                            fontSize = 12.5.sp, lineHeight = 17.sp, color = PathfinAppearance.textSub, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }

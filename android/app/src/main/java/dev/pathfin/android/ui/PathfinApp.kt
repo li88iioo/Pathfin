@@ -272,8 +272,9 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     }
 
     val discoveryPage = insideServer && (route == Route.Search || route == Route.Favorites)
-    // 搜索与元数据编辑各自绘制完整顶栏，这里只留出状态栏。
-    val ownTopBar = discoveryPage || route is Route.LibrarySearch || route is Route.MediaTools
+    // 搜索、元数据编辑、识别与控制台各自绘制毛玻璃顶栏，这里只留出状态栏。
+    val toolOwnsTopBar = route is Route.MediaTools || route is Route.Identification || route == Route.ServerAdministration
+    val ownTopBar = discoveryPage || route is Route.LibrarySearch || toolOwnsTopBar
     val hasHeader = !isDetail && !showManager && !standaloneTool && !ownTopBar
     val headerInset = when {
         hasHeader -> 60.dp + AppSafeDrawingInsets.asPaddingValues().calculateTopPadding()
@@ -281,11 +282,12 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
         else -> 0.dp
     }
     val insetInContent = route == Route.Home || route == Route.Libraries || route == Route.Search ||
-        route == Route.Favorites || route is Route.Discovery || libraryPage || route == Route.Settings || route is Route.SettingsPage || route is Route.MediaTools
+        route == Route.Favorites || route is Route.Discovery || libraryPage || route == Route.Settings || route is Route.SettingsPage ||
+        route == Route.Downloads || toolOwnsTopBar
     val scrollToTopRequests = remember { mutableIntStateOf(0) }
     val topBarBlur = rememberTopBarBlurState()
     // 带固定工具栏的页面自己提供采样源，工具栏作为标题栏第二行一起模糊。
-    val pageOwnsBlurSource = route == Route.Search || libraryPage || route is Route.MediaTools
+    val pageOwnsBlurSource = route == Route.Search || libraryPage || toolOwnsTopBar
     CompositionLocalProvider(LocalNavigationBottomInset provides navigationBottomInset,
         LocalScrollToTopRequests provides scrollToTopRequests,
         LocalTopBarBlurState provides topBarBlur) {
@@ -392,7 +394,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                 }
             }
             // 连接页底图本身就是状态栏背景，不再盖一层画布色雾带。
-            if (!hasHeader && !isDetail && !connecting && route != Route.Search && route !is Route.LibrarySearch && route !is Route.MediaTools) {
+            if (!hasHeader && !isDetail && !connecting && route != Route.Search && route !is Route.LibrarySearch && !toolOwnsTopBar) {
                 val statusHeight = AppSafeDrawingInsets.asPaddingValues().calculateTopPadding()
                 if (statusHeight > 0.dp) TopBarBlurSurface(
                     Modifier.fillMaxWidth().height(statusHeight).align(Alignment.TopCenter), height = statusHeight,

@@ -109,7 +109,8 @@ fun DownloadsScreen(profileId: String?) {
         Modifier.fillMaxSize().testTag("downloads-screen"), refreshOnEntry = false) {
         LazyColumn(
             Modifier.fillMaxSize().testTag("downloads-list"),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = LocalNavigationBottomInset.current + 28.dp),
+            // 列表从标题栏下方起排，滚动时透过毛玻璃标题栏。
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = LocalPageTopInset.current + 12.dp, bottom = LocalNavigationBottomInset.current + 28.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item(key = "intro") {
