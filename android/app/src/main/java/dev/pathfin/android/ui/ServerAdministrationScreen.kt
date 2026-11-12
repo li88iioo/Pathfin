@@ -84,7 +84,11 @@ class ServerAdministrationState(val session: Session, api: JellyfinApi, private 
         if (error != null || pages.any { key -> readAt[key]?.let { clock() - it < 30_000L } != true }) load()
     }
     fun cancel() { taskReadVersion++; readJob?.cancel(); leave() }
-    fun leave() { writeJob?.cancel() }
+    fun leave() {
+        writeJob?.cancel()
+        // 离开即结束一次性提示；重启待确认的说明留到下次刷新出结果。
+        if (!restartPending) notice = null
+    }
     fun openLog(file: ServerLogFile) {
         logFile = file; logContent = null; logLines = emptyList(); readAt.remove("log"); positions.remove("log"); page = "log"
     }
@@ -125,7 +129,12 @@ class ServerAdministrationState(val session: Session, api: JellyfinApi, private 
         if (!append) readAt["activity"] = clock()
     }
     private suspend fun readOverview() = coroutineScope {
-        launch { try { info = administration.info(session); restartPending = false; readAt["overview"] = clock() } catch (exception: Exception) { failure(exception) } }
+        launch { try {
+            info = administration.info(session)
+            // 读到服务器状态即完成“稍后刷新”的提示，重启说明随之结束。
+            if (restartPending) notice = null
+            restartPending = false; readAt["overview"] = clock()
+        } catch (exception: Exception) { failure(exception) } }
         launch { readTasks() }
         launch { try { readActivities(append = false) }
             catch (exception: Exception) { activityFailed = true; failure(exception) } }
@@ -204,6 +213,10 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
     }
     BackHandler(enabled = writing || page != "overview") { back() }
     LaunchedEffect(state, page, active) { if (active) enter() }
+    // 任务排队/取消等结果只需看一眼；重启说明要等刷新确认，不自动收起。
+    LaunchedEffect(state, notice, restartPending) {
+        if (notice != null && !restartPending) { delay(4_000); notice = null }
+    }
     DisposableEffect(state) { onDispose { state.leave() } }
     LaunchedEffect(state, lifecycleOwner, active) {
         if (!active || !session.isAdministrator) return@LaunchedEffect

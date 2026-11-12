@@ -308,6 +308,9 @@ class ManagementFeaturesUiTest {
             awaitDialog("server-task-confirm", "task-cancel-dialog")
             compose.onNodeWithTag("server-task-confirm").performVerificationClick(compose)
             compose.waitUntil(WAIT_MS) { fixture.cancels.get() == 1 }
+            // 任务结果只短暂提示，不能一直停在页头。
+            compose.waitUntil(WAIT_MS) { hasText("已请求取消任务") }
+            compose.waitUntil(WAIT_MS) { !hasText("已请求取消任务") }
             scrollAdministration(hasTestTag("server-restart"))
             compose.waitUntil(WAIT_MS) {
                 runCatching { compose.onNodeWithTag("server-restart").assertIsEnabled(); true }.getOrDefault(false)
@@ -330,6 +333,10 @@ class ManagementFeaturesUiTest {
             compose.onNodeWithTag("server-restart").assertIsNotEnabled()
             assertAdministrationRequestsStayAt(fixture, requests)
             assertEquals("重进不能再次提交重启", 1, fixture.restarts.get())
+            assertTrue("重启待确认时重进仍应说明状态", hasText(RESTART_NOTICE))
+            compose.onNodeWithTag("server-administration-list").performScrollToIndex(0)
+            pullPageToRefresh(compose, stage = "restart-status-refreshed")
+            compose.waitUntil(WAIT_MS) { !hasText(RESTART_NOTICE) }
             compose.runOnIdle { host.shown.value = false }
         }
     }
@@ -725,6 +732,8 @@ class ManagementFeaturesUiTest {
         return host
     }
 
+    private fun hasText(text: String) = compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+
     private fun reenterAdministration(host: AdministrationHost) {
         compose.runOnIdle { host.shown.value = false }
         compose.waitUntil(WAIT_MS) { !exists("server-administration-screen") }
@@ -1004,5 +1013,8 @@ class ManagementFeaturesUiTest {
             assertHealthy()
         }
     }
-    private companion object { const val WAIT_MS = 10_000L; const val TOKEN = "management-ui-synthetic-token" }
+    private companion object {
+        const val WAIT_MS = 10_000L; const val TOKEN = "management-ui-synthetic-token"
+        const val RESTART_NOTICE = "重启请求已接受，请稍后刷新服务器状态。"
+    }
 }
