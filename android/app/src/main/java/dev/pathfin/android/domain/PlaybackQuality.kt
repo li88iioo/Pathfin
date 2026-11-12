@@ -15,7 +15,7 @@ enum class PlaybackQuality(private val labelKey: String, private val description
 
 /** 字幕时差按账号、媒体和版本隔离；持久化键不包含令牌或明文地址。 */
 fun PlaybackRequest.subtitlePreferenceKey(): String {
-    val parts = listOf(session.serverId.ifBlank { session.server.baseUrl }, session.userId, item.id, source.id)
+    val parts = listOf(session.serverIdentity, session.userId, item.id, source.id)
     val bytes = parts.joinToString("") { "${it.length}:$it" }.toByteArray(Charsets.UTF_8)
     return java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 }

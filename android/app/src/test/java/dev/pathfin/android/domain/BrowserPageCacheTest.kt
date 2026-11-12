@@ -4,19 +4,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class BrowserPageCacheTest {
-    private val scope = ProfileHomeKey("profile-A", "https://example.test/jellyfin", "server", "user")
+    private val scope = ProfileHomeKey("profile-A", "server", "user")
     private val key = BrowserPageKey(scope, "library/movies", "movies", LibraryQuery(itemTypes = setOf("Movie")))
 
     private fun page(name: String = "Movie", count: Int = 1, totalCount: Int = count) = MediaPage(
         List(count) { MediaItem("$name-$it", "$name $it", "Movie") }, totalCount,
     )
 
-    @Test fun eachProfileAddressServerUserParentAndBrowserHasItsOwnPage() {
+    @Test fun eachProfileServerUserParentAndBrowserHasItsOwnPage() {
         val keys = listOf(
             key,
             key.copy(scope = scope.copy(profileId = "profile-B")),
-            key.copy(scope = scope.copy(baseUrl = "https://other.test/jellyfin")),
-            key.copy(scope = scope.copy(serverId = "other-server")),
+            key.copy(scope = scope.copy(server = "other-server")),
             key.copy(scope = scope.copy(userId = "other-user")),
             key.copy(parentId = "other-parent"),
             key.copy(parentId = null),
@@ -135,8 +134,7 @@ class BrowserPageCacheTest {
             key.copy(parentId = "other-parent"),
             key.copy(parentId = null),
             key.copy(scope = scope.copy(profileId = "profile-B")),
-            key.copy(scope = scope.copy(baseUrl = "https://other.test/jellyfin")),
-            key.copy(scope = scope.copy(serverId = "other-server")),
+            key.copy(scope = scope.copy(server = "other-server")),
             key.copy(scope = scope.copy(userId = "other-user")),
         )
         (removed + retained).forEach { cache.put(it, page()) }

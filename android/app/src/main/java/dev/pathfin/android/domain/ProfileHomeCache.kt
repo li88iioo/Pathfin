@@ -1,11 +1,9 @@
 package dev.pathfin.android.domain
 
-/** 首页内容按本机资料及实际登录地址隔离，不能复用仅含 serverId/userId 的偏好键。 */
-data class ProfileHomeKey(val profileId: String, val baseUrl: String, val serverId: String, val userId: String) {
+/** 首页内容按本机资料、服务器与账号隔离；同一服务器换地址仍是同一份内容。 */
+data class ProfileHomeKey(val profileId: String, val server: String, val userId: String) {
     companion object {
-        fun of(profileId: String, session: Session) = ProfileHomeKey(
-            profileId, ServerUrls.normalize(session.server).baseUrl, session.serverId, session.userId,
-        )
+        fun of(profileId: String, session: Session) = ProfileHomeKey(profileId, session.serverIdentity, session.userId)
     }
 }
 

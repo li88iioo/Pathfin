@@ -2,7 +2,6 @@ package dev.pathfin.android.data
 
 import android.content.Context
 import dev.pathfin.android.domain.MediaItem
-import dev.pathfin.android.domain.ServerUrls
 import dev.pathfin.android.domain.Session
 import org.json.JSONObject
 import java.io.File
@@ -93,8 +92,7 @@ internal class HomeSnapshotStore(private val directory: File) {
 
     private fun file(profileId: String, session: Session): File {
         // 会话与权限变化只改变不可逆指纹，磁盘内容和文件名都不保存 token/deviceId。
-        val identity = listOf(ServerUrls.normalize(session.server).baseUrl, session.server.allowInsecureHttp,
-            session.serverId, session.userId, session.accessToken, session.deviceId,
+        val identity = listOf(session.serverIdentity, session.userId, session.accessToken, session.deviceId,
             session.isAdministrator, session.canDownload, session.canDelete).joinToString("\u0000")
         return File(directory, "${digest(profileId)}-${digest(identity)}.json")
     }

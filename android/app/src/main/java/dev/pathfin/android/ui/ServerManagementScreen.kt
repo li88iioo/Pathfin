@@ -83,6 +83,7 @@ import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.PublicUser
 import dev.pathfin.android.domain.ServerAddressFieldSource
+import dev.pathfin.android.domain.ServerAddressSelection
 import dev.pathfin.android.domain.ServerAddressInputState
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.ServerProfile
@@ -235,19 +236,19 @@ internal fun ServerManagementScreen(
                 }
             }
             "addresses" -> target?.let { profile ->
-                AppDialog(dismiss, tr("连接地址"), subtitle = tr("选择本次连接使用的地址"), actions = cancel) {
-                    (listOf(profile.session.server) + profile.addresses).distinctBy { it.baseUrl }.forEachIndexed { index, address ->
-                        val active = address == profile.session.server
-                        if (index > 0) Hairline()
-                        Row(
-                            Modifier.fillMaxWidth().clickable { if (!requestBusy) { dialog = null; onOpen(profile.copy(session = profile.session.copy(server = address))) } }
-                                .padding(vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text(address.baseUrl, Modifier.weight(1f), fontSize = 13.5.sp, lineHeight = 20.sp,
-                                color = if (active) PathfinAppearance.textMain else PathfinAppearance.textSub)
-                            if (active) Icon(PathfinIcons.Check, tr("当前地址"), Modifier.size(18.dp), tint = PathfinAppearance.accent)
+                fun choose(action: () -> Unit) { if (!requestBusy) { dialog = null; action() } }
+                AppDialog(dismiss, tr("连接地址"), subtitle = tr("自动选择时优先使用局域网地址，连不上再换用其他地址"), actions = cancel) {
+                    AddressChoice(tr("自动选择"), profile.autoAddress, detail = tr("当前：%1\$s", profile.session.server.baseUrl).takeIf { profile.autoAddress }) {
+                        choose { if (!profile.autoAddress) onUpdate(profile.copy(autoAddress = true)) }
+                    }
+                    profile.connectionAddresses.forEach { address ->
+                        Hairline()
+                        // 指定地址即固定使用，不再自动切换。
+                        AddressChoice(address.baseUrl, !profile.autoAddress && address == profile.session.server) {
+                            choose {
+                                if (address == profile.session.server) onUpdate(profile.copy(autoAddress = false))
+                                else onOpen(profile.copy(session = profile.session.copy(server = address), autoAddress = false))
+                            }
                         }
                     }
                 }
@@ -674,7 +675,7 @@ private fun FeaturedServer(
             // 压暗只盖封面区，续播条下保留拼贴原色供毛玻璃透出。
             Box(Modifier.matchParentSize().background(Brush.verticalGradient(
                 0f to Color.Black.copy(alpha = 0.45f), 0.45f to Color.Black.copy(alpha = 0.38f), 1f to Color.Black.copy(alpha = 0.85f))))
-            if (current) LivePill(Modifier.align(Alignment.TopStart).padding(12.dp))
+            if (current) LivePill(profile, Modifier.align(Alignment.TopStart).padding(12.dp))
             Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 18.dp, end = 6.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -727,8 +728,9 @@ private fun CoverMosaic(session: Session, posters: List<MediaItem>, api: Jellyfi
 
 private val MosaicColorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0.55f) })
 
+/** 有多个地址时注明当前走的线路，自动切换后一眼可知是局域网还是公网。 */
 @Composable
-private fun LivePill(modifier: Modifier = Modifier) {
+private fun LivePill(profile: ServerProfile, modifier: Modifier = Modifier) {
     Row(
         modifier.clip(CircleShape).frostedCard(0.30f, Color.Black, fallback = Color.Black.copy(alpha = 0.30f))
             .border(0.5.dp, Color.White.copy(alpha = 0.22f), CircleShape).padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
@@ -737,6 +739,12 @@ private fun LivePill(modifier: Modifier = Modifier) {
     ) {
         Box(Modifier.size(5.dp).clip(CircleShape).background(PathfinAppearance.accentWash.copy(alpha = 1f)))
         Text(tr("正在使用"), fontSize = 11.sp, letterSpacing = 0.5.sp, color = Color.White)
+        if (profile.connectionAddresses.size > 1) {
+            val local = ServerAddressSelection.isLocal(profile.session.server)
+            Box(Modifier.size(width = 0.5.dp, height = 10.dp).background(Color.White.copy(alpha = 0.32f)))
+            Icon(if (local) PathfinIcons.Home else PathfinIcons.Globe, null, Modifier.size(12.dp), tint = Color.White.copy(alpha = 0.86f))
+            Text(if (local) tr("局域网") else tr("公网"), fontSize = 11.sp, letterSpacing = 0.5.sp, color = Color.White.copy(alpha = 0.86f))
+        }
     }
 }
 
@@ -798,7 +806,6 @@ private fun ServerAvatar(profile: ServerProfile, api: JellyfinApi, size: Dp) {
         Text(profile.icon, fontSize = (size.value * 0.5f).sp)
     }
 }
-
 @Composable
 private fun ErrorLine(message: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val error = MaterialTheme.colorScheme.error
@@ -842,8 +849,8 @@ private fun ServerActionSheet(
                 SheetRow(PathfinIcons.Smile, tr("自定义图标")) { onAction("icon") }
                 SheetRow(PathfinIcons.Edit, tr("编辑连接")) { onAction("edit") }
                 SheetRow(PathfinIcons.Route, tr("添加备用地址")) { onAction("address") }
-                if (profile.addresses.isNotEmpty()) SheetRow(PathfinIcons.Link, tr("连接地址"),
-                    tr("%1\$s 个", (listOf(profile.session.server) + profile.addresses).distinctBy { it.baseUrl }.size)) { onAction("addresses") }
+                if (profile.connectionAddresses.size > 1) SheetRow(PathfinIcons.Link, tr("连接地址"),
+                    if (profile.autoAddress) tr("自动") else tr("已固定")) { onAction("addresses") }
                 SheetRow(PathfinIcons.Key, tr("修改密码")) { onAction("password") }
             }
             SheetGroup {
@@ -1108,5 +1115,21 @@ private fun relativeTime(timestamp: Long): String {
         minutes < 60 -> tr("%1\$s 分钟前", minutes)
         minutes < 24 * 60 -> tr("%1\$s 小时前", minutes / 60)
         else -> tr("%1\$s 天前", minutes / (24 * 60))
+    }
+}
+
+@Composable
+private fun AddressChoice(label: String, selected: Boolean, detail: String? = null, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.RadioButton, onClick = onClick).padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, fontSize = 13.5.sp, lineHeight = 20.sp,
+                color = if (selected) PathfinAppearance.textMain else PathfinAppearance.textSub)
+            detail?.let { Text(it, fontSize = 11.sp, color = PathfinAppearance.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+        if (selected) Icon(PathfinIcons.Check, tr("已选择"), Modifier.size(18.dp), tint = PathfinAppearance.accent)
     }
 }

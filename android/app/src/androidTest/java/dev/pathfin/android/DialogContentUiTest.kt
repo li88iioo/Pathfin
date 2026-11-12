@@ -11,6 +11,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.MediaSource
 import dev.pathfin.android.domain.PlaybackInfo
+import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.ui.PlaybackSourceDialog
 import dev.pathfin.android.ui.SourceSelection
 import dev.pathfin.android.ui.theme.PathfinTheme
@@ -33,7 +34,7 @@ class DialogContentUiTest {
             val density = LocalDensity.current.density
             CompositionLocalProvider(LocalDensity provides Density(density, 1.5f)) {
                 PathfinTheme(ThemePreference.LIGHT) {
-                    PlaybackSourceDialog(SourceSelection(MediaItem("item", "合成影片", "Movie"), PlaybackInfo(sources, "session"), 0),
+                    PlaybackSourceDialog(SourceSelection(MediaItem("item", "合成影片", "Movie"), PlaybackInfo(sources, "session"), 0, ServerConfig("https://media.invalid")),
                         onChoose = choices::add, onDismiss = { dismisses++ })
                 }
             }

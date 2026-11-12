@@ -7,6 +7,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.Deferred
 import android.app.Application
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
 import android.net.Uri
 import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
@@ -51,6 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import java.io.File
 import java.time.LocalDate
@@ -136,7 +139,8 @@ data class DownloadSelection(
     val needsDestination: Boolean = false,
 )
 
-data class SourceSelection(val item: MediaItem, val info: PlaybackInfo, val startMs: Long,
+/** server 是取得这份 PlaybackInfo 时的地址；其中可能含该地址的绝对转码 URL，换址后不能直接使用。 */
+data class SourceSelection(val item: MediaItem, val info: PlaybackInfo, val startMs: Long, val server: ServerConfig,
     val needsSelectedVideoPreflight: Boolean = false)
 
 /** 点击即发布；只保存可重试的目标，PlaybackInfo 仍在每次准备时重新取得。 */
@@ -242,6 +246,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val homeSnapshots = ProfileHomeCache<HomeState>()
     private val homeSnapshotWrites = mutableMapOf<String, Job>()
     private var loginJob: Job? = null
+    private var addressCheckJob: Job? = null
+    // 系统在自己的线程回调默认网络变化（含注册后的首次回调），统一回到主线程去抖。
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) { viewModelScope.launch { scheduleAddressCheck() } }
+    }
     private val discoveryJobs = mutableMapOf<String, Job>()
     private val discoveryLoads = mutableMapOf<String, Any>()
     private val discoveryConcurrency = Semaphore(3)
@@ -303,6 +312,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        runCatching { application.getSystemService(ConnectivityManager::class.java).registerDefaultNetworkCallback(networkCallback) }
         // 只在 IO 清理已移除功能的独立本机数据；不等待、不影响 Jellyfin 会话恢复。
         viewModelScope.launch { LegacyTraktCleanup.run(application) }
         viewModelScope.launch {
@@ -346,20 +356,27 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun validateAndLoad(saved: Session) {
         val epoch = generation
+        val profileId = state.value.currentProfileId
         loginJob = viewModelScope.launch {
             try {
-                ensureLocalNetworkAccess(saved.server.baseUrl)
-                val validated = api.validateSession(saved)
+                // 上次的地址可能已不在当前网络中（如局域网换成移动数据），先挑可用地址，免得等满连接超时。
+                val server = state.value.profiles.firstOrNull { it.id == profileId }
+                    ?.let { chooseAddress(it.copy(session = saved)) } ?: saved.server
+                ensureLocalNetworkAccess(server.baseUrl)
+                val validated = api.validateSession(saved.copy(server = server))
                 if (epoch == generation) {
                     val freshHome = requiresFreshHome(saved, validated)
-                    if (freshHome) state.value.currentProfileId?.let(::invalidateHomeSnapshot)
-                    if (validated != saved) storeIo { sessionStore.save(validated) }
+                    if (freshHome) profileId?.let(::invalidateHomeSnapshot)
+                    if (validated != saved) storeIo {
+                        val stored = profileId?.let { id -> sessionStore.loadProfiles().firstOrNull { it.id == id } }
+                        if (stored != null) sessionStore.upsertProfile(stored.withSession(validated)) else sessionStore.save(validated)
+                    }
                     if (epoch != generation) return@launch
                     mutableState.update { current -> current.copy(session = validated,
                         liveTv = current.liveTv?.let { liveTvFor(validated) },
                         administration = current.administration?.let { administrationFor(validated) },
                         home = if (freshHome) HomeState() else current.home,
-                        profiles = current.profiles.map { if (it.id == current.currentProfileId) it.copy(session = validated) else it }) }
+                        profiles = current.profiles.map { if (it.id == current.currentProfileId) it.withSession(validated) else it }) }
                     state.value.currentProfileId?.let(homeSnapshots::allowProfile)
                     refreshHome()
                 }
@@ -600,7 +617,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun requiresFreshHome(old: Session, updated: Session): Boolean =
-        old.server != updated.server || old.serverId != updated.serverId || old.userId != updated.userId ||
+        old.serverIdentity != updated.serverIdentity || old.serverId != updated.serverId || old.userId != updated.userId ||
             old.accessToken != updated.accessToken || old.deviceId != updated.deviceId ||
             old.isAdministrator != updated.isAdministrator || old.canDownload != updated.canDownload || old.canDelete != updated.canDelete
 
@@ -644,15 +661,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             var attempted = profile
             try {
                 storageReady.await()
-                val persisted = storeIo { sessionStore.loadProfiles().firstOrNull { it.id == profile.id } } ?: error(tr("服务器已移除"))
-                attempted = persisted.copy(session = persisted.session.copy(server = profile.session.server))
+                val persisted = storeIo { sessionStore.loadProfiles().firstOrNull { it.id == profile.id } }
+                    ?.copy(autoAddress = profile.autoAddress) ?: error(tr("服务器已移除"))
+                // 手动指定地址时关闭了自动选择，按所选地址连接；否则挑当前网络下可用的地址。
+                val server = chooseAddress(persisted) ?: profile.session.server
+                attempted = persisted.withSession(persisted.session.copy(server = server))
                 trace.point("profile_read")
-                val validated = validateAddress(persisted.session, profile.session.server)
+                val validated = validateAddress(persisted.session, server)
                 trace.point("session_validated")
                 if (epoch != generation) return@launch
                 // 只读校验可取消替换；进入本地提交后沿用账号写操作互斥，避免旧选择迟到落盘。
                 mutableState.update { it.copy(switchingProfileId = null) }
-                val updated = attempted.copy(session = validated)
+                val updated = attempted.withSession(validated)
                 if (requiresFreshHome(persisted.session, validated)) invalidateHomeSnapshot(updated.id)
                 storeIo { sessionStore.upsertProfile(updated); sessionStore.selectProfile(updated.id) }
                 if (epoch != generation) return@launch
@@ -699,11 +719,72 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             homeSnapshots.allowProfile(updated.id)
             refreshHome()
         }
+        if (updated.autoAddress && !old.autoAddress && updated.id == state.value.currentProfileId) scheduleAddressCheck()
     }
 
     fun addServerAddress(profile: ServerProfile, config: ServerConfig) = serverOperation(profile) {
         validateAddress(profile.session, config)
         storeIo { sessionStore.upsertProfile(profile.copy(addresses = (profile.addresses + config).distinctBy { it.baseUrl })) }
+        // 新地址可能比当前地址更合适（如在家补了局域网地址），操作结束后按自动规则重选。
+        if (profile.id == state.value.currentProfileId) scheduleAddressCheck()
+    }
+
+    private suspend fun chooseAddress(profile: ServerProfile): ServerConfig? =
+        ServerAddressSelection.choose(profile) { api.publicServerInfo(it).id }
+
+    /** 网络变化后稍候再探测，避开刚连上网络时路由与 DNS 尚未就绪。 */
+    private fun scheduleAddressCheck() {
+        addressCheckJob?.cancel()
+        addressCheckJob = viewModelScope.launch {
+            delay(1_000)
+            storageReady.await()
+            // 登录、切服、启动校验与账号删除进行中时等它们结束，再按当时的网络重选，不能漏掉这次变化。
+            do {
+                loginJob?.takeIf { it.isActive }?.join()
+                state.first { !it.loginBusy }
+            } while (!switchToBestAddress())
+        }
+    }
+
+    /**
+     * 同一服务器换地址不换会话：页面、首页与媒体缓存都保留，只让后续请求走新地址。
+     * 探测前后遇到登录、切服或账号操作进行中时返回 false，由调用方等它结束后重来。
+     */
+    private suspend fun switchToBestAddress(): Boolean {
+        fun busy() = loginJob?.isActive == true || state.value.loginBusy
+        if (busy()) return false
+        val current = state.value
+        val session = current.session ?: return true
+        val profile = current.profiles.firstOrNull { it.id == current.currentProfileId } ?: return true
+        if (current.reauthenticationProfile != null) return true
+        val server = chooseAddress(profile.copy(session = session))
+        if (busy()) return false
+        if (server == null || server == session.server || state.value.session != session) return true
+        val updated = storeIo {
+            val stored = sessionStore.loadProfiles().firstOrNull { it.id == profile.id }
+                ?.takeIf { it.autoAddress && it.session.hasSameAuthentication(session) } ?: return@storeIo null
+            stored.withSession(session.copy(server = server)).also(sessionStore::upsertProfile)
+        } ?: return true
+        if (state.value.session != session || state.value.currentProfileId != profile.id) return true
+        // 预取按认证匹配，同服换址仍会命中；旧地址上挂起的预取不能让起播继续等它。
+        invalidatePlaybackPrefetch()
+        val home = state.value.home
+        mutableState.update { it.copy(session = updated.session,
+            profiles = it.profiles.map { other -> if (other.id == updated.id) updated else other },
+            liveTv = it.liveTv?.let { liveTvFor(updated.session) },
+            administration = it.administration?.let { administrationFor(updated.session) }) }
+        restartPendingPlayback()
+        // 旧地址上未完成的首页请求可能要等到连接超时，直接按新地址重来。
+        if (!home.complete || home.error != null) refreshHome()
+        return true
+    }
+
+    /** 已开始的起播准备持有旧地址的会话，且按认证匹配仍算有效；换址后按同一起播意图在新地址上重新准备。 */
+    private fun restartPendingPlayback() {
+        val current = state.value
+        val pending = current.pendingPlayback?.takeIf { current.preparingPlay } ?: return
+        cancelPendingPlayback()
+        beginPlaybackPreparation(pending.item, pending.fromStart, pending.sourceId, pending.loadDetails, pending.quality)
     }
 
     fun changePassword(profile: ServerProfile, current: String, new: String) = serverOperation(profile) {
@@ -739,9 +820,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun clearProfileImages(profile: ServerProfile) {
         // 先捕获当前缓存代次；迟到的 IO 清理不能关闭重新登录后创建的 loader。
-        val removals = (listOf(profile.session.server) + profile.addresses).distinctBy { it.baseUrl }.map { server ->
-            PosterImageCache.prepareAccountRemoval(getApplication(), profile.session.copy(server = server))
-        }
+        // 缓存按服务器与账号划分：同一账号的其他本机资料仍在用的那份不能删；没有 serverId 时每个地址各一份。
+        val retained = state.value.profiles.filter { it.id != profile.id }.flatMap { other ->
+            other.connectionAddresses.map { PosterImageCache.accountKey(other.session.copy(server = it)) }
+        }.toSet()
+        val removals = profile.connectionAddresses.map { profile.session.copy(server = it) }
+            .distinctBy(PosterImageCache::accountKey).filter { PosterImageCache.accountKey(it) !in retained }
+            .map { PosterImageCache.prepareAccountRemoval(getApplication(), it) }
         viewModelScope.launch(Dispatchers.IO) { removals.forEach { remove -> runCatching { remove() } } }
     }
 
@@ -778,7 +863,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return api.validateSession(session.copy(server = config))
     }
 
-    private fun sessionKey(session: Session) = "${session.serverId.ifBlank { session.server.baseUrl }}/${session.userId}"
+    override fun onCleared() {
+        runCatching { getApplication<Application>().getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(networkCallback) }
+    }
+
+    private fun sessionKey(session: Session) = "${session.serverIdentity}/${session.userId}"
 
     fun selectTab(route: Route) {
         cancelServerSwitch()
@@ -1835,7 +1924,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 require(info.errorCode.isNullOrBlank()) { tr("服务器暂时无法准备播放，请检查权限或媒体源") }
                 require(info.sources.isNotEmpty()) { tr("该媒体没有可播放的媒体源") }
                 if (sourceId != null) require(info.sources.any { it.id == sourceId }) { tr("当前版本已不可用，请重新选择媒体源") }
-                val selection = SourceSelection(target, info, start,
+                val selection = SourceSelection(target, info, start, session.server,
                     needsSelectedVideoPreflight = videoPreflight == VideoPreflightPolicy.TRY_ORIGINAL_SOURCE ||
                         (sourceId == null && info.sources.size > 1))
                 mutableState.update { it.copy(preparingPlay = false, sourceSelection = selection) }
@@ -1866,6 +1955,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val selection = current.sourceSelection ?: return
         val session = current.session ?: return
         if (current.preparingPlay) return
+        if (selection.server != session.server) {
+            // 选源框等待期间换了地址：按所选片源在新地址重新取得播放信息，保留同一起播意图。
+            cancelPendingPlayback()
+            beginPlaybackPreparation(pending.item, pending.fromStart, sourceId, pending.loadDetails, pending.quality)
+            return
+        }
         val epoch = generation
         playJob?.cancel()
         mutableState.update { it.copy(preparingPlay = true, playbackError = null) }

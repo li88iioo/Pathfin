@@ -7,7 +7,6 @@ $1[已隐藏]	$1[hidden]
 %1$s · 直接串流（不转码）	%1$s · Direct stream (no transcoding)
 %1$s · 直接播放	%1$s · Direct play
 %1$s · 转码	%1$s · Transcoding
-%1$s 个	%1$s
 %1$s 个任务	%1$s tasks
 %1$s 个任务 · %2$s 个进行中	%1$s tasks · %2$s running
 %1$s 个日志文件	%1$s log files
@@ -506,6 +505,9 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 已跟随系统主题色	Following the system theme color
 已连接	Connected
 已选择	Selected
+已固定	Fixed
+局域网	LAN
+公网	Internet
 已选择 %1$s 项	%1$s selected
 已选择的目录	Selected folder
 已遮盖	Masked
@@ -525,7 +527,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 强制字幕	Forced subtitles
 当前为其他媒体版本；服务器字幕操作用于条目的默认版本。	Another media version is playing; server subtitle actions apply to the item's default version.
 当前升序	Ascending
-当前地址	Current address
 当前媒体未提供云盘画质	This media has no cloud quality options
 当前媒体版本已不存在	The current media version no longer exists
 当前密码	Current password
@@ -1322,7 +1323,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 选择媒体版本	Choose media version
 选择播放版本	Choose playback version
 选择文件夹…	Choose folder…
-选择本次连接使用的地址	Choose the address for this connection
+自动选择时优先使用局域网地址，连不上再换用其他地址	Auto select prefers LAN addresses and falls back to others when they are unreachable
 选择标签	Choose tags
 选择账号	Choose account
 选用图片	Use image

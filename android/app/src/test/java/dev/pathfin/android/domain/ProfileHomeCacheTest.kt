@@ -7,12 +7,15 @@ class ProfileHomeCacheTest {
     private val session = Session(ServerConfig("https://example.test/jellyfin/"), "synthetic-token", "user", "Alice", "device", "server")
     private fun key(profile: String = "A", value: Session = session) = ProfileHomeKey.of(profile, value)
 
-    @Test fun canonicalAddressMatchesButEachProfileServerUserAndAddressRemainSeparate() {
+    @Test fun addressesOfOneServerShareAKeyButEachProfileServerAndUserRemainSeparate() {
         assertEquals(key(), key(value = session.copy(server = ServerConfig("https://example.test/jellyfin"))))
+        assertEquals(key(), key(value = session.copy(server = ServerConfig("http://192.0.2.10:8096", allowInsecureHttp = true))))
         val keys = setOf(key(), key("B"), key(value = session.copy(serverId = "other-server")),
-            key(value = session.copy(userId = "other-user")),
-            key(value = session.copy(server = ServerConfig("https://other.test/jellyfin"))))
-        assertEquals(5, keys.size)
+            key(value = session.copy(userId = "other-user")))
+        assertEquals(4, keys.size)
+        // 没有 serverId 时无从确认是同一台服务器，只能按地址区分。
+        val legacy = session.copy(serverId = "")
+        assertNotEquals(key(value = legacy), key(value = legacy.copy(server = ServerConfig("https://other.test/jellyfin"))))
     }
 
     @Test fun tokenDeviceAndPermissionChangesDoNotExposeCredentialsInTheContentKey() {
@@ -34,7 +37,7 @@ class ProfileHomeCacheTest {
 
     @Test fun invalidationRemovesAllAddressesForOnlyThatProfileAndRejectsLateOldCaptures() {
         val cache = ProfileHomeCache<String>()
-        val alternate = key(value = session.copy(server = ServerConfig("https://other.test/jellyfin")))
+        val alternate = key(value = session.copy(serverId = "", server = ServerConfig("https://other.test/jellyfin")))
         cache.put(key(), "A-home")
         cache.put(alternate, "A-alternate")
         cache.put(key("B"), "B-home")

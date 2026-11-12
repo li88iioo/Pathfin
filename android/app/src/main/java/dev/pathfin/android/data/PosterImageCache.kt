@@ -6,6 +6,7 @@ import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import dev.pathfin.android.domain.ServerUrls
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.i18n.tr
 import dev.pathfin.android.playback.PlaybackClientCleanup
@@ -30,12 +31,14 @@ import okio.ByteString.Companion.encodeUtf8
 import okio.Path.Companion.toOkioPath
 import org.json.JSONObject
 
-/** 封面缓存按服务器地址与账号隔离；凭据只随请求发送，不参与缓存目录或 key。 */
+/** 封面缓存按服务器与账号隔离，同一服务器的各个地址共用；凭据只随请求发送，不参与缓存目录或 key。 */
 internal object PosterImageCache {
     const val MAX_DISK_BYTES = 1024L * 1024 * 1024
     const val MEMORY_BYTES_PER_LOADER = 16L * 1024 * 1024
     const val MAX_IDLE_LOADERS = 2
-    private const val DIRECTORY = "poster-images-v1"
+    private const val DIRECTORY = "poster-images-v2"
+    // v1 按地址分区，换地址即整份失效；升级后整目录删除，不做迁移。
+    private const val LEGACY_DIRECTORY = "poster-images-v1"
     private const val CURRENT = "current.json"
     private val widths = intArrayOf(160, 240, 320, 420, 560, 720, 960, 1280, 1920, 2048)
     // 主线程只短暂操作状态；关闭 DiskCache、读写元数据和删除目录仅持有 ioLock。
@@ -48,6 +51,7 @@ internal object PosterImageCache {
     private val accountEpochs = mutableMapOf<String, Long>()
     private var nextLoaderGeneration = 0L
     private var nextUse = 0L
+    private var legacyRemoved = false // 仅在 ioLock 内读写
 
     private class Entry(val diskCache: DiskCache, var epoch: Long) {
         var record: LoaderRecord? = null
@@ -67,14 +71,18 @@ internal object PosterImageCache {
 
     private class AccountPreparation(val directory: File, val epoch: Long)
 
-    /** Token 轮换与账号显示名变化不使缓存失效；同 origin 下不同反代目录仍隔离。 */
-    fun accountKey(session: Session): String {
-        val url = session.server.baseUrl.toHttpUrl()
-        return digest(listOf(url.scheme, url.host, url.port.toString(), url.encodedPath.trimEnd('/'), session.userId)
-            .joinToString("\u0000"))
-    }
+    /** 局域网与公网地址指向同一服务器时共用缓存；Token 轮换与显示名变化不使缓存失效。 */
+    fun accountKey(session: Session): String = digest("${session.serverIdentity}\u0000${session.userId}")
 
-    fun requestKey(session: Session, imageUrl: String): String = "poster-v1/${accountKey(session)}/${digest(imageUrl)}"
+    fun requestKey(session: Session, imageUrl: String): String = "poster-v1/${accountKey(session)}/${digest(serverResource(session, imageUrl))}"
+
+    /** 服务器内的图片只取地址之后的路径与参数，换地址后命中同一条缓存；站外图片保留完整 URL。 */
+    private fun serverResource(session: Session, imageUrl: String): String {
+        if (!ServerUrls.isWithinBase(session.server, imageUrl)) return imageUrl
+        val url = imageUrl.toHttpUrl()
+        val base = session.server.baseUrl.toHttpUrl().encodedPath.trimEnd('/')
+        return url.encodedPath.removePrefix(base) + url.encodedQuery?.let { "?$it" }.orEmpty()
+    }
 
     /** 以真实显示像素选有限档位，避免小横图固定下载详情尺寸，或每像素产生一个变体。 */
     fun requestWidth(displayWidthPx: Int): Int = widths.firstOrNull { it >= displayWidthPx } ?: widths.last()
@@ -147,6 +155,10 @@ internal object PosterImageCache {
                 throw error
             }
             return@creation record.loader
+        }
+        if (!legacyRemoved) {
+            File(context.cacheDir, LEGACY_DIRECTORY).deleteRecursively()
+            legacyRemoved = true
         }
         val boundedBytes = boundedDiskBytes(maxBytes)
         val root = account.directory

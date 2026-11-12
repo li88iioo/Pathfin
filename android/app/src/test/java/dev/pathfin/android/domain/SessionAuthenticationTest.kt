@@ -19,10 +19,17 @@ class SessionAuthenticationTest {
         val replacements = listOf(
             session.copy(accessToken = "token-b"), session.copy(userId = "user-b"),
             session.copy(serverId = "server-b"), session.copy(deviceId = "device-b"),
-            session.copy(server = ServerConfig("https://other.invalid/jellyfin")),
-            session.copy(server = ServerConfig("https://media.invalid/another-base")),
         )
         replacements.forEach { assertFalse(session.hasSameAuthentication(it)) }
         assertFalse(session.hasSameAuthentication(null))
+    }
+
+    @Test fun anotherAddressOfTheSameServerKeepsTheConnectionButUnknownServersStaySeparatedByAddress() {
+        val lan = session.copy(server = ServerConfig("http://192.0.2.10:8096", allowInsecureHttp = true))
+        assertTrue(session.hasSameAuthentication(lan))
+        val legacy = session.copy(serverId = "")
+        assertTrue(legacy.hasSameAuthentication(legacy.copy(server = ServerConfig("https://MEDIA.invalid/jellyfin/"))))
+        assertFalse(legacy.hasSameAuthentication(legacy.copy(server = ServerConfig("https://other.invalid/jellyfin"))))
+        assertFalse(legacy.hasSameAuthentication(legacy.copy(server = ServerConfig("https://media.invalid/another-base"))))
     }
 }

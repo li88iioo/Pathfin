@@ -14,9 +14,12 @@ data class Session(
     val canDownload: Boolean = false,
     val canDelete: Boolean = false,
 ) {
-    /** 资料补全不会更换认证；地址、服务器、账号、凭据或设备变更才隔离在途响应。 */
+    /** 缓存、快照与本机偏好的服务器身份：同一服务器的局域网/公网地址共用；尚无 serverId 时只能按地址区分。 */
+    val serverIdentity: String get() = serverId.ifBlank { ServerUrls.normalize(server.copy(allowInsecureHttp = true)).baseUrl }
+
+    /** 资料补全与切换同一服务器的其他地址不会更换认证；服务器、账号、凭据或设备变更才隔离在途响应。 */
     fun hasSameAuthentication(other: Session?): Boolean = other != null &&
-        server == other.server && serverId == other.serverId && userId == other.userId &&
+        serverIdentity == other.serverIdentity && serverId == other.serverId && userId == other.userId &&
         accessToken == other.accessToken && deviceId == other.deviceId
 }
 

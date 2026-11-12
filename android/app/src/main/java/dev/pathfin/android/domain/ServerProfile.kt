@@ -12,7 +12,16 @@ data class ServerProfile(
     val showLastPlayed: Boolean = true,
     val lastPlayedAt: Long = 0,
     val addresses: List<ServerConfig> = emptyList(),
-)
+    /** 在全部地址中自动选择：局域网优先，连不上再用其他地址；手动指定某个地址后关闭。 */
+    val autoAddress: Boolean = true,
+) {
+    /** 当前地址在前，其余为备用地址。 */
+    val connectionAddresses: List<ServerConfig> get() = (listOf(session.server) + addresses).distinctBy { it.baseUrl }
+
+    /** 换用另一个地址时原地址转为备用，不会从列表中丢失。 */
+    fun withSession(updated: Session): ServerProfile =
+        copy(session = updated, addresses = connectionAddresses.filter { it.baseUrl != updated.server.baseUrl })
+}
 
 /** 本机资料按登录地址区分；同一服务器的其他地址只有显式添加后才属于备用地址。 */
 object ServerProfileIdentity {

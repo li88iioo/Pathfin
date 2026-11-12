@@ -71,12 +71,14 @@ class HomeSnapshotStoreTest {
         assertNull(store.load("B", session))
         val differentSessions = listOf(
             session.copy(userId = "user-B"), session.copy(serverId = "server-B"),
-            session.copy(server = ServerConfig("https://other.test/jellyfin")),
+            session.copy(serverId = "", server = ServerConfig("https://other.test/jellyfin")),
             session.copy(accessToken = "renewed-token"), session.copy(deviceId = "other-device"),
             session.copy(isAdministrator = true), session.copy(canDownload = true), session.copy(canDelete = true),
         )
         differentSessions.forEach { assertNull(store.load("A", it)) }
         assertEquals(expected, store.load("A", session.copy(server = ServerConfig("https://server.test/jellyfin/"))))
+        // 同一服务器的局域网/公网地址读同一份首页。
+        assertEquals(expected, store.load("A", session.copy(server = ServerConfig("http://192.0.2.10:8096", allowInsecureHttp = true))))
         assertEquals(expected, store.load("A", session.copy(userName = "Renamed", userImageTag = "avatar")))
         val other = expected.copy(nextUp = emptyList())
         assertTrue(store.save("B", session, other))
@@ -87,7 +89,7 @@ class HomeSnapshotStoreTest {
     @Test fun removingOneProfileDeletesEveryAddressAndAuthenticationWithoutAffectingOthers() {
         val directory = temporary.newFolder()
         val store = HomeSnapshotStore(directory)
-        val addresses = listOf(session, session.copy(server = ServerConfig("https://alternate.test")),
+        val addresses = listOf(session, session.copy(serverId = "", server = ServerConfig("https://alternate.test")),
             session.copy(accessToken = "renewed-token"))
         addresses.forEach { assertTrue(store.save("A", it, snapshot())) }
         assertTrue(store.save("B", session, snapshot()))

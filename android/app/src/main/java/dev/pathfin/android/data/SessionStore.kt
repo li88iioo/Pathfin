@@ -159,6 +159,7 @@ class SessionStore(context: Context) {
                         val address = addresses.getJSONObject(position)
                         ServerUrls.normalize(address.getString("baseUrl"), address.getBoolean("allowInsecureHttp"))
                     }.distinct(),
+                    autoAddress = json.optBoolean("autoAddress", true),
                 ).also(::validateProfile)
             }.also { profiles -> require(profiles.map { it.id }.distinct().size == profiles.size) }
         } catch (_: GeneralSecurityException) {
@@ -189,7 +190,7 @@ class SessionStore(context: Context) {
                 .put("id", profile.id).put("session", sessionJson(profile.session))
                 .put("displayName", profile.displayName).put("icon", profile.icon)
                 .put("showUserName", profile.showUserName).put("showLastPlayed", profile.showLastPlayed)
-                .put("lastPlayedAt", profile.lastPlayedAt).put("addresses", addresses))
+                .put("lastPlayedAt", profile.lastPlayedAt).put("addresses", addresses).put("autoAddress", profile.autoAddress))
         }
         val encrypted = encrypt(JSONObject().put("profiles", array), 2, PROFILES_AAD)
         val editor = preferences.edit().putString(PROFILES, encrypted)

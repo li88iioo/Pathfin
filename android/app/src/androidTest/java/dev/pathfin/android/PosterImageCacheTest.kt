@@ -69,6 +69,22 @@ class PosterImageCacheTest {
     }
 
     @Test
+    fun sameServerAndAccountShareCacheAcrossLanAndPublicAddresses() {
+        val lan = session().copy(server = ServerConfig("http://192.0.2.10:8096", allowInsecureHttp = true), serverId = "server-a")
+        val public = lan.copy(server = ServerConfig("https://media.example.invalid/jellyfin"))
+        val image = "Items/film/Images/Primary?maxWidth=420&tag=one"
+        val key = PosterImageCache.requestKey(lan, "http://192.0.2.10:8096/$image")
+        assertEquals(PosterImageCache.accountKey(lan), PosterImageCache.accountKey(public))
+        assertEquals(key, PosterImageCache.requestKey(public, "https://media.example.invalid/jellyfin/$image"))
+        // 同地址的另一台服务器、另一个账号与站外图片都不能串用。
+        assertNotEquals(key, PosterImageCache.requestKey(lan.copy(serverId = "server-b"), "http://192.0.2.10:8096/$image"))
+        assertNotEquals(key, PosterImageCache.requestKey(lan.copy(userId = "another-user"), "http://192.0.2.10:8096/$image"))
+        assertNotEquals(PosterImageCache.requestKey(lan, "https://images.example.invalid/$image"),
+            PosterImageCache.requestKey(public, "https://other-images.example.invalid/$image"))
+        assertFalse(key.contains("server-a"))
+    }
+
+    @Test
     fun oneDiskInstanceIsSharedAndEntriesSurviveLoaderAndRegistryRecreation() {
         val session = session()
         val first = PosterImageCache.createLoader(context, session, client)

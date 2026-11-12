@@ -113,10 +113,9 @@ class BrowserSnapshotStoreTest {
         assertNull(store.load(session, key(profileId = "B")))
         val alternatives = listOf(
             session.copy(userId = "user-B"), session.copy(serverId = "server-B"),
-            session.copy(server = ServerConfig("https://other.test/jellyfin")),
-            session.copy(server = ServerConfig("https://server.test/other-proxy")),
-            session.copy(server = ServerConfig("https://server.test:8443/jellyfin")),
-            session.copy(server = session.server.copy(allowInsecureHttp = true)),
+            session.copy(serverId = "", server = ServerConfig("https://other.test/jellyfin")),
+            session.copy(serverId = "", server = ServerConfig("https://server.test/other-proxy")),
+            session.copy(serverId = "", server = ServerConfig("https://server.test:8443/jellyfin")),
             session.copy(accessToken = "renewed-token"), session.copy(deviceId = "other-device"),
             session.copy(isAdministrator = true), session.copy(canDownload = true), session.copy(canDelete = true),
         )
@@ -124,6 +123,8 @@ class BrowserSnapshotStoreTest {
         val same = session.copy(server = ServerConfig("https://server.test/jellyfin/"),
             userName = "Renamed", userImageTag = "avatar")
         assertEquals(page, store.load(same, key(activeSession = same)))
+        val lan = session.copy(server = ServerConfig("http://192.0.2.10:8096", allowInsecureHttp = true))
+        assertEquals("同一服务器换地址应读到同一页", page, store.load(lan, key(activeSession = lan)))
         val other = session.copy(userId = "other-user")
         assertFalse("不匹配的页面归属不能写入其他会话", store.save(other, key(), page))
         assertNull(store.load(other, key()))
@@ -197,7 +198,7 @@ class BrowserSnapshotStoreTest {
     @Test fun removeProfileDeletesAllQueriesAddressesAndTokensButKeepsOtherProfiles() {
         val directory = temporary.newFolder()
         val store = BrowserSnapshotStore(directory)
-        val sessions = listOf(session, session.copy(server = ServerConfig("https://other.test")),
+        val sessions = listOf(session, session.copy(serverId = "", server = ServerConfig("https://other.test")),
             session.copy(accessToken = "new-token"))
         sessions.forEach { active ->
             assertTrue(store.save(active, key(activeSession = active), page))
@@ -217,7 +218,7 @@ class BrowserSnapshotStoreTest {
             key(LibraryQuery(favorite = true), browserId = "library-alias"))
         val unrelated = listOf(key(parentId = "other"), key(parentId = null), key(profileId = "B"))
         val otherSessions = listOf(session.copy(accessToken = "renewed-token"), session.copy(userId = "other-user"),
-            session.copy(server = ServerConfig("https://other.test")), session.copy(isAdministrator = true))
+            session.copy(serverId = "", server = ServerConfig("https://other.test")), session.copy(isAdministrator = true))
         matching.forEach { assertTrue(store.save(session, it, page)) }
         unrelated.forEach { assertTrue(store.save(session, it, page)) }
         otherSessions.forEach { assertTrue(store.save(it, key(activeSession = it), page)) }

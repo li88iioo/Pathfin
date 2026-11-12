@@ -8,7 +8,6 @@ import dev.pathfin.android.domain.LibraryTab
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.MediaPage
 import dev.pathfin.android.domain.ProfileHomeKey
-import dev.pathfin.android.domain.ServerUrls
 import dev.pathfin.android.domain.Session
 import org.json.JSONArray
 import org.json.JSONObject
@@ -98,8 +97,7 @@ internal class BrowserSnapshotStore(private val directory: File) {
     }
 
     private fun profileSessionPrefix(profileId: String, session: Session): String {
-        val identity = listOf(ServerUrls.normalize(session.server).baseUrl, session.server.allowInsecureHttp,
-            session.serverId, session.userId, session.accessToken, session.deviceId,
+        val identity = listOf(session.serverIdentity, session.userId, session.accessToken, session.deviceId,
             session.isAdministrator, session.canDownload, session.canDelete).joinToString("\u0000")
         return "${digest(profileId)}-${digest(identity)}-"
     }
