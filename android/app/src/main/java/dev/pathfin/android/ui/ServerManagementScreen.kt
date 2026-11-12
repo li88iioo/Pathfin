@@ -227,7 +227,7 @@ internal fun ServerManagementScreen(
                 val valid = password.isNotEmpty() && password == confirmation
                 ServerDialogFrame(tr("修改密码"), busy = requestBusy, error = error, onDismiss = dismiss,
                     onSubmit = { dispatch { onPassword(profile, current, password) } }, submitEnabled = valid, submitLabel = tr("修改"),
-                    subtitle = tr("为 %1\$s 设置新密码", profile.session.userName)) {
+                    subtitle = tr("修改 %1\$s 在 Jellyfin 服务器上的登录密码，其他设备也需用新密码登录", profile.session.userName)) {
                     GroupCard(container = PathfinAppearance.canvas) {
                         PasswordField(current, { current = it }, tr("当前密码"), tr("输入当前密码"), requestBusy, divider = false)
                         PasswordField(password, { password = it }, tr("新密码"), tr("输入新密码"), requestBusy)

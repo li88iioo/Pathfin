@@ -125,7 +125,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 中止	Abort
 临时媒体地址已撤销；设备未确认停止，请在电视端检查状态	The temporary media address was revoked; the device didn't confirm stopping. Check the TV
 临时媒体地址无效	Invalid temporary media address
-为 %1$s 设置新密码	Set a new password for %1$s
+修改 %1$s 在 Jellyfin 服务器上的登录密码，其他设备也需用新密码登录	Change the Jellyfin server sign-in password for %1$s; other devices will need the new password too
 为服务器起个名字	Give the server a name
 主题	Theme
 主题保存失败，请重试	Couldn't save the theme. Please retry
