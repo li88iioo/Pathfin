@@ -329,11 +329,12 @@ class DetailManagementActionsTest {
     }
 
     private fun openDetail(fixture: Fixture, vm: AppViewModel) {
-        // 同名内容还在缩略图与最近入库中；明确点击主图详情入口，不能依赖文字查询的首个节点。
-        val tag = "home-ambient-hero/$ITEM_ID"
+        // 管理契约从已选中条目的独立详情入口开始，不依赖主图内嵌控件的点击区域。
+        val tag = "home-ambient-thumb/$ITEM_ID"
         compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
-        val entry = compose.onNodeWithTag(tag).performScrollTo()
+        val entry = compose.onNodeWithTag(tag)
         VerificationDisplay.awaitWindowReady(compose, "open-synthetic-detail", entry)
+        entry.assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.StateDescription, "已选中"))
         entry.assertVerificationDisplayed(compose, "open-synthetic-detail").performVerificationClick(compose)
         await(fixture, vm, "合成媒体详情必须完成真实读取") {
             it.route == Route.Detail(ITEM_ID) && !it.detailLoading &&
