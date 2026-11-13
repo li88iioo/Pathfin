@@ -29,7 +29,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.composed
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import dev.pathfin.android.data.LiveTvSnapshotStore
@@ -276,7 +275,6 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     // 与新内容同帧生效，不会先按旧首项的键跟随、下一帧再跳；首次组合（含重新进入）不动，保留上次位置。
     val searchMark = remember(state) { arrayOf(search) }
     if (search != searchMark[0]) {
-        if (searchMark[0].isEmpty()) overviewPosition = list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset
         val (index, offset) = if (search.isEmpty()) overviewPosition else 0 to 0
         list.requestScrollToItem(index, offset)
         searchMark[0] = search
@@ -472,7 +470,12 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
                             if (expanded) Row(verticalAlignment = Alignment.CenterVertically) {
                                 val requester = remember { FocusRequester() }
                                 LaunchedEffect(pageActive) { if (pageActive && query.isEmpty()) requester.requestFocus() }
-                                PathfinSearchField(query, { query = it.take(200) }, { focus.clearFocus() }, { query = "" }, tr("搜索频道、节目或台号"),
+                                PathfinSearchField(query, {
+                                    val next = it.take(200)
+                                    // 用已组合的内容判定：同帧清空再输入时仍保留原总览锚点。
+                                    if (searchMark[0].isEmpty() && next.isNotBlank()) overviewPosition = list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset
+                                    query = next
+                                }, { focus.clearFocus() }, { query = "" }, tr("搜索频道、节目或台号"),
                                     Modifier.weight(1f).padding(start = 4.dp).focusRequester(requester)
                                         .onFocusChanged { searchFocused = it.isFocused }.testTag("live-tv-search"), frosted = true)
                                 QuietButton(tr("取消"), ::closeSearch, Modifier.testTag("live-tv-search-close"), color = LocalContentColor.current)
@@ -612,15 +615,14 @@ private fun LiveTvSkeletonTile(index: Int, modifier: Modifier) {
 
 /** 点按播放（无权限时看节目单），长按节目单；读屏另给节目单动作。 */
 @OptIn(ExperimentalFoundationApi::class)
-private fun Modifier.liveTvActions(channel: LiveTvChannel, canPlay: Boolean, preparingId: String?, onPlay: () -> Unit, onGuide: () -> Unit) =
-    composed {
-        val guideLabel = tr("%1\$s 节目单", channel.name)
-        combinedClickable(role = Role.Button,
-            onClickLabel = if (canPlay) tr("播放 %1\$s", channel.name) else guideLabel,
-            onLongClickLabel = guideLabel, onLongClick = onGuide,
-            onClick = { if (preparingId == null) { if (canPlay) onPlay() else onGuide() } })
-            .semantics { customActions = listOf(CustomAccessibilityAction(guideLabel) { onGuide(); true }) }
-    }
+private fun Modifier.liveTvActions(channel: LiveTvChannel, canPlay: Boolean, preparingId: String?, onPlay: () -> Unit, onGuide: () -> Unit): Modifier {
+    val guideLabel = tr("%1\$s 节目单", channel.name)
+    return combinedClickable(role = Role.Button,
+        onClickLabel = if (canPlay) tr("播放 %1\$s", channel.name) else guideLabel,
+        onLongClickLabel = guideLabel, onLongClick = onGuide,
+        onClick = { if (preparingId == null) { if (canPlay) onPlay() else onGuide() } })
+        .semantics { customActions = listOf(CustomAccessibilityAction(guideLabel) { onGuide(); true }) }
+}
 
 private val TileMinWidth = 96.dp
 private val GridSpacing = 10.dp
@@ -653,10 +655,10 @@ private fun LiveTvProgram.remainingMinutes(now: Instant): Long? = end?.takeIf { 
  */
 @Composable
 private fun LiveTvChannelMark(channel: LiveTvChannel, session: Session, api: JellyfinApi, preparing: Boolean,
-    size: Dp = 44.dp, modifier: Modifier = Modifier.size(size)) {
+    modifier: Modifier = Modifier) {
     val logo = rememberServerImage(session, api.imageUrl(session, channel.item, width = 240), api)
     val screen = if (PathfinAppearance.isDark()) Color(0xFF2A2B31) else Color(0xFF24252B)
-    BoxWithConstraints(modifier.clip(RoundedCornerShape(10.dp)).background(screen), contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(screen), contentAlignment = Alignment.Center) {
         val inner = minOf(maxWidth, maxHeight)
         when {
             logo != null -> AsyncImage(logo, null, imageLoader = LocalPosterLoader.current,
@@ -711,7 +713,7 @@ private fun LiveTvAmbient(channel: LiveTvChannel, session: Session, api: Jellyfi
                     // 深色氛围区本身托得住白色台标，这里不再垫底块，台标放大直接压在背景上；没有台标时退回台号块。
                     if (logo != null) AsyncImage(logo, null, imageLoader = LocalPosterLoader.current,
                         modifier = Modifier.height(56.dp).widthIn(max = 132.dp), contentScale = ContentScale.Fit, alignment = Alignment.CenterStart)
-                    else LiveTvChannelMark(channel, session, api, preparing = false, size = 48.dp)
+                    else LiveTvChannelMark(channel, session, api, preparing = false, modifier = Modifier.size(48.dp))
                     Column(Modifier.padding(start = 14.dp)) {
                         Text(tr("上次观看"), fontSize = 12.sp, lineHeight = 16.sp, color = Color.White.copy(alpha = .7f), maxLines = 1)
                         Text(listOfNotNull(channel.displayNumber, channel.name).joinToString("  "), fontSize = 14.sp, lineHeight = 19.sp,
@@ -747,7 +749,7 @@ private fun LiveTvGuide(session: Session, service: LiveTvApi, api: JellyfinApi, 
     // 节目单是大段文字，叠一层画布色加浓玻璃，后面频道列表的深色台标不会透成灰斑。
     Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).background(PathfinAppearance.canvas.copy(alpha = 0.7f)).windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))) {
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            LiveTvChannelMark(channel, session, api, preparing = false, size = 44.dp)
+            LiveTvChannelMark(channel, session, api, preparing = false, modifier = Modifier.size(44.dp))
             Column(Modifier.weight(1f).padding(start = 12.dp, end = 12.dp)) {
                 Text(channel.name, fontSize = 19.sp, lineHeight = 25.sp, fontWeight = FontWeight.SemiBold, color = PathfinAppearance.textMain,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
