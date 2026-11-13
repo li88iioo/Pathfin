@@ -159,6 +159,19 @@ class CastingFlowTest {
         assertTrue("控制 SOAP 和 relay 不应暴露 Jellyfin token", fixture.credentialsSafe.get())
     }
 
+    @Test fun rendererStopFailureStillReportsServerStopAndRevokesTheLease() = withOwnRenderer { context, profileId, fixture ->
+        start(context, profileId, fixture)
+        val lease = requireNotNull(fixture.relay.get())
+        fixture.rejectStop.set(true)
+        compose.runOnIdle { DlnaCasting.stop(context) }
+        await(fixture) { !DlnaCasting.state.value.active && !DlnaCasting.state.value.busy }
+        assertEquals(1, fixture.stops.get())
+        assertEquals("电视拒绝 Stop 也必须向服务器结束本次播放", 1, fixture.stopReports.get())
+        assertEquals("PLAYING", fixture.transport.get())
+        assertTrue(DlnaCasting.state.value.error.orEmpty().contains("设备未确认停止"))
+        assertThrows(IOException::class.java) { fixture.fetch(lease) }
+    }
+
     @Test fun removingOwnSyntheticProfileRevokesLeaseAndStopsDeviceWithoutOldApiCalls() = withOwnRenderer { context, profileId, fixture ->
         start(context, profileId, fixture)
         val lease = requireNotNull(fixture.relay.get())
@@ -242,14 +255,17 @@ class CastingFlowTest {
         val playReports = AtomicInteger(); val stopReports = AtomicInteger()
         val credentialsSafe = AtomicBoolean(true)
         val accountRemoved = AtomicBoolean(); val apiAfterRemoval = AtomicInteger()
+        val rejectStop = AtomicBoolean()
         init {
             executor.execute {
                 while (!closed.get()) {
                     val socket = try { server.accept() } catch (_: IOException) { break }
                     sockets += socket
-                    executor.execute { try { socket.use(::serve) } catch (error: Throwable) {
-                        if (!closed.get()) failure.compareAndSet(null, error)
-                    } finally { sockets -= socket } }
+                    try {
+                        executor.execute { try { socket.use(::serve) } catch (error: Throwable) {
+                            if (!closed.get()) failure.compareAndSet(null, error)
+                        } finally { sockets -= socket } }
+                    } catch (_: java.util.concurrent.RejectedExecutionException) { socket.close(); sockets -= socket }
                 }
             }
         }
@@ -295,7 +311,14 @@ class CastingFlowTest {
                             try { relayBytes.addAndGet(fetch(requireNotNull(relay.get())).size) } catch (error: Throwable) { failure.compareAndSet(null, error) }
                         } }
                         "Pause" -> { pauses.incrementAndGet(); transport.set("PAUSED_PLAYBACK") }
-                        "Stop" -> { stops.incrementAndGet(); transport.set("STOPPED") }
+                        "Stop" -> {
+                            stops.incrementAndGet()
+                            if (rejectStop.get()) {
+                                respond(socket, 500, "Stop rejected by synthetic renderer".encodeToByteArray(), "text/plain")
+                                return
+                            }
+                            transport.set("STOPPED")
+                        }
                         "Seek" -> position.set(UpnpXml.text(xml, "Target"))
                     }
                     val fields = when (action) {

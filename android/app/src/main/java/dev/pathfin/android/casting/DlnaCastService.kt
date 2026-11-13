@@ -249,8 +249,7 @@ class DlnaCastService : Service() {
             if (selected == null) throw CastException(tr("服务器未提供可投屏的媒体版本"))
             val stream = PlaybackResolver.resolve(session, item, info, selected.id, preferOriginal = true)
             val request = PlaybackRequest(item, info, selected, stream, TimeUnits.ticksToMs(position), session)
-            // 验证 progressive 后才开放端口；上游客户端独立，不与 Jellyfin API 的池/拦截器共享。
-            CastRelay.progressiveMime(request)
+            // CastRelay 先验证 progressive 再开放端口；上游客户端不与 API 共享连接池。
             relay = CastRelay(device.localAddress, device.address, request)
             val deviceClient = OkHttpClient.Builder().socketFactory(requireNotNull(device.network).socketFactory).build()
             av = AvTransportClient(device, deviceClient)
@@ -285,7 +284,7 @@ class DlnaCastService : Service() {
                     }
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (failure: Exception) {
-                    if (failure is LocalNetworkPermissionDenied || failure is CastException && failure.message == ACCOUNT_REMOVED || ++failures >= 3) {
+                    if (failure is LocalNetworkPermissionDenied || failure is CastAccountRemoved || ++failures >= 3) {
                         if (active === cast && generation == epoch) endSession(castError(failure))
                     }
                 }
@@ -323,7 +322,7 @@ class DlnaCastService : Service() {
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
                 if (active === cast && generation == epoch) {
-                    if (failure is LocalNetworkPermissionDenied || failure is CastException && failure.message == ACCOUNT_REMOVED) endSession(castError(failure))
+                    if (failure is LocalNetworkPermissionDenied || failure is CastAccountRemoved) endSession(castError(failure))
                     else DlnaCasting.update { it.copy(busy = false, error = castError(failure)) }
                 }
             }
@@ -354,15 +353,12 @@ class DlnaCastService : Service() {
     private suspend fun dispose(cast: ActiveCast?, stopDevice: Boolean): Boolean {
         if (cast == null) return true
         cast.relay.revoke()
-        var stopped = !stopDevice
         try {
-            if (stopDevice) stopped = withTimeoutOrNull(3_000) { cast.av.stop(); true } == true
-            if (cast.reported && profileExists(cast)) withTimeoutOrNull(3_000) {
-                report(cast, "stop", cast.positionTicks, false)
-            }
-        } catch (_: Exception) { /* 停止失败不恢复 lease；UI 不宣称电视已确认。 */ }
-        finally { runCatching { cast.relay.close() }; runCatching { cast.av.close() }; closeClient(cast.apiClient) }
-        return stopped
+            // 电视确认与服务器会话各自结束；任一端失败不能跳过另一端的清理。
+            val stopped = !stopDevice || runCatching { withTimeoutOrNull(3_000) { cast.av.stop(); true } == true }.getOrDefault(false)
+            runCatching { if (cast.reported && profileExists(cast)) report(cast, "stop", cast.positionTicks, false) }
+            return stopped
+        } finally { runCatching { cast.relay.close() }; runCatching { cast.av.close() }; closeClient(cast.apiClient) }
     }
 
     private fun profileExists(cast: ActiveCast): Boolean {
@@ -376,7 +372,7 @@ class DlnaCastService : Service() {
 
     private fun checkProfile(cast: ActiveCast) {
         if (!LocalNetworkPermission.isGranted(this)) throw LocalNetworkPermissionDenied()
-        if (!profileExists(cast)) throw CastException(ACCOUNT_REMOVED)
+        if (!profileExists(cast)) throw CastAccountRemoved()
     }
 
     private suspend fun report(cast: ActiveCast, event: String, ticks: Long, paused: Boolean) {
@@ -452,7 +448,6 @@ class DlnaCastService : Service() {
         internal const val STOP = "dev.pathfin.cast.STOP"
         private const val CHANNEL = "pathfin-dlna"
         private const val NOTIFICATION_ID = 8301
-        private val ACCOUNT_REMOVED: String get() = tr("此账号已移除，临时媒体地址已撤销")
         private fun closeClient(client: OkHttpClient) {
             runCatching { client.dispatcher.cancelAll() }
             runCatching { client.connectionPool.evictAll() }
@@ -461,7 +456,10 @@ class DlnaCastService : Service() {
     }
 }
 
+private class CastAccountRemoved : java.io.IOException()
+
 private fun castError(failure: Exception): String = when (failure) {
+    is CastAccountRemoved -> tr("此账号已移除，临时媒体地址已撤销")
     is LocalNetworkPermissionDenied -> LocalNetworkPermission.DENIED_MESSAGE
     is CastException -> failure.message ?: tr("投屏失败，请检查设备状态后重试")
     is ApiException -> when (failure.statusCode) { 401 -> tr("登录已失效，请重新登录"); 403 -> tr("当前账号无权播放此媒体"); else -> tr("无法读取服务器播放信息，请稍后重试") }
