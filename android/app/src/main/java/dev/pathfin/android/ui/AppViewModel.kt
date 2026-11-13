@@ -224,7 +224,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val preferencesStore by lazy { AppPreferencesStore(application) }
     private val homeSnapshotStore by lazy { HomeSnapshotStore(application) }
     private val browserSnapshotStore by lazy { BrowserSnapshotStore(application) }
-    private val liveTvGroupSource by lazy { LiveTvGroupSource(application) }
+    private val liveTvGroupSource by lazy { LiveTvGroupSource(application) { ensureLocalNetworkAccess(it) } }
     private val liveTvSnapshots by lazy { LiveTvSnapshotStore(application) }
     private val mutableState = MutableStateFlow(AppState(restoringSession = true))
     private val storageMutex = Mutex()

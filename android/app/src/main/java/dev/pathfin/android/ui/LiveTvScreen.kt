@@ -172,7 +172,7 @@ class LiveTvState(val session: Session, val api: JellyfinApi, private val scope:
         job?.takeIf { it.isActive }?.let { pending -> pending.join(); if (pending.isCancelled) return }
         if (loadedAt?.let { clock() - it < 60_000L } != true) load()
     }
-    fun cancel() { job?.cancel() }
+    fun cancel() { job?.cancel(); groupsJob?.cancel() }
     fun denyAccess() {
         cancel(); access = LiveTvCapabilities(false, false, false); error = null
         channels = emptyList(); loadedAt = clock()
@@ -221,7 +221,7 @@ class LiveTvState(val session: Session, val api: JellyfinApi, private val scope:
         if (groupsJob?.isActive == true) return
         groupsJob = scope.launch {
             try {
-                source.refresh(session, api)?.takeIf { it.entries.isNotEmpty() }?.let { groups = it }
+                source.refresh(session, api)?.let { groups = it }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {}
         }

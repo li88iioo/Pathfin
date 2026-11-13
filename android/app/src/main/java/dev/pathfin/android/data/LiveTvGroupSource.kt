@@ -19,8 +19,10 @@ import org.json.JSONObject
  * 频道分组取自服务器 M3U 调谐器的原始播放列表：管理员账号从直播设置读到地址后直接下载（不带 Jellyfin 凭据）。
  * 只缓存频道名与分组名，不保存播放列表地址或片源；调谐器在内网时，离家沿用上次在家读到的分组。
  */
-class LiveTvGroupSource(private val directory: File, private val client: OkHttpClient = DefaultClient) {
-    constructor(context: Context) : this(File(context.filesDir, "live-tv-groups"))
+class LiveTvGroupSource(private val directory: File, private val client: OkHttpClient = DefaultClient,
+    private val ensureNetworkAccess: suspend (String) -> Unit) {
+    constructor(context: Context, ensureNetworkAccess: suspend (String) -> Unit) :
+        this(File(context.filesDir, "live-tv-groups"), ensureNetworkAccess = ensureNetworkAccess)
 
     suspend fun cached(session: Session): LiveTvGroups? = withContext(Dispatchers.IO) {
         runCatching {
@@ -36,13 +38,14 @@ class LiveTvGroupSource(private val directory: File, private val client: OkHttpC
         val hosts = api.authenticatedObject(session, "System/Configuration/livetv").optJSONArray("TunerHosts") ?: return null
         val playlists = (0 until hosts.length()).mapNotNull(hosts::optJSONObject)
             .filter { it.optString("Type").equals("m3u", ignoreCase = true) }
-            .mapNotNull { host -> host.optString("Url").takeIf { ServerUrls.httpUri(it) != null }?.let { it to host.optString("UserAgent") } }
-        if (playlists.isEmpty()) return null
-        val parsed = withContext(Dispatchers.IO) {
-            playlists.map { (url, userAgent) -> runCatching { LiveTvGroups.parse(download(url, userAgent)) }.getOrNull() ?: return@withContext null }
-        } ?: return null
+            .map { host -> (host.optString("Url").takeIf { ServerUrls.httpUri(it) != null } ?: return null) to host.optString("UserAgent") }
+        val parsed = playlists.map { (url, userAgent) ->
+            // 等待现有授权流程完成后才连接调谐器；拒绝或取消沿调用链返回，不改写缓存。
+            ensureNetworkAccess(url)
+            withContext(Dispatchers.IO) { runCatching { LiveTvGroups.parse(download(url, userAgent)) }.getOrNull() } ?: return null
+        }
         val merged = LiveTvGroups(parsed.flatMap { it.entries }.distinctBy { it.first })
-        if (merged.order.isNotEmpty()) withContext(Dispatchers.IO) { runCatching { save(session, merged) } }
+        withContext(Dispatchers.IO) { runCatching { save(session, merged) } }
         return merged
     }
 
@@ -52,7 +55,13 @@ class LiveTvGroupSource(private val directory: File, private val client: OkHttpC
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             val source = response.body.source()
             if (source.request(MaxPlaylistBytes + 1)) throw IOException("playlist too large")
-            return source.buffer.readUtf8()
+            val playlist = source.buffer.readUtf8()
+            // 200 登录页等无效响应不能被当成空分组；兼容扩展 M3U、无头 EXTINF 与纯 HTTP 地址列表。
+            if (playlist.lineSequence().none { raw ->
+                val line = raw.trim().removePrefix("\uFEFF")
+                line.startsWith("#EXTM3U", true) || line.startsWith("#EXTINF:", true) || ServerUrls.httpUri(line) != null
+            }) throw IOException("invalid M3U playlist")
+            return playlist
         }
     }
 

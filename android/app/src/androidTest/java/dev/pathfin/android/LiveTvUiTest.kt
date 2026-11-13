@@ -59,6 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.awaitCancellation
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -538,6 +539,50 @@ class LiveTvUiTest {
         }
     }
 
+    @Test fun removingAllPlaylistGroupsClearsTheSelectedGroupAfterRefresh() {
+        Fixture(rich = true, session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User",
+            "device", serverId = "server", isAdministrator = true)).use { fixture ->
+            show(fixture, groups = true)
+            waitFor("live-tv-tab-夜航")
+            compose.onNodeWithTag("live-tv-tab-夜航").performVerificationClick(compose)
+            compose.onNodeWithTag("live-tv-channel-lighthouse").assertVerificationDisplayed(compose)
+            compose.onNodeWithTag("live-tv-channel-seagull").assertDoesNotExist()
+
+            fixture.playlistGroupsEnabled.set(false)
+            val grid = compose.onNodeWithTag("live-tv-channel-list")
+            grid.performScrollToIndex(0)
+            pullPageToRefresh(compose, page = grid, stage = "live-tv-remove-playlist-groups", horizontalFraction = .25f)
+            compose.waitUntil(WAIT_MS) {
+                fixture.playlistRequests.get() == 2 && compose.onAllNodesWithTag("live-tv-tabs").fetchSemanticsNodes().isEmpty()
+            }
+            compose.onNodeWithTag("live-tv-tab-夜航").assertDoesNotExist()
+            compose.onNodeWithText("全部频道").assertExists()
+            listOf("harbour", "seagull", "lighthouse").forEach { id ->
+                grid.performScrollToNode(hasTestTag("live-tv-channel-$id"))
+                compose.onNodeWithTag("live-tv-channel-$id").assertVerificationDisplayed(compose)
+            }
+        }
+    }
+
+    @Test fun cancellingLiveTvStateCancelsPendingGroupNetworkAuthorizationBeforeDownloading() {
+        Fixture(rich = true, session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User",
+            "device", serverId = "server", isAdministrator = true)).use { fixture ->
+            val started = AtomicInteger()
+            val cancelled = AtomicInteger()
+            fixture.ensureGroupNetworkAccess = {
+                started.incrementAndGet()
+                try { awaitCancellation() } finally { cancelled.incrementAndGet() }
+            }
+            val host = show(fixture, groups = true)
+            waitFor("live-tv-channel-seagull")
+            compose.waitUntil(WAIT_MS) { started.get() == 1 }
+            compose.runOnIdle { host.state.cancel() }
+            compose.waitUntil(WAIT_MS) { cancelled.get() == 1 }
+            assertEquals("取消授权等待后不能再下载播放列表", 0, fixture.playlistRequests.get())
+            compose.onNodeWithTag("live-tv-channel-seagull").assertVerificationDisplayed(compose)
+        }
+    }
+
     @Test fun longPressOpensTheGuideWithoutPlaying() {
         val played = AtomicReference<MediaItem?>()
         show(Fixture()) { played.set(it) }
@@ -838,6 +883,9 @@ class LiveTvUiTest {
         val channelPages = PageProbe(blockRefresh)
         val programPages = PageProbe()
         val channelStatus = AtomicInteger(200)
+        val playlistGroupsEnabled = AtomicBoolean(true)
+        val playlistRequests = AtomicInteger()
+        var ensureGroupNetworkAccess: suspend (String) -> Unit = {}
         val refreshStarted get() = channelPages.refreshStarted
         val releaseRefresh get() = channelPages.releaseRefresh
         val api = JellyfinApi(OkHttpClient.Builder().addInterceptor { chain ->
@@ -891,11 +939,13 @@ class LiveTvUiTest {
         /** 合成调谐器播放列表：港湾、海鸥在“沿海”，灯塔在“夜航”。 */
         fun groupSource(directory: java.io.File) = LiveTvGroupSource(directory, OkHttpClient.Builder().addInterceptor { chain ->
             check(chain.request().url.host == "tuner.invalid")
+            playlistRequests.incrementAndGet()
             val playlist = "#EXTM3U\n#EXTINF:-1 group-title=\"${groupNames[0]}\",港湾电视\nhttp://a/1\n" +
                 "#EXTINF:-1 group-title=\"${groupNames[0]}\",海鸥电视\nhttp://a/2\n#EXTINF:-1 group-title=\"${groupNames[1]}\",灯塔电视\nhttp://a/3\n"
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(playlist.toResponseBody("audio/x-mpegurl".toMediaType())).build()
-        }.build())
+                .body((if (playlistGroupsEnabled.get()) playlist else playlist.replace(Regex(" group-title=\"[^\"]*\""), ""))
+                    .toResponseBody("audio/x-mpegurl".toMediaType())).build()
+        }.build(), ensureNetworkAccess = { ensureGroupNetworkAccess(it) })
 
         private fun channel(id: String, title: String) = JSONObject().put("Id", id).put("Name", title).put("Type", "TvChannel")
         private fun program(id: String, start: Instant, end: Instant, channelId: String = "seagull") = JSONObject().put("Id", id).put("ChannelId", channelId).put("Name", "合成节目 $id").put("StartDate", start.toString()).put("EndDate", end.toString())
