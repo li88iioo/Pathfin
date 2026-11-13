@@ -695,13 +695,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val session = if (old.session.server == profile.session.server) old.session else validateAddress(old.session, profile.session.server)
         val updated = profile.copy(session = session)
         storeIo { sessionStore.upsertProfile(updated) }
-        if (requiresFreshHome(old.session, session)) {
-            invalidateHomeSnapshot(updated.id)
-            invalidateBrowserPages()
-        }
-        if (state.value.currentProfileId == updated.id && state.value.session != updated.session) {
+        val sessionChanged = state.value.currentProfileId == updated.id && state.value.session != updated.session
+        val freshHome = requiresFreshHome(old.session, session)
+        if (freshHome || sessionChanged) invalidateHomeSnapshot(updated.id)
+        if (freshHome) invalidateBrowserPages()
+        if (sessionChanged) {
             val hidden = storeIo { preferencesStore.hiddenLibraries(sessionKey(updated.session)) }
-            invalidateHomeSnapshot(updated.id)
             // 编辑地址属于当前管理操作，不取消它自身；旧首页回包仍须立即失效。
             homeRefreshGeneration++
             homeJob?.cancel()
