@@ -45,6 +45,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** WorkData 仅含 taskId；重试及进程重启均从加密会话重新取得临时下载地址。 */
 class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     private val sessionStore by lazy { SessionStore(applicationContext) }
+    private var checkedProfileRevision: Long? = null
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val taskId = inputData.getString(TASK_ID) ?: return@withContext Result.failure()
         // WorkManager 可在没有任何页面/ViewModel 时冷启动；先修复持久提交，再取得凭据或打开目标。
@@ -98,8 +99,8 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                     }) { bytes, total ->
                         currentCoroutineContext().ensureActive()
                         requirePermission(source.url)
-                        // 进度回调不再逐次解密账号列表：删除账号时 recover() 已把任务置为取消，
-                        // 下面的 update 随即抛出取消；起写前与完成前仍各校验一次账号。
+                        // 列表变化才重读账号；队列恢复失败时也不能继续已删除账号的传输。
+                        ensureProfileCurrent(task.profileId)
                         val updated = store.update(task.id, task.workId) {
                             if (!it.isActive) throw CancellationException("Download cancelled")
                             it.copy(status = DownloadStatus.DOWNLOADING, downloadedBytes = bytes, totalBytes = total)
@@ -154,7 +155,15 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
     private fun ensureCurrent(store: DownloadStore, task: DownloadTask) {
         val current = store.get(task.id)
         if (current == null || current.workId != task.workId || !current.isActive) throw CancellationException("Download cancelled or replaced")
-        if (sessionStore.loadProfiles().none { it.id == task.profileId }) throw ProfileRemoved()
+        ensureProfileCurrent(task.profileId)
+    }
+
+    private fun ensureProfileCurrent(profileId: String) {
+        val revision = SessionStore.profilesRevision
+        if (checkedProfileRevision == revision) return
+        if (sessionStore.loadProfiles().none { it.id == profileId }) throw ProfileRemoved()
+        // 保存读取前的版本；并发删号会让下一次检查重新读取，不能把旧结果标成新版本。
+        checkedProfileRevision = revision
     }
 
     private class ProfileRemoved : CancellationException("Download profile removed")

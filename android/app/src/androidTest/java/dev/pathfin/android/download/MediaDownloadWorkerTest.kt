@@ -196,8 +196,9 @@ class MediaDownloadWorkerTest {
                     withTimeout(10_000) {
                         while ((DownloadStore(context).get(task.id)?.downloadedBytes ?: 0) == 0L) delay(30)
                     }
+                    // 持久删号后队列恢复可能失败；运行中的Worker必须自己及时发现账号已移除。
+                    // 不调用recover，也不抢先把任务置为CANCELLED。
                     SessionStore(context).removeProfile(task.profileId)
-                    MediaDownloads.recover(context)
                     withTimeout(5_000) { first.join() }
                     assertTrue("删除账号应取消实际媒体传输", first.isCancelled)
                     val cancelled = requireNotNull(DownloadStore(context).get(task.id))
@@ -433,7 +434,8 @@ class MediaDownloadWorkerTest {
                 while (!closed) {
                     val socket = runCatching { server.accept() }.getOrNull() ?: break
                     sockets += socket
-                    executor.execute { runCatching { serve(socket) }; sockets -= socket }
+                    try { executor.execute { runCatching { serve(socket) }; sockets -= socket } }
+                    catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() }; sockets -= socket }
                 }
             }
         }
