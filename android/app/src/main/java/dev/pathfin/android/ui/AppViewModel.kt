@@ -2236,21 +2236,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val current = state.value
         if (current.loginBusy || current.reauthenticationProfile != null || !browserParents.containsKey(key)) return
         val old = current.browsers[key] ?: return
-        val safeQuery = query
-        if (old.query == safeQuery) return
-        if ((old.query.sort != safeQuery.sort || old.query.descending != safeQuery.descending) && !isLibrarySearch(key)) {
+        if (old.query == query) return
+        if ((old.query.sort != query.sort || old.query.descending != query.descending) && !isLibrarySearch(key)) {
             val preferenceKey = browserKey(key)
             viewModelScope.launch {
-                try { storeIo { preferencesStore.saveBrowserSort(preferenceKey, safeQuery.sort, safeQuery.descending) } }
+                try { storeIo { preferencesStore.saveBrowserSort(preferenceKey, query.sort, query.descending) } }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { /* 排序记忆写入失败不影响本次浏览。 */ }
             }
         }
-        val queryKey = BrowserQueryKey(browserParents[key], safeQuery)
+        val queryKey = BrowserQueryKey(browserParents[key], query)
         // 改选后立即选回当前结果只需取消等待，不能把已读深页换成40项首屏或丢掉原位置。
-        val retained = key !in dirtyBrowsers && old.displayedQuery == safeQuery && loadedBrowsers[key] == queryKey
+        val retained = key !in dirtyBrowsers && old.displayedQuery == query && loadedBrowsers[key] == queryKey
         val cached = if (key !in dirtyBrowsers) browserPageKey(key, queryKey)?.let { browserPages[it] } else null
-        val trace = if (old.query.nameInitial != safeQuery.nameInitial) PerformanceTrace.navigation("alphabet_filter") else null
+        val trace = if (old.query.nameInitial != query.nameInitial) PerformanceTrace.navigation("alphabet_filter") else null
         if (retained || cached != null) {
             browserJobs.remove(key)?.cancel()
             browserLoads.remove(key)
@@ -2259,12 +2258,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         updateBrowser(key) { browser ->
             val next = when {
                 retained -> browser.copy(content = browser.content.copy(loading = false, loadingMore = false, error = null, retryAppend = false))
-                cached != null -> browser.withContent(safeQuery, ContentState(
+                cached != null -> browser.withContent(query, ContentState(
                     items = cached.items.distinctBy { item -> item.id }, total = cached.totalCount,
                     nextIndex = if (cached.items.isEmpty()) cached.totalCount else cached.items.size))
                 else -> browser.copy(contentQuery = browser.displayedQuery)
             }
-            next.copy(query = safeQuery, restoringCache = if (retained || cached != null) false else next.restoringCache)
+            next.copy(query = query, restoringCache = if (retained || cached != null) false else next.restoringCache)
         }
         if (!retained && cached == null) loadBrowser(key) else trace?.point("content_cache_ready", state.value.browsers.getValue(key).content.items.size.toLong())
         if (old.displayedQuery.itemTypes != state.value.browsers.getValue(key).displayedQuery.itemTypes) loadFilters(key)
