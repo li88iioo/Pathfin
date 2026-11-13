@@ -145,7 +145,7 @@ class LibrarySearchFlowTest {
         assertEquals("Folder", folder.type)
         assertTrue(folder.isFolder)
         compose.onNode(hasClickAction() and hasAnyDescendant(hasTestTag("poster-title/$MIXED_FOLDER")), useUnmergedTree = true)
-            .assert(SemanticsMatcher.keyNotDefined(SemanticsActions.OnLongClick))
+            .assert(SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
         val rootRequest = env.fixture.folderRequests(MIXED).single()
         assertEquals(MIXED, rootRequest.query["parentId"])
         assertEquals("false", rootRequest.query["recursive"])
