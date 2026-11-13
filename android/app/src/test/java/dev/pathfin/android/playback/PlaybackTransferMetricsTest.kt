@@ -46,19 +46,21 @@ class PlaybackTransferMetricsTest {
         assertEquals(0L, idle.bytesRead)
     }
 
-    @Test fun resetAndNewSessionCannotRetainAnEarlierRate() {
+    @Test fun newPlaybackSessionCannotRetainEarlierSamplesOrLateReads() {
         var nanos = 0L
         val metrics = PlaybackTransferMetrics { nanos }
         metrics.wrap(ByteArray(128).toResponseBody()).use { it.bytes() }
         nanos = 1_000_000_000L
         assertEquals(128L, metrics.sample()?.bytesPerSecond)
-        metrics.reset()
+        val nextSession = PlaybackTransferMetrics { nanos }
         nanos += 1_000_000_000L
-        assertNull(metrics.sample())
-        metrics.wrap(ByteArray(64).toResponseBody()).use { it.bytes() }
+        assertNull(nextSession.sample())
+        metrics.wrap(ByteArray(32).toResponseBody()).use { it.bytes() }
+        nextSession.wrap(ByteArray(64).toResponseBody()).use { it.bytes() }
         nanos += 1_000_000_000L
-        assertEquals(64L, metrics.sample()?.bytesPerSecond)
-        assertNull(PlaybackTransferMetrics { nanos }.sample())
+        val first = requireNotNull(nextSession.sample())
+        assertEquals(64L, first.bytesRead)
+        assertEquals(64L, first.bytesPerSecond)
     }
 
     @Test fun formattingUsesByteUnitsAndCannotDisplayNegativeSpeed() {

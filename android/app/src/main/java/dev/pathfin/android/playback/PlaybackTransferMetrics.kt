@@ -43,13 +43,6 @@ internal class PlaybackTransferMetrics(private val clockNanos: () -> Long = Syst
         return PlaybackTransferSample(rate, bytes, elapsed)
     }
 
-    @Synchronized fun reset() {
-        totalBytes = 0
-        firstReadNanos = null
-        sampledAtNanos = null
-        sampledBytes = 0
-    }
-
     private companion object { const val MIN_WINDOW_NANOS = 250_000_000L }
 }
 
