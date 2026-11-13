@@ -242,7 +242,7 @@ class JsonMappingTest {
         assertTrue(session.canDownload)
         assertTrue(session.canDelete)
 
-        val changed = JsonMapping.sessionUser(session, JSONObject("""{"Id":"user","Name":"Changed","Policy":{}}"""))
+        val changed = JsonMapping.currentUser(session, JSONObject("""{"Id":"user","Name":"Changed","Policy":{}}""")).session
         assertEquals("Changed", changed.userName)
         assertNull(changed.userImageTag)
         assertFalse(changed.isAdministrator)
@@ -251,14 +251,20 @@ class JsonMappingTest {
     }
 
     @Test fun missingMalformedOrDisabledPolicyCannotGrantManagementPermissions() {
-        for (policy in listOf("null", "{}", """{"IsAdministrator":"true","EnableContentDownloading":1,"EnableContentDeletion":"true","EnableContentDeletionFromFolders":[null,"",7]}""",
-            """{"IsDisabled":true,"IsAdministrator":true,"EnableContentDownloading":true,"EnableContentDeletion":true}""")) {
-            val session = JsonMapping.session(JSONObject("""{"AccessToken":"secret","User":{"Id":"user","PrimaryImageTag":" ","Policy":$policy}}"""),
-                ServerConfig("https://media.example"), "device")
+        for (policy in listOf("null", "{}", """{"IsAdministrator":"true","EnableContentDownloading":1,"EnableContentDeletion":"true","EnableContentDeletionFromFolders":[null,"",7],
+            "EnableLiveTvAccess":"true","EnableMediaPlayback":1,"EnableSubtitleManagement":"true"}""",
+            """{"IsDisabled":true,"IsAdministrator":true,"EnableContentDownloading":true,"EnableContentDeletion":true,
+            "EnableLiveTvAccess":true,"EnableMediaPlayback":true,"EnableSubtitleManagement":true}""")) {
+            val json = JSONObject("""{"AccessToken":"secret","User":{"Id":"user","PrimaryImageTag":" ","Policy":$policy}}""")
+            val session = JsonMapping.session(json, ServerConfig("https://media.example"), "device")
             assertNull(session.userImageTag)
             assertFalse(session.isAdministrator)
             assertFalse(session.canDownload)
             assertFalse(session.canDelete)
+            val current = JsonMapping.currentUser(session, json.getJSONObject("User"))
+            assertFalse(current.canViewLiveTv)
+            assertFalse(current.canPlayMedia)
+            assertFalse(current.canManageSubtitles)
         }
     }
 

@@ -19,13 +19,10 @@ class LiveTvApi(private val api: JellyfinApi) {
     /** 重读频道快照时更新权限；缓存仅用于同一会话内的后续分页和节目单。 */
     suspend fun capabilities(session: Session): LiveTvCapabilities {
         access = null
-        val user = api.authenticatedObject(session, "Users/Me")
-        if (user.opt("Id") != session.userId) throw ApiException(401, tr("登录已失效，请重新登录"))
-        val policy = user.optJSONObject("Policy")
-        val canView = policy?.opt("IsDisabled") != true && policy?.opt("EnableLiveTvAccess") == true
-        if (!canView) return LiveTvCapabilities(false, false, false).also { access = Access(session, it) }
+        val user = api.currentUser(session)
+        if (!user.canViewLiveTv) return LiveTvCapabilities(false, false, false).also { access = Access(session, it) }
         val info = api.authenticatedObject(session, "LiveTv/Info")
-        val result = LiveTvCapabilities(true, policy.opt("EnableMediaPlayback") == true, info.opt("IsEnabled") == true)
+        val result = LiveTvCapabilities(true, user.canPlayMedia, info.opt("IsEnabled") == true)
         access = Access(session, result)
         return result
     }

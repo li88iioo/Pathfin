@@ -82,10 +82,12 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         return JsonMapping.session(response, server, deviceId)
     }
 
-    suspend fun validateSession(session: Session): Session {
-        val user = execute(session.server, "Users/Me", headers = PlaybackHeaders.serverHeaders(session))
-        if (user.optString("Id") != session.userId) throw ApiException(401, tr("登录已失效，请重新登录"))
-        return JsonMapping.sessionUser(session, user)
+    suspend fun validateSession(session: Session): Session = currentUser(session).session
+
+    internal suspend fun currentUser(session: Session, operation: ManagementOperation? = null): CurrentUser {
+        val user = execute(session.server, "Users/Me", headers = PlaybackHeaders.serverHeaders(session), operation = operation)
+        if (user.opt("Id") != session.userId) throw ApiException(401, tr("登录已失效，请重新登录"))
+        return JsonMapping.currentUser(session, user)
     }
 
     /** 共享受基址和鉴权限制的 GET，供独立功能 API 使用。 */
@@ -720,7 +722,8 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         headers: Map<String, String>,
         body: JSONObject? = null,
         method: String = if (body == null) "GET" else "POST",
-    ): JSONObject = executeJson(server, path, query, headers, body, method) { text ->
+        operation: ManagementOperation? = null,
+    ): JSONObject = executeJson(server, path, query, headers, body, method, operation = operation) { text ->
         if (text.isBlank()) JSONObject() else JSONObject(text)
     }
 

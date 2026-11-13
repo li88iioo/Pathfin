@@ -160,6 +160,22 @@ class JellyfinApiTest {
         }
     }
 
+    @Test fun disabledCurrentUserRevokesPrivilegesWithoutInvalidatingTheSavedAuthentication() = withServer({ exchange ->
+        assertEquals("/Users/Me", exchange.requestURI.path)
+        exchange.json("""{"Id":"user","Name":"Updated","Policy":{"IsDisabled":true,"IsAdministrator":true,
+            "EnableContentDownloading":true,"EnableContentDeletion":true}}""")
+    }) { url ->
+        runBlocking {
+            val original = session(url).copy(isAdministrator = true, canDownload = true, canDelete = true)
+            val updated = JellyfinApi().validateSession(original)
+            assertTrue(original.hasSameAuthentication(updated))
+            assertEquals("Updated", updated.userName)
+            assertFalse(updated.isAdministrator)
+            assertFalse(updated.canDownload)
+            assertFalse(updated.canDelete)
+        }
+    }
+
     @Test fun onlyPasswordAuthenticationReportsInvalidCredentials() = withServer({ exchange ->
         exchange.json("{}", 401)
     }) { url ->

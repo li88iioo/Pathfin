@@ -22,30 +22,42 @@ import java.net.URI
 import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
 
+internal data class CurrentUser(
+    val session: Session,
+    val canViewLiveTv: Boolean,
+    val canPlayMedia: Boolean,
+    val canManageSubtitles: Boolean,
+)
+
 /** 集中映射 Jellyfin 的 PascalCase 字段，允许可选字段缺失或为 null。 */
 object JsonMapping {
     fun session(json: JSONObject, config: ServerConfig, deviceId: String): Session {
         val user = json.optJSONObject("User") ?: invalidResponse()
-        return sessionUser(Session(
+        return currentUser(Session(
             server = config,
             accessToken = json.requiredString("AccessToken"),
             userId = user.requiredString("Id"),
             userName = user.text("Name").orEmpty(),
             deviceId = deviceId,
             serverId = json.text("ServerId").orEmpty(),
-        ), user)
+        ), user).session
     }
 
-    fun sessionUser(session: Session, user: JSONObject): Session {
+    internal fun currentUser(session: Session, user: JSONObject): CurrentUser {
         val policy = user.optJSONObject("Policy")
         val enabled = policy?.opt("IsDisabled") != true
-        return session.copy(
-            userName = user.text("Name") ?: session.userName,
-            userImageTag = user.text("PrimaryImageTag")?.takeIf(String::isNotBlank),
-            isAdministrator = enabled && policy?.opt("IsAdministrator") == true,
-            canDownload = enabled && policy?.opt("EnableContentDownloading") == true,
-            canDelete = enabled && (policy?.opt("EnableContentDeletion") == true ||
-                strings(policy?.optJSONArray("EnableContentDeletionFromFolders")).isNotEmpty()),
+        return CurrentUser(
+            session = session.copy(
+                userName = user.text("Name") ?: session.userName,
+                userImageTag = user.text("PrimaryImageTag")?.takeIf(String::isNotBlank),
+                isAdministrator = enabled && policy?.opt("IsAdministrator") == true,
+                canDownload = enabled && policy?.opt("EnableContentDownloading") == true,
+                canDelete = enabled && (policy?.opt("EnableContentDeletion") == true ||
+                    strings(policy?.optJSONArray("EnableContentDeletionFromFolders")).isNotEmpty()),
+            ),
+            canViewLiveTv = enabled && policy?.opt("EnableLiveTvAccess") == true,
+            canPlayMedia = enabled && policy?.opt("EnableMediaPlayback") == true,
+            canManageSubtitles = enabled && policy?.opt("EnableSubtitleManagement") == true,
         )
     }
 

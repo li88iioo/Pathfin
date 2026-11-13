@@ -28,6 +28,7 @@ class SubtitleManagementApiTest {
         assertFalse(document.tracks.first().isExternal)
         assertTrue(document.tracks.last().isExternal)
         assertTrue(document.isDefaultSource)
+        assertEquals("subtitle_policy", fixture.requests.single { it.url.encodedPath.endsWith("/Users/Me") }.operation)
     }
 
     @Test fun remoteSearchAndDownloadStayOnJellyfinAndPreserveOpaqueProviderIdsAsOneEncodedPathSegment() = runBlocking {
@@ -76,6 +77,19 @@ class SubtitleManagementApiTest {
         assertEquals(403, failure { fixture.api.search(fixture.session, document, "zho", false) }.statusCode)
         assertEquals(403, failure { fixture.api.upload(fixture.session, document, SubtitleUploadFile.prepare(SRT.toByteArray()), "zho", false, false) }.statusCode)
         assertEquals(0, fixture.requests.count { "RemoteSearch" in it.url.pathSegments || it.method != "GET" })
+    }
+
+    @Test fun disabledAccountCannotManageOrDeleteSubtitlesEvenWhenPolicyStillAdvertisesBothPermissions() = runBlocking {
+        val fixture = Fixture(canManage = true, administrator = true, disabled = true)
+        val document = fixture.api.document(fixture.session.copy(isAdministrator = true), ITEM)
+        assertFalse("停用账号不能管理服务器字幕", document.permissions.canManage)
+        assertFalse("停用管理员不能删除服务器字幕", document.permissions.canDelete)
+        assertEquals(403, failure { fixture.api.search(fixture.session, document, "zho", false) }.statusCode)
+        assertEquals(403, failure { fixture.api.upload(fixture.session, document,
+            SubtitleUploadFile.prepare(SRT.toByteArray()), "zho", false, false) }.statusCode)
+        assertEquals(403, failure { fixture.api.delete(fixture.session, document, document.tracks.last()) }.statusCode)
+        assertEquals("只允许读取文档，不能发起字幕搜索或写入", 0,
+            fixture.requests.count { "RemoteSearch" in it.url.pathSegments || it.method != "GET" })
     }
 
     @Test fun deletionRequiresAdministratorAndAnUnchangedExternalTrackFromTheDocument() = runBlocking {
@@ -161,9 +175,10 @@ class SubtitleManagementApiTest {
         throw AssertionError("Expected an API error")
     } catch (failure: ApiException) { failure }
 
-    private data class RequestRecord(val method: String, val url: HttpUrl, val body: String, val authorization: String, val contentType: String)
+    private data class RequestRecord(val method: String, val url: HttpUrl, val body: String, val authorization: String, val contentType: String,
+        val operation: String?)
     private class Fixture(canManage: Boolean = true, administrator: Boolean = false, userId: String = "fixture-user", searchStatus: Int = 200,
-        higherResolutionVersionFirst: Boolean = false, itemSourceId: String = ITEM, omitEntitySource: Boolean = false) {
+        higherResolutionVersionFirst: Boolean = false, itemSourceId: String = ITEM, omitEntitySource: Boolean = false, disabled: Boolean = false) {
         val session = Session(ServerConfig("https://jellyfin.example/proxy"), "fixture-token", "fixture-user", "Fixture", "fixture-device")
         val requests = CopyOnWriteArrayList<RequestRecord>()
         val itemReads = AtomicInteger()
@@ -171,11 +186,12 @@ class SubtitleManagementApiTest {
         val api = SubtitleManagementApi(JellyfinApi(OkHttpClient.Builder().addInterceptor { chain ->
             val request = chain.request()
             val body = Buffer().also { request.body?.writeTo(it) }.readUtf8()
-            requests += RequestRecord(request.method, request.url, body, request.header("Authorization").orEmpty(), request.body?.contentType()?.toString().orEmpty())
+            requests += RequestRecord(request.method, request.url, body, request.header("Authorization").orEmpty(), request.body?.contentType()?.toString().orEmpty(),
+                request.tag(PerformanceTrace.Span::class.java)?.operation)
             var status = 200
             val response = when {
                 request.url.encodedPath.endsWith("/Users/Me") -> JSONObject().put("Id", userId).put("Policy",
-                    JSONObject().put("EnableSubtitleManagement", canManage).put("IsAdministrator", administrator)).toString()
+                    JSONObject().put("EnableSubtitleManagement", canManage).put("IsAdministrator", administrator).put("IsDisabled", disabled)).toString()
                 request.url.encodedPath.endsWith("/Items") -> {
                     itemReads.incrementAndGet()
                     val entitySource = """{"Id":"$itemSourceId","Name":"1080p","MediaStreams":[

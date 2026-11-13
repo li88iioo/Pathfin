@@ -22,15 +22,12 @@ import org.json.JSONObject
 class SubtitleManagementApi(private val api: JellyfinApi = JellyfinApi()) {
     suspend fun document(session: Session, itemId: String, sourceId: String? = null): SubtitleDocument = coroutineScope {
         requireIdentifier(itemId)
-        val user = async { api.managementObject(session, ManagementOperation.SUBTITLE_POLICY, "Users/Me") }
+        val user = async { api.currentUser(session, ManagementOperation.SUBTITLE_POLICY) }
         val media = async { api.item(session, checkNotNull(normalizedIdentifier(itemId))) }
         val item = media.await()
         requireVideo(item)
         val account = user.await()
-        if (account.optString("Id") != session.userId) throw ApiException(401, tr("登录已失效，请重新登录"))
-        val policy = account.optJSONObject("Policy")
-        val administrator = policy?.opt("IsAdministrator") == true
-        val permissions = SubtitlePermissions(policy?.opt("EnableSubtitleManagement") == true, administrator)
+        val permissions = SubtitlePermissions(account.canManageSubtitles, account.session.isAdministrator)
         // Jellyfin 按分辨率等属性排序 MediaSources；第一项不一定对应写入端点的 itemId。
         val source = if (sourceId == null) item.mediaSources.firstOrNull { sameIdentifier(it.id, item.id) } else
             item.mediaSources.firstOrNull { sameIdentifier(it.id, sourceId) } ?: throw ApiException(404, tr("所选媒体版本已不存在，请重新打开字幕管理"))
