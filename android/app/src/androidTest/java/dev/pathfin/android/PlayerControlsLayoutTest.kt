@@ -288,6 +288,8 @@ class PlayerControlsLayoutTest {
         try {
             showControls(player, live = true, ended = ended)
             compose.onNodeWithTag("player-speed").assertDoesNotExist()
+            // 合成播放器没有字幕轨：直播不显示字幕入口（点播的同一播放器仍显示，见其余用例）。
+            compose.onNodeWithTag("player-subtitles").assertDoesNotExist()
             openPanel("player-more", "player-popup-more")
             compose.onNodeWithTag("player-menu-information").assertExists()
             // 面板是惰性列表：逐项滚动查找，确认整个面板都没有这两项，而不只是不在可见区域。

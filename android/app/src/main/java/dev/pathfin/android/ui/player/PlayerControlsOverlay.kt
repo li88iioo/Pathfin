@@ -127,7 +127,9 @@ internal fun PlayerControlsOverlay(
         panel = target
     }
     val hasAudio = snapshot.tracks.groups.any { it.type == C.TRACK_TYPE_AUDIO && it.length > 0 }
-    val showSubtitles = !state.subtitlesBurnedIn
+    // 直播只在流内确有字幕轨（如 CEA-608、DVB 字幕）时显示字幕入口。
+    val showSubtitles = !state.subtitlesBurnedIn &&
+        (!state.live || snapshot.tracks.groups.any { it.type == C.TRACK_TYPE_TEXT && it.length > 0 })
     val transportEnabled = player != null && !player.pathfinReleased() && state.errorMessage == null && !state.ended
     val largeText = LocalDensity.current.fontScale >= 1.5f
     val headerTitle = snapshot.displayTitle.ifBlank { state.title }

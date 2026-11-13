@@ -126,7 +126,8 @@ internal fun PlayerControlPopup(
                         val disabled = type in snapshot.selection.disabledTrackTypes
                         val automatic = !disabled && snapshot.selection.overrides.values.none { it.type == type }
                         if (panel == PlayerControlPanel.SUBTITLES) {
-                            item("subtitle-sources") { PlayerMenuPair(
+                            // 没有字幕来源入口（直播）时整组不显示，只保留流内字幕轨。
+                            if (onManageSubtitles != null) item("subtitle-sources") { PlayerMenuPair(
                                 { PlayerMenuAction(PathfinIcons.Folder, tr("本机导入"), "player-add-subtitle", it, onAddSubtitle != null) {
                                     onDismiss(); onAddSubtitle?.invoke() } },
                                 { PlayerMenuAction(PathfinIcons.Search, tr("在线搜索"), "player-manage-subtitles", it, onManageSubtitles != null) {

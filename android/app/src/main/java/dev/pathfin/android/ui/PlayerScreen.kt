@@ -417,11 +417,12 @@ fun PlayerScreen(
                     sleepTimerLabel = sleepRemaining.takeIf { it > 0 }?.let { tr("%1\$s 分钟后关闭", (it + 59_999) / 60_000) },
                     audioGainPercent = preferences.audioGainPercent,
                     onAudioGainChange = { onPreferencesChange(preferences.copy(audioGainPercent = it)) },
-                    onAddSubtitle = if (subtitleBusy || player == null || !state.hasRenderedFrame) null else ({
+                    onAddSubtitle = if (state.live || subtitleBusy || player == null || !state.hasRenderedFrame) null else ({
                         subtitlePickerGeneration = state.playerGeneration
                         addSubtitle.launch(arrayOf("*/*"))
                     }),
-                    onManageSubtitles = { showSubtitleManager = true },
+                    // 直播的外挂字幕对不上实时流，服务器也不为频道搜字幕：不提供导入与在线搜索。
+                    onManageSubtitles = if (state.live) null else ({ showSubtitleManager = true }),
                     subtitlePresentation = subtitlePresentation,
                     onSubtitlePresentationChange = { value ->
                         val normalized = value.normalized()
