@@ -188,6 +188,53 @@ class ServerProfilesStoreTest {
         assertNull(store.activeProfileId())
     }
 
+    @Test
+    fun oneInvalidPersistedProfileIsSkippedWithoutDiscardingTheOtherServers() {
+        val first = ServerProfile("first", session(1), "本地测试一")
+        val second = ServerProfile("second", session(2), "本地测试二")
+        store.upsertProfile(first)
+        store.upsertProfile(second)
+        store.selectProfile(first.id)
+        // 模拟磁盘上已有、按当前规则不再合法的一条资料（如地址校验收紧后）。
+        rewriteProfiles { profiles -> profiles.getJSONObject(1).getJSONObject("session").put("baseUrl", "not a server address") }
+        assertEquals(listOf(first), store.loadProfiles())
+        assertEquals(first.id, store.activeProfileId())
+        assertEquals(first.session, store.load())
+        val third = ServerProfile("third", session(3), "本地测试三")
+        store.upsertProfile(third)
+        assertEquals(listOf("first", "third"), SessionStore(context).loadProfiles().map { it.id })
+    }
+
+    @Test
+    fun separateStoreInstancesDoNotLoseConcurrentProfileWrites() {
+        // UI、下载 Worker 与投屏服务在同一进程内各自创建实例；读改写必须互斥。
+        val writers = (0 until 2).map { writer ->
+            Thread {
+                val own = SessionStore(context)
+                repeat(12) { index -> own.upsertProfile(ServerProfile("w$writer-$index", session(writer * 100 + index), "并发 $writer-$index")) }
+            }
+        }
+        writers.forEach(Thread::start)
+        writers.forEach { it.join(30_000) }
+        assertEquals(24, store.loadProfiles().size)
+    }
+
+    private fun rewriteProfiles(edit: (org.json.JSONArray) -> Unit) {
+        val key = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            .getKey("dev.pathfin.android.session.v1", null) as javax.crypto.SecretKey
+        val aad = "Pathfin profiles v2".toByteArray(Charsets.UTF_8)
+        val envelope = JSONObject(requireNotNull(preferences().getString("encrypted_profiles_v2", null)))
+        val plain = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").apply {
+            init(javax.crypto.Cipher.DECRYPT_MODE, key, javax.crypto.spec.GCMParameterSpec(128, Base64.decode(envelope.getString("iv"), Base64.NO_WRAP)))
+            updateAAD(aad)
+        }.doFinal(Base64.decode(envelope.getString("data"), Base64.NO_WRAP))
+        val data = JSONObject(String(plain, Charsets.UTF_8)).also { edit(it.getJSONArray("profiles")) }
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").apply { init(javax.crypto.Cipher.ENCRYPT_MODE, key); updateAAD(aad) }
+        val sealed = cipher.doFinal(data.toString().toByteArray(Charsets.UTF_8))
+        envelope.put("iv", Base64.encodeToString(cipher.iv, Base64.NO_WRAP)).put("data", Base64.encodeToString(sealed, Base64.NO_WRAP))
+        check(preferences().edit().putString("encrypted_profiles_v2", envelope.toString()).commit())
+    }
+
     private fun preferences() = context.getSharedPreferences("pathfin_session", Context.MODE_PRIVATE)
 
     private fun session(number: Int) = Session(

@@ -30,8 +30,7 @@ class SessionStore(context: Context) {
     private val preferences = context.applicationContext
         .getSharedPreferences("pathfin_session", Context.MODE_PRIVATE)
 
-    @Synchronized
-    fun load(): Session? {
+    fun load(): Session? = synchronized(LOCK) {
         val session = readSession() ?: return null
         // 只有验证过 GCM 的 v1 会话才能迁移；绝不从列表自动恢复损坏的当前会话。
         val profiles = readProfiles()
@@ -46,8 +45,7 @@ class SessionStore(context: Context) {
         return session
     }
 
-    @Synchronized
-    fun save(session: Session) {
+    fun save(session: Session): Unit = synchronized(LOCK) {
         validateSession(session)
         val profiles = readProfiles()
         val existing = matchingProfile(profiles, session)
@@ -61,22 +59,19 @@ class SessionStore(context: Context) {
 
     /** 退出当前会话，保留服务器列表与设备身份；删除账户须显式 removeProfile。 */
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
-    @Synchronized
-    fun clear() {
+    fun clear(): Unit = synchronized(LOCK) {
         check(preferences.edit().remove(SESSION).remove(ACTIVE_PROFILE).commit()) {
             tr("无法清除登录会话。")
         }
     }
 
-    @Synchronized
-    fun loadProfiles(): List<ServerProfile> {
+    fun loadProfiles(): List<ServerProfile> = synchronized(LOCK) {
         // 首次打开列表也会迁移旧会话，但不会从列表恢复当前登录。
         if (!preferences.contains(PROFILES) && preferences.contains(SESSION)) load()
         return readProfiles()
     }
 
-    @Synchronized
-    fun upsertProfile(profile: ServerProfile) {
+    fun upsertProfile(profile: ServerProfile): Unit = synchronized(LOCK) {
         validateProfile(profile)
         val profiles = readProfiles()
         val current = preferences.getString(ACTIVE_PROFILE, null) == profile.id && preferences.contains(SESSION)
@@ -86,8 +81,7 @@ class SessionStore(context: Context) {
         }
     }
 
-    @Synchronized
-    fun removeProfile(id: String) {
+    fun removeProfile(id: String): Unit = synchronized(LOCK) {
         val profiles = readProfiles()
         val selected = preferences.getString(ACTIVE_PROFILE, null) == id
         commitProfiles(profiles.filterNot { it.id == id }) {
@@ -95,13 +89,12 @@ class SessionStore(context: Context) {
         }
     }
 
-    @Synchronized
-    fun activeProfileId(): String? =
+    fun activeProfileId(): String? = synchronized(LOCK) {
         if (preferences.contains(SESSION)) preferences.getString(ACTIVE_PROFILE, null) else null
+    }
 
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
-    @Synchronized
-    fun selectProfile(id: String?) {
+    fun selectProfile(id: String?): Unit = synchronized(LOCK) {
         if (id == null) {
             clear()
             return
@@ -115,8 +108,7 @@ class SessionStore(context: Context) {
     }
 
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
-    @Synchronized
-    fun deviceId(): String {
+    fun deviceId(): String = synchronized(LOCK) {
         preferences.getString(DEVICE_ID, null)?.takeIf(String::isNotBlank)?.let { return it }
         return UUID.randomUUID().toString().also { id ->
             check(preferences.edit().putString(DEVICE_ID, id).commit()) {
@@ -142,34 +134,38 @@ class SessionStore(context: Context) {
 
     private fun readProfiles(): List<ServerProfile> {
         val encrypted = preferences.getString(PROFILES, null) ?: return emptyList()
-        return try {
-            val entries = decrypt(encrypted, 2, PROFILES_AAD).getJSONArray("profiles")
-            (0 until entries.length()).map { index ->
-                val json = entries.getJSONObject(index)
-                val addresses = json.optJSONArray("addresses") ?: JSONArray()
-                ServerProfile(
-                    id = json.getString("id"),
-                    session = parseSession(json.getJSONObject("session")),
-                    displayName = json.getString("displayName"),
-                    showUserName = json.optBoolean("showUserName", true),
-                    showLastPlayed = json.optBoolean("showLastPlayed", true),
-                    lastPlayedAt = json.optLong("lastPlayedAt", 0),
-                    addresses = (0 until addresses.length()).map { position ->
-                        val address = addresses.getJSONObject(position)
-                        ServerUrls.normalize(address.getString("baseUrl"), address.getBoolean("allowInsecureHttp"))
-                    }.distinct(),
-                    autoAddress = json.optBoolean("autoAddress", true),
-                ).also(::validateProfile)
-            }.also { profiles -> require(profiles.map { it.id }.distinct().size == profiles.size) }
+        val entries = try {
+            decrypt(encrypted, 2, PROFILES_AAD).getJSONArray("profiles")
         } catch (_: GeneralSecurityException) {
-            discardUnreadableProfiles()
+            return discardUnreadableProfiles()
         } catch (_: JSONException) {
-            discardUnreadableProfiles()
+            return discardUnreadableProfiles()
         } catch (_: IllegalArgumentException) {
-            discardUnreadableProfiles()
+            return discardUnreadableProfiles()
         } catch (_: IOException) {
-            discardUnreadableProfiles()
+            return discardUnreadableProfiles()
         }
+        // 整份密文损坏才丢弃；单条资料不合法（如地址规则收紧）只跳过该条，其余服务器保留。
+        return (0 until entries.length()).mapNotNull { index ->
+            try { parseProfile(entries.getJSONObject(index)) } catch (_: JSONException) { null } catch (_: IllegalArgumentException) { null }
+        }.distinctBy { it.id }
+    }
+
+    private fun parseProfile(json: JSONObject): ServerProfile {
+        val addresses = json.optJSONArray("addresses") ?: JSONArray()
+        return ServerProfile(
+            id = json.getString("id"),
+            session = parseSession(json.getJSONObject("session")),
+            displayName = json.getString("displayName"),
+            showUserName = json.optBoolean("showUserName", true),
+            showLastPlayed = json.optBoolean("showLastPlayed", true),
+            lastPlayedAt = json.optLong("lastPlayedAt", 0),
+            addresses = (0 until addresses.length()).map { position ->
+                val address = addresses.getJSONObject(position)
+                ServerUrls.normalize(address.getString("baseUrl"), address.getBoolean("allowInsecureHttp"))
+            }.distinct(),
+            autoAddress = json.optBoolean("autoAddress", true),
+        ).also(::validateProfile)
     }
 
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
@@ -313,6 +309,8 @@ class SessionStore(context: Context) {
     private fun decode(value: String): ByteArray = Base64.decode(value, Base64.NO_WRAP)
 
     private companion object {
+        /** 同进程内 UI、下载与投屏各自创建实例；读改写必须共用一把锁，否则并发写会互相覆盖。 */
+        val LOCK = Any()
         const val SESSION = "encrypted_session_v1"
         const val PROFILES = "encrypted_profiles_v2"
         const val ACTIVE_PROFILE = "active_profile_id"
