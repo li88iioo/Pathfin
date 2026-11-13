@@ -660,7 +660,6 @@ class LiveTvUiTest {
                 return
             }
             openGuide("channel-0")
-            waitFor("live-tv-program-program-0")
             scrollEnd("live-tv-program-list", "live-tv-program-program-79")
             scrollEnd("live-tv-program-list", "live-tv-program-program-159")
             scrollEnd("live-tv-program-list", "live-tv-program-program-160")
@@ -675,7 +674,6 @@ class LiveTvUiTest {
             show(fixture)
             waitFor("live-tv-channel-channel-0")
             openGuide("channel-0")
-            waitFor("live-tv-program-program-0")
             val probe = fixture.programPages
             val size = 80
             val listTag = "live-tv-program-list"
@@ -730,7 +728,6 @@ class LiveTvUiTest {
             val guide = compose.onNodeWithTag("live-tv-channel-channel-0")
             VerificationDisplay.awaitWindowReady(compose, "live-tv-open-guide", guide)
             openGuide("channel-0")
-            waitFor("live-tv-program-program-0")
             val probe = fixture.programPages
             val pageSize = 80
             val listTag = "live-tv-program-list"
