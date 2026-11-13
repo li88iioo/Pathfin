@@ -8,21 +8,20 @@ class PlaybackAudioGainTest {
         val gain = PlaybackAudioGain { error("原音量和衰减不能创建音效") }
         assertEquals(1f, gain.apply(7, 100).volume, 0f)
         assertEquals(.5f, gain.apply(7, 50).volume, 0f)
-        assertEquals(.2f, gain.apply(7, 50, .4f).volume, .0001f)
         assertEquals(0f, gain.apply(7, -1).volume, 0f)
         assertNull(gain.apply(0, 100).status)
         gain.close()
     }
 
-    @Test fun amplificationUsesRealMillibelScaleAndPreservesBaseDucking() {
+    @Test fun amplificationUsesRealMillibelScaleAtFullPlayerVolume() {
         val effect = FakeEnhancer()
         var session = 0
         PlaybackAudioGain { id -> session = id; effect }.use { gain ->
-            val result = gain.apply(42, 200, .2f)
+            val result = gain.apply(42, 200)
             assertEquals(42, session)
             assertEquals(602, effect.millibels)
             assertTrue(effect.enabledState)
-            assertEquals(.2f, result.volume, 0f)
+            assertEquals(1f, result.volume, 0f)
             assertNull(result.status)
             gain.apply(42, 150)
             assertEquals(352, effect.millibels)
