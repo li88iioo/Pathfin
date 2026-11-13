@@ -54,7 +54,7 @@ class MediaManagementFlowTest {
         val editedTitle = if (before.title == "Pathfin UI fixture edited") "Pathfin UI fixture edited again"
             else "Pathfin UI fixture edited"
         val saved = AtomicInteger()
-        val loader = PosterImageCache.createLoader(context, session, OkHttpClient())
+        val loader = PosterImageCache.prepareLoader(context, session, OkHttpClient())
         try {
             compose.setContent {
                 PathfinTheme(ThemePreference.LIGHT) {
@@ -77,7 +77,7 @@ class MediaManagementFlowTest {
             assertEquals(before.genres, after.genres)
         } finally {
             PosterImageCache.release(loader)
-            PosterImageCache.clearAccount(context, session)
+            PosterImageCache.prepareAccountRemoval(context, session).invoke()
         }
     }
 }

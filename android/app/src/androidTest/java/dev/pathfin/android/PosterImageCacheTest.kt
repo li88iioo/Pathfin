@@ -47,7 +47,7 @@ class PosterImageCacheTest {
     @After
     fun clean() {
         if (!::context.isInitialized || context.packageName != "dev.pathfin.android.verification") return
-        sessions.forEach { check(PosterImageCache.clearAccount(context, it)) }
+        sessions.forEach { check(PosterImageCache.prepareAccountRemoval(context, it).invoke()) }
     }
 
     @Test
@@ -85,10 +85,10 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun oneDiskInstanceIsSharedAndEntriesSurviveLoaderAndRegistryRecreation() {
+    fun oneDiskInstanceIsSharedAndEntriesSurviveLoaderAndRegistryRecreation() = runBlocking {
         val session = session()
-        val first = PosterImageCache.createLoader(context, session, client)
-        val second = PosterImageCache.createLoader(context, session, client)
+        val first = PosterImageCache.prepareLoader(context, session, client)
+        val second = PosterImageCache.prepareLoader(context, session, client)
         val disk = requireNotNull(first.diskCache)
         val key = PosterImageCache.requestKey(session, "https://poster-cache.invalid/Images/film?tag=one")
         assertEquals(1024L * 1024 * 1024, disk.maxSize)
@@ -99,18 +99,18 @@ class PosterImageCacheTest {
         PosterImageCache.release(second)
         PosterImageCache.shutdown()
 
-        val restored = PosterImageCache.createLoader(context, session.copy(accessToken = "new-fixture-token"), client)
+        val restored = PosterImageCache.prepareLoader(context, session.copy(accessToken = "new-fixture-token"), client)
         assertNotSame(disk, restored.diskCache)
         assertEquals("关闭进程资源后仍应从磁盘恢复", "fixture-image-bytes", read(requireNotNull(restored.diskCache), key))
         PosterImageCache.release(restored)
     }
 
     @Test
-    fun settingsClearBothCachesAndDeletingOneAccountPreservesTheOther() {
+    fun settingsClearBothCachesAndDeletingOneAccountPreservesTheOther() = runBlocking {
         val firstSession = session("first-$runId")
         val secondSession = session("second-$runId")
-        val first = PosterImageCache.createLoader(context, firstSession, client)
-        val second = PosterImageCache.createLoader(context, secondSession, client)
+        val first = PosterImageCache.prepareLoader(context, firstSession, client)
+        val second = PosterImageCache.prepareLoader(context, secondSession, client)
         val imageUrl = "https://poster-cache.invalid/Images/film?tag=one"
         val firstKey = PosterImageCache.requestKey(firstSession, imageUrl)
         val secondKey = PosterImageCache.requestKey(secondSession, imageUrl)
@@ -133,7 +133,7 @@ class PosterImageCacheTest {
         firstMemory[MemoryCache.Key(firstKey)] = MemoryCache.Value(image)
         val firstDirectory = File(firstDisk.directory.toString())
 
-        assertTrue(PosterImageCache.clearAccount(context, firstSession))
+        assertTrue(PosterImageCache.prepareAccountRemoval(context, firstSession).invoke())
         assertFalse(firstDirectory.exists())
         assertNull(firstMemory[MemoryCache.Key(firstKey)])
         assertEquals("second-account", read(secondDisk, secondKey))
@@ -143,11 +143,11 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun delayedRemovalPreservesNewLoaderOnTheSameEntryAndOtherAccount() {
+    fun delayedRemovalPreservesNewLoaderOnTheSameEntryAndOtherAccount() = runBlocking {
         val firstSession = session("relogin-$runId")
         val otherSession = session("other-$runId")
-        val first = PosterImageCache.createLoader(context, firstSession, client)
-        val other = PosterImageCache.createLoader(context, otherSession, client)
+        val first = PosterImageCache.prepareLoader(context, firstSession, client)
+        val other = PosterImageCache.prepareLoader(context, otherSession, client)
         val firstDisk = requireNotNull(first.diskCache)
         val otherDisk = requireNotNull(other.diskCache)
         val firstKey = PosterImageCache.requestKey(firstSession, "https://poster-cache.invalid/Images/first")
@@ -158,7 +158,7 @@ class PosterImageCacheTest {
         PosterImageCache.release(first)
 
         // 真实共享 DiskCache 的新 loader：只比较 Entry identity 无法识别这次重新登录。
-        val reopened = PosterImageCache.createLoader(context, firstSession.copy(accessToken = "relogged-fixture-token"), client)
+        val reopened = PosterImageCache.prepareLoader(context, firstSession.copy(accessToken = "relogged-fixture-token"), client)
         val reopenedDisk = requireNotNull(reopened.diskCache)
         assertSame(firstDisk, reopenedDisk)
         write(reopenedDisk, firstKey, "new-account-cache")
@@ -176,10 +176,10 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun delayedRemovalWithoutInitialEntryPreservesLoaderCreatedAfterPreparation() {
+    fun delayedRemovalWithoutInitialEntryPreservesLoaderCreatedAfterPreparation() = runBlocking {
         val account = session("cold-relogin-$runId")
         val delayedRemoval = PosterImageCache.prepareAccountRemoval(context, account)
-        val loader = PosterImageCache.createLoader(context, account, client)
+        val loader = PosterImageCache.prepareLoader(context, account, client)
         val disk = requireNotNull(loader.diskCache)
         val key = PosterImageCache.requestKey(account, "https://poster-cache.invalid/Images/cold")
         write(disk, key, "created-after-preparation")
@@ -192,16 +192,16 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun preparedRemovalStillDeletesItsAccountWhenOnlyAnotherAccountCreatesLoader() {
+    fun preparedRemovalStillDeletesItsAccountWhenOnlyAnotherAccountCreatesLoader() = runBlocking {
         val account = session("remove-$runId")
         val otherAccount = session("keep-$runId")
-        val loader = PosterImageCache.createLoader(context, account, client)
+        val loader = PosterImageCache.prepareLoader(context, account, client)
         val disk = requireNotNull(loader.diskCache)
         val key = PosterImageCache.requestKey(account, "https://poster-cache.invalid/Images/remove")
         write(disk, key, "remove-this-account")
         val directory = File(disk.directory.toString())
         val delayedRemoval = PosterImageCache.prepareAccountRemoval(context, account)
-        val other = PosterImageCache.createLoader(context, otherAccount, client)
+        val other = PosterImageCache.prepareLoader(context, otherAccount, client)
         val otherDisk = requireNotNull(other.diskCache)
         val otherKey = PosterImageCache.requestKey(otherAccount, "https://poster-cache.invalid/Images/keep")
         write(otherDisk, otherKey, "keep-other-account")
@@ -226,13 +226,13 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun capacityChangesUseNewPhysicalGenerationsAndColdStartRestoresTheCurrentOne() {
+    fun capacityChangesUseNewPhysicalGenerationsAndColdStartRestoresTheCurrentOne() = runBlocking {
         val account = session()
-        val initial = PosterImageCache.createLoader(context, account, client)
+        val initial = PosterImageCache.prepareLoader(context, account, client)
         val firstDisk = requireNotNull(initial.diskCache)
         val key = PosterImageCache.requestKey(account, "https://poster-cache.invalid/Images/resizing")
         write(firstDisk, key, "old-generation")
-        val resized = PosterImageCache.createLoader(context, account, client, 128L * 1024 * 1024)
+        val resized = PosterImageCache.prepareLoader(context, account, client, 128L * 1024 * 1024)
         val resizedDisk = requireNotNull(resized.diskCache)
         assertNotSame(firstDisk, resizedDisk)
         assertNotEquals("容量变化不能重开仍有旧请求的物理目录", firstDisk.directory, resizedDisk.directory)
@@ -244,14 +244,14 @@ class PosterImageCacheTest {
         PosterImageCache.release(resized)
         PosterImageCache.shutdown()
 
-        val restored = PosterImageCache.createLoader(context, account, client, 128L * 1024 * 1024)
+        val restored = PosterImageCache.prepareLoader(context, account, client, 128L * 1024 * 1024)
         val restoredDisk = requireNotNull(restored.diskCache)
         assertNotSame(resizedDisk, restoredDisk)
         assertEquals("冷启动必须复用 current.json 指定的代次", resizedDisk.directory, restoredDisk.directory)
         assertEquals(128L * 1024 * 1024, restoredDisk.maxSize)
         assertEquals("current-generation", read(restoredDisk, key))
 
-        val reset = PosterImageCache.createLoader(context, account, client)
+        val reset = PosterImageCache.prepareLoader(context, account, client)
         val resetDisk = requireNotNull(reset.diskCache)
         assertEquals(PosterImageCache.MAX_DISK_BYTES, resetDisk.maxSize)
         assertNotEquals("改回原容量也不能复用旧 UUID 目录", firstDisk.directory, resetDisk.directory)
@@ -261,9 +261,9 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun oldEditorAbortingAfterResizeCannotDeleteTheNewGenerationFileWithTheSameKey() {
+    fun oldEditorAbortingAfterResizeCannotDeleteTheNewGenerationFileWithTheSameKey() = runBlocking {
         val account = session()
-        val initial = PosterImageCache.createLoader(context, account, client)
+        val initial = PosterImageCache.prepareLoader(context, account, client)
         val oldDisk = requireNotNull(initial.diskCache)
         val key = PosterImageCache.requestKey(account, "https://poster-cache.invalid/Images/same-key")
         val oldEditor = requireNotNull(oldDisk.openEditor(key))
@@ -271,7 +271,7 @@ class PosterImageCacheTest {
         try {
             oldDisk.fileSystem.write(oldEditor.metadata) { writeUtf8("pending-old-metadata") }
             oldDisk.fileSystem.write(oldEditor.data) { writeUtf8("pending-old-image") }
-            val resized = PosterImageCache.createLoader(context, account, client, 64L * 1024 * 1024)
+            val resized = PosterImageCache.prepareLoader(context, account, client, 64L * 1024 * 1024)
             try {
                 val newDisk = requireNotNull(resized.diskCache)
                 assertNotEquals(oldDisk.directory, newDisk.directory)
@@ -293,11 +293,11 @@ class PosterImageCacheTest {
     }
 
     @Test
-    fun obsoleteGenerationDeletionSerializesWithAccountRemovalAndPreservesOtherAccount() {
+    fun obsoleteGenerationDeletionSerializesWithAccountRemovalAndPreservesOtherAccount() = runBlocking {
         val account = session("serialized-removal-$runId")
         val otherAccount = session("serialized-keep-$runId")
-        val loader = PosterImageCache.createLoader(context, account, client)
-        val other = PosterImageCache.createLoader(context, otherAccount, client)
+        val loader = PosterImageCache.prepareLoader(context, account, client)
+        val other = PosterImageCache.prepareLoader(context, otherAccount, client)
         val entered = CountDownLatch(1)
         val proceed = CountDownLatch(1)
         var removal: Thread? = null
@@ -341,13 +341,13 @@ class PosterImageCacheTest {
                 val finished = CountDownLatch(1)
                 val removing = Thread({
                     started.countDown()
-                    try { removed.set(runCatching { PosterImageCache.clearAccount(context, account) }) }
+                    try { removed.set(runCatching { PosterImageCache.prepareAccountRemoval(context, account).invoke() }) }
                     finally { finished.countDown() }
                 }, "pathfin-cache-account-removal").also { removal = it; it.start() }
                 assertTrue("正式账号删除线程必须已启动", started.await(5, TimeUnit.SECONDS))
-                runBlocking { withTimeout(5_000) {
+                withTimeout(5_000) {
                     while (finished.count != 0L && !blockedAtAccountRemoval(removing)) yield()
-                } }
+                }
                 removed.get()?.getOrThrow()
                 assertEquals("旧代次遍历未结束时，账号删除必须等待同一 IO 事务", 1L, finished.count)
             } finally {
@@ -374,10 +374,10 @@ class PosterImageCacheTest {
             frame.methodName == "clearIfUnchanged"
     }
 
-    private fun awaitCleanup() {
+    private suspend fun awaitCleanup() {
         val scope = PosterImageCache::class.java.getDeclaredField("cleanupScope").apply { isAccessible = true }
             .get(PosterImageCache) as CoroutineScope
-        runBlocking { withTimeout(5_000) { requireNotNull(scope.coroutineContext[Job]).children.toList().joinAll() } }
+        withTimeout(5_000) { requireNotNull(scope.coroutineContext[Job]).children.toList().joinAll() }
     }
 
     private fun session(user: String = "fixture-$runId") = Session(

@@ -121,11 +121,6 @@ internal object PosterImageCache {
     /** 异步准备期间的临时 loader；客户端仍由调用方持有，调用方必须 shutdown 并释放客户端。 */
     fun createMemoryLoader(context: Context, client: OkHttpClient): ImageLoader = buildLoader(context, client, null)
 
-    /** 同步入口仅供已在工作线程上的调用和生命周期测试；UI 应使用 prepareLoader。 */
-    fun createLoader(context: Context, session: Session?, client: OkHttpClient, maxBytes: Long = MAX_DISK_BYTES): ImageLoader {
-        return createLoaderBlocking(context, beginPreparation(context, session), client, maxBytes, null)
-    }
-
     private fun beginPreparation(context: Context, session: Session?): AccountPreparation? {
         val directory = session?.let { accountDirectory(context, it) } ?: return null
         return synchronized(stateLock) {
@@ -140,14 +135,14 @@ internal object PosterImageCache {
         account: AccountPreparation?,
         client: OkHttpClient,
         maxBytes: Long,
-        coroutineContext: CoroutineContext?,
+        coroutineContext: CoroutineContext,
     ): ImageLoader = synchronized(ioLock) creation@{
-        coroutineContext?.ensureActive()
+        coroutineContext.ensureActive()
         if (account == null) {
             val record = newRecord(context, client, null)
             try {
                 synchronized(stateLock) {
-                    coroutineContext?.ensureActive()
+                    coroutineContext.ensureActive()
                     records[record.loader] = record
                 }
             } catch (error: Throwable) {
@@ -251,8 +246,8 @@ internal object PosterImageCache {
     }
 
     /** 必须在 stateLock 内检查，退出时能够立刻使排队中的旧会话准备失效。 */
-    private fun requireCurrent(account: AccountPreparation, coroutineContext: CoroutineContext?) {
-        coroutineContext?.ensureActive()
+    private fun requireCurrent(account: AccountPreparation, coroutineContext: CoroutineContext) {
+        coroutineContext.ensureActive()
         if ((accountEpochs[account.directory.absolutePath] ?: 0L) != account.epoch) {
             throw CancellationException(tr("图片缓存会话已变更"))
         }
@@ -314,14 +309,6 @@ internal object PosterImageCache {
         }
         ownedEntries.forEach { retireEntry(it, force = true)?.let(::dispose) }
         directory.deleteRecursively()
-    }
-
-    /**
-     * 删除账号/退出时使用。先停止关联图片请求，再关闭唯一磁盘实例，避免旧请求写回。
-     * 此方法包含文件删除，应在 IO 调度器调用；不影响其他账号的目录和内存缓存。
-     */
-    fun clearAccount(context: Context, session: Session): Boolean {
-        return prepareAccountRemoval(context, session).invoke()
     }
 
     /** 释放进程内资源而不删除文件，下一次创建可从同一磁盘目录恢复。 */

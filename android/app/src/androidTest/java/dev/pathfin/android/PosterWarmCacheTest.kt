@@ -61,19 +61,19 @@ class PosterWarmCacheTest {
 
     @After fun clean() {
         if (!::context.isInitialized || context.packageName != "dev.pathfin.android.verification") return
-        accounts.forEach { assertTrue(PosterImageCache.clearAccount(context, it)) }
+        accounts.forEach { assertTrue(PosterImageCache.prepareAccountRemoval(context, it).invoke()) }
         clients.forEach { PlaybackClientCleanup.release(it).get(5, TimeUnit.SECONDS) }
     }
 
-    @Test fun switchingAtoBtoAReusesTheDecodedImageAndTheSameLoader() {
+    @Test fun switchingAtoBtoAReusesTheDecodedImageAndTheSameLoader() = runBlocking {
         val client = transport()
         val a = account("a")
         val b = account("b")
-        val first = PosterImageCache.createLoader(context, a, client)
+        val first = PosterImageCache.prepareLoader(context, a, client)
         val decoded = load(first, a)
         assertEquals(DataSource.NETWORK, decoded.dataSource)
         PosterImageCache.release(first)
-        val second = PosterImageCache.createLoader(context, b, client)
+        val second = PosterImageCache.prepareLoader(context, b, client)
         assertNotSame(first, second)
         assertEquals(DataSource.NETWORK, load(second, b).dataSource)
         PosterImageCache.release(second)
@@ -91,10 +91,10 @@ class PosterWarmCacheTest {
         } finally { PosterImageCache.release(returned) }
     }
 
-    @Test fun idleLruIsBoundedAndNeverEvictsAnActivelyBorrowedLoader() {
+    @Test fun idleLruIsBoundedAndNeverEvictsAnActivelyBorrowedLoader() = runBlocking {
         val client = transport()
         val activeAccount = account("active")
-        val active = PosterImageCache.createLoader(context, activeAccount, client)
+        val active = PosterImageCache.prepareLoader(context, activeAccount, client)
         load(active, activeAccount)
         val additionalReference = requireNotNull(PosterImageCache.acquireWarmLoader(context, activeAccount))
         assertSame(active, additionalReference)
@@ -102,7 +102,7 @@ class PosterWarmCacheTest {
 
         val idle = (0..PosterImageCache.MAX_IDLE_LOADERS).map { index ->
             val session = account("idle-$index")
-            val loader = PosterImageCache.createLoader(context, session, client)
+            val loader = PosterImageCache.prepareLoader(context, session, client)
             load(loader, session)
             PosterImageCache.release(loader)
             session to loader
@@ -118,10 +118,10 @@ class PosterWarmCacheTest {
         PosterImageCache.release(additionalReference)
     }
 
-    @Test fun disposingTheFallbackClientCannotCloseTheWarmLoadersTransport() {
+    @Test fun disposingTheFallbackClientCannotCloseTheWarmLoadersTransport() = runBlocking {
         val client = transport()
         val session = account("transport")
-        val loader = PosterImageCache.createLoader(context, session, client)
+        val loader = PosterImageCache.prepareLoader(context, session, client)
         assertEquals(DataSource.NETWORK, load(loader, session, "first").dataSource)
         PosterImageCache.release(loader)
         PlaybackClientCleanup.release(client).get(5, TimeUnit.SECONDS)
@@ -135,10 +135,10 @@ class PosterWarmCacheTest {
         } finally { PosterImageCache.release(returned) }
     }
 
-    @Test fun resizingKeepsOldBorrowersAliveUntilTheirFinalReleaseAndClearsOnlyTheOldLoader() {
+    @Test fun resizingKeepsOldBorrowersAliveUntilTheirFinalReleaseAndClearsOnlyTheOldLoader() = runBlocking {
         val client = transport()
         val session = account("resize")
-        val original = PosterImageCache.createLoader(context, session, client)
+        val original = PosterImageCache.prepareLoader(context, session, client)
         load(original, session)
         val oldDisk = requireNotNull(original.diskCache)
         val oldDirectory = oldDisk.directory.toFile()
@@ -149,7 +149,7 @@ class PosterWarmCacheTest {
         try {
             oldDisk.fileSystem.write(oldEditor.metadata) { writeUtf8("pending-old-metadata") }
             oldDisk.fileSystem.write(oldEditor.data) { writeUtf8("pending-old-image") }
-            val resized = PosterImageCache.createLoader(context, session, client, 64L * 1024 * 1024)
+            val resized = PosterImageCache.prepareLoader(context, session, client, 64L * 1024 * 1024)
             try {
                 val newDirectory = requireNotNull(resized.diskCache).directory.toFile()
                 assertNotSame(original, resized)
@@ -179,7 +179,7 @@ class PosterWarmCacheTest {
         }
     }
 
-    @Test fun cancellationAndRemovalCannotPublishOrResurrectAPreparedLoader() {
+    @Test fun cancellationAndRemovalCannotPublishOrResurrectAPreparedLoader() = runBlocking {
         val client = transport()
         val session = account("cancelled")
         val entered = CountDownLatch(1)
@@ -198,12 +198,12 @@ class PosterWarmCacheTest {
             val removal = PosterImageCache.prepareAccountRemoval(context, session)
             preparation.cancel()
             proceed.countDown()
-            runBlocking { withTimeout(5_000) { preparation.join() } }
+            withTimeout(5_000) { preparation.join() }
             assertTrue(preparation.isCancelled)
             assertNull("旧任务不能安装为可见暖缓存", PosterImageCache.acquireWarmLoader(context, session))
             assertTrue(removal())
 
-            val newLogin = PosterImageCache.createLoader(context, session.copy(accessToken = "synthetic-new-token"), client)
+            val newLogin = PosterImageCache.prepareLoader(context, session.copy(accessToken = "synthetic-new-token"), client)
             assertEquals(DataSource.NETWORK, load(newLogin, session).dataSource)
             assertTrue("旧清理迟到不能删除新登录", removal())
             assertEquals(DataSource.MEMORY_CACHE, load(newLogin, session).dataSource)
@@ -214,10 +214,10 @@ class PosterWarmCacheTest {
         }
     }
 
-    @Test fun emptySessionLoaderHasAnOwnedTransportAndIsNeverRetainedAsAnAccount() {
+    @Test fun emptySessionLoaderHasAnOwnedTransportAndIsNeverRetainedAsAnAccount() = runBlocking {
         val client = transport()
         val session = account("empty-fixture")
-        val loader = PosterImageCache.createLoader(context, null, client)
+        val loader = PosterImageCache.prepareLoader(context, null, client)
         PlaybackClientCleanup.release(client).get(5, TimeUnit.SECONDS)
         assertEquals(DataSource.NETWORK, load(loader, session).dataSource)
         assertNull(loader.diskCache)
@@ -230,7 +230,7 @@ class PosterWarmCacheTest {
         val client = transport(width = 960, height = 1440)
         val session = account("poster-card-dimensions")
         val api = JellyfinApi(client)
-        val loader = PosterImageCache.createLoader(context, session, client)
+        val loader = PosterImageCache.prepareLoader(context, session, client)
         try {
             val cases = listOf(
                 MediaItem("poster", "海报", "Movie", imageTag = "one") to PosterStyle.POSTER,
@@ -271,7 +271,7 @@ class PosterWarmCacheTest {
         val parentLimit = client.dispatcher.maxRequestsPerHost
         val session = account("concurrent-posters")
         val api = JellyfinApi(client)
-        val loader = PosterImageCache.createLoader(context, session, client)
+        val loader = PosterImageCache.prepareLoader(context, session, client)
         try {
             val requests = (0 until 8).map { index -> async(Dispatchers.Default) {
                 val item = MediaItem("concurrent-$index", "封面 $index", "Movie", imageTag = "one")
@@ -297,15 +297,13 @@ class PosterWarmCacheTest {
         }
     }
 
-    private fun load(loader: ImageLoader, session: Session, image: String = "same") = runBlocking {
-        withTimeout(10_000) {
-            val url = "https://poster-warm.invalid/Images/$runId/$image?tag=synthetic"
-            val key = PosterImageCache.requestKey(session, url)
-            val result = loader.execute(ImageRequest.Builder(context).data(url)
-                .memoryCacheKey(key).diskCacheKey(key).size(48, 72).allowHardware(false).build())
-            assertTrue("真实 Coil PNG 解码必须成功：${result.javaClass.simpleName}", result is SuccessResult)
-            result as SuccessResult
-        }
+    private suspend fun load(loader: ImageLoader, session: Session, image: String = "same") = withTimeout(10_000) {
+        val url = "https://poster-warm.invalid/Images/$runId/$image?tag=synthetic"
+        val key = PosterImageCache.requestKey(session, url)
+        val result = loader.execute(ImageRequest.Builder(context).data(url)
+            .memoryCacheKey(key).diskCacheKey(key).size(48, 72).allowHardware(false).build())
+        assertTrue("真实 Coil PNG 解码必须成功：${result.javaClass.simpleName}", result is SuccessResult)
+        result as SuccessResult
     }
 
     private fun transport(width: Int = 48, height: Int = 72, beforeResponse: () -> Unit = {}): OkHttpClient {
