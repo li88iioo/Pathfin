@@ -158,12 +158,12 @@ object MediaDownloads {
     }
 
     /** 仅移除本机记录；用户通过 SAF 保存的文件继续保留。 */
-    suspend fun remove(context: Context, taskId: String) = withContext(Dispatchers.IO) {
+    suspend fun remove(context: Context, taskId: String): Unit = withContext(Dispatchers.IO) {
         val store = DownloadStore(context)
         val task = store.get(taskId) ?: return@withContext
         val info = WorkManager.getInstance(context).getWorkInfoById(UUID.fromString(task.workId)).get()
         check(!task.isActive || info == null || info.state.isFinished) { tr("请先取消正在进行的下载") }
-        store.remove(taskId)
+        store.update(task.id, task.workId) { null }
     }
 
     fun open(context: Context, task: DownloadTask): Boolean = runCatching {

@@ -381,7 +381,7 @@ class MediaDownloadWorkerTest {
             block(task)
         } finally {
             androidx.work.WorkManager.getInstance(context).cancelUniqueWork("pathfin-download-$id").result.get(10, TimeUnit.SECONDS)
-            DownloadStore(context).remove(id)
+            DownloadStore(context).apply { get(id)?.let { update(it.id, it.workId) { null } } }
             SessionStore(context).removeProfile(profileId)
             if (destination == null && uri != null) context.contentResolver.delete(uri, null, null)
         }

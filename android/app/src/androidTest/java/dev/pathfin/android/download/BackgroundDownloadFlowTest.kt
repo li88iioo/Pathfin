@@ -395,8 +395,8 @@ class BackgroundDownloadFlowTest {
         val tasks = store.all().filter { it.profileId == fixture.profileId && it.itemId == fixture.itemId }
         tasks.forEach { task ->
             runCatching { runBlocking { MediaDownloads.cancel(context, task.id, task.workId) } }
-            runCatching { workManager.cancelWorkById(UUID.fromString(task.workId)).result.get(5, TimeUnit.SECONDS) }
-            store.remove(task.id)
+            runCatching { workManager.cancelUniqueWork("pathfin-download-${task.id}").result.get(5, TimeUnit.SECONDS) }
+            store.get(task.id)?.let { store.update(it.id, it.workId) { null } }
             notifications.cancel(notificationId(task))
             notifications.cancel(completionNotificationId(task))
         }

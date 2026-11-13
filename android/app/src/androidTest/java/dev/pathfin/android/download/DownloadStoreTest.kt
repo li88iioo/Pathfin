@@ -47,6 +47,11 @@ class DownloadStoreTest {
         assertNull(late)
         assertEquals("retry-work", DownloadStore(context).get(task.id)?.workId)
         assertEquals(8192L, DownloadStore(context).get(task.id)?.downloadedBytes)
+        val retry = checkNotNull(DownloadStore(context).get(task.id))
+        DownloadStore(context).update(task.id, task.workId) { null }
+        assertEquals("迟到的旧代移除不得删除刚重试的任务", retry, DownloadStore(context).get(task.id))
+        DownloadStore(context).update(retry.id, retry.workId) { null }
+        assertNull(DownloadStore(context).get(task.id))
     }
 
     @Test fun removingAnotherAccountRecordPreservesTheCompletedFileReference() {
@@ -55,7 +60,7 @@ class DownloadStoreTest {
         val other = DownloadTask("other", "work2", "account2", "item", "Other", "content://documents/2")
         val store = DownloadStore(context)
         store.insert(complete); store.insert(other)
-        DownloadStore(context).remove(other.id)
+        DownloadStore(context).update(other.id, other.workId) { null }
         assertEquals(complete, DownloadStore(context).all().single())
     }
 

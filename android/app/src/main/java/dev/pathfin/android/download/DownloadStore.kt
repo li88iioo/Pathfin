@@ -22,16 +22,14 @@ internal class DownloadStore(context: Context) {
         write(tasks + task)
     }
 
-    /** workId 隔离重试代次，迟到的旧 Worker 不能覆盖新任务或用户取消状态。 */
-    fun update(id: String, workId: String, transform: (DownloadTask) -> DownloadTask): DownloadTask? = synchronized(lock) {
+    /** workId 隔离重试代次；transform 返回 null 删除匹配项，旧操作不能改动新任务。 */
+    fun update(id: String, workId: String, transform: (DownloadTask) -> DownloadTask?): DownloadTask? = synchronized(lock) {
         val tasks = read()
         val current = tasks.firstOrNull { it.id == id && it.workId == workId } ?: return@synchronized null
         val next = transform(current)
-        write(tasks.map { if (it.id == id) next else it })
+        write(tasks.mapNotNull { if (it === current) next else it })
         next
     }
-
-    fun remove(id: String) = synchronized(lock) { write(read().filterNot { it.id == id }) }
 
     /** 只撤销调用方持有的代次；已撤销结果仍可用于重试未完成的系统停止。 */
     fun cancel(id: String, workId: String, reason: String = tr("已取消；重试会从头重新下载")): DownloadTask? = update(id, workId) {
