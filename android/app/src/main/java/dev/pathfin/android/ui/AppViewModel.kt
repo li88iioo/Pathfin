@@ -882,15 +882,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (route != Route.Search) releaseSearchResults()
         if (route == Route.LiveTv) { openLiveTv(); return }
         if ((route == Route.Home || route == Route.Libraries) && !state.value.home.complete && !state.value.home.loading) refreshHome()
-        if (state.value.routes == listOf(route)) {
-            if (route == Route.Favorites) ensureFavorites()
-            if (route == Route.Search) {
-                if (state.value.search.query.isBlank()) loadSearchSuggestions() else ensureSearchSections()
-            }
-            return
+        if (state.value.routes != listOf(route)) {
+            invalidatePlaybackPrefetch()
+            mutableState.update { it.copy(routes = listOf(route), playbackError = null, preparingPlay = false, sourceSelection = null, detailLoading = false) }
         }
-        invalidatePlaybackPrefetch()
-        mutableState.update { it.copy(routes = listOf(route), playbackError = null, preparingPlay = false, sourceSelection = null, detailLoading = false) }
         if (route == Route.Favorites) ensureFavorites()
         if (route == Route.Search) {
             if (state.value.search.query.isBlank()) loadSearchSuggestions() else ensureSearchSections()
