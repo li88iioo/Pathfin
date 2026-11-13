@@ -96,10 +96,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         mainHandler.post {
             if (active !== current || current.assExtension !== extension) return@post
             val owner = player ?: return@post
-            val restored = capturePlayerState(owner)
-            startPlayback(current.request, current.originalRequest,
-                current.tuning.copy(exoAssEnabled = false), current.introHistory, current.manualTracks,
-                current.localSubtitles.toList(), recoveryPolicy = current.recoveryPolicy, restored = restored)
+            restart(current, owner, tuning = current.tuning.copy(exoAssEnabled = false))
             mutableState.update { it.copy(assStatus = message) }
         }
     }
@@ -159,11 +156,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     handlePlaybackFailure(current, owner, failure)
                 } else {
                     current.decoderFallbackTypes += type
-                    val restored = capturePlayerState(owner)
-                    startPlayback(current.request, current.originalRequest,
-                        fallbackTuning.copy(audioGainPercent = current.runtimeAudioGainPercent),
-                        current.introHistory, current.manualTracks, current.localSubtitles.toList(),
-                        recoveryPolicy = current.recoveryPolicy, restored = restored, reuseMediaSegments = true)
+                    restart(current, owner, tuning = fallbackTuning)
                 }
             }
         }.send()
@@ -175,9 +168,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         if (!retriesAsHls(request, error.errorCode)) return false
         mainHandler.post {
             if (active !== current || player !== owner) return@post
-            startPlayback(request.copy(stream = request.stream.copy(mimeType = MimeTypes.APPLICATION_M3U8)),
-                current.originalRequest, current.tuning, current.introHistory, current.manualTracks,
-                current.localSubtitles.toList(), recoveryPolicy = current.recoveryPolicy)
+            restart(current, owner, request.copy(stream = request.stream.copy(mimeType = MimeTypes.APPLICATION_M3U8)))
         }
         return true
     }
@@ -291,20 +282,30 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         owner.playbackParameters, owner.playWhenReady, mutableState.value.controlsLocked,
         owner.trackSelectionParameters.disabledTrackTypes.toSet())
 
+    /**
+     * 当前条目的所有重建（字幕/解码回退、直播改 HLS、换源重试、切画质）共用：沿用片头记录、选轨、外挂字幕、
+     * 运行时音量增益与锁定/仅音频等现场，各入口只给出自己不同的部分。
+     */
+    private fun restart(current: ActivePlayback, owner: Player?, prepared: PlaybackRequest = current.request,
+        tuning: PlaybackTuning = current.tuning, restored: PlayerState? = owner?.let(::capturePlayerState),
+        rollback: PlaybackRecovery? = null, recoveryPolicy: PlaybackRecoveryPolicy = current.recoveryPolicy) =
+        startPlayback(prepared, current.originalRequest, tuning.copy(audioGainPercent = current.runtimeAudioGainPercent),
+            current.introHistory, current.manualTracks, current.localSubtitles.toList(), rollback, recoveryPolicy, restored)
+
     private fun startPlayback(prepared: PlaybackRequest, originalRequest: PlaybackRequest, tuning: PlaybackTuning,
         introHistory: IntroSkipHistory = IntroSkipHistory(),
         manualTracks: ManualTrackSelections = ManualTrackSelections(),
         localSubtitles: List<LocalSubtitle> = emptyList(), rollback: PlaybackRecovery? = null,
-        recoveryPolicy: PlaybackRecoveryPolicy = PlaybackRecoveryPolicy(), restored: PlayerState? = null,
-        reuseMediaSegments: Boolean = false) {
-        val request = restored?.let { prepared.copy(startPositionMs = it.positionMs) } ?: prepared
+        recoveryPolicy: PlaybackRecoveryPolicy = PlaybackRecoveryPolicy(), restored: PlayerState? = null) {
+        // 直播位置相对于直播窗口，换流后没有意义；与首次起播一样从 0 起。
+        val request = restored?.let { prepared.copy(startPositionMs = if (prepared.item.isLiveChannel) 0 else it.positionMs) } ?: prepared
         val pendingSubtitles = pendingSubtitleRefresh?.takeIf {
             it.id == request.item.id && active?.request?.session?.hasSameAuthentication(request.session) == true
         }
         val previous = active
         val retainSession = previous?.let { PlaybackEntryGate.sameEntry(it.request, request) } == true
         val retainedEntry = previous?.takeIf { PlaybackEntryGate.sameEntry(it.originalRequest, originalRequest) }
-        val retainedSegments = previous?.takeIf { reuseMediaSegments && retainSession }
+        val retainedSegments = previous?.takeIf { retainSession }
         val reloadSegments = retainedSegments == null || retainedSegments.mediaSegmentsPending
         val segmentError = mutableState.value.mediaSegmentsError.takeIf { retainedSegments != null }
         val tracker = previous?.tracker?.takeIf { retainSession } ?: PlaybackSessionTracker()
@@ -646,12 +647,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                         previous.copy(info = info, source = source, stream = stream)
                     }
                     if (active !== current || player !== owner) return@launch
-                    val restored = capturePlayerState(owner)
                     retryJob = null
-                    startPlayback(prepared,
-                        current.originalRequest, current.tuning, current.introHistory, current.manualTracks,
-                        current.localSubtitles.toList(), recoveryPolicy = if (automatic) current.recoveryPolicy else PlaybackRecoveryPolicy(),
-                        restored = restored)
+                    restart(current, owner, prepared, recoveryPolicy = if (automatic) current.recoveryPolicy else PlaybackRecoveryPolicy())
                     break
                 }
             } catch (cancelled: CancellationException) {
@@ -753,9 +750,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 qualityJob = null
                 // 只有手动切换才记为连播沿用的画质；字幕刷新和失败回滚保留原记录。
                 val manual = updatedItem == null && recovery == null
-                startPlayback(if (manual) prepared.copy(preferredQuality = quality) else prepared, current.originalRequest, current.tuning,
-                    current.introHistory, current.manualTracks, current.localSubtitles.toList(), rollback,
-                    recoveryPolicy = if (updatedItem != null) current.recoveryPolicy else PlaybackRecoveryPolicy(), restored = restored)
+                restart(current, owner, if (manual) prepared.copy(preferredQuality = quality) else prepared, restored = restored,
+                    rollback = rollback, recoveryPolicy = if (updatedItem != null) current.recoveryPolicy else PlaybackRecoveryPolicy())
                 mutableState.update { it.copy(isChangingQuality = qualityRollback != null,
                     qualityError = if (recovery != null) tr("切换失败，已重新请求%1\$s", quality.label) else null) }
                 val replacement = active
