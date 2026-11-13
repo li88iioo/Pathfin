@@ -49,7 +49,7 @@ object PlaybackResolver {
         // 用户已明确选择原始HTTP视频时，本机实际能力决定是否可播，不能被服务器替代流覆盖。
         // 其他媒体保留服务器协商；直播仍遵守独立的“直连直播源”选择。
         val originalAllowed = prefersOriginalHttp(item, source, preferOriginal, quality, effectiveDelivery) ||
-            source.supportsDirectPlay || (direct == null && transcode == null) || item.type == "TvChannel"
+            source.supportsDirectPlay || (direct == null && transcode == null) || item.isLiveChannel
         if (effectiveDelivery == PlaybackDelivery.AUTOMATIC && preferOriginal && originalAllowed && original != null && compatibleProtocol) {
             // allowInsecureHttp 只确认 Jellyfin 自身的明文连接；外部初始 HTTP 是服务端明确提供的片源。
             ServerUrls.normalize(session.server)
@@ -78,7 +78,7 @@ object PlaybackResolver {
 
     /** 内网直播源（如 M3U 调谐器代理）只在经内网地址连接服务器时直连；经公网访问时交给服务器代拉。 */
     private fun liveSourceReachable(session: Session, item: MediaItem, url: String): Boolean =
-        item.type != "TvChannel" || !LocalNetworkDestination.isLocalHost(URI(url).host.orEmpty()) ||
+        !item.isLiveChannel || !LocalNetworkDestination.isLocalHost(URI(url).host.orEmpty()) ||
             ServerAddressSelection.isLocal(session.server)
 
     private fun serverResult(session: Session, source: MediaSource, url: String, method: PlayMethod) =
@@ -149,7 +149,7 @@ object PlaybackHeaders {
 
     /** 用户开启“直连直播源”后的外部频道地址。 */
     internal fun isExternalLive(request: PlaybackRequest): Boolean =
-        !request.stream.trustedServer && request.item.type == "TvChannel"
+        !request.stream.trustedServer && request.item.isLiveChannel
 
     fun serverHeaders(session: Session): Map<String, String> =
         JellyfinAuthorization.headers(session.deviceId, session.accessToken)

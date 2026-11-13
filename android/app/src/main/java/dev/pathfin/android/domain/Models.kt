@@ -78,7 +78,10 @@ data class MediaItem(
     /** 直播节目所属频道；打开节目即播放该频道。 */
     val channelId: String? = null,
     val channelName: String? = null,
-)
+) {
+    /** 直播频道：Jellyfin 以 TvChannel 返回，部分接口也用 LiveTvChannel；全链路只认这一个判断。 */
+    val isLiveChannel: Boolean get() = type == "TvChannel" || type == "LiveTvChannel"
+}
 
 data class MediaChapter(val name: String, val startPositionTicks: Long, val imageTag: String? = null, val imageIndex: Int = -1)
 

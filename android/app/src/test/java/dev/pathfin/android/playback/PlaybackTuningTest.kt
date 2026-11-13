@@ -83,5 +83,11 @@ class PlaybackTuningTest {
         assertEquals("Jellyfin · 转码", playbackSourceLabel(movie, trustedServer = true, transcode))
         assertEquals("Jellyfin 直播 · 转码", playbackSourceLabel(channel, trustedServer = true, transcode))
         assertEquals("Jellyfin 直播 · 直接串流（不转码）", playbackSourceLabel(channel, trustedServer = true, stream))
+        // 部分接口以 LiveTvChannel 返回同一频道，必须同样按直播处理。
+        val liveTvChannel = channel.copy(type = "LiveTvChannel")
+        assertEquals("直播源直连", playbackSourceLabel(liveTvChannel, trustedServer = false, play))
+        val tuning = PlaybackTuning.from(AppPreferences(originalPathEnabled = false, liveTvDirectPlay = true))
+        assertTrue(tuning.preferOriginalFor(liveTvChannel))
+        assertFalse(tuning.preferOriginalFor(movie))
     }
 }

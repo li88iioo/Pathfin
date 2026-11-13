@@ -70,7 +70,7 @@ internal data class PlaybackTuning(
     val preferHardwareVideoDecoder: Boolean = true,
 ) {
     /** 直播频道按“直连直播源”，其余媒体按 STRM 原始地址开关。 */
-    fun preferOriginalFor(item: MediaItem): Boolean = if (item.type == "TvChannel") preferOriginalLive else preferOriginal
+    fun preferOriginalFor(item: MediaItem): Boolean = if (item.isLiveChannel) preferOriginalLive else preferOriginal
 
     fun initialPositionMs(startPositionMs: Long, durationTicks: Long): Long {
         if (startPositionMs > 0) return startPositionMs
@@ -157,7 +157,7 @@ internal fun androidx.media3.common.Player.pathfinReleased(): Boolean =
  * 直接播放（原文件）、直接串流（只换封装、不重新编码）与转码。每次换流（切画质、自动恢复）都会重新计算。
  */
 internal fun playbackSourceLabel(item: MediaItem, trustedServer: Boolean, method: PlayMethod): String {
-    val live = item.type == "TvChannel"
+    val live = item.isLiveChannel
     if (!trustedServer) return if (live) tr("直播源直连") else tr("STRM 原始地址")
     val server = if (live) tr("Jellyfin 直播") else "Jellyfin"
     return when (method) {

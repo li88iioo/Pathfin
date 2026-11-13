@@ -91,7 +91,7 @@ enum class AccentColor(private val labelKey: String, val argb: Long?) {
 
 /** 直播频道走“直连直播源”开关，其余媒体走 STRM 原始地址开关。 */
 fun AppPreferences.prefersOriginalSource(item: MediaItem): Boolean =
-    if (item.type == "TvChannel") liveTvDirectPlay else originalPathEnabled
+    if (item.isLiveChannel) liveTvDirectPlay else originalPathEnabled
 
 /** 播放器默认方向：固定横/竖屏，或在横/竖屏内、全方向随传感器旋转。 */
 enum class PlayerOrientation(private val labelKey: String) {

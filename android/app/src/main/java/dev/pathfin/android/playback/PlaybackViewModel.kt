@@ -270,7 +270,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         // 主页面传入已恢复的偏好快照，起播不在主线程等待 SharedPreferences 磁盘读取。
         val tuning = PlaybackTuning.from(preferences)
             .let { if (request.item.type == "Audio") it.copy(introSkipMs = 0, outroSkipMs = 0) else it }
-        val position = if (request.item.type == "TvChannel") 0 else tuning.initialPositionMs(request.startPositionMs, request.item.runTimeTicks)
+        val position = if (request.item.isLiveChannel) 0 else tuning.initialPositionMs(request.startPositionMs, request.item.runTimeTicks)
         // 第一次有效起播立即消费结束交接；不匹配也丢弃，不能绕过别的媒体再继承。
         val completed = completedPlayback
         completedPlayback = null
@@ -283,7 +283,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             preferences.subtitlePositionPercent, preferences.subtitleDelays[request.subtitlePreferenceKey()] ?: 0).normalized()
         startPlayback(request.copy(startPositionMs = position), request, tuning, manualTracks = inheritedTracks)
         // 记住的倍速只属于点播；直播追的是实时流，始终 1×，也不改写点播的倍速记忆。
-        player?.setPlaybackSpeed(if (request.item.type == "TvChannel") 1f
+        player?.setPlaybackSpeed(if (request.item.isLiveChannel) 1f
             else preferences.playbackSpeed.takeIf { it.isFinite() }?.coerceIn(.25f, 4f) ?: 1f)
     }
 
@@ -333,7 +333,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     else -> item.name
                 }
             },
-            live = request.item.type == "TvChannel",
+            live = request.item.isLiveChannel,
             isPreparing = true,
             controlsLocked = restored?.locked ?: false,
             isChangingQuality = rollback != null,
@@ -445,7 +445,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     }
                     refreshIntroPrompt(current, exoPlayer)
                     if (active !== current) break
-                    if (tuning.outroSkipMs > 0 && request.item.type != "TvChannel" && !exoPlayer.isCurrentMediaItemLive &&
+                    if (tuning.outroSkipMs > 0 && !request.item.isLiveChannel && !exoPlayer.isCurrentMediaItemLive &&
                         exoPlayer.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
                         tuning.outroEndPositionMs(exoPlayer.isPlaying, exoPlayer.currentPosition, exoPlayer.duration, current.outroSkipped)?.let { end ->
                             current.outroSkipped = true
@@ -626,7 +626,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                         val tracks = serverTrackSelection(current, owner)
                         val info = api.playbackInfo(previous.session, previous.item.id, previous.source.id,
                             TimeUnits.msToTicks(owner.currentPosition.coerceAtLeast(0)), previous.quality, target, tracks.first, tracks.second,
-                            videoPreflight = if (retainOriginalHttp || previous.item.type == "TvChannel" && current.tuning.preferOriginalLive)
+                            videoPreflight = if (retainOriginalHttp || previous.item.isLiveChannel && current.tuning.preferOriginalLive)
                                 VideoPreflightPolicy.TRY_ORIGINAL_SOURCE else VideoPreflightPolicy.NEGOTIATE_UNSUPPORTED)
                         if (active !== current || player !== owner) return@launch
                         if (revision != current.manualTrackRevision) continue
@@ -738,7 +738,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                         info = api.playbackInfo(previous.session, item.id, previous.source.id,
                             TimeUnits.msToTicks(recovery?.state?.positionMs ?: checkNotNull(owner).currentPosition.coerceAtLeast(0)), quality,
                             delivery, tracks.first, tracks.second,
-                            videoPreflight = if (item.type == "TvChannel" && current.tuning.preferOriginalLive)
+                            videoPreflight = if (item.isLiveChannel && current.tuning.preferOriginalLive)
                                 VideoPreflightPolicy.TRY_ORIGINAL_SOURCE else VideoPreflightPolicy.NEGOTIATE_UNSUPPORTED)
                         if (active !== current || player !== owner) return@launch
                     } while (revision != current.manualTrackRevision)

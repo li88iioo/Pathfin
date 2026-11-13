@@ -2016,7 +2016,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 preferences.prefersOriginalSource(selection.item), quality, selection.info.delivery)
             val video = source.mediaStreams.firstOrNull { it.type.equals("Video", true) }
             val localSupport = if (selection.info.delivery != PlaybackDelivery.TRANSCODE &&
-                !(selection.item.type == "TvChannel" && preferences.liveTvDirectPlay) && video != null)
+                !(selection.item.isLiveChannel && preferences.liveTvDirectPlay) && video != null)
                 withContext(Dispatchers.Default) { DevicePlaybackCapabilities.supportsVideo(video) } else null
             require(!originalHttp || localSupport != false) { tr("本机不支持此原画，请更换片源或关闭原始路径后选择服务器画质。") }
             val info = when {

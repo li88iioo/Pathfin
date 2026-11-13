@@ -101,6 +101,8 @@ class PlaybackResolverTest {
         val swapped = AppPreferences(originalPathEnabled = true, liveTvDirectPlay = false)
         assertFalse(swapped.prefersOriginalSource(MediaItem("c", "Channel", "TvChannel")))
         assertTrue(swapped.prefersOriginalSource(MediaItem("m", "Movie", "Movie")))
+        assertTrue(preferences.prefersOriginalSource(MediaItem("c", "Channel", "LiveTvChannel")))
+        assertFalse(swapped.prefersOriginalSource(MediaItem("c", "Channel", "LiveTvChannel")))
     }
 
     @Test fun negotiatedRecoveryCannotReturnToTheOriginalUrlOrStaticDirectPlay() {
