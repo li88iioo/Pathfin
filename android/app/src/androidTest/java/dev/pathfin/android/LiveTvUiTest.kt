@@ -3,7 +3,12 @@ package dev.pathfin.android
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.isFocused
@@ -48,6 +53,8 @@ import dev.pathfin.android.ui.LiveTvScreen
 import dev.pathfin.android.ui.LiveTvState
 import dev.pathfin.android.ui.LocalPageActive
 import dev.pathfin.android.ui.LocalPageRefreshEnabled
+import dev.pathfin.android.ui.LocalNoticeHost
+import dev.pathfin.android.ui.PathfinSnackbarHost
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.time.Instant
@@ -69,6 +76,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -344,6 +352,30 @@ class LiveTvUiTest {
             compose.onNodeWithText("刷新 · 港湾电视").assertVerificationDisplayed(compose)
             compose.onNodeWithText("正在读取直播频道").assertDoesNotExist()
             assertEquals(listOf(0, 0, 0), fixture.channelPages.requests.map { it.startIndex })
+            waitFor("app-notice")
+            assertSameBounds(before, channelBounds())
+            fixture.channelStatus.set(200)
+            compose.onNodeWithText("重试").performVerificationClick(compose)
+            compose.waitUntil(WAIT_MS) { fixture.channelPages.requests.size == 4 && !host.state.refreshing && host.state.error == null }
+            assertNoNewRequests(fixture.channelPages, 4)
+            assertSameBounds(before, channelBounds())
+        }
+    }
+
+    @Test fun retainedHiddenLivePageDoesNotShowATardyRefreshFailure() {
+        Fixture(blockRefresh = true).use { fixture ->
+            val host = show(fixture)
+            waitFor("live-tv-channel-harbour")
+            compose.runOnIdle { host.state.load() }
+            compose.waitUntil(WAIT_MS) { fixture.refreshStarted.count == 0L }
+            compose.runOnIdle { host.active = false; fixture.channelStatus.set(503) }
+            fixture.releaseRefresh.countDown()
+            compose.waitUntil(WAIT_MS) { !host.state.refreshing && host.state.error != null }
+            val error = compose.runOnIdle { requireNotNull(host.state.error) }
+            compose.onNodeWithText(error).assertDoesNotExist()
+            compose.onNodeWithTag("app-notice").assertDoesNotExist()
+            compose.runOnIdle { assertNull("失活页不能把迟到错误排进全局通知", host.notice.currentSnackbarData) }
+            compose.onNodeWithTag("live-tv-channel-harbour").assertVerificationDisplayed(compose)
         }
     }
 
@@ -805,6 +837,7 @@ class LiveTvUiTest {
         val backgroundBacks = AtomicInteger()
         val clock = AtomicLong(1_000)
         val authExpired = AtomicInteger()
+        val notice = SnackbarHostState()
     }
 
     private fun show(fixture: Fixture, initialQuery: String = "", groups: Boolean = false, onPlay: (MediaItem) -> Unit = {}): ScreenHost {
@@ -820,8 +853,12 @@ class LiveTvUiTest {
             DisposableEffect(state) { onDispose { state.cancel() } }
             PathfinTheme(ThemePreference.LIGHT) { Surface {
                 BackHandler(!host.active) { host.backgroundBacks.incrementAndGet() }
-                CompositionLocalProvider(LocalPageActive provides host.active, LocalPageRefreshEnabled provides host.active) {
-                    if (host.visible) LiveTvScreen(state, { host.visible = false }, onPlay)
+                CompositionLocalProvider(LocalPageActive provides host.active, LocalPageRefreshEnabled provides host.active,
+                    LocalNoticeHost provides host.notice) {
+                    Box(Modifier.fillMaxSize()) {
+                        if (host.visible) LiveTvScreen(state, { host.visible = false }, onPlay)
+                        if (host.active) PathfinSnackbarHost(host.notice, Modifier.align(Alignment.BottomCenter))
+                    }
                 }
             } }
         }

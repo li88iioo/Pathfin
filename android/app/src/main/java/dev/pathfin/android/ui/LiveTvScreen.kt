@@ -248,7 +248,6 @@ private const val OTHER_GROUP = "\u0000other"
 @Composable
 fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> Unit, preparingId: String? = null,
     onAmbientCovered: (Boolean) -> Unit = {}) = with(state) {
-    val snackbar = remember(state) { SnackbarHostState() }
     var selected by remember(state) { mutableStateOf<LiveTvChannel?>(null) }
     val pageActive = LocalPageActive.current
     val now = liveTvClock()
@@ -256,9 +255,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     val play: (LiveTvChannel) -> Unit = { channel -> watchedId = channel.id; onPlay(channel.item) }
     val guide: (LiveTvChannel) -> Unit = { selected = it }
 
-    LaunchedEffect(error) {
-        if (channels.isNotEmpty()) error?.let { message -> snackbar.showSnackbar(message, duration = SnackbarDuration.Long) }
-    }
+    RefreshFailureNotice(error?.takeIf { channels.isNotEmpty() }, settled = !refreshing, retry = { load() })
     // 搜索默认收起成按钮；有搜索词时（包括重新进入）保持展开。
     var searchOpen by remember(state) { mutableStateOf(false) }
     val searchExpanded = searchOpen || query.isNotEmpty()
@@ -413,6 +410,8 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     }
     // 卡片高度随字号变化，按实测值补足分组末尾留白。
     var tileHeight by remember { mutableStateOf(0.dp) }
+    // 只观察视口尺寸；滚动产生的新 layoutInfo 不应让填充行每帧重组。
+    val viewport by remember(list) { derivedStateOf { list.layoutInfo.viewportSize } }
     LaunchedEffect(refreshing) { if (!refreshing) pulled = false }
     Box(Modifier.fillMaxSize().testTag("live-tv-screen")) {
         // 只有手动下拉才显示刷新圈；进入时的后台刷新静默替换内容。
@@ -437,7 +436,6 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
                             trailing = rowSearch.takeIf { searchInRows })
                         LiveTvFillerRow -> {
                             // 让标签能停在页头下沿：补足“页头 + 标签 + 本组各排卡片 + 底部留白”之外的高度。
-                            val viewport = list.layoutInfo.viewportSize
                             val (width, height) = with(density) { viewport.width.toDp() to viewport.height.toDp() }
                             val columns = maxOf(1, ((width - 32.dp + GridSpacing) / (TileMinWidth + GridSpacing)).toInt())
                             val lines = ((chosen?.channels?.size ?: 0) + columns - 1) / columns
@@ -455,7 +453,6 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
                     }
                 }
             }
-            PathfinSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = bottomInset))
         }
         // 页头接住点击不穿透；双击回到顶部，与应用标题栏一致。
         val headerBottom by animateDpAsState(if (headerRow) headerTop else topInset, tween(200), label = "live-tv-header")
