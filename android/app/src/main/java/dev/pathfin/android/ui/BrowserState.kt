@@ -1,5 +1,9 @@
 package dev.pathfin.android.ui
 
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import dev.pathfin.android.domain.LibraryFilterOptions
 import dev.pathfin.android.domain.LibraryQuery
 import dev.pathfin.android.i18n.tr
@@ -39,6 +43,16 @@ data class BrowserUiState(
 internal object BrowserColumns {
     const val horizontalPaddingDp = 16f
     const val spacingDp = 12f
+
+    /** 直接沿用网格的像素分配，保留余数列的 1px 差异，让首组合就能请求实际尺寸的图片。 */
+    fun imageWidths(cells: GridCells, availableWidthPx: Int, density: Density): List<Dp> = with(cells) {
+        with(density) {
+            calculateCrossAxisCellSizes(
+                availableSize = (availableWidthPx - horizontalPaddingDp.dp.roundToPx() * 2).coerceAtLeast(0),
+                spacing = spacingDp.dp.roundToPx(),
+            ).map { it.toDp() }
+        }
+    }
 
     fun resolve(style: PosterStyle, availableWidthDp: Float, fontScale: Float): Int {
         val width = if (availableWidthDp.isFinite()) availableWidthDp.coerceAtLeast(0f) else 360f

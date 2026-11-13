@@ -131,15 +131,7 @@ internal fun BrowserScreen(
         val gridCells = GridCells.Fixed(columns)
         val startPadding = BrowserColumns.horizontalPaddingDp.dp
         val endPadding = startPadding
-        // 复用网格本身的像素分配，保留余数列的1px差异，首组合即可请求准确宽度的图片。
-        val imageWidths = with(gridCells) {
-            with(density) {
-                calculateCrossAxisCellSizes(
-                    availableSize = (constraints.maxWidth - startPadding.roundToPx() - endPadding.roundToPx()).coerceAtLeast(0),
-                    spacing = BrowserColumns.spacingDp.dp.roundToPx(),
-                ).map { it.toDp() }
-            }
-        }
+        val imageWidths = BrowserColumns.imageWidths(gridCells, constraints.maxWidth, density)
         Box(Modifier.fillMaxSize().background(PathfinAppearance.canvas)) {
             Box(Modifier.fillMaxSize()) {
                 RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },

@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -79,21 +79,25 @@ internal fun LibrarySearchScreen(
         // 保留网格与刷新生命周期，建议遮盖结果时移除旧结果采样。
         val resultsSource = if (editing) Modifier else Modifier.topBarBlurSource()
         BoxWithConstraints(Modifier.fillMaxSize().then(resultsSource).background(PathfinAppearance.canvas)) {
-            val columns = BrowserColumns.resolve(state.style, maxWidth.value, LocalDensity.current.fontScale)
+            val density = LocalDensity.current
+            val columns = BrowserColumns.resolve(state.style, maxWidth.value, density.fontScale)
+            val gridCells = GridCells.Fixed(columns)
+            val imageWidths = BrowserColumns.imageWidths(gridCells, constraints.maxWidth, density)
             RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },
                 settled = !state.content.loading, retry = onRefresh)
             RefreshablePage(state.content.loading || state.content.loadingMore, onRefresh, Modifier.fillMaxSize(),
                 enabled = state.query.searchTerm.isNotBlank(), refreshOnEntry = refreshOnEntry,
                 indicatorTopInset = headerHeight) {
-                LazyVerticalGrid(GridCells.Fixed(columns), state = grid, modifier = Modifier.fillMaxSize().testTag("library-search-results"),
+                LazyVerticalGrid(gridCells, state = grid, modifier = Modifier.fillMaxSize().testTag("library-search-results"),
                     contentPadding = PaddingValues(start = BrowserColumns.horizontalPaddingDp.dp, end = BrowserColumns.horizontalPaddingDp.dp,
                         top = headerHeight + 8.dp, bottom = LocalNavigationBottomInset.current),
                     verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(BrowserColumns.spacingDp.dp)) {
                     state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isEmpty() }?.let { error ->
                         item(key = "search-error", span = { GridItemSpan(maxLineSpan) }) { ErrorPanel(error, retry = onRefresh) }
                     }
-                    items(state.content.items, key = { it.id }) { item ->
-                        BrowserMediaCard(item, session, api, state.style, Modifier.fillMaxWidth(), libraryStyle = true) { onOpen(item) }
+                    itemsIndexed(state.content.items, key = { _, item -> item.id }) { index, item ->
+                        BrowserMediaCard(item, session, api, state.style, Modifier.fillMaxWidth(),
+                            imageWidth = imageWidths[index % columns].takeIf { it > 0.dp }, libraryStyle = true) { onOpen(item) }
                     }
                     if (state.query.searchTerm.isNotBlank() && !state.content.loading && state.content.items.isEmpty() && state.content.error == null)
                         item(key = "search-empty", span = { GridItemSpan(maxLineSpan) }) { EmptyPanel(tr("没有找到内容"), tr("试试其他片名。")) }

@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -290,19 +290,21 @@ internal fun DiscoveryGridContent(
     AutomaticGridPagination(grid, content.pagination, content.queryKey ?: category.name, onMore)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val style = if (category.isLandscape) PosterStyle.BACKDROP else PosterStyle.POSTER
-        val columns = BrowserColumns.resolve(style, maxWidth.value, LocalDensity.current.fontScale)
+        val density = LocalDensity.current
+        val columns = BrowserColumns.resolve(style, maxWidth.value, density.fontScale)
+        val gridCells = GridCells.Fixed(columns)
+        val imageWidths = BrowserColumns.imageWidths(gridCells, constraints.maxWidth, density)
         RefreshFailureNotice(content.error?.takeIf { content.items.isNotEmpty() }, settled = !content.loading, retry = onRefresh)
         RefreshablePage(content.loading || content.loadingMore, onRefresh,
             Modifier.fillMaxSize().background(PathfinAppearance.canvas), refreshOnEntry = content.queryKey != null) {
-            LazyVerticalGrid(GridCells.Fixed(columns), state = grid,
+            LazyVerticalGrid(gridCells, state = grid,
                 modifier = Modifier.fillMaxSize().testTag("discovery-grid/${category.name}"),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = LocalPageTopInset.current + 12.dp,
+                contentPadding = PaddingValues(start = BrowserColumns.horizontalPaddingDp.dp, end = BrowserColumns.horizontalPaddingDp.dp,
+                    top = LocalPageTopInset.current + 12.dp,
                     bottom = LocalNavigationBottomInset.current),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                gridItems(content.items, key = MediaItem::id) { item ->
-                    BoxWithConstraints(Modifier.fillMaxWidth()) {
-                        DiscoveryMediaCard(category, item, session, api, Modifier.fillMaxWidth(), maxWidth, onOpen)
-                    }
+                horizontalArrangement = Arrangement.spacedBy(BrowserColumns.spacingDp.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                gridItemsIndexed(content.items, key = { _, item -> item.id }) { index, item ->
+                    DiscoveryMediaCard(category, item, session, api, Modifier.fillMaxWidth(), imageWidths[index % columns], onOpen)
                 }
                 content.error?.takeIf { content.items.isEmpty() }?.let { error -> item(key = "discovery-grid-error", span = { GridItemSpan(maxLineSpan) }) {
                     ErrorPanel(error, retry = onRefresh)

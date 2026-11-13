@@ -1,10 +1,21 @@
 package dev.pathfin.android.ui
 
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserColumnsTest {
+    @Test
+    fun imageWidthsPreserveThePixelBudgetAndRemainderColumns() = with(Density(2.75f)) {
+        val widths = BrowserColumns.imageWidths(GridCells.Fixed(3), 1080, this).map { it.roundToPx() }
+        assertEquals(listOf(309, 309, 308), widths)
+        assertEquals("首帧图片宽度、边距和间隔应恰好铺满网格", 1080,
+            widths.sum() + 16.dp.roundToPx() * 2 + 12.dp.roundToPx() * 2)
+    }
+
     @Test
     fun automaticPhoneDensityKeepsThreePostersAndTwoBackdrops() {
         assertEquals(listOf(PosterStyle.POSTER, PosterStyle.BACKDROP), PosterStyle.entries)
