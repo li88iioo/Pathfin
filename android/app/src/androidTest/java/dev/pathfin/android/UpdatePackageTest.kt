@@ -52,8 +52,6 @@ class UpdatePackageTest {
         File(directory, "pathfin-broken.apk").writeText("x")
         File(directory, "pathfin-1.0.part").writeText("x")
         File(directory, "notes.txt").writeText("x")
-        UpdateFiles.cleanup(context, keepPartial = true)
-        assertEquals(listOf("pathfin-1.0.part"), directory.list()!!.toList())
         UpdateFiles.cleanup(context)
         assertTrue(directory.list()!!.isEmpty())
     }

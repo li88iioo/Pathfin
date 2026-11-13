@@ -8,7 +8,6 @@ data class MediaManagementCapabilities(
     val canEditMetadata: Boolean = false,
     val canEditImages: Boolean = false,
     val canRefresh: Boolean = false,
-    val canScanLibrary: Boolean = false,
     val canDelete: Boolean = false,
     val canDownload: Boolean = false,
 )

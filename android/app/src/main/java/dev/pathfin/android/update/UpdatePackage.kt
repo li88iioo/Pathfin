@@ -138,13 +138,13 @@ internal object UpdateFiles {
     }
 
     /** 已安装、无法解析或超过一天的安装包都删除；正在交给安装器的新版本保留到安装完成。 */
-    fun cleanup(context: Context, keepPartial: Boolean = false) {
+    fun cleanup(context: Context) {
         val files = directory(context).listFiles() ?: return
         val installed = installedIdentity(context).versionCode
         val stale = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)
         files.forEach { file ->
             val obsolete = when (file.extension) {
-                "part" -> !keepPartial
+                "part" -> true
                 "apk" -> file.lastModified() < stale || (archiveIdentity(context, file)?.versionCode ?: 0) <= installed
                 else -> true
             }

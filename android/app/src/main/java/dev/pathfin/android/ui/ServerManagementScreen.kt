@@ -45,10 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.BlendMode
@@ -1075,9 +1073,6 @@ private fun PasswordField(
 }
 
 /** 与实际表单共用纯解析规则；分离的协议、端口、路径控件允许覆盖粘贴值。 */
-internal fun serverConfigFromFields(host: String, scheme: String, port: String, path: String, allowHttp: Boolean): ServerConfig {
-    return ServerAddressInputState(host, scheme, port, path).toServerConfig(allowHttp)
-}
 
 private fun relativeTime(timestamp: Long): String {
     val minutes = ((System.currentTimeMillis() - timestamp).coerceAtLeast(0) / 60_000)

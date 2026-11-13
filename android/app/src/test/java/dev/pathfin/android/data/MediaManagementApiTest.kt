@@ -143,7 +143,7 @@ class MediaManagementApiTest {
                 { api.externalIds(session, MediaItem("film", "Film", "Movie")) },
                 { api.uploadImage(session, "film", MediaImageType.PRIMARY, png(), "image/png") },
                 { api.deleteImage(session, "film", MediaImage(MediaImageType.PRIMARY, 0, "poster")) },
-                { api.refreshItem(session, "film") }, { api.scanItem(session, "library") },
+                { api.refreshItem(session, "film") }, { api.refreshItem(session, "library") },
             )
             for (operation in operations) assertEquals(403, expectApiFailure(operation).statusCode)
         } }
@@ -379,7 +379,7 @@ class MediaManagementApiTest {
         }) { session -> runBlocking {
             val api = MediaManagementApi()
             api.refreshItem(session, "film")
-            api.scanItem(session, "library")
+            api.refreshItem(session, "library")
             assertThrows(IllegalArgumentException::class.java) { runBlocking {
                 api.refreshItem(session, "film", MetadataRefreshOptions(replaceAllMetadata = true))
             } }

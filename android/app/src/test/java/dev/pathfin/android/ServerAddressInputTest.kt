@@ -1,6 +1,5 @@
 package dev.pathfin.android
 
-import dev.pathfin.android.ui.serverConfigFromFields
 import dev.pathfin.android.domain.ServerAddressInputState
 import dev.pathfin.android.domain.ServerConfig
 import org.junit.Assert.assertEquals
@@ -139,4 +138,7 @@ class ServerAddressInputTest {
         assertEquals("9443", explicit.port)
         assertEquals("https://192.168.1.2:9443", explicit.toServerConfig(false).baseUrl)
     }
+
+    private fun serverConfigFromFields(host: String, scheme: String, port: String, path: String, allowHttp: Boolean) =
+        ServerAddressInputState(host, scheme, port, path).toServerConfig(allowHttp)
 }

@@ -54,7 +54,6 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
         canEditMetadata = session.isAdministrator,
         canEditImages = session.isAdministrator,
         canRefresh = session.isAdministrator,
-        canScanLibrary = session.isAdministrator,
         canDelete = session.canDelete && item.canDelete == true,
         canDownload = session.canDownload && item.canDownload == true,
     )
@@ -247,7 +246,6 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
     }
 
     /** 对指定媒体库文件夹排队刷新，不会转成全服务器 Library/Refresh。 */
-    suspend fun scanItem(session: Session, parentId: String) = refreshItem(session, parentId)
 
     suspend fun deleteItem(session: Session, itemId: String) {
         if (!session.canDelete) permissionDenied(tr("当前账号没有删除媒体的权限"))

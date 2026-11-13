@@ -57,8 +57,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import java.io.File
-import java.time.LocalDate
 
 sealed interface Route {
     val key: String
@@ -541,7 +539,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         browserPages.clear()
     }
 
-    fun logout(reason: String? = null) {
+    fun logout() {
         if ("logout" in state.value.actionBusy) return
         val current = state.value.currentProfileId
         val removed = state.value.profiles.firstOrNull { it.id == current }
@@ -562,7 +560,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 if (epoch != generation) return@launch
                 removed?.let(::clearProfileImages)
                 mutableState.update { AppState(theme = it.theme, preferences = it.preferences, profiles = remaining,
-                    showServers = true, loginError = reason,
+                    showServers = true, loginError = null,
                     notice = accountRemovalNotice(queueFailed)) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
