@@ -31,10 +31,12 @@ import dev.pathfin.android.i18n.tr
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -125,9 +127,7 @@ class DlnaCastService : Service() {
     private val cleanup = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val controls = Mutex()
     @Volatile private var generation = 0L
-    private var starting: Job? = null
-    private var ending: Job? = null
-    private var polling: Job? = null
+    private var ending: Deferred<Boolean>? = null
     private var active: ActiveCast? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
@@ -170,21 +170,17 @@ class DlnaCastService : Service() {
             endSession(if (!LocalNetworkPermission.isGranted(this)) LocalNetworkPermission.DENIED_MESSAGE else tr("设备已失效，请重新发现后连接"))
             return
         }
-        val oldStart = starting; oldStart?.cancel()
-        val oldEnd = ending
-        polling?.cancel(); unregisterNetwork()
-        val previous = active; active = null; previous?.relay?.revoke()
-        val epoch = ++generation
+        val retired = retire()
+        val epoch = generation
         val source = intent.getStringExtra("source")
         val position = intent.getLongExtra("position", 0).coerceAtLeast(0)
         DlnaCasting.update { it.copy(status = CastStatus.CONNECTING, busy = true, device = device,
             profileId = profile, itemId = itemId, title = tr("正在读取媒体"), positionTicks = position, durationTicks = null, error = null, authExpired = false) }
-        starting = scope.launch {
+        scope.launch {
             var prepared: ActiveCast? = null
             var installed = false
             try {
-                withContext(NonCancellable + Dispatchers.IO) { oldStart?.join(); oldEnd?.join(); dispose(previous, true) }
-                currentCoroutineContext().ensureActive()
+                retired.join()
                 withContext(Dispatchers.IO) { prepared = prepare(profile, itemId, source, position, device) }
                 val current = requireNotNull(prepared)
                 currentCoroutineContext().ensureActive()
@@ -228,7 +224,7 @@ class DlnaCastService : Service() {
                     endSession(castError(failure))
                 }
             } finally {
-                if (!installed) withContext(NonCancellable + Dispatchers.IO) { dispose(prepared, true) }
+                if (!installed) withContext(NonCancellable + Dispatchers.IO) { dispose(prepared) }
             }
         }
     }
@@ -260,33 +256,31 @@ class DlnaCastService : Service() {
         }
     }
 
-    private fun poll(epoch: Long, cast: ActiveCast) {
-        polling?.cancel()
-        polling = scope.launch {
-            var failures = 0
-            while (active === cast && generation == epoch) {
-                delay(2_000)
-                try {
-                    controls.withLock {
-                        val (transport, position) = withContext(Dispatchers.IO) { checkProfile(cast); cast.av.transportState() to cast.av.position() }
-                        if (active !== cast || generation != epoch) return@withLock
-                        failures = 0
-                        if (transport in listOf("STOPPED", "NO_MEDIA_PRESENT")) { endSession(); return@withLock }
-                        val status = when (transport) { "PLAYING" -> CastStatus.PLAYING; "PAUSED_PLAYBACK" -> CastStatus.PAUSED; else -> null }
-                        if (status != null) {
-                            cast.positionTicks = position.positionTicks
-                            DlnaCasting.update { it.copy(status = status, positionTicks = position.positionTicks, durationTicks = position.durationTicks ?: it.durationTicks) }
-                            foreground(if (status == CastStatus.PAUSED) tr("投屏已暂停") else tr("正在投屏至 %1\$s", cast.device.name))
-                            if (System.nanoTime() - cast.lastReportNanos > 10_000_000_000L) withContext(Dispatchers.IO) {
-                                report(cast, "progress", position.positionTicks, status == CastStatus.PAUSED)
-                            }
+    private suspend fun poll(epoch: Long, cast: ActiveCast) {
+        var failures = 0
+        while (active === cast && generation == epoch) {
+            delay(2_000)
+            try {
+                controls.withLock {
+                    if (active !== cast || generation != epoch) return@withLock
+                    val (transport, position) = withContext(Dispatchers.IO) { checkProfile(cast); cast.av.transportState() to cast.av.position() }
+                    if (active !== cast || generation != epoch) return@withLock
+                    failures = 0
+                    if (transport in listOf("STOPPED", "NO_MEDIA_PRESENT")) { endSession(); return@withLock }
+                    val status = when (transport) { "PLAYING" -> CastStatus.PLAYING; "PAUSED_PLAYBACK" -> CastStatus.PAUSED; else -> null }
+                    if (status != null) {
+                        cast.positionTicks = position.positionTicks
+                        DlnaCasting.update { it.copy(status = status, positionTicks = position.positionTicks, durationTicks = position.durationTicks ?: it.durationTicks) }
+                        foreground(if (status == CastStatus.PAUSED) tr("投屏已暂停") else tr("正在投屏至 %1\$s", cast.device.name))
+                        if (System.nanoTime() - cast.lastReportNanos > 10_000_000_000L) withContext(Dispatchers.IO) {
+                            report(cast, "progress", position.positionTicks, status == CastStatus.PAUSED)
                         }
                     }
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (failure: Exception) {
-                    if (failure is LocalNetworkPermissionDenied || failure is CastAccountRemoved || ++failures >= 3) {
-                        if (active === cast && generation == epoch) endSession(castError(failure))
-                    }
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (failure: Exception) {
+                if (failure is LocalNetworkPermissionDenied || failure is CastAccountRemoved || ++failures >= 3) {
+                    if (active === cast && generation == epoch) endSession(castError(failure))
                 }
             }
         }
@@ -300,6 +294,7 @@ class DlnaCastService : Service() {
         scope.launch {
             try {
                 controls.withLock {
+                    if (active !== cast || generation != epoch) return@withLock
                     val (transport, position) = withContext(Dispatchers.IO) {
                         checkProfile(cast)
                         when (action) { PLAY -> cast.av.play(); PAUSE -> cast.av.pause(); SEEK -> cast.av.seek(ticks.coerceAtLeast(0)) }
@@ -329,33 +324,41 @@ class DlnaCastService : Service() {
         }
     }
 
-    /** 必须从 Main 调用；立即摘下 lease，所有 SOAP/TLS/磁盘清理交给独立 IO scope。 */
-    internal fun endSession(reason: String? = null): Job {
-        val epoch = ++generation
-        val oldStart = starting; starting = null; oldStart?.cancel()
-        val oldEnd = ending
-        polling?.cancel(); polling = null
+    /** Main立即撤销会话；独立IO等待旧作业，允许从当前会话Job内调用。 */
+    private fun retire(): Deferred<Boolean> {
+        generation++
         val old = active; active = null
         old?.relay?.revoke(); unregisterNetwork()
-        DlnaCasting.update { it.copy(status = if (reason == null) CastStatus.STOPPED else CastStatus.ERROR, busy = true, error = reason) }
-        return cleanup.launch {
-            oldStart?.join(); oldEnd?.join()
-            val stopped = dispose(old, true)
-            withContext(Dispatchers.Main.immediate) {
-                if (generation == epoch) {
-                    DlnaCasting.update { it.copy(busy = false, error = reason ?: if (!stopped && old != null) tr("临时媒体地址已撤销；设备未确认停止，请在电视端检查状态") else null) }
-                    stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
-                }
-            }
+        val jobs = scope.coroutineContext.job.children.toList().onEach { it.cancel() }
+        val previous = ending
+        return cleanup.async {
+            jobs.forEach { it.join() }
+            previous?.join()
+            if (old == null) previous?.await() ?: true else dispose(old)
         }.also { ending = it }
     }
 
-    private suspend fun dispose(cast: ActiveCast?, stopDevice: Boolean): Boolean {
+    internal fun endSession(reason: String? = null): Job {
+        val retired = retire()
+        val epoch = generation
+        DlnaCasting.update { it.copy(status = if (reason == null) CastStatus.STOPPED else CastStatus.ERROR, busy = true, error = reason) }
+        return cleanup.launch {
+            val stopped = retired.await()
+            withContext(Dispatchers.Main.immediate) {
+                if (generation == epoch) {
+                    DlnaCasting.update { it.copy(busy = false, error = reason ?: if (!stopped) tr("临时媒体地址已撤销；设备未确认停止，请在电视端检查状态") else null) }
+                    stopForeground(STOP_FOREGROUND_REMOVE); stopSelf()
+                }
+            }
+        }
+    }
+
+    private suspend fun dispose(cast: ActiveCast?): Boolean {
         if (cast == null) return true
         cast.relay.revoke()
         try {
             // 电视确认与服务器会话各自结束；任一端失败不能跳过另一端的清理。
-            val stopped = !stopDevice || runCatching { withTimeoutOrNull(3_000) { cast.av.stop(); true } == true }.getOrDefault(false)
+            val stopped = runCatching { withTimeoutOrNull(3_000) { cast.av.stop(); true } == true }.getOrDefault(false)
             runCatching { if (cast.reported && profileExists(cast)) report(cast, "stop", cast.positionTicks, false) }
             return stopped
         } finally { runCatching { cast.relay.close() }; runCatching { cast.av.close() }; closeClient(cast.apiClient) }
@@ -428,14 +431,10 @@ class DlnaCastService : Service() {
     override fun onTaskRemoved(rootIntent: Intent?) { /* 前台通知继续提供真实暂停/停止；非 sticky，不恢复被系统杀死的会话。 */ }
 
     override fun onDestroy() {
-        generation++
-        val oldStart = starting; oldStart?.cancel(); polling?.cancel()
-        val oldEnd = ending
-        val old = active; active = null; old?.relay?.revoke()
-        unregisterNetwork()
+        val retired = retire()
         if (DlnaCasting.service === this) DlnaCasting.service = null
         scope.cancel()
-        cleanup.launch { oldStart?.join(); oldEnd?.join(); dispose(old, true); cleanup.cancel() }
+        cleanup.launch { retired.join(); cleanup.cancel() }
         DlnaCasting.update { if (it.active) it.copy(status = CastStatus.ERROR, busy = false, error = tr("投屏服务已停止，临时媒体地址已撤销")) else it.copy(busy = false) }
         super.onDestroy()
     }

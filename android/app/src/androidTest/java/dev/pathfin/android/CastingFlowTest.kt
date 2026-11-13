@@ -33,7 +33,10 @@ import java.net.Socket
 import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -42,7 +45,9 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
@@ -163,13 +168,63 @@ class CastingFlowTest {
         start(context, profileId, fixture)
         val lease = requireNotNull(fixture.relay.get())
         fixture.rejectStop.set(true)
-        compose.runOnIdle { DlnaCasting.stop(context) }
-        await(fixture) { !DlnaCasting.state.value.active && !DlnaCasting.state.value.busy }
-        assertEquals(1, fixture.stops.get())
-        assertEquals("电视拒绝 Stop 也必须向服务器结束本次播放", 1, fixture.stopReports.get())
-        assertEquals("PLAYING", fixture.transport.get())
-        assertTrue(DlnaCasting.state.value.error.orEmpty().contains("设备未确认停止"))
-        assertThrows(IOException::class.java) { fixture.fetch(lease) }
+        fixture.blockStopReport.set(true)
+        try {
+            compose.runOnIdle { DlnaCasting.stop(context) }
+            await(fixture) { fixture.stopReportEntered.count == 0L }
+            compose.runOnIdle {
+                // 第二次命令清除标记，证明它已在第一次清理未完成时被处理，而非猜测 Binder 派发时机。
+                DlnaCasting.update { it.copy(error = "等待第二次停止") }
+                DlnaCasting.stop(context)
+            }
+            await(fixture) { DlnaCasting.state.value.error == null && DlnaCasting.state.value.busy }
+            fixture.releaseStopReport.countDown()
+            await(fixture) { !DlnaCasting.state.value.active && !DlnaCasting.state.value.busy }
+            assertEquals("重复停止只向同一设备发送一次 Stop", 1, fixture.stops.get())
+            assertEquals("电视拒绝 Stop 也必须向服务器结束本次播放", 1, fixture.stopReports.get())
+            assertEquals("PLAYING", fixture.transport.get())
+            assertTrue("重复停止不能覆盖设备未确认停止的提示", DlnaCasting.state.value.error.orEmpty().contains("设备未确认停止"))
+            assertThrows(IOException::class.java) { fixture.fetch(lease) }
+        } finally {
+            fixture.releaseStopReport.countDown()
+        }
+    }
+
+    @Test fun queuedPlayCannotResumeTheRendererAfterStopRetiresItsSession() = withOwnRenderer { context, profileId, fixture ->
+        start(context, profileId, fixture)
+        compose.runOnIdle { DlnaCasting.pause(context) }
+        await(fixture) { DlnaCasting.state.value.status == CastStatus.PAUSED && !DlnaCasting.state.value.busy }
+        val lease = requireNotNull(fixture.relay.get())
+        val plays = fixture.plays.get()
+        val service = requireNotNull(DlnaCasting.service)
+        // 公共HTTP取消会立即释放轮询锁，无法稳定编排排队顺序；只借用现有锁，不调用私有业务方法。
+        val controls = service.javaClass.getDeclaredField("controls").apply { isAccessible = true }.get(service) as Mutex
+        var held = false
+        try {
+            runBlocking { withTimeout(5_000) { controls.lock(); held = true } }
+            fixture.blockStopReport.set(true)
+            compose.runOnIdle { DlnaCasting.play(context) }
+            await(fixture) { DlnaCasting.state.value.busy }
+            assertEquals("持锁期间恢复播放请求必须仍在排队", plays, fixture.plays.get())
+            compose.runOnIdle { DlnaCasting.stop(context) }
+            await(fixture) { fixture.stopReportEntered.count == 0L }
+            assertEquals("释放控制队列前，电视必须已收到Stop", 1, fixture.stops.get())
+            assertEquals("STOPPED", fixture.transport.get())
+            controls.unlock(); held = false
+            // Stop已确认但服务器上报尚未放行，旧av客户端仍可用；观察迟到控制，不靠随机sleep猜排队。
+            fixture.controlAfterStop.await(1, TimeUnit.SECONDS)
+            fixture.releaseStopReport.countDown()
+            await(fixture) { !DlnaCasting.state.value.active && !DlnaCasting.state.value.busy }
+            val actions = fixture.soapActions.toList()
+            val afterStop = actions.drop(actions.indexOf("Stop") + 1).filter { it in setOf("Play", "Pause", "Seek") }
+            assertEquals("退役后不能再发设备控制，实际SOAP=$actions", emptyList<String>(), afterStop)
+            assertEquals("STOPPED", fixture.transport.get())
+            assertEquals("停止后不能由旧队列再次播放", plays, fixture.plays.get())
+            assertThrows(IOException::class.java) { fixture.fetch(lease) }
+        } finally {
+            if (held) controls.unlock()
+            fixture.releaseStopReport.countDown()
+        }
     }
 
     @Test fun removingOwnSyntheticProfileRevokesLeaseAndStopsDeviceWithoutOldApiCalls() = withOwnRenderer { context, profileId, fixture ->
@@ -256,6 +311,11 @@ class CastingFlowTest {
         val credentialsSafe = AtomicBoolean(true)
         val accountRemoved = AtomicBoolean(); val apiAfterRemoval = AtomicInteger()
         val rejectStop = AtomicBoolean()
+        val soapActions = CopyOnWriteArrayList<String>()
+        val blockStopReport = AtomicBoolean()
+        val stopReportEntered = CountDownLatch(1)
+        val releaseStopReport = CountDownLatch(1)
+        val controlAfterStop = CountDownLatch(1)
         init {
             executor.execute {
                 while (!closed.get()) {
@@ -290,7 +350,14 @@ class CastingFlowTest {
                             .put("RunTimeTicks", 600L * 10_000_000).put("SupportsDirectPlay", true)
                             .put("RequiredHttpHeaders", JSONObject().put("Authorization", "Bearer fixture-source")))).toString() }
                         "/Sessions/Playing" -> { playReports.incrementAndGet(); "" }
-                        "/Sessions/Playing/Stopped" -> { stopReports.incrementAndGet(); "" }
+                        "/Sessions/Playing/Stopped" -> {
+                            stopReports.incrementAndGet()
+                            if (blockStopReport.get()) {
+                                stopReportEntered.countDown()
+                                releaseStopReport.await()
+                            }
+                            ""
+                        }
                         else -> ""
                     }
                     respond(socket, if (path.startsWith("/Sessions")) 204 else 200, response.encodeToByteArray(), "application/json")
@@ -298,6 +365,8 @@ class CastingFlowTest {
                 "/control" -> {
                     if (headers.values.any { it.contains("fixture-jf-token") || it.contains("MediaBrowser") }) credentialsSafe.set(false)
                     val action = headers["soapaction"].orEmpty().substringAfter('#').trim('"')
+                    soapActions += action
+                    if (stops.get() > 0 && action in setOf("Play", "Pause", "Seek")) controlAfterStop.countDown()
                     val xml = UpnpXml.parse(body.decodeToString())
                     when (action) {
                         "SetAVTransportURI" -> {
@@ -389,6 +458,7 @@ class CastingFlowTest {
                 "relayBytes=${relayBytes.get()} playReports=${playReports.get()} transport=${transport.get()}"
         }
         override fun close() {
+            releaseStopReport.countDown()
             closed.set(true); server.close(); sockets.toList().forEach { runCatching { it.close() } }
             client.dispatcher.cancelAll(); client.connectionPool.evictAll(); client.dispatcher.executorService.shutdown(); executor.shutdownNow()
         }
