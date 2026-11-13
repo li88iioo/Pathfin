@@ -604,6 +604,25 @@ class BrowserCacheTest {
     }
 
     @Test
+    fun batchPlayedOnAVisibleDependentListReloadsItOnceForTheWholeBatch() = withApp { app, fixture ->
+        val library = MediaItem(PAGED_LIBRARY, "分页缓存测试", "CollectionFolder", isFolder = true)
+        onMain { app.open(library) }
+        val opened = awaitBrowser(app, fixture, PAGED_LIBRARY)
+        onMain { app.changeBrowserQuery(PAGED_LIBRARY, opened.query.copy(played = false)) }
+        val unplayed = awaitBrowser(app, fixture, PAGED_LIBRARY) { it.query.played == false && !it.content.loading }
+        val batch = unplayed.content.items.take(5)
+        assertEquals(5, batch.size)
+        val before = fixture.counts()
+        // 可见列表按“未播放”筛选，每项标记都会使它失效；整批只能重载一次，而不是每项发出又取消。
+        onMain { app.runBatch(batch, BatchMediaAction.Played(true)) }
+        awaitState(app, fixture, "批量标记与随后的单次重载必须完成") { state ->
+            BATCH_KEY !in state.actionBusy && state.browsers[PAGED_LIBRARY]?.content?.loading == false
+        }
+        awaitBrowser(app, fixture, PAGED_LIBRARY) { !it.content.loading }
+        assertEquals("整批只重载一次可见列表", before.items + 1, fixture.counts().items)
+    }
+
+    @Test
     fun reentryPreservesAllPagesAndFailedAppendUntilExplicitRetry() = withApp { app, fixture ->
         val library = MediaItem(PAGED_LIBRARY, "分页缓存测试", "CollectionFolder", isFolder = true)
         val expectedIds = (0 until PAGED_ITEM_COUNT).map { "cache-paged-$it" }

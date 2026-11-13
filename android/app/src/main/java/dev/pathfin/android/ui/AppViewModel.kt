@@ -1128,6 +1128,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(actionBusy = it.actionBusy + BATCH_KEY) }
         extraJobs[BATCH_KEY] = viewModelScope.launch {
             var deleted = false
+            val played = mutableListOf<BrowserUserDataChange>()
             try {
                 ensureLocalNetworkAccess(session.server.baseUrl)
                 val management = MediaManagementApi(api)
@@ -1147,7 +1148,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             }
                             is BatchMediaAction.Played -> {
                                 val data = api.setPlayed(session, item.id, action.played)
-                                if (current()) applyUserDataChange(BrowserUserDataChange(item, data, BrowserUserDataChange.Kind.PLAYED))
+                                if (current()) BrowserUserDataChange(item, data, BrowserUserDataChange.Kind.PLAYED).also(::showUserDataChange).let(played::add)
                             }
                             is BatchMediaAction.Refresh -> {
                                 management.refreshItem(session, item.id, action.options)
@@ -1174,8 +1175,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             finally {
                 if (epoch == generation) {
                     deletingBatch = false
-                    // 成功项立即从界面移除；整批（含部分失败）结束后只重刷一次。
+                    // 成功项立即从界面移除或更新；整批（含部分失败、提前中止）结束后只持久化与重刷一次。
                     if (deleted && current()) finishMediaDeletion()
+                    if (current()) settleUserDataChanges(played)
                     mutableState.update { it.copy(actionBusy = it.actionBusy - BATCH_KEY) }
                 }
             }
@@ -2474,6 +2476,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun applyUserDataChange(change: BrowserUserDataChange, favoriteCategory: DiscoveryCategory? = null) {
+        showUserDataChange(change)
+        settleUserDataChanges(listOf(change), favoriteCategory)
+    }
+
+    /** 写入成功的一项立即反映到界面；批量操作逐项调用，整批结束后再 settle 一次。 */
+    private fun showUserDataChange(change: BrowserUserDataChange) {
         val session = state.value.session ?: return
         val profileId = state.value.currentProfileId ?: return
         // 单项与批量显式写入共用：迟到的播放父项读取不能覆盖用户刚提交的状态。
@@ -2482,14 +2490,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         activeMediaReads.forEach { it.record(change) }
         updateEverywhere(change::apply)
         browserPages.update(ProfileHomeKey.of(profileId, session), change)
-        val affected = state.value.browsers.filterValues { change.invalidates(it.query) }.keys
+    }
+
+    /** 持久化快照、失效依赖这些字段的列表并重载可见页；批量时整批只做一次，而不是每项重写快照、发出又取消重载。 */
+    private fun settleUserDataChanges(changes: List<BrowserUserDataChange>, favoriteCategory: DiscoveryCategory? = null) {
+        if (changes.isEmpty()) return
+        val session = state.value.session ?: return
+        val profileId = state.value.currentProfileId ?: return
+        fun invalidates(query: LibraryQuery) = changes.any { it.invalidates(query) }
+        val affected = state.value.browsers.filterValues { invalidates(it.query) }.keys
         affected.forEach { key -> browserJobs.remove(key)?.cancel(); browserLoads.remove(key) }
         dirtyBrowsers += affected
         if (affected.isNotEmpty()) mutableState.update { current -> current.copy(browsers = current.browsers.mapValues { (key, browser) ->
             if (key in affected) browser.copy(restoringCache = false, content = browser.content.copy(loading = false, loadingMore = false)) else browser
         }) }
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) { storeIo {
-            browserSnapshotStore.update(session, profileId, change::apply, change::invalidates)
+            browserSnapshotStore.update(session, profileId, { item -> changes.fold(item) { current, change -> change.apply(current) } }, ::invalidates)
         } }
         invalidateDiscovery(favoriteCategory)
         refreshVisibleBrowserIfDirty()
