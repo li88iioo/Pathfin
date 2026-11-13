@@ -92,7 +92,7 @@ jobs:
         working-directory: android
         run: |
           python3 -m unittest discover -s tools -p 'test_extract_release_notes.py'
-          ./gradlew --no-daemon testDebugUnitTest :app:lintRelease
+          ./gradlew --no-daemon testDebugUnitTest lintRelease
 
       - name: Build signed release APK
         env:

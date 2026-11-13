@@ -68,6 +68,7 @@ internal class AssExtractorsFactory(private val controller: AssController) : Ext
     override fun setSubtitleParserFactory(subtitleParserFactory: SubtitleParser.Factory): ExtractorsFactory = apply {
         base.setSubtitleParserFactory(subtitleParserFactory)
     }
+    @androidx.annotation.OptIn(androidx.media3.common.util.ExperimentalApi::class)
     override fun experimentalSetCodecsToParseWithinGopSampleDependencies(codecsToParseWithinGopSampleDependencies: Int): ExtractorsFactory = apply {
         base.experimentalSetCodecsToParseWithinGopSampleDependencies(codecsToParseWithinGopSampleDependencies)
     }
