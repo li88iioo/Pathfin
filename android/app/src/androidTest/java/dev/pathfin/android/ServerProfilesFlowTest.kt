@@ -10,8 +10,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.ApiException
 import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.data.JellyfinApi
+import dev.pathfin.android.data.LiveTvGroupSource
+import dev.pathfin.android.data.LiveTvSnapshotStore
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.AppPreferences
+import dev.pathfin.android.domain.LiveTvChannel
+import dev.pathfin.android.domain.LiveTvGroups
+import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.ServerProfile
 import dev.pathfin.android.ui.AppState
@@ -20,6 +25,7 @@ import dev.pathfin.android.ui.Route
 import java.io.Closeable
 import java.io.EOFException
 import java.io.IOException
+import java.io.File
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -27,6 +33,7 @@ import java.net.Socket
 import java.net.SocketException
 import java.net.URI
 import java.net.URLDecoder
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -81,6 +88,67 @@ class ServerProfilesFlowTest {
             assertEquals(USER_ID, api.validateSession(firstUser.copy(server = env.second.config)).userId)
             assertEquals(OTHER_USER_ID, api.validateSession(secondUser.copy(server = env.first.config)).userId)
         }
+    }
+
+    @Test
+    fun deletingAnotherAccountRetainsSharedLiveGroupsUntilTheLastAccountLogsOut() = withServers { env ->
+        val first = login(env, env.first, "合成直播账号 A")
+        val second = login(env, env.second, "合成直播账号 B", username = OTHER_USERNAME)
+        assertEquals(first.session.serverIdentity, second.session.serverIdentity)
+        assertNotEquals(first.session.userId, second.session.userId)
+        val context = context()
+        val snapshots = LiveTvSnapshotStore(context)
+        val groupSource = LiveTvGroupSource(context) { throw AssertionError("缓存清理验收不能下载真实播放列表") }
+        val firstChannels = listOf(LiveTvChannel(MediaItem("synthetic-live-a", "合成直播", "TvChannel"), "1"))
+        val secondChannels = listOf(LiveTvChannel(MediaItem("synthetic-live-b", "合成直播", "TvChannel"), "2"))
+        val groups = LiveTvGroups(listOf("合成直播" to "合成分组"))
+        fun cacheName(identity: String) = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) } + ".json"
+        val groupsDirectory = File(context.filesDir, "live-tv-groups")
+        val groupFile = File(groupsDirectory, cacheName(first.session.serverIdentity))
+        val snapshotFiles = listOf(first, second).map {
+            File(File(context.filesDir, "live-tv-snapshots"), cacheName("${it.session.serverIdentity}/${it.session.userId}"))
+        }
+        try {
+            runBlocking { snapshots.save(first.session, firstChannels); snapshots.save(second.session, secondChannels) }
+            // 预填既有 M3U 缓存格式，只验账号入口的磁盘清理，不请求直播配置或节目单。
+            check(groupsDirectory.isDirectory || groupsDirectory.mkdirs())
+            groupFile.writeText(JSONObject().put("channels", JSONArray(groups.entries.map { (name, group) ->
+                JSONArray(listOf(name, group))
+            })).toString())
+            runBlocking {
+                assertEquals(firstChannels, snapshots.load(first.session))
+                assertEquals(secondChannels, snapshots.load(second.session))
+                assertEquals(groups, groupSource.cached(first.session))
+                assertEquals(groups, groupSource.cached(second.session))
+            }
+
+            main { env.app.showServers(); env.app.deleteServer(first) }
+            awaitState(env, description = "移除另一账号后应保留当前账号及其持久资料") {
+                !it.loginBusy && it.currentProfileId == second.id && it.profiles == listOf(second)
+            }
+            assertSelectionAndStorage(env, second, listOf(second))
+            runBlocking {
+                assertNull("删除另一账号必须同步移除它的频道快照", snapshots.load(first.session))
+                assertEquals("当前账号频道快照必须保留", secondChannels, snapshots.load(second.session))
+                assertEquals("同服务器仍有账号时共享分组必须保留", groups, groupSource.cached(second.session))
+            }
+            assertFalse(snapshotFiles.first().exists())
+            assertTrue(groupFile.isFile)
+
+            main { env.app.logout() }
+            awaitState(env, description = "最后账号退出后应清除会话和持久资料") {
+                !it.loginBusy && it.session == null && it.profiles.isEmpty()
+            }
+            assertTrue(SessionStore(context).loadProfiles().isEmpty())
+            assertNull(SessionStore(context).load())
+            runBlocking {
+                assertNull("最后账号的频道快照应移除", snapshots.load(second.session))
+                assertNull("服务器最后账号移除后不再保留共享分组", groupSource.cached(second.session))
+            }
+            assertTrue(snapshotFiles.none(File::exists))
+            assertFalse(groupFile.exists())
+        } finally { snapshotFiles.forEach { it.delete() }; groupFile.delete() }
     }
 
     @Test

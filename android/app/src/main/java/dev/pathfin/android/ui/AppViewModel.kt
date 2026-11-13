@@ -543,17 +543,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if ("logout" in state.value.actionBusy) return
         val current = state.value.currentProfileId
         val removed = state.value.profiles.firstOrNull { it.id == current }
-        val removedSession = state.value.session
         cancelRequests()
         val epoch = generation
         mutableState.update { it.copy(loginBusy = true, actionBusy = it.actionBusy + "logout") }
         viewModelScope.launch {
             try {
                 storageReady.await()
-                val remaining = storeIo {
-                    if (current != null) sessionStore.removeProfile(current) else sessionStore.clear()
-                    sessionStore.loadProfiles()
-                }
+                val remaining = storeIo { removeStoredProfile(current) }
                 current?.let(::invalidateHomeSnapshot)
                 if (current != null) dev.pathfin.android.casting.DlnaCasting.cancelProfile(getApplication(), current)
                 val queueFailed = current != null && runCatching { MediaDownloads.recover(getApplication()) }.isFailure
@@ -803,7 +799,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(loginBusy = true) }
         viewModelScope.launch {
             try {
-                val profiles = storeIo { sessionStore.removeProfile(profile.id); sessionStore.loadProfiles() }
+                val profiles = storeIo { removeStoredProfile(profile.id) }
                 invalidateHomeSnapshot(profile.id)
                 dev.pathfin.android.casting.DlnaCasting.cancelProfile(getApplication(), profile.id)
                 val queueFailed = runCatching { MediaDownloads.recover(getApplication()) }.isFailure
@@ -815,6 +811,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { if (epoch == generation) mutableState.update { it.copy(loginBusy = false, loginError = tr("无法移除本机账号，请重试")) } }
         }
+    }
+
+    /** 与资料删除共用存储队列；按实际剩余账号和备用地址保留共享直播缓存。 */
+    private fun removeStoredProfile(profileId: String?): List<ServerProfile> {
+        if (profileId != null) sessionStore.removeProfile(profileId) else sessionStore.clear()
+        val remaining = sessionStore.loadProfiles()
+        val sessions = remaining.flatMap { profile -> profile.connectionAddresses.map { profile.session.copy(server = it) } }
+        liveTvSnapshots.retainAccounts(sessions)
+        liveTvGroupSource.retainAccounts(sessions)
+        return remaining
     }
 
     private fun accountRemovalNotice(queueFailed: Boolean): String? =
