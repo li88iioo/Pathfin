@@ -20,6 +20,7 @@ import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.MediaPage
 import dev.pathfin.android.domain.ProfileHomeKey
 import dev.pathfin.android.domain.favoriteDiscoveryCategories
+import dev.pathfin.android.domain.forLiveTv
 import dev.pathfin.android.ui.AppState
 import dev.pathfin.android.ui.AppViewModel
 import dev.pathfin.android.ui.BATCH_KEY
@@ -1155,7 +1156,7 @@ class BrowserCacheTest {
     ): DiscoveryState = awaitState(app, fixture, "收藏的独立分类必须全部加载完成") { state ->
         val favorites = state.favorites
         favorites.error?.let { throw AssertionError("收藏请求失败：$it") }
-        favorites.requested && favorites.sections.keys == favoriteDiscoveryCategories.toSet() &&
+        favorites.requested && favorites.sections.keys == favoriteDiscoveryCategories.forLiveTv(state.preferences.liveTvEnabled).toSet() &&
             favorites.sections.values.all { !it.loading && !it.loadingMore && it.queryKey == "favorites" } && predicate(favorites)
     }.favorites
 

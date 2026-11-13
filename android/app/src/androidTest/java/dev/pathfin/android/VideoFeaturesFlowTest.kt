@@ -24,6 +24,7 @@ import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.DiscoveryCategory
 import dev.pathfin.android.domain.LibraryQuery
 import dev.pathfin.android.domain.favoriteDiscoveryCategories
+import dev.pathfin.android.domain.forLiveTv
 import dev.pathfin.android.ui.AppViewModel
 import dev.pathfin.android.ui.Route
 import kotlinx.coroutines.runBlocking
@@ -159,7 +160,7 @@ class VideoFeaturesFlowTest {
             val favorites = state.favorites
             favorites.error?.let { throw AssertionError("收藏页读取失败：$it") }
             state.route == Route.Favorites && favorites.requested &&
-                favorites.sections.keys == favoriteDiscoveryCategories.toSet() &&
+                favorites.sections.keys == favoriteDiscoveryCategories.forLiveTv(state.preferences.liveTvEnabled).toSet() &&
                 favorites.sections.values.all { !it.loading && !it.loadingMore && it.queryKey == "favorites" } &&
                 favorites.sections[DiscoveryCategory.MOVIES]?.items?.any { it.id == ITEM_ID } == shouldContainMovie
         }
