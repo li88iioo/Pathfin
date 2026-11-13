@@ -1847,7 +1847,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(search = it.search.copy(results = it.search.results.invalidate()), favorites = it.favorites.invalidate()) }
     }
 
-    fun refreshDetail(id: String, reconcilePlayback: Boolean = false) {
+    fun refreshDetail(id: String) {
         val session = state.value.session ?: return
         // 简略卡片先行显示不代表完整详情已完成；取消后返回仍需补齐。
         dirtyDetails += id
@@ -1863,10 +1863,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 currentCoroutineContext().ensureActive()
                 if (epoch != generation || detailLoad !== load || !session.hasSameAuthentication(state.value.session)) return@launchMediaRead
                 val item = changes.reconcile(response)
-                if (reconcilePlayback) {
-                    applyUserDataChange(BrowserUserDataChange(state.value.details[id] ?: item, item.userData(), BrowserUserDataChange.Kind.PLAYBACK))
-                    refreshPlaybackParents(session, item)
-                }
                 dirtyDetails.remove(id)
                 mutableState.update { it.copy(details = it.details + (id to item), detailLoading = false) }
                 loadDetailExtras(item)
@@ -2160,9 +2156,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             playbackError = null, playbackNeighbors = emptyList(), playbackEpisodes = ContentState()) }
     }
 
+    /**
+     * 播放结束校正观看状态。独立于页面的详情加载槽：关闭播放器后立刻打开别的详情，两边互不取消，
+     * 否则新页只剩简略卡片，或本次观看的进度写不回列表。
+     */
     fun refreshAfterPlayback(session: Session, itemId: String) {
         if (!session.hasSameAuthentication(state.value.session)) return
-        refreshDetail(itemId, reconcilePlayback = true)
+        dirtyDetails += itemId
+        val key = "playback-return/$itemId"
+        extraJobs.remove(key)?.cancel()
+        val epoch = generation
+        extraJobs[key] = launchMediaRead { changes ->
+            val result = serverSafely(session) { api.item(session, itemId) }
+            if (epoch != generation || !session.hasSameAuthentication(state.value.session)) return@launchMediaRead
+            result.onSuccess { response ->
+                val item = changes.reconcile(response)
+                applyUserDataChange(BrowserUserDataChange(state.value.details[itemId] ?: item, item.userData(), BrowserUserDataChange.Kind.PLAYBACK))
+                refreshPlaybackParents(session, item)
+                // 页面正在加载同一条目时交给页面发布，避免两份结果先后覆盖。
+                if (detailLoad?.itemId != itemId) {
+                    dirtyDetails.remove(itemId)
+                    mutableState.update { it.copy(details = it.details + (itemId to item)) }
+                    loadDetailExtras(item)
+                }
+            }.onFailure { handleAuthFailure(it) }
+        }
         refreshHome()
     }
 

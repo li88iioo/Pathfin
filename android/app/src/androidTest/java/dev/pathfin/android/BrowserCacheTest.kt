@@ -265,6 +265,24 @@ class BrowserCacheTest {
     }
 
     @Test
+    fun playbackReturnDoesNotCancelADetailPageOpenedWhileItsReportIsStillFinishing() = withApp { app, fixture ->
+        val library = app.state.value.home.libraries.single { it.id == LIBRARY_A }
+        onMain { app.open(library) }
+        val movie = awaitBrowser(app, fixture, LIBRARY_A).content.items.single { it.id == MOVIE_A }
+        val session = checkNotNull(app.state.value.session)
+        // 关闭播放器后、上报完成前，用户已打开另一部影片的详情，其完整读取还在途中。
+        val detailRead = fixture.blockItem(MOVIE_A, captureResponse = false, allowClientDisconnect = true)
+        onMain { app.open(movie) }
+        detailRead.awaitRequest()
+        onMain { app.refreshAfterPlayback(session, EPISODE_A) }
+        detailRead.release()
+        awaitState(app, fixture, "新打开的详情必须完整读取，播放校正也必须完成") {
+            it.route == Route.Detail(MOVIE_A) && !it.detailLoading && it.detailError == null &&
+                it.detailExtras[MOVIE_A]?.loading == false && it.detailExtras[EPISODE_A]?.loading == false
+        }
+    }
+
+    @Test
     fun favoriteAndPlayedReloadOnlyQueriesDependingOnTheirChangedFields() = withApp { app, fixture ->
         val base = LibraryQuery(itemTypes = setOf("Movie"))
         val queries = linkedMapOf(
