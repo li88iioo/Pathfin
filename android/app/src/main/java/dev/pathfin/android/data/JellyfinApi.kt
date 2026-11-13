@@ -160,7 +160,6 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
     suspend fun items(
         session: Session,
         parentId: String? = null,
-        query: String? = null,
         startIndex: Int = 0,
         limit: Int = 40,
         resume: Boolean = false,
@@ -174,7 +173,6 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             else -> Unit
         }
         val searchTerm = options?.searchTerm?.trim()?.takeIf(String::isNotEmpty)
-            ?: query?.trim()?.takeIf(String::isNotEmpty)
         val posterOnly = options != null && options.itemTypes.isNotEmpty() &&
             options.itemTypes.all { it in setOf("Movie", "Series", "Folder", "BoxSet") }
         val parameters = mutableMapOf(
@@ -239,9 +237,9 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
     suspend fun discoveryPage(session: Session, category: dev.pathfin.android.domain.DiscoveryCategory,
         query: String = "", favorite: Boolean = false, startIndex: Int = 0, limit: Int = 24): MediaPage {
         val type = category.itemType
-        if (type !in setOf("Person", "MusicArtist")) return items(session, query = query,
+        if (type !in setOf("Person", "MusicArtist")) return items(session,
             startIndex = startIndex, limit = limit,
-            options = LibraryQuery(itemTypes = setOf(type), favorite = true.takeIf { favorite },
+            options = LibraryQuery(itemTypes = setOf(type), searchTerm = query, favorite = true.takeIf { favorite },
                 sort = dev.pathfin.android.domain.LibrarySort.TITLE, descending = false))
         val parameters = mutableMapOf("userId" to session.userId, "fields" to LIST_FIELDS,
             "enableUserData" to "true", "imageTypeLimit" to "1", "enableImageTypes" to "Primary")

@@ -513,7 +513,7 @@ class JellyfinLibraryApiTest {
         assertEquals(listOf(0, 2), starts.toList())
     }
 
-    @Test fun televisionSearchQueryCannotBeOverriddenByTheLegacyGlobalTerm() = withServer({ exchange ->
+    @Test fun televisionSearchKeepsTheLibraryScopedTermTypesAndCursor() = withServer({ exchange ->
         val query = "http://localhost${exchange.requestURI}".toHttpUrl()
         assertEquals("/proxy/Items", exchange.requestURI.path)
         assertEquals("tv-only", query.queryParameter("parentId"))
@@ -526,19 +526,21 @@ class JellyfinLibraryApiTest {
     }) { session ->
         runBlocking {
             val library = MediaItem("tv-only", "TV", "CollectionFolder", collectionType = "tvshows")
-            JellyfinApi().items(session, parentId = library.id, query = "unrelated global term", startIndex = 40,
+            JellyfinApi().items(session, parentId = library.id, startIndex = 40,
                 options = library.librarySearchQuery(" 目标 "))
         }
     }
 
-    @Test fun legacyGlobalSearchStillUsesItsTermWithoutInventingALibraryParent() = withServer({ exchange ->
+    @Test fun explicitSearchQueryKeepsItsTermAndOrderingWithoutInventingALibraryParent() = withServer({ exchange ->
         val query = "http://localhost${exchange.requestURI}".toHttpUrl()
         assertEquals("全站", query.queryParameter("searchTerm"))
         assertNull(query.queryParameter("parentId"))
         assertEquals("Movie,Series,Episode", query.queryParameter("includeItemTypes"))
         assertEquals("SortName", query.queryParameter("sortBy"))
+        assertEquals("Ascending", query.queryParameter("sortOrder"))
         exchange.json("""{"Items":[],"TotalRecordCount":0}""")
-    }) { session -> runBlocking { JellyfinApi().items(session, query = " 全站 ") } }
+    }) { session -> runBlocking { JellyfinApi().items(session,
+        options = LibraryQuery(searchTerm = " 全站 ", sort = LibrarySort.TITLE, descending = false)) } }
 
     @Test fun favoriteAndPlayedMutationsUseCurrentEndpointsAndRealDeleteRequests() {
         val requests = CopyOnWriteArrayList<Pair<String, String>>()
