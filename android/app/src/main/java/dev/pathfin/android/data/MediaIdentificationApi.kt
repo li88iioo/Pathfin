@@ -28,14 +28,14 @@ class MediaIdentificationApi(private val api: JellyfinApi = JellyfinApi()) {
             val key = listOf(provider.orEmpty(), name, year?.toString().orEmpty(), ids.toSortedMap().toString()).joinToString("|")
             val image = (raw.opt("ImageUrl") as? String)?.trim()?.takeIf { it.length <= 2048 && ServerUrls.httpUri(it) != null }
             MediaIdentificationResult(key, name, year, ids, provider, raw.opt("Overview") as? String, image,
-                raw.toString(), session.server, session.userId, item.id, type)
+                raw.toString(), session, item.id, type)
         }.distinctBy { it.key }
     }
 
     suspend fun apply(session: Session, item: MediaItem, result: MediaIdentificationResult,
         options: MediaIdentificationOptions = MediaIdentificationOptions()) {
         val type = requireSupported(session, item)
-        require(result.server == session.server && result.userId == session.userId && result.itemId == item.id && result.itemType == type) {
+        require(result.owner.hasSameAuthentication(session) && result.itemId == item.id && result.itemType == type) {
             tr("账号或媒体已经变化，请重新搜索识别结果")
         }
         require(result.providerIds.isNotEmpty()) { tr("此结果没有外部编号，无法可靠识别；请选择其他结果") }

@@ -84,6 +84,38 @@ class DetailManagementActionsTest {
         previousPreferences?.let { AppPreferencesStore(context).save(it) }
     }
 
+    @Test fun sameAuthenticationAddressChangeKeepsTheImageEditorAndSearchesAtTheNewAddress() = withApp { fixture, vm ->
+        openDetail(fixture, vm)
+        openMore("detail-edit-images")
+        compose.onNodeWithTag("detail-edit-images").performVerificationClick(compose)
+        awaitWindowTag("media-image-editor-sheet", "address-image-editor")
+        awaitWindowTag("media-image-search/Primary", "address-image-search")
+        compose.onNodeWithTag("media-image-search/Primary").performVerificationClick(compose)
+        awaitWindowTag("remote-image-results", "address-remote-images")
+        compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.remoteImageReads.isNotEmpty() }
+        val previous = requireNotNull(vm.state.value.session)
+        val updated = previous.copy(server = ServerConfig(fixture.alternateUrl, true))
+        assertTrue(previous.hasSameAuthentication(updated))
+        val profile = vm.state.value.profiles.single { it.id == vm.state.value.currentProfileId }
+
+        main { vm.updateServer(profile.copy(session = updated)) }
+        await(fixture, vm, "同服务器换址必须完成且保留详情路由") {
+            !it.loginBusy && it.session?.server == updated.server && it.route == Route.Detail(ITEM_ID)
+        }
+        compose.onNodeWithTag("media-image-editor-sheet").assertExists()
+        compose.onNodeWithTag("remote-image-results").assertExists()
+        val languages = compose.onNodeWithTag("remote-image-all-languages")
+        VerificationDisplay.awaitWindowReady(compose, "address-remote-images-retained", languages)
+        languages.assertIsOff().performVerificationClick(compose)
+        compose.waitUntil(WAIT_MS) {
+            fixture.assertHealthy()
+            fixture.remoteImageReads.any { it.encodedPath == "/alternate/Items/$ITEM_ID/RemoteImages" &&
+                it.queryParameter("includeAllLanguages") == "true" }
+        }
+        assertEquals("浏览和换址不能写元数据或删除媒体", 0, fixture.refreshPosts.get() + fixture.deletes.get())
+        assertEquals(Route.Detail(ITEM_ID), vm.state.value.route)
+    }
+
     @Test fun refreshUsesDefaultNonReplacingPostWithoutLeavingTheCurrentDetail() = withApp { fixture, vm ->
         openDetail(fixture, vm)
         val detailReads = fixture.detailReads.get()
@@ -424,6 +456,7 @@ class DetailManagementActionsTest {
         val parentReadCancelled = AtomicBoolean()
         val parentReplyFinished = AtomicBoolean()
         val refreshRequest = AtomicReference<HttpUrl?>()
+        val remoteImageReads = ConcurrentLinkedQueue<HttpUrl>()
         val refreshed = AtomicBoolean()
         val deleted = AtomicBoolean()
         private val keeperDeleted = AtomicBoolean()
@@ -439,6 +472,7 @@ class DetailManagementActionsTest {
         private val executor = Executors.newCachedThreadPool()
         private val server = ServerSocket().apply { bind(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0)) }
         val baseUrl = "http://127.0.0.1:${server.localPort}"
+        val alternateUrl = "$baseUrl/alternate"
         private val accept = Thread({
             while (!closed.get()) try {
                 val socket = server.accept(); sockets.add(socket); try { executor.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
@@ -475,7 +509,8 @@ class DetailManagementActionsTest {
                     val body = ByteArray(length).also(input::readFully)
                     val url = (baseUrl + parts[1]).toHttpUrl()
                     check(!url.toString().contains(TOKEN))
-                    check(headers["authorization"]?.contains(TOKEN) == true)
+                    if (url.encodedPath.removePrefix("/alternate") != "/System/Info/Public")
+                        check(headers["authorization"]?.contains(TOKEN) == true)
                     check("x-emby-token" !in headers)
                     parentReply = delayedParentRead && parts[0] == "GET" &&
                         url.encodedPath == "/Items" && url.queryParameter("ids") == ITEM_ID
@@ -495,7 +530,9 @@ class DetailManagementActionsTest {
         }
 
         private fun respond(method: String, url: HttpUrl, body: ByteArray, socket: Socket): Pair<Int, String?> {
-            return when ("$method ${url.encodedPath}") {
+            return when ("$method ${url.encodedPath.removePrefix("/alternate")}") {
+                "GET /System/Info/Public" -> 200 to JSONObject().put("Id", SERVER_ID)
+                    .put("ServerName", "Synthetic management server").put("Version", "12.3.0").toString()
                 "GET /Users/Me" -> 200 to JSONObject().put("Id", USER_ID).put("Name", "Synthetic detail manager")
                     .put("Policy", JSONObject().put("IsAdministrator", true).put("EnableContentDeletion", true)).toString()
                 "GET /UserViews" -> {
@@ -528,6 +565,13 @@ class DetailManagementActionsTest {
                     200 to result
                 }
                 "GET /Items/$ITEM_ID/Similar" -> 200 to page(JSONArray().put(item(KEEPER_ID)))
+                "GET /Items/$ITEM_ID/Images" -> 200 to "[]"
+                "GET /Items/$ITEM_ID/RemoteImages/Providers" -> 200 to JSONArray().put(JSONObject()
+                    .put("Name", "Fixture").put("SupportedImages", JSONArray().put("Primary"))).toString()
+                "GET /Items/$ITEM_ID/RemoteImages" -> {
+                    remoteImageReads += url
+                    200 to JSONObject().put("Images", JSONArray()).put("TotalRecordCount", 0).toString()
+                }
                 "GET /Items/$EPISODE_ID/Similar" -> 200 to page(JSONArray())
                 "GET /Items/$ITEM_ID" -> {
                     capabilityReads.incrementAndGet()

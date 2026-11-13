@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -84,7 +85,36 @@ class MediaManagementStateTest {
 
     @get:Rule val rules: TestRule = RuleChain.outerRule(verificationOnly).around(compose)
 
-    @Test fun successfulSaveWithFailedReadIsCommittedOnceAndRetryOnlyReads() = withScreen { fixture, changed, _ ->
+    @Test fun sameAuthenticationAddressChangeKeepsTheDraftAndSavesOnceToTheNewAddress() = withScreen { fixture, changed, _, session ->
+        fixture.failReadsAfterSave.set(false)
+        val formBounds = bounds("metadata-form")
+        compose.onNodeWithTag("metadata-title").performTextReplacement(SAVED_TITLE)
+        compose.onNodeWithTag("metadata-save").assertIsEnabled()
+        val previous = session.value
+        val updated = previous.copy(server = ServerConfig(fixture.alternateUrl, true))
+        assertTrue(previous.hasSameAuthentication(updated))
+
+        compose.runOnIdle { session.value = updated }
+        compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.requests.any { it.second.startsWith("/alternate/") } }
+        compose.onNodeWithTag("metadata-title").assertExists().assertTextContains(SAVED_TITLE)
+        assertEquals("同账号换址不能卸载编辑表单", formBounds, bounds("metadata-form"))
+        compose.runOnIdle { session.value = updated.copy(isAdministrator = false) }
+        compose.onNodeWithTag("metadata-save").assertIsNotEnabled()
+        assertEquals("失去权限后不能提交缓存草稿", 0, fixture.posts.get())
+        compose.runOnIdle { session.value = updated }
+        waitForEditor(fixture)
+        compose.onNodeWithTag("metadata-title").assertTextContains(SAVED_TITLE)
+        val save = compose.onNodeWithTag("metadata-save")
+        VerificationDisplay.awaitWindowReady(compose, "metadata-draft-after-address-change", save)
+        save.assertIsEnabled().performVerificationClick(compose)
+        compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.posts.get() == 1 && changed.get() == 1 }
+        assertEquals(SAVED_TITLE, fixture.savedTitle())
+        assertEquals("草稿只允许向当前地址提交一次", listOf("/alternate/Items/$ITEM_ID"),
+            fixture.requests.filter { it.first == "POST" }.map { it.second })
+        fixture.assertHealthy()
+    }
+
+    @Test fun successfulSaveWithFailedReadIsCommittedOnceAndRetryOnlyReads() = withScreen { fixture, changed, _, _ ->
         val formBounds = bounds("metadata-form")
         val saveBounds = bounds("metadata-save")
         compose.onNodeWithTag("metadata-title").performTextReplacement(SAVED_TITLE)
@@ -137,7 +167,7 @@ class MediaManagementStateTest {
         fixture.assertHealthy()
     }
 
-    @Test fun invalidNumericDraftsRequireDiscardAndReopeningRestoresServerValues() = withScreen { fixture, changed, shown ->
+    @Test fun invalidNumericDraftsRequireDiscardAndReopeningRestoresServerValues() = withScreen { fixture, changed, shown, _ ->
         for (label in listOf("年份", "社区评分（0–10）", "影评人评分（0–100）")) {
             val field = editableField(label)
             scrollTo(field)
@@ -170,7 +200,7 @@ class MediaManagementStateTest {
         assertFalse("只操作无效草稿时不应进入读失败模式", fixture.failReads.get())
     }
 
-    @Test fun anOldMetadataResponseCannotOverwriteMetadataSavedWhileItWasInFlight() = withScreen { fixture, changed, _ ->
+    @Test fun anOldMetadataResponseCannotOverwriteMetadataSavedWhileItWasInFlight() = withScreen { fixture, changed, _, _ ->
         fixture.failReadsAfterSave.set(false)
         val readsBeforeRefresh = fixture.successfulGets.get()
         assertEquals("文本编辑首次只读取完整文档一次", 1, readsBeforeRefresh)
@@ -223,7 +253,7 @@ class MediaManagementStateTest {
         }
     }
 
-    @Test fun metadataScrollsBehindTheTitleInsetWhileSaveStaysFixed() = withScreen(topInset = 72.dp) { fixture, changed, _ ->
+    @Test fun metadataScrollsBehindTheTitleInsetWhileSaveStaysFixed() = withScreen(topInset = 72.dp) { fixture, changed, _, _ ->
         val formBounds = bounds("metadata-form")
         val headerBounds = bounds("metadata-editor-header")
         val backBounds = bounds("metadata-back")
@@ -258,7 +288,7 @@ class MediaManagementStateTest {
 
     @Test fun externalIdEditsAndClearingSurviveSavedStateRestorationAndSaveExactlyOnce() {
         val restoration = StateRestorationTester(compose)
-        withScreen(restoration = restoration, providerIds = mapOf("Imdb" to "tt-original")) { fixture, changed, _ ->
+        withScreen(restoration = restoration, providerIds = mapOf("Imdb" to "tt-original")) { fixture, changed, _, _ ->
             fixture.failReadsAfterSave.set(false)
             val imdb = hasTestTag("metadata-id/Imdb")
             val tmdb = hasTestTag("metadata-id/Tmdb")
@@ -294,11 +324,12 @@ class MediaManagementStateTest {
 
     @Suppress("DEPRECATION") // 与生产窗口一致，验证旧版系统上的 adjustResize 行为。
     private fun withScreen(topInset: Dp = 0.dp, restoration: StateRestorationTester? = null,
-        providerIds: Map<String, String> = emptyMap(), block: (MetadataFixture, AtomicInteger, MutableState<Boolean>) -> Unit) {
+        providerIds: Map<String, String> = emptyMap(), block: (MetadataFixture, AtomicInteger, MutableState<Boolean>, MutableState<Session>) -> Unit) {
         MetadataFixture(providerIds).use { fixture ->
             val changed = AtomicInteger()
             val shown = mutableStateOf(true)
-            val session = Session(ServerConfig(fixture.baseUrl, true), "management-state-token", "state-user", "Synthetic", "state-device", isAdministrator = true)
+            val session = mutableStateOf(Session(ServerConfig(fixture.baseUrl, true), "management-state-token", "state-user", "Synthetic", "state-device",
+                serverId = "management-state-server", isAdministrator = true))
             val item = MediaItem(ITEM_ID, ORIGINAL_TITLE, "Movie")
             val api = JellyfinApi()
             // 与生产 MainActivity 的 adjustResize 一致，底部输入聚焦不能把整个测试窗口向上平移。
@@ -308,7 +339,7 @@ class MediaManagementStateTest {
                     CompositionLocalProvider(LocalPageTopInset provides topInset) {
                     // 与 PathfinApp 的非缓存管理路由一致，离开时实际卸载 Screen。
                     BackHandler(enabled = shown.value) { shown.value = false }
-                    if (shown.value) MediaToolsScreen(item, session, api, "metadata",
+                    if (shown.value) MediaToolsScreen(item, session.value, api, "metadata",
                         onChanged = { changed.incrementAndGet() })
                     else Button({ shown.value = true }, Modifier.testTag("management-reopen")) { Text("重新打开管理页") }
                     }
@@ -317,7 +348,7 @@ class MediaManagementStateTest {
             if (restoration == null) compose.setContent(content) else restoration.setContent(content)
             try {
                 waitForEditor(fixture)
-                block(fixture, changed, shown)
+                block(fixture, changed, shown, session)
             } finally {
                 // 先卸载页面以取消读取，再关闭本测试的回环服务。
                 compose.runOnIdle { shown.value = false }
@@ -363,6 +394,8 @@ class MediaManagementStateTest {
         private val executor = Executors.newCachedThreadPool { task -> Thread(task, "pathfin-metadata-state").apply { isDaemon = true } }
         private val server = ServerSocket().apply { bind(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0)) }
         val baseUrl = "http://127.0.0.1:${server.localPort}"
+        val alternateUrl = "$baseUrl/alternate"
+        val requests = ConcurrentLinkedQueue<Pair<String, String>>()
         private val accept = Thread({
             while (!closed.get()) try {
                 val socket = server.accept(); sockets.add(socket)
@@ -394,7 +427,9 @@ class MediaManagementStateTest {
                     val length = headers["content-length"]?.toInt() ?: 0
                     check(length in 0..1_048_576)
                     val body = ByteArray(length).also(input::readFully)
-                    val path = request[1].substringBefore('?')
+                    val requestedPath = request[1].substringBefore('?')
+                    requests += request[0] to requestedPath
+                    val path = requestedPath.removePrefix("/alternate")
                     var metadataGate: MetadataReadGate? = null
                     val (code, json) = when {
                         request[0] == "GET" && path == "/Items/$ITEM_ID" -> if (failReads.get()) {

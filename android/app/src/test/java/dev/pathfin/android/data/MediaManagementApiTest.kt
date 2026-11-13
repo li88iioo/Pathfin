@@ -152,7 +152,8 @@ class MediaManagementApiTest {
 
     @Test fun metadataValidationAndCrossAccountProtectionDoNotSendWrites() {
         val requests = AtomicInteger()
-        withServer({ exchange -> requests.incrementAndGet(); exchange.json("""{"Id":"film","Name":"Film"}""") }) { session -> runBlocking {
+        withServer({ exchange -> requests.incrementAndGet(); exchange.json("""{"Id":"film","Name":"Film"}""") }) { fixture -> runBlocking {
+            val session = fixture.copy(serverId = "fixture-server")
             val api = MediaManagementApi()
             val document = api.editableMetadata(session, "film")
             for (metadata in listOf(document.metadata.copy(title = " "), document.metadata.copy(productionYear = 0),
@@ -160,11 +161,39 @@ class MediaManagementApiTest {
                 document.metadata.copy(criticRating = 101.0), document.metadata.copy(tags = listOf("")))) {
                 assertThrows(IllegalArgumentException::class.java) { runBlocking { api.saveMetadata(session, document, metadata) } }
             }
+            for (other in listOf(session.copy(userId = "other"), session.copy(serverId = "other-server"),
+                session.copy(accessToken = "changed-fixture-token"), session.copy(deviceId = "other-device"))) {
+                assertThrows(IllegalArgumentException::class.java) { runBlocking {
+                    api.saveMetadata(other, document, document.metadata.copy(title = "Changed"))
+                } }
+            }
+            val unknown = session.copy(serverId = "")
+            val unknownDocument = api.editableMetadata(unknown, "film")
             assertThrows(IllegalArgumentException::class.java) { runBlocking {
-                api.saveMetadata(session.copy(userId = "other"), document, document.metadata.copy(title = "Changed"))
+                api.saveMetadata(unknown.copy(server = unknown.server.copy(baseUrl = unknown.server.baseUrl + "-current")),
+                    unknownDocument, unknownDocument.metadata.copy(title = "Changed"))
             } }
         } }
-        assertEquals(1, requests.get())
+        assertEquals("身份不符与未知服务器换址都不能写入", 2, requests.get())
+    }
+
+    @Test fun metadataDraftSavesThroughTheCurrentAddressOfTheSameAuthentication() {
+        val requests = CopyOnWriteArrayList<String>()
+        withServer({ exchange ->
+            requests += exchange.requestMethod + " " + exchange.requestURI.path
+            if (exchange.requestMethod == "GET") exchange.json("""{"Id":"film","Name":"Film"}""")
+            else {
+                assertEquals("Changed", JSONObject(exchange.requestBody.readBytes().decodeToString()).getString("Name"))
+                exchange.empty()
+            }
+        }) { fixture -> runBlocking {
+            val original = fixture.copy(serverId = "fixture-server")
+            val current = original.copy(server = original.server.copy(baseUrl = original.server.baseUrl + "-current"))
+            val api = MediaManagementApi()
+            val document = api.editableMetadata(original, "film")
+            api.saveMetadata(current, document, document.metadata.copy(title = "Changed"))
+        } }
+        assertEquals(listOf("GET /proxy/Items/film", "POST /proxy-current/Items/film"), requests.toList())
     }
 
     @Test fun metadataRejectsWrongItemIdentityAndSanitizesHttpErrors() {
@@ -319,7 +348,8 @@ class MediaManagementApiTest {
         withServer({ exchange ->
             requests.incrementAndGet()
             exchange.json("""{"Images":[{"Type":"Primary","ProviderName":"Synthetic","Url":"https://pictures.example/poster.png"}],"TotalRecordCount":1}""")
-        }) { session -> runBlocking {
+        }) { fixture -> runBlocking {
+            val session = fixture.copy(serverId = "fixture-server")
             val api = MediaManagementApi()
             val ordinary = session.copy(isAdministrator = false)
             assertEquals(403, expectApiFailure { api.imageProviders(ordinary, "film") }.statusCode)
@@ -334,11 +364,37 @@ class MediaManagementApiTest {
             val selected = api.searchImages(session, "film", MediaImageType.PRIMARY).images.single()
             assertEquals(403, expectApiFailure { api.applyRemoteImage(ordinary, "film", selected) }.statusCode)
             for ((account, id) in listOf(session.copy(userId = "other") to "film", session to "other",
-                session.copy(server = ServerConfig("https://other.example")) to "film")) {
+                session.copy(serverId = "other-server") to "film", session.copy(accessToken = "changed-fixture-token") to "film",
+                session.copy(deviceId = "other-device") to "film")) {
                 assertThrows(IllegalArgumentException::class.java) { runBlocking { api.applyRemoteImage(account, id, selected) } }
             }
-            assertEquals("Only the real search may send HTTP", 1, requests.get())
+            val unknown = session.copy(serverId = "")
+            val unknownImage = api.searchImages(unknown, "film", MediaImageType.PRIMARY).images.single()
+            assertThrows(IllegalArgumentException::class.java) { runBlocking {
+                api.applyRemoteImage(unknown.copy(server = unknown.server.copy(baseUrl = unknown.server.baseUrl + "-current")), "film", unknownImage)
+            } }
+            assertEquals("Only the two real searches may send HTTP", 2, requests.get())
         } }
+    }
+
+    @Test fun remoteImageSelectionAppliesThroughTheCurrentAddressOfTheSameAuthentication() {
+        val requests = CopyOnWriteArrayList<String>()
+        val imageUrl = "https://pictures.example/poster.png?signature=a%2Fb"
+        withServer({ exchange ->
+            requests += exchange.requestMethod + " " + exchange.requestURI.path
+            if (exchange.requestMethod == "GET") exchange.json("""{"Images":[{"Type":"Primary","ProviderName":"Synthetic","Url":"$imageUrl"}],"TotalRecordCount":1}""")
+            else {
+                assertEquals(imageUrl, "http://localhost${exchange.requestURI}".toHttpUrl().queryParameter("imageUrl"))
+                exchange.empty()
+            }
+        }) { fixture -> runBlocking {
+            val original = fixture.copy(serverId = "fixture-server")
+            val current = original.copy(server = original.server.copy(baseUrl = original.server.baseUrl + "-current"))
+            val api = MediaManagementApi()
+            val selected = api.searchImages(original, "film", MediaImageType.PRIMARY).images.single()
+            api.applyRemoteImage(current, "film", selected)
+        } }
+        assertEquals(listOf("GET /proxy/Items/film/RemoteImages", "POST /proxy-current/Items/film/RemoteImages/Download"), requests.toList())
     }
 
     @Test fun remoteImageMalformedPagesAndUnsafeProviderUrlsFailExplicitly() {

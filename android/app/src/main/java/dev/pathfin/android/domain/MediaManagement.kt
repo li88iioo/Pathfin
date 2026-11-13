@@ -33,14 +33,13 @@ data class MediaMetadata(
     val providerIds: Map<String, String> = emptyMap(),
 )
 
-/** 原始对象仅保存在内存中，保存时保留未编辑字段，并绑定读取它的服务器和用户。 */
+/** 原始对象仅保存在内存中，保存时保留未编辑字段，并绑定读取它的认证会话。 */
 class EditableMediaMetadata internal constructor(
     val itemId: String,
     val metadata: MediaMetadata,
     val capabilities: MediaManagementCapabilities,
     internal val originalJson: String,
-    internal val server: ServerConfig,
-    internal val userId: String,
+    internal val owner: Session,
     val path: String? = null,
 )
 
@@ -74,8 +73,7 @@ class RemoteMediaImage internal constructor(
     val height: Int?,
     val language: String?,
     internal val itemId: String,
-    internal val server: ServerConfig,
-    internal val userId: String,
+    internal val owner: Session,
 )
 
 data class RemoteMediaImagePage(

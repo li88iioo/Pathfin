@@ -154,6 +154,64 @@ class ManagementFeaturesUiTest {
         }
     }
 
+    @Test fun sameAuthenticationAddressChangeKeepsIdentificationAndUsesTheNewAddressBeforeCredentialsChange() {
+        Fixture().use { fixture ->
+            fixture.allowApply.countDown()
+            val session = mutableStateOf(fixture.session().copy(serverId = "identification-address-server"))
+            val changed = AtomicInteger()
+            val api = JellyfinApi()
+            compose.setContent { ManagementContent {
+                MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Movie", year = 2024), session.value, api,
+                    {}, { changed.incrementAndGet() })
+            } }
+            awaitIdentification(fixture, "address-provider-fields") { exists("identification-id/Imdb") }
+            scrollIdentification("identification-name")
+            compose.onNodeWithTag("identification-name").performTextReplacement("Retained custom query")
+            scrollIdentification("identification-year")
+            compose.onNodeWithTag("identification-year").performTextReplacement("2001")
+            scrollIdentification("identification-id/Imdb")
+            compose.onNodeWithTag("identification-id/Imdb").performTextReplacement("tt-retained")
+            scrollIdentification("identification-search")
+            compose.onNodeWithTag("identification-search").performVerificationClick(compose)
+            awaitIdentification(fixture, "address-initial-results") { exists("identification-results") }
+            val previous = session.value
+            val updated = previous.copy(server = ServerConfig(fixture.alternateUrl, true))
+            assertTrue(previous.hasSameAuthentication(updated))
+
+            compose.runOnIdle { session.value = updated }
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.requests.any { it.second.startsWith("/alternate/") } }
+            compose.onNodeWithTag("identification-results").assertExists()
+            scrollIdentification("identification-name")
+            compose.onNodeWithTag("identification-name").assertTextContains("Retained custom query")
+            scrollIdentification("identification-year")
+            compose.onNodeWithTag("identification-year").assertTextContains("2001")
+            scrollIdentification("identification-id/Imdb")
+            compose.onNodeWithTag("identification-id/Imdb").assertTextContains("tt-retained")
+            scrollIdentification("identification-show-results")
+            compose.onNodeWithTag("identification-show-results").performVerificationClick(compose)
+            scrollIdentification("identification-result")
+            compose.onNodeWithTag("identification-result").performVerificationClick(compose)
+            awaitIdentification(fixture, "address-identification-confirm") { exists("identification-confirm") }
+            compose.runOnIdle { session.value = updated.copy(isAdministrator = false) }
+            compose.onNodeWithTag("identification-confirm").assertIsNotEnabled()
+            assertEquals("降权后不能应用仍保留的候选", 0, fixture.applies.get())
+            compose.runOnIdle { session.value = updated }
+            compose.onNodeWithTag("identification-confirm").performVerificationClick(compose)
+            awaitIdentification(fixture, "address-identification-applied") { fixture.applies.get() == 1 && changed.get() == 1 }
+            assertEquals("换址不能重放搜索", 1, fixture.searches.get())
+            assertEquals("只向当前地址应用一次", listOf("/alternate/proxy/Items/RemoteSearch/Apply/item"),
+                fixture.requests.filter { it.first == "POST" && it.second.contains("/RemoteSearch/Apply/") }.map { it.second })
+
+            val renewed = updated.copy(accessToken = updated.accessToken + "-renewed")
+            assertFalse(updated.hasSameAuthentication(renewed))
+            compose.runOnIdle { session.value = renewed }
+            compose.onNodeWithTag("identification-results").assertDoesNotExist()
+            scrollIdentification("identification-name")
+            compose.onNodeWithTag("identification-name").assertTextContains("Synthetic title")
+            assertEquals("凭据变化不能再次应用旧结果", 1, fixture.applies.get())
+        }
+    }
+
     @Test fun searchCanRetryAndSwitchingAccountDropsTheOldCandidates() {
         Fixture().use { fixture ->
             fixture.failSearch.set(true)
@@ -879,6 +937,8 @@ class ManagementFeaturesUiTest {
         private val executor = Executors.newCachedThreadPool()
         @Volatile private var closed = false
         val baseUrl = "http://127.0.0.1:${server.localPort}/proxy"
+        val alternateUrl = "http://127.0.0.1:${server.localPort}/alternate/proxy"
+        val requests = CopyOnWriteArrayList<Pair<String, String>>()
         init { executor.execute {
             while (!closed) {
                 val socket = runCatching { server.accept() }.getOrNull() ?: break
@@ -897,7 +957,9 @@ class ManagementFeaturesUiTest {
             socket.soTimeout = 15_000
             val input = DataInputStream(socket.getInputStream())
             val start = input.readLine() ?: return
-            val parts = start.split(' '); val method = parts[0]; val uri = java.net.URI(parts[1]); val path = uri.path
+            val parts = start.split(' '); val method = parts[0]; val uri = java.net.URI(parts[1])
+            requests += method to uri.path
+            val path = uri.path.removePrefix("/alternate")
             val headers = mutableMapOf<String, String>()
             while (true) { val line = input.readLine() ?: break; if (line.isEmpty()) break
                 headers[line.substringBefore(':').lowercase()] = line.substringAfter(':').trim() }

@@ -75,21 +75,22 @@ internal val ProviderIdDraftSaver = mapSaver<Map<String, String>>(
 /** 所有写入均由明确按钮发起；离开页面取消尚未完成的请求。 */
 @Composable
 internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinApi, initialPage: String,
-    onChanged: () -> Unit, onAuthExpired: () -> Unit = {}, onBusyChanged: (Boolean) -> Unit = {}) {
+    onChanged: () -> Unit, onAuthExpired: () -> Unit = {}, onBusyChanged: (Boolean) -> Unit = {}) =
+    key(session.serverIdentity, session.serverId, session.userId, session.accessToken, session.deviceId, item.id, initialPage) {
     require(initialPage == "metadata" || initialPage == "images")
     val management = remember(api) { MediaManagementApi(api) }
+    val currentSession by rememberUpdatedState(session)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val editorState = rememberSaveableStateHolder()
-    val page = initialPage
-    var document by remember(session, item.id) { mutableStateOf<EditableMediaMetadata?>(null) }
+    var document by remember { mutableStateOf<EditableMediaMetadata?>(null) }
     // 外部编号来自服务器的提供程序清单；读取失败仍可编辑条目已有的编号。
-    var externalIdFields by remember(session, item.id) { mutableStateOf<List<ExternalIdField>>(emptyList()) }
-    var externalIdsError by remember(session, item.id) { mutableStateOf<String?>(null) }
-    var capabilities by remember(session, item.id) { mutableStateOf(management.capabilities(session, item)) }
-    var images by remember(session, item.id) { mutableStateOf<List<MediaImage>>(emptyList()) }
+    var externalIdFields by remember { mutableStateOf<List<ExternalIdField>>(emptyList()) }
+    var externalIdsError by remember { mutableStateOf<String?>(null) }
+    val capabilities = management.capabilities(session, item)
+    var images by remember { mutableStateOf<List<MediaImage>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    var reloadVersion by remember(session, item.id) { mutableIntStateOf(0) }
+    var reloadVersion by remember { mutableIntStateOf(0) }
     var readSequence by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf(false) }
     var preparingImage by remember { mutableStateOf(false) }
@@ -100,9 +101,9 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     val feedback = remember { SnackbarHostState() }
     var deleteImage by remember { mutableStateOf<MediaImage?>(null) }
     var imageType by rememberSaveable { mutableStateOf(MediaImageType.PRIMARY.name) }
-    var remoteSearchType by remember(session, item.id) { mutableStateOf<MediaImageType?>(null) }
+    var remoteSearchType by remember { mutableStateOf<MediaImageType?>(null) }
     var draftDirty by remember { mutableStateOf(false) }
-    var contentRevision by remember(session, item.id) { mutableIntStateOf(0) }
+    var contentRevision by remember { mutableIntStateOf(0) }
     var metadataNeedsReload by remember { mutableStateOf(false) }
     var allowBack by remember { mutableStateOf(false) }
     var leaveDialog by remember { mutableStateOf(false) }
@@ -136,18 +137,17 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
             duration = if (failure != null) SnackbarDuration.Indefinite else SnackbarDuration.Short)
     }
 
-    suspend fun read(targetPage: String) {
+    suspend fun read() {
         val revision = contentRevision
         // 元数据对象已包含条目能力；文本编辑不等待无关的图片读取。
-        val latestDocument = if (targetPage == "metadata" && capabilities.canEditMetadata && !draftDirty)
+        val latestDocument = if (initialPage == "metadata" && capabilities.canEditMetadata && !draftDirty)
             management.editableMetadata(session, item.id) else null
         val latestCapabilities = latestDocument?.capabilities ?: management.readCapabilities(session, item.id)
-        val latestImages = if (targetPage == "images" && latestCapabilities.canEditImages)
+        val latestImages = if (initialPage == "images" && latestCapabilities.canEditImages)
             management.images(session, item.id) else null
         settled.awaitSettled()
         // 保存/上传或新草稿产生后，整次旧读取不能覆盖更新后的元数据和图片。
-        if (revision != contentRevision || page != targetPage) return
-        capabilities = latestCapabilities
+        if (revision != contentRevision) return
         // 后台重读期间仍允许编辑，返回的数据不能覆盖等待期间产生的草稿。
         if (latestDocument != null && !draftDirty) {
             document = latestDocument
@@ -156,18 +156,18 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
         if (latestImages != null) images = latestImages
     }
     fun action(success: String, metadataSave: Boolean = false,
-        refresh: (suspend () -> Unit)? = null, operation: suspend () -> Unit) {
+        refresh: (suspend (Session) -> Unit)? = null, operation: suspend (Session) -> Unit) {
         if (busy || preparingImage) return
         contentRevision++
         busy = true; savingMetadata = metadataSave; error = null; result = null
         scope.launch {
             var committed = false
             try {
-                operation()
+                operation(currentSession)
                 committed = true
                 onChanged()
                 result = success
-                refresh?.invoke()
+                refresh?.invoke(currentSession)
             } catch (failure: Exception) {
                 if (failure is CancellationException) throw failure
                 if (failure is ApiException && failure.statusCode == 401) onAuthExpired()
@@ -182,10 +182,10 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
         reloadVersion++
     }
     // 当前编辑页和下拉共用唯一读取入口；卸载页面会取消读取。
-    LaunchedEffect(session, item.id, page, reloadVersion) {
+    LaunchedEffect(session, reloadVersion) {
         val sequence = ++readSequence
         loading = true; error = null
-        try { read(page) } catch (failure: Exception) {
+        try { read() } catch (failure: Exception) {
             if (failure is CancellationException) throw failure
             if (sequence == readSequence) {
                 if (failure is ApiException && failure.statusCode == 401) onAuthExpired()
@@ -197,7 +197,7 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     LaunchedEffect(allowBack) { if (allowBack) backDispatcher?.onBackPressed() }
 
     val upload = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null && !busy && !preparingImage) {
+        if (uri != null && !controlsBusy && capabilities.canEditImages) {
             val type = MediaImageType.valueOf(imageType)
             preparingImage = true; error = null; result = null
             scope.launch {
@@ -213,8 +213,8 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                     currentCoroutineContext().ensureActive()
                     // 准备文件允许关闭抽屉；只有开始服务器写入后才阻止退出。
                     preparingImage = false
-                    action(tr("图片已更新"), refresh = { images = management.images(session, item.id) }) {
-                        management.uploadImage(session, item.id, type, bytes, mime)
+                    action(tr("图片已更新"), refresh = { images = management.images(it, item.id) }) {
+                        management.uploadImage(it, item.id, type, bytes, mime)
                     }
                 } catch (failure: Exception) {
                     if (failure is CancellationException) throw failure
@@ -229,10 +229,10 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     CompositionLocalProvider(LocalPersonImages provides (item.type == "Person")) {
     Box(Modifier.fillMaxSize().background(PathfinAppearance.canvas)) {
         RefreshablePage(loading, ::reload, Modifier.fillMaxSize(), refreshOnEntry = false, enabled = !controlsBusy,
-            indicatorTopInset = topInset + if (page == "metadata") titleBarHeight else 0.dp) {
+            indicatorTopInset = topInset + if (initialPage == "metadata") titleBarHeight else 0.dp) {
             Column(Modifier.fillMaxSize()) {
                 when {
-                    page == "metadata" && capabilities.canEditMetadata -> {
+                    initialPage == "metadata" && capabilities.canEditMetadata -> {
                         val current = document
                         if (current != null) editorState.SaveableStateProvider("metadata") { MetadataEditor(current, item.type == "Person", externalIdFields, externalIdsError, busy || metadataNeedsReload,
                             saving = savingMetadata, titleBarHeight = titleBarHeight, onDirty = {
@@ -240,10 +240,10 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                             draftDirty = it && !metadataNeedsReload
                         }, onSave = { changed ->
                             action(tr("元数据已保存"), metadataSave = true, refresh = {
-                                document = management.editableMetadata(session, item.id)
+                                document = management.editableMetadata(it, item.id)
                                 metadataNeedsReload = false
                             }) {
-                                management.saveMetadata(session, current, changed)
+                                management.saveMetadata(it, current, changed)
                                 metadataNeedsReload = true
                                 draftDirty = false
                             }
@@ -251,7 +251,7 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                             if (!loading) EmptyPanel(tr("无法读取元数据"), tr("请检查连接或当前账号权限。"))
                         }
                     }
-                    page == "images" && capabilities.canEditImages -> LazyColumn(
+                    initialPage == "images" && capabilities.canEditImages -> LazyColumn(
                         Modifier.fillMaxSize().testTag("media-images"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalNavigationBottomInset.current), verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         val types = ((if (item.type == "Person") listOf(MediaImageType.PRIMARY) else editableImageTypes) + images.map { it.type }.filterNot {
@@ -294,30 +294,30 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                         item("upload-limit") { Text(tr("JPG、PNG、WebP · 单张不超过 10 MB"), fontSize = 12.sp, lineHeight = 17.sp,
                             color = PathfinAppearance.textMuted) }
                     }
-                    !loading -> Box(Modifier.padding(top = if (page == "metadata") topInset + titleBarHeight else 0.dp)) {
+                    !loading -> Box(Modifier.padding(top = if (initialPage == "metadata") topInset + titleBarHeight else 0.dp)) {
                         EmptyPanel(tr("当前账号没有编辑权限"), tr("请在 Jellyfin 中为账号授予所需权限。"))
                     }
                 }
             }
         }
-        if (page == "metadata" && (document == null || !capabilities.canEditMetadata)) {
+        if (initialPage == "metadata" && (document == null || !capabilities.canEditMetadata)) {
             MetadataTitleBar(topInset, titleBarHeight)
         }
         PathfinSnackbarHost(feedback, Modifier.align(Alignment.BottomCenter).padding(bottom = LocalNavigationBottomInset.current), tag = "media-tools-feedback")
     }
-    remoteSearchType?.let { type -> key(session, item.id) {
+    remoteSearchType?.takeIf { capabilities.canEditImages }?.let { type ->
         RemoteImageSearchSheet(management, session, item.id, type, onDismiss = { remoteSearchType = null },
             onAuthExpired = onAuthExpired, onSelect = { image ->
                 remoteSearchType = null
-                action(tr("图片已更新"), refresh = { images = management.images(session, item.id) }) {
-                    management.applyRemoteImage(session, item.id, image)
+                action(tr("图片已更新"), refresh = { images = management.images(it, item.id) }) {
+                    management.applyRemoteImage(it, item.id, image)
                 }
             })
-    } }
-    deleteImage?.let { image -> AppAlertDialog(onDismissRequest = { deleteImage = null }, title = { Text(tr("删除%1\$s？", imageEditorLabel(image.type))) }, text = {
+    }
+    deleteImage?.takeIf { capabilities.canEditImages }?.let { image -> AppAlertDialog(onDismissRequest = { deleteImage = null }, title = { Text(tr("删除%1\$s？", imageEditorLabel(image.type))) }, text = {
         Text(tr("将删除服务器上的这张图片，媒体文件不会受影响。"))
-    }, confirmButton = { DialogAction(tr("删除"), { deleteImage = null; action(tr("图片已删除"), refresh = { images = management.images(session, item.id) }) {
-        management.deleteImage(session, item.id, image)
+    }, confirmButton = { DialogAction(tr("删除"), { deleteImage = null; action(tr("图片已删除"), refresh = { images = management.images(it, item.id) }) {
+        management.deleteImage(it, item.id, image)
     } }, role = DialogActionRole.Danger) }, dismissButton = { DialogAction(tr("取消"), { deleteImage = null }) }) }
     if (leaveDialog) AppAlertDialog(onDismissRequest = { leaveDialog = false }, title = { Text(tr("放弃未保存的修改？")) },
         confirmButton = { DialogAction(tr("放弃修改"), { leaveDialog = false; allowBack = true }, role = DialogActionRole.Danger) },
@@ -447,8 +447,8 @@ private fun RemoteImageSearchSheet(management: MediaManagementApi, session: Sess
             }
         }
     }
-    LaunchedEffect(query, refreshVersion) { load(false) }
-    LaunchedEffect(refreshVersion) {
+    LaunchedEffect(session, query, refreshVersion) { load(false) }
+    LaunchedEffect(session, refreshVersion) {
         providersError = null
         try { providers = management.imageProviders(session, itemId) }
         catch (failure: Exception) {
@@ -458,7 +458,7 @@ private fun RemoteImageSearchSheet(management: MediaManagementApi, session: Sess
         }
     }
     DisposableEffect(Unit) { onDispose { request?.cancel() } }
-    LaunchedEffect(grid) {
+    LaunchedEffect(grid, session) {
         snapshotFlow {
             val lastVisible = grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
             if (!loading && !appending && error == null && displayedQuery == query && page?.hasMore == true &&

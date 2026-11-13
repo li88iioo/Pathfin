@@ -229,8 +229,11 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     var deleteConfirmation by remember(route) { mutableStateOf(false) }
     val browserKey = when (route) { is Route.Folder -> route.item.id; is Route.Browse -> route.id; else -> null }
     var librarySelection by rememberLibrarySelection(route.key, browserKey?.let { state.browsers[it]?.query })
-    var imageEditor by remember(session, route) { mutableStateOf(false) }
-    var imageEditorBusy by remember(session, route) { mutableStateOf(false) }
+    val imageEditorState = remember(session?.serverIdentity, session?.serverId, session?.userId, session?.accessToken, session?.deviceId, route) {
+        mutableStateOf(false) to mutableStateOf(false)
+    }
+    var imageEditor by imageEditorState.first
+    var imageEditorBusy by imageEditorState.second
     var detailScrolled by remember(route) { mutableStateOf(false) }
     var liveAmbientCovered by remember(route) { mutableStateOf(false) }
     var navigationVisible by remember { mutableStateOf(true) }

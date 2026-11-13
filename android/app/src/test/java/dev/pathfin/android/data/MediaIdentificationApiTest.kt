@@ -130,18 +130,53 @@ class MediaIdentificationApiTest {
 
     @Test fun candidateCannotBeAppliedToAnotherAccountServerItemOrType() {
         val requests = AtomicInteger()
-        withServer({ exchange -> requests.incrementAndGet(); exchange.reply("""[{"Name":"Synthetic","ProviderIds":{"Tmdb":"42"}}]""") }) { session -> runBlocking {
+        withServer({ exchange ->
+            requests.incrementAndGet()
+            if (exchange.requestURI.path.endsWith("/RemoteSearch/Movie"))
+                exchange.reply("""[{"Name":"Synthetic","ProviderIds":{"Tmdb":"42"}}]""")
+            else exchange.reply("", 204)
+        }) { fixture -> runBlocking {
+            val session = fixture.copy(serverId = "fixture-server")
             val api = MediaIdentificationApi()
             val item = MediaItem("item", "Synthetic", "Movie")
             val result = api.search(session, item, MediaIdentificationQuery("Synthetic")).single()
             for ((other, target) in listOf(session.copy(userId = "other") to item,
-                session.copy(server = session.server.copy(baseUrl = "https://other.example")) to item,
+                session.copy(serverId = "other-server") to item,
+                session.copy(accessToken = "changed-synthetic-token") to item,
+                session.copy(deviceId = "other-device") to item,
                 session to item.copy(id = "another"), session to item.copy(type = "Series"))) {
                 assertThrows(IllegalArgumentException::class.java) { runBlocking { api.apply(other, target, result) } }
             }
             assertEquals(403, expectApiFailure { api.apply(session.copy(isAdministrator = false), item, result) }.statusCode)
+            val unknown = session.copy(serverId = "")
+            val unknownResult = api.search(unknown, item, MediaIdentificationQuery("Synthetic")).single()
+            assertThrows(IllegalArgumentException::class.java) { runBlocking {
+                api.apply(unknown.copy(server = unknown.server.copy(baseUrl = unknown.server.baseUrl + "-current")), item, unknownResult)
+            } }
         } }
-        assertEquals("仅搜索请求可以联网", 1, requests.get())
+        assertEquals("仅两次搜索请求可以联网", 2, requests.get())
+    }
+
+    @Test fun candidateAppliesThroughTheCurrentAddressOfTheSameAuthentication() {
+        val requests = CopyOnWriteArrayList<String>()
+        withServer({ exchange ->
+            requests += exchange.requestMethod + " " + exchange.requestURI.path
+            if (exchange.requestURI.path.endsWith("/RemoteSearch/Movie"))
+                exchange.reply("""[{"Name":"Synthetic","ProviderIds":{"Tmdb":"42"}}]""")
+            else {
+                assertEquals("POST", exchange.requestMethod)
+                assertEquals("42", JSONObject(exchange.requestBody.readBytes().decodeToString()).getJSONObject("ProviderIds").getString("Tmdb"))
+                exchange.reply("", 204)
+            }
+        }) { fixture -> runBlocking {
+            val original = fixture.copy(serverId = "fixture-server")
+            val current = original.copy(server = original.server.copy(baseUrl = original.server.baseUrl + "-current"))
+            val item = MediaItem("item", "Synthetic", "Movie")
+            val api = MediaIdentificationApi()
+            val result = api.search(original, item, MediaIdentificationQuery("Synthetic")).single()
+            api.apply(current, item, result)
+        } }
+        assertEquals(listOf("POST /proxy/Items/RemoteSearch/Movie", "POST /proxy-current/Items/RemoteSearch/Apply/item"), requests.toList())
     }
 
     @Test fun wrongResponseShapeAndPermissionFailureStayExplicitAndRetryOnlySearches() {

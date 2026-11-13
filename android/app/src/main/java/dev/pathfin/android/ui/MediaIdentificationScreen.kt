@@ -40,14 +40,10 @@ import kotlinx.coroutines.launch
 /** 搜索和确认分开；Apply 后只提示刷新结果，不会因重读失败重复提交。 */
 @Composable
 fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinApi, onBack: () -> Unit,
-    onChanged: () -> Unit, onAuthExpired: () -> Unit = {}) {
-    key(session, item.id) { IdentificationContent(item, session, api, onBack, onChanged, onAuthExpired) }
-}
-
-@Composable
-private fun IdentificationContent(item: MediaItem, session: Session, api: JellyfinApi, onBack: () -> Unit,
-    onChanged: () -> Unit, onAuthExpired: () -> Unit) {
+    onChanged: () -> Unit, onAuthExpired: () -> Unit = {}) =
+    key(session.serverIdentity, session.serverId, session.userId, session.accessToken, session.deviceId, item.id) {
     val identification = remember(api) { MediaIdentificationApi(api) }
+    val currentSession by rememberUpdatedState(session)
     val scope = rememberCoroutineScope()
     var name by rememberSaveable { mutableStateOf(item.name) }
     var year by rememberSaveable { mutableStateOf(item.year?.toString().orEmpty()) }
@@ -79,7 +75,7 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
     val form = MediaIdentificationQuery(name.trim(), if (byYear) year.toIntOrNull() else null, providerIds.toMap())
     val filledIds = fields.mapNotNull { field -> providerValue(field.key).trim().takeIf(String::isNotEmpty)?.let { field.key to it } }.toMap()
     val query = form.copy(providerIds = filledIds)
-    val canApply = !searching && !applying && !applied && validYear && resultForm == form
+    val canApply = enabled && !searching && !applying && !applied && validYear && resultForm == form
 
     fun failure(exception: Exception) {
         if (exception is CancellationException) throw exception
@@ -91,7 +87,7 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
         searching = true; searched = true; error = null; selected = null; applied = false; resultForm = null
         scope.launch {
             try {
-                results = identification.search(session, item, query)
+                results = identification.search(currentSession, item, query)
                 resultForm = form
                 resultsPage = true
             }
@@ -221,7 +217,7 @@ private fun IdentificationContent(item: MediaItem, session: Session, api: Jellyf
                         applying = true; error = null
                         scope.launch {
                             try {
-                                identification.apply(session, item, candidate, MediaIdentificationOptions(replaceImages))
+                                identification.apply(currentSession, item, candidate, MediaIdentificationOptions(replaceImages))
                                 applied = true; selected = null; onChanged()
                             } catch (exception: Exception) { selected = null; failure(exception) }
                             finally { applying = false }

@@ -35,8 +35,7 @@ class MediaIdentificationResult internal constructor(
     /** 提供程序给出的海报或头像（http/https），供结果页区分同名条目。 */
     val imageUrl: String?,
     internal val originalJson: String,
-    internal val server: ServerConfig,
-    internal val userId: String,
+    internal val owner: Session,
     internal val itemId: String,
     internal val itemType: MediaIdentificationType,
 )

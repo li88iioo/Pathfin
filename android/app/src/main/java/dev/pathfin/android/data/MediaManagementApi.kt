@@ -65,7 +65,7 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
         requireAdministrator(session)
         val json = readItem(session, itemId, ManagementOperation.METADATA_READ)
         return EditableMediaMetadata(itemId, metadata(json), capabilities(session, JsonMapping.mediaItem(json)),
-            json.toString(), session.server, session.userId, (json.opt("Path") as? String)?.takeIf(String::isNotBlank))
+            json.toString(), session, (json.opt("Path") as? String)?.takeIf(String::isNotBlank))
     }
 
     /**
@@ -86,7 +86,7 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
 
     suspend fun saveMetadata(session: Session, document: EditableMediaMetadata, metadata: MediaMetadata) {
         requireAdministrator(session)
-        require(document.server == session.server && document.userId == session.userId) { tr("编辑内容与当前服务器账号不一致，请重新打开编辑页") }
+        require(document.owner.hasSameAuthentication(session)) { tr("编辑内容与当前服务器账号不一致，请重新打开编辑页") }
         requireIdentifier(document.itemId)
         val before = document.metadata
         validateMetadata(metadata, before)
@@ -204,7 +204,7 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
             RemoteMediaImage(url, remoteImageUrl(session, raw.opt("ThumbnailUrl")), type, providerName,
                 integer(raw.opt("Width"))?.takeIf { it > 0 }, integer(raw.opt("Height"))?.takeIf { it > 0 },
                 (raw.opt("Language") as? String)?.takeIf { it.length <= 64 && it.none(Char::isISOControl) && it.isNotBlank() },
-                itemId, session.server, session.userId)
+                itemId, session)
         }
         return RemoteMediaImagePage(images, total, startIndex, array.length())
     }
@@ -212,7 +212,7 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
     suspend fun applyRemoteImage(session: Session, itemId: String, image: RemoteMediaImage) {
         requireAdministrator(session)
         requireIdentifier(itemId)
-        require(image.itemId == itemId && image.server == session.server && image.userId == session.userId) {
+        require(image.itemId == itemId && image.owner.hasSameAuthentication(session)) {
             tr("图片结果与当前媒体或服务器账号不一致，请重新搜索")
         }
         require(remoteImageUrl(session, image.url) == image.url) { tr("图片地址无效，请重新搜索") }
