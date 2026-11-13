@@ -47,12 +47,45 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** 测试使用默认偏好：未开启直播电视，搜索不含节目与频道两组。 */
-private val visibleSearchCategories = searchDiscoveryCategories.forLiveTv(dev.pathfin.android.domain.AppPreferences().liveTvEnabled)
-
 /** 只在独立 verification 包运行；搜索、收藏、账号和竞态均经过真实 VM 与自有回环 HTTP。 */
 @RunWith(AndroidJUnit4::class)
 class DiscoveryFlowTest {
+    @Test fun liveTvSettingControlsSearchAndFavoriteChannelRequestsAndResults() {
+        val liveCategories = setOf(DiscoveryCategory.PROGRAMS, DiscoveryCategory.CHANNELS)
+        for (enabled in listOf(false, true)) withApp(liveTvEnabled = enabled) { app, fixture ->
+            val expectedSearch = searchDiscoveryCategories.filter { enabled || it !in liveCategories }.toSet()
+            val expectedFavorites = favoriteDiscoveryCategories.filter { enabled || it !in liveCategories }.toSet()
+            main { app.selectTab(Route.Search); app.search("live-categories") }
+            val search = awaitSearch(app, fixture, "live-categories")
+            val requests = fixture.requestsFor("live-categories")
+            assertEquals("搜索只建立当前开关允许的分类", expectedSearch, search.sections.keys)
+            assertEquals(expectedSearch, requests.map { it.category }.toSet())
+            assertEquals("每个搜索分类只发一次首读", expectedSearch.size, requests.size)
+            expectedSearch.forEach { category ->
+                assertEquals(category.itemType, search.sections.getValue(category).items.single().type)
+            }
+            for (category in liveCategories) {
+                assertEquals("直播开关决定是否读取 $category", enabled, category in search.sections)
+                if (enabled) assertEquals(category.itemType, requests.single { it.category == category }.query["includeItemTypes"])
+            }
+
+            main { app.selectTab(Route.Favorites) }
+            val favorites = awaitFavorites(app, fixture)
+            val favoriteRequests = fixture.discoveryRequests().filter { it.favorite }
+            assertEquals("收藏只建立当前开关允许的分类", expectedFavorites, favorites.sections.keys)
+            assertEquals(expectedFavorites, favoriteRequests.map { it.category }.toSet())
+            assertEquals("每个收藏分类只发一次首读", expectedFavorites.size, favoriteRequests.size)
+            assertEquals("关闭直播不请求频道收藏，开启后读取真实频道结果", enabled,
+                favorites.sections[DiscoveryCategory.CHANNELS]?.items?.singleOrNull()?.type == "TvChannel")
+            if (enabled) {
+                assertTrue(favorites.sections.getValue(DiscoveryCategory.CHANNELS).items.single().isFavorite)
+                assertEquals("TvChannel", favoriteRequests.single { it.category == DiscoveryCategory.CHANNELS }.query["includeItemTypes"])
+            }
+            assertTrue(favoriteRequests.all { it.query["isFavorite"] == "true" && it.userId == ALPHA_ID })
+            assertTrue("节目不进入频道收藏分类", DiscoveryCategory.PROGRAMS !in favorites.sections)
+        }
+    }
+
     @Test fun independentGroupsKeepArrivalOrderReuseFiltersAndPaginateTheirOwnCursors() = withApp { app, fixture ->
         main { app.selectTab(Route.Search) }
         val suggestions = await(app, fixture, "推荐搜索完成") { it.search.suggestionsLoaded }.search.suggestions
@@ -65,7 +98,7 @@ class DiscoveryFlowTest {
             main { app.search("  paged  ") }
             movies.awaitRequest()
             val early = await(app, fixture, "慢电影不能阻塞其余分类") { state ->
-                state.search.results.sections.size == visibleSearchCategories.size &&
+                state.search.results.sections.keys == activeSearchCategories(app).toSet() &&
                     state.search.results.sections.all { (category, page) -> category == DiscoveryCategory.MOVIES || !page.loading }
             }.search.results
             assertTrue(early.sections.getValue(DiscoveryCategory.MOVIES).loading)
@@ -81,8 +114,8 @@ class DiscoveryFlowTest {
         assertEquals(27, first.sections.getValue(DiscoveryCategory.MOVIES).total)
         assertEquals(24, first.sections.getValue(DiscoveryCategory.ARTISTS).nextIndex)
         val firstRequests = fixture.discoveryRequests()
-        assertEquals(visibleSearchCategories.size, firstRequests.size)
-        assertEquals(visibleSearchCategories.toSet(), firstRequests.map { it.category }.toSet())
+        assertEquals(activeSearchCategories(app).size, firstRequests.size)
+        assertEquals(activeSearchCategories(app).toSet(), firstRequests.map { it.category }.toSet())
         firstRequests.forEach { request ->
             assertEquals(ALPHA_ID, request.userId)
             assertEquals("paged", request.query["searchTerm"])
@@ -210,9 +243,9 @@ class DiscoveryFlowTest {
         main { app.toggleSearchCategory(DiscoveryCategory.SEASONS) }
         val all = awaitSearch(app, fixture, "multi")
         assertTrue("移除最后一个筛选回到全部", app.state.value.search.categories.isEmpty())
-        assertEquals(visibleSearchCategories.toSet(), all.sections.keys)
+        assertEquals(activeSearchCategories(app).toSet(), all.sections.keys)
         selected.forEach { category -> assertEquals(first.sections.getValue(category), all.sections.getValue(category)) }
-        assertEquals("回到全部只补齐尚未读取的组", visibleSearchCategories.size, fixture.requestsFor("multi").size)
+        assertEquals("回到全部只补齐尚未读取的组", activeSearchCategories(app).size, fixture.requestsFor("multi").size)
         main {
             app.toggleSearchCategory(DiscoveryCategory.MOVIES)
             app.toggleSearchCategory(DiscoveryCategory.SERIES)
@@ -221,7 +254,7 @@ class DiscoveryFlowTest {
         main { app.toggleSearchCategory(null) }
         assertTrue(app.state.value.search.categories.isEmpty())
         assertEquals(all, app.state.value.search.results)
-        assertEquals(visibleSearchCategories.size, fixture.requestsFor("multi").size)
+        assertEquals(activeSearchCategories(app).size, fixture.requestsFor("multi").size)
     }
 
     @Test fun changingMultipleFiltersRetainsSelectedRequestsAndFreesUnselectedQueueSlots() = withApp { app, fixture ->
@@ -255,11 +288,11 @@ class DiscoveryFlowTest {
             main { app.toggleSearchCategory(null) }
             val all = awaitSearch(app, fixture, "priority")
             assertTrue(app.state.value.search.categories.isEmpty())
-            assertEquals(visibleSearchCategories.size, all.sections.values.count { it.items.size == 1 })
+            assertEquals(activeSearchCategories(app).size, all.sections.values.count { it.items.size == 1 })
             assertEquals(focused.sections.getValue(DiscoveryCategory.ARTISTS), all.sections.getValue(DiscoveryCategory.ARTISTS))
             assertEquals("切回全部不得重新读取已完成歌手组", artistRequests, fixture.requestsFor("priority", DiscoveryCategory.ARTISTS).size)
             assertEquals(DiscoveryCategory.ARTISTS, all.order.first())
-            assertEquals(visibleSearchCategories.toSet(), all.order.toSet())
+            assertEquals(activeSearchCategories(app).toSet(), all.order.toSet())
             blocked.forEach { it.release(); it.awaitFinished() }
             main { assertEquals("已取消首读的迟到响应不得覆盖重读结果", all, app.state.value.search.results) }
         } finally { blocked.forEach { it.close() } }
@@ -444,7 +477,7 @@ class DiscoveryFlowTest {
         main { app.selectTab(Route.Favorites) }
         awaitFavorites(app, fixture)
         val favoriteRequests = fixture.discoveryRequests().filter { it.favorite }
-        assertEquals(favoriteDiscoveryCategories.forLiveTv(app.state.value.preferences.liveTvEnabled).toSet(), favoriteRequests.map { it.category }.toSet())
+        assertEquals(activeFavoriteCategories(app).toSet(), favoriteRequests.map { it.category }.toSet())
         assertTrue(favoriteRequests.all { it.query["isFavorite"] == "true" && "searchTerm" !in it.query })
         val source = app.state.value.routes
         main { app.openDiscovery(category = DiscoveryCategory.MOVIES, favorite = true) }
@@ -626,7 +659,7 @@ class DiscoveryFlowTest {
         }
     }
 
-    private fun withApp(block: (AppViewModel, Fixture) -> Unit) {
+    private fun withApp(liveTvEnabled: Boolean = false, block: (AppViewModel, Fixture) -> Unit) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         check(context.packageName == VERIFICATION_PACKAGE) { "分组链路测试只允许独立 verification 包" }
         val preferences = AppPreferencesStore(context)
@@ -636,7 +669,7 @@ class DiscoveryFlowTest {
         var failure: Throwable? = null
         try {
             clearSessions(context)
-            preferences.save(AppPreferences())
+            preferences.save(AppPreferences(liveTvEnabled = liveTvEnabled))
             val app = main { ViewModelProvider(owner,
                 ViewModelProvider.AndroidViewModelFactory(context.applicationContext as Application))[AppViewModel::class.java] }
             await(app, fixture, "合成会话恢复完成") { !it.restoringSession }
@@ -658,16 +691,17 @@ class DiscoveryFlowTest {
         }
     }
 
+    private fun activeSearchCategories(app: AppViewModel) = searchDiscoveryCategories.forLiveTv(app.state.value.preferences.liveTvEnabled)
+    private fun activeFavoriteCategories(app: AppViewModel) = favoriteDiscoveryCategories.forLiveTv(app.state.value.preferences.liveTvEnabled)
+
     private fun awaitSearch(app: AppViewModel, fixture: Fixture, query: String,
-        categories: List<DiscoveryCategory> = visibleSearchCategories): DiscoveryState =
+        categories: List<DiscoveryCategory> = activeSearchCategories(app)): DiscoveryState =
         await(app, fixture, "搜索 $query 的分类完成") {
             it.search.query == query && categories.all { category -> it.search.results.sections[category]?.settled == true }
         }.search.results
 
     private fun awaitFavorites(app: AppViewModel, fixture: Fixture): DiscoveryState =
-        await(app, fixture, "收藏分类完成") { state ->
-            favoriteDiscoveryCategories.forLiveTv(state.preferences.liveTvEnabled).all { state.favorites.sections[it]?.settled == true }
-        }.favorites
+        await(app, fixture, "收藏分类完成") { activeFavoriteCategories(app).all { category -> it.favorites.sections[category]?.settled == true } }.favorites
 
     private val ContentState.settled get() = !loading && !loadingMore && error == null && queryKey != null
 
@@ -856,7 +890,7 @@ class DiscoveryFlowTest {
             val key = checkNotNull(request.pageKey)
             val favoriteContent = key.favorite || key.term == "favorite"
             val total = when {
-                favoriteContent -> when (key.category) { DiscoveryCategory.MOVIES -> 26; DiscoveryCategory.SERIES, DiscoveryCategory.PEOPLE -> 1; else -> 0 }
+                favoriteContent -> when (key.category) { DiscoveryCategory.MOVIES -> 26; DiscoveryCategory.SERIES, DiscoveryCategory.PEOPLE, DiscoveryCategory.CHANNELS -> 1; else -> 0 }
                 key.term == "paged" -> when (key.category) { DiscoveryCategory.MOVIES -> 27; DiscoveryCategory.ARTISTS -> 26; DiscoveryCategory.SERIES -> 2; DiscoveryCategory.PEOPLE -> 1; else -> 0 }
                 else -> 1
             }

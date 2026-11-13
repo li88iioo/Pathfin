@@ -93,7 +93,7 @@ class VideoFeaturesFlowTest {
         waitForFavorites(app, shouldContainMovie = true)
         compose.onNodeWithText(MOVIE_NAME).assertVerificationDisplayed(compose)
         compose.onNodeWithTag("discovery-section/MOVIES").assertVerificationDisplayed(compose)
-        favoriteDiscoveryCategories.filterNot { it == DiscoveryCategory.MOVIES }.forEach {
+        favoriteDiscoveryCategories.forLiveTv(app.state.value.preferences.liveTvEnabled).filterNot { it == DiscoveryCategory.MOVIES }.forEach {
             compose.onNodeWithTag("discovery-section/${it.name}").assertDoesNotExist()
         }
         compose.onNodeWithTag("browser-toolbar").assertDoesNotExist()

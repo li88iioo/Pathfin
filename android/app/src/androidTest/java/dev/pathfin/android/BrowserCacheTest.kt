@@ -151,7 +151,8 @@ class BrowserCacheTest {
             assertCachedFavorites(app, favorites)
         }
         fixture.assertCounts(favoriteCounts)
-        fixture.assertCounts(Counts(items = 3, filters = 2, favoriteGroups = 8))
+        fixture.assertCounts(Counts(items = 3, filters = 2,
+            favoriteGroups = favoriteDiscoveryCategories.forLiveTv(app.state.value.preferences.liveTvEnabled).size))
         fixture.assertFavoriteRequests(mapOf("Movie" to 1, "Series" to 1, "BoxSet" to 1, "Person" to 1,
             "Episode" to 1, "Season" to 1, "MusicAlbum" to 1, "Audio" to 1))
     }
