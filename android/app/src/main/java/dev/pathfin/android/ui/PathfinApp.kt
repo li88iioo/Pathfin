@@ -80,7 +80,9 @@ private class RememberedPosterLoader(val loader: ImageLoader) : androidx.compose
 }
 private data class Tab(val route: Route, val title: String, val icon: ImageVector)
 // 每次读取都按当前界面语言取标题。
-private val tabs: List<Tab> get() = listOf(Tab(Route.Home, tr("首页"), PathfinIcons.Home), Tab(Route.Search, tr("搜索"), PathfinIcons.Search), Tab(Route.Favorites, tr("收藏"), PathfinIcons.Star))
+private fun tabs(liveTv: Boolean): List<Tab> = listOfNotNull(Tab(Route.Home, tr("首页"), PathfinIcons.Home),
+    Tab(Route.LiveTv, tr("直播"), PathfinIcons.Tv).takeIf { liveTv },
+    Tab(Route.Search, tr("搜索"), PathfinIcons.Search), Tab(Route.Favorites, tr("收藏"), PathfinIcons.Star))
 
 internal fun AppState.savedPageKey(route: Route = this.route): String {
     val visit = when (route) {
@@ -230,7 +232,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     var imageEditor by remember(session, route) { mutableStateOf(false) }
     var imageEditorBusy by remember(session, route) { mutableStateOf(false) }
     var detailScrolled by remember(route) { mutableStateOf(false) }
-    var ambientCovered by remember(route) { mutableStateOf(false) }
+    var liveAmbientCovered by remember(route) { mutableStateOf(false) }
     var navigationVisible by remember { mutableStateOf(true) }
     val pageActive = LocalPageActive.current
     LaunchedEffect(route, pageActive) {
@@ -252,25 +254,17 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     val connecting = showManager && (state.profiles.isEmpty() || state.addingServer)
     val showManagerNavigation = !insideServer && !connecting
     val isDetail = insideServer && route is Route.Detail
+    val homePage = insideServer && route == Route.Home
     val standaloneTool = route is Route.Identification || route == Route.ServerAdministration || route == Route.LiveTv
     val libraryPage = route is Route.Folder || route is Route.Browse || route is Route.LibrarySearch
-    val showInnerNavigation = insideServer && route in listOf(Route.Home, Route.Search, Route.Favorites)
+    val showInnerNavigation = insideServer && route in listOf(Route.Home, Route.LiveTv, Route.Search, Route.Favorites)
     val hasBottomNavigation = showInnerNavigation || showManagerNavigation
     // 没有悬浮导航的页面同样铺到手势条下，列表末尾自己让出手势条高度。
     val navigationBarHeight = AppNavigationBarInsets.asPaddingValues().calculateBottomPadding()
     val navigationBottomInset = (if (hasBottomNavigation) 88.dp else 16.dp) + navigationBarHeight
     val lightSurface = MaterialTheme.colorScheme.surface.luminance() > 0.5f
-    // 在组合中读取滚动状态：只在SideEffect里读会漏掉详情子树独立重组后的前景切换。
-    // 首页与直播的氛围区在标题栏下方时，标题栏与状态栏都按深色背景使用白色前景。
-    val overAmbient = (route == Route.Home || route == Route.LiveTv) && ambientCovered
-    // 详情滚过头图只重组这个小作用域与下面的详情标题栏，不带动整页内容重组。
-    RecomposeScope {
-        val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !overAmbient
-        SideEffect {
-            if (pageActive) (context as? Activity)?.let { activity -> WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = lightStatusBars }
-        }
-    }
-
+    // 首页的覆盖状态由正文测量后同步交给 chrome；直播仍自行绘制页头。
+    val overAmbient = route == Route.LiveTv && liveAmbientCovered
     val discoveryPage = insideServer && (route == Route.Search || route == Route.Favorites)
     // 搜索、元数据编辑、识别、直播电视与控制台各自绘制毛玻璃顶栏，这里只留出状态栏。
     val toolOwnsTopBar = route is Route.MediaTools || route is Route.Identification || route == Route.LiveTv || route == Route.ServerAdministration
@@ -287,13 +281,89 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     val scrollToTopRequests = remember { mutableIntStateOf(0) }
     val topBarBlur = rememberTopBarBlurState()
     // 带固定工具栏的页面自己提供采样源，工具栏作为标题栏第二行一起模糊。
-    val pageOwnsBlurSource = route == Route.Search || libraryPage || toolOwnsTopBar
+    val pageOwnsBlurSource = homePage || route == Route.Search || libraryPage || toolOwnsTopBar
     CompositionLocalProvider(LocalNavigationBottomInset provides navigationBottomInset,
         LocalScrollToTopRequests provides scrollToTopRequests,
         LocalTopBarBlurState provides topBarBlur) {
         // 服务器页的壁纸环境光铺满整窗（含状态栏区），Scaffold 在该页透明以免遮挡。
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)
             .nestedScroll(scroll)) {
+            val chrome: @Composable (Boolean) -> Unit = { covered ->
+                // 详情滚过头图只重组这个小作用域与下面的详情标题栏，不带动整页内容重组。
+                RecomposeScope {
+                    val active = LocalPageActive.current
+                    val lightStatusBars = lightSurface && (!isDetail || detailScrolled) && !covered
+                    SideEffect {
+                        if (active) (context as? Activity)?.let { activity -> WindowCompat.getInsetsController(activity.window, activity.window.decorView).isAppearanceLightStatusBars = lightStatusBars }
+                    }
+                }
+                // 标题栏自己接住点击，不再穿透到下面的海报；双击发出“回到顶部”。
+                if (hasHeader) PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
+                    .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scrollToTopRequests.intValue++ }) }, height = headerInset,
+                    dark = covered) {
+                    Row(Modifier.fillMaxWidth()
+                        .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                        .heightIn(min = 60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (route == Route.Home) {
+                            ServerSwitcher(state.profiles, state.currentProfileId, session, !state.canSwitchServer, vm.api, vm::openServer)
+                            Spacer(Modifier.weight(1f))
+                            Box {
+                                Box(Modifier.size(44.dp).clip(CircleShape)
+                                    .clickable(role = Role.Button) { libraryMenu = true }
+                                    .semantics { contentDescription = tr("更多") }.testTag("home-more"),
+                                    contentAlignment = Alignment.Center) {
+                                    Icon(painterResource(R.drawable.ic_jellyfin), null, Modifier.size(24.dp), tint = Color.Unspecified)
+                                }
+                                AppDropdownMenu(libraryMenu && pageActive, { libraryMenu = false }, Modifier.widthIn(min = 176.dp, max = 260.dp),
+                                    shape = RoundedCornerShape(CardRadius), containerColor = PathfinAppearance.card) {
+                                    MenuRow(tr("设置"), { libraryMenu = false; vm.openSettings() }, icon = PathfinIcons.Sliders)
+                                    MenuRow(tr("下载任务"), { libraryMenu = false; vm.openDownloads() }, icon = PathfinIcons.Download)
+                                    if (session?.isAdministrator == true) MenuRow(tr("媒体库控制台"), { libraryMenu = false; vm.openServerAdministration() },
+                                        icon = MediaNavigationIcons.Console)
+                                    val homeLibraries = state.home.libraries.filterNot { it.collectionType == "livetv" }
+                                    if (homeLibraries.isNotEmpty()) {
+                                        MenuDivider()
+                                        Eyebrow(tr("首页显示的媒体库"), Modifier.padding(start = 18.dp, top = 4.dp, bottom = 2.dp))
+                                        homeLibraries.forEach { library ->
+                                            MenuRow(library.name, { vm.toggleHomeLibrary(library.id) }, icon = libraryTypeIcon(library),
+                                                checked = library.id !in state.hiddenLibraries)
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (browserKey != null && librarySelection.isNotEmpty()) {
+                            val selected = state.browsers[browserKey]?.content?.items.orEmpty().filter { it.id in librarySelection }
+                            LibrarySelectionBar(selected, busy = BATCH_KEY in state.actionBusy,
+                                canDelete = session?.canDelete == true && selected.any { it.canDelete != false },
+                                canRefresh = session?.isAdministrator == true,
+                                onCancel = { librarySelection = emptySet() }) { action ->
+                                librarySelection = emptySet()
+                                vm.runBatch(selected, action)
+                            }
+                        } else {
+                            PathfinIconButton(PathfinIcons.Back, tr("返回"), vm::back,
+                                tint = PathfinAppearance.textMain, size = 44.dp)
+                            Box(Modifier.weight(1f), contentAlignment = if (libraryPage) Alignment.Center else Alignment.CenterStart) {
+                                if (route is Route.Discovery) Row(verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(pageTitle(state), Modifier.weight(1f, fill = false), fontSize = 19.sp, color = LocalContentColor.current,
+                                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    val total = (if (route.favorite) state.favorites else state.search.results).sections[route.category]?.total ?: 0
+                                    if (total > 0) {
+                                        Text(total.toString(), fontSize = 12.sp, color = PathfinAppearance.textMuted)
+                                    }
+                                } else Text(pageTitle(state), color = LocalContentColor.current, fontSize = if (libraryPage) 18.sp else 19.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            if (route is Route.Folder) {
+                                PathfinIconButton(PathfinIcons.Search, tr("搜索当前媒体库"), { vm.openLibrarySearch(route.item) },
+                                    Modifier.testTag("library-search-open"), tint = PathfinAppearance.textMain, size = 48.dp)
+                            } else if (libraryPage) Spacer(Modifier.width(48.dp))
+                        }
+                    }
+                }
+            }
             Scaffold(
                 containerColor = if (showManager) Color.Transparent else MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
@@ -304,6 +374,8 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                     showManager && !connecting -> AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
                     // 连接页底图铺到手势条下，底部安全区由连接页的表单与按钮自己让出。
                     connecting -> AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
+                    // 首页自行区分正文与页头的横向安全区，页头背景仍铺满窗口。
+                    homePage -> WindowInsets(0, 0, 0, 0)
                     hasBottomNavigation -> AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
                     // 底部只为键盘让位；手势条高度并入 LocalNavigationBottomInset，由页面列表留白。
                     else -> AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal).union(WindowInsets.ime)
@@ -337,7 +409,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                             onChanged = { vm.mediaChanged(session, route.item.id) }, onAuthExpired = { vm.authenticationExpired(session) })
                     } else if (route == Route.LiveTv && session != null) {
                         state.liveTv?.let { liveTv -> LiveTvScreen(liveTv, onBack = { vm.back() }, onPlay = { vm.preparePlayback(it, true) },
-                            preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }, onAmbientCovered = { ambientCovered = it }) }
+                            preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }, onAmbientCovered = { liveAmbientCovered = it }) }
                     } else if (route == Route.ServerAdministration && session != null) {
                         state.administration?.let { ServerAdministrationScreen(it, onBack = { vm.back() }) }
                     } else savedState.SaveableStateProvider(state.savedPageKey()) {
@@ -357,7 +429,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                                     HomeScreen(visibleHome, session, vm.api, vm::open, vm::refreshHomeFromPage,
                                         onPlay = { vm.preparePlayback(it, loadDetails = true) },
                                         preparingIds = setOfNotNull(preparing?.id, preparing?.seriesId),
-                                        onAmbientCovered = { ambientCovered = it })
+                                        chrome = chrome)
                                 }
                                 Route.Libraries -> LibrariesScreen(state.home.copy(libraries = state.home.libraries.filterNot { it.collectionType == "livetv" }),
                                     session, vm.api, vm::open, vm::refreshHomeFromPage)
@@ -400,73 +472,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                     Modifier.fillMaxWidth().height(statusHeight).align(Alignment.TopCenter), height = statusHeight,
                 ) {}
             }
-            // 标题栏自己接住点击，不再穿透到下面的海报；双击发出“回到顶部”。
-            if (hasHeader) PageTitleBar(Modifier.fillMaxWidth().align(Alignment.TopCenter)
-                .pointerInput(Unit) { detectTapGestures(onDoubleTap = { scrollToTopRequests.intValue++ }) }, height = headerInset,
-                dark = overAmbient) {
-                        Row(Modifier.fillMaxWidth()
-                            .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                            .heightIn(min = 60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (route == Route.Home) {
-                                ServerSwitcher(state.profiles, state.currentProfileId, session, !state.canSwitchServer, vm.api, vm::openServer)
-                                Spacer(Modifier.weight(1f))
-                                Box {
-                                    Box(Modifier.size(44.dp).clip(CircleShape)
-                                        .clickable(role = Role.Button) { libraryMenu = true }
-                                        .semantics { contentDescription = tr("更多") }.testTag("home-more"),
-                                        contentAlignment = Alignment.Center) {
-                                        Icon(painterResource(R.drawable.ic_jellyfin), null, Modifier.size(24.dp), tint = Color.Unspecified)
-                                    }
-                                    AppDropdownMenu(libraryMenu && pageActive, { libraryMenu = false }, Modifier.widthIn(min = 176.dp, max = 260.dp),
-                                        shape = RoundedCornerShape(CardRadius), containerColor = PathfinAppearance.card) {
-                                        MenuRow(tr("设置"), { libraryMenu = false; vm.openSettings() }, icon = PathfinIcons.Sliders)
-                                        MenuRow(tr("下载任务"), { libraryMenu = false; vm.openDownloads() }, icon = PathfinIcons.Download)
-                                        if (state.preferences.liveTvEnabled) MenuRow(tr("直播电视"), { libraryMenu = false; vm.openLiveTv() }, icon = PathfinIcons.Tv)
-                                        if (session?.isAdministrator == true) MenuRow(tr("媒体库控制台"), { libraryMenu = false; vm.openServerAdministration() },
-                                            icon = MediaNavigationIcons.Console)
-                                        val homeLibraries = state.home.libraries.filterNot { it.collectionType == "livetv" }
-                                        if (homeLibraries.isNotEmpty()) {
-                                            MenuDivider()
-                                            Eyebrow(tr("首页显示的媒体库"), Modifier.padding(start = 18.dp, top = 4.dp, bottom = 2.dp))
-                                            homeLibraries.forEach { library ->
-                                                MenuRow(library.name, { vm.toggleHomeLibrary(library.id) }, icon = libraryTypeIcon(library),
-                                                    checked = library.id !in state.hiddenLibraries)
-                                            }
-                                        }
-                                    }
-                                }
-                            } else if (browserKey != null && librarySelection.isNotEmpty()) {
-                                val selected = state.browsers[browserKey]?.content?.items.orEmpty().filter { it.id in librarySelection }
-                                LibrarySelectionBar(selected, busy = BATCH_KEY in state.actionBusy,
-                                    canDelete = session?.canDelete == true && selected.any { it.canDelete != false },
-                                    canRefresh = session?.isAdministrator == true,
-                                    onCancel = { librarySelection = emptySet() }) { action ->
-                                    librarySelection = emptySet()
-                                    vm.runBatch(selected, action)
-                                }
-                            } else {
-                                PathfinIconButton(PathfinIcons.Back, tr("返回"), vm::back,
-                                    tint = PathfinAppearance.textMain, size = 44.dp)
-                                Box(Modifier.weight(1f), contentAlignment = if (libraryPage) Alignment.Center else Alignment.CenterStart) {
-                                    if (route is Route.Discovery) Row(verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(pageTitle(state), Modifier.weight(1f, fill = false), fontSize = 19.sp, color = LocalContentColor.current,
-                                            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        val total = (if (route.favorite) state.favorites else state.search.results).sections[route.category]?.total ?: 0
-                                        if (total > 0) {
-                                            Text(total.toString(), fontSize = 12.sp, color = PathfinAppearance.textMuted)
-                                        }
-                                    } else Text(pageTitle(state), color = LocalContentColor.current, fontSize = if (libraryPage) 18.sp else 19.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                                if (route is Route.Folder) {
-                                    PathfinIconButton(PathfinIcons.Search, tr("搜索当前媒体库"), { vm.openLibrarySearch(route.item) },
-                                        Modifier.testTag("library-search-open"), tint = PathfinAppearance.textMain, size = 48.dp)
-                                } else if (libraryPage) Spacer(Modifier.width(48.dp))
-                            }
-                        }
-            }
+            if (!homePage) chrome(overAmbient)
             if (isDetail) {
                 RecomposeScope {
                     CompositionLocalProvider(LocalContentColor provides if (detailScrolled) MaterialTheme.colorScheme.onSurface else Color.White) {
@@ -532,7 +538,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
             }
             if (showInnerNavigation) {
                 AnimatedVisibility(visible = !autoHide || navigationVisible, modifier = Modifier.align(Alignment.BottomCenter), enter = fadeIn() + slideInVertically { it }, exit = fadeOut() + slideOutVertically { it }) {
-                    val items = tabs.map { tab -> DockItem(tab.title, tab.icon, state.routes.first() == tab.route) { vm.selectTab(tab.route) } }
+                    val items = tabs(state.preferences.liveTvEnabled).map { tab -> DockItem(tab.title, tab.icon, state.routes.first() == tab.route) { vm.selectTab(tab.route) } }
                     Box(Modifier.testTag("app-floating-navigation")
                         .windowInsetsPadding(AppNavigationBarInsets).padding(bottom = 12.dp)) { PathfinDock(items) }
                 }

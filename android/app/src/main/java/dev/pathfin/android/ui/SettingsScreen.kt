@@ -194,7 +194,7 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
                 item("original-path") { SettingsSwitch(tr("STRM 原始地址"), p.originalPathEnabled, tr("关闭后使用 Jellyfin 播放地址"), position = GroupPosition.TOP) { onPreferences(p.copy(originalPathEnabled = it)) } }
                 item("strm-default-quality") { StrmQualitySettings(p, onPreferences, GroupPosition.BOTTOM) }
                 item("live-tv-label") { SettingLabel(tr("直播电视")) }
-                item("live-tv-enabled") { SettingsSwitch(tr("启用直播电视"), p.liveTvEnabled, tr("关闭后首页“更多”里不再显示直播电视"),
+                item("live-tv-enabled") { SettingsSwitch(tr("启用直播电视"), p.liveTvEnabled, tr("开启后在底栏显示直播电视"),
                     tag = "live-tv-enabled-switch", position = GroupPosition.TOP) { onPreferences(p.copy(liveTvEnabled = it)) } }
                 item("live-tv-direct") { SettingsSwitch(tr("直连直播源"), p.liveTvDirectPlay, tr("直接播放频道的直播源地址，不经服务器转码；设备不支持其编码时可能无法播放"),
                     enabled = p.liveTvEnabled, tag = "live-tv-direct-switch", position = GroupPosition.BOTTOM) { onPreferences(p.copy(liveTvDirectPlay = it)) } }

@@ -190,7 +190,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 修改密码	Change password
 倍速	Speed
 偏移	Offset
-停止加载 · 已读取 %1$s 个频道	Stop loading · %1$s channels loaded
 停止投屏	Stop casting
 像素格式	Pixel format
 允许 HTTP 明文连接与播放	Allow plain HTTP connections and playback
@@ -217,7 +216,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 关闭后定位到邻近关键帧	When off, seeks to the nearest keyframe
 关闭后显示跳过按钮	When off, shows a skip button
 关闭后松手跳转	When off, seeks on release
-关闭后首页“更多”里不再显示直播电视	When off, Live TV no longer appears in More on Home
+开启后在底栏显示直播电视	Shows Live TV in the bottom bar
 关闭后，进入页面或返回应用自动刷新	When off, pages refresh automatically when opened or when you return to the app
 关闭后，重新启动进入服务器列表	When off, the app opens the server list on launch
 关闭图片编辑	Close image editor
@@ -324,7 +323,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 可填写外部编号以缩小匹配范围	Fill in external IDs to narrow the match
 可更换类型、提供商或语言后查询；结果来自此媒体的 Jellyfin 图片提供商。	Change the type, provider or language and search again; results come from this media's Jellyfin image providers.
 可留空	Optional
-可继续载入全部频道，或换个频道名称、频道号或节目名称。	Load all channels, or try another channel name, number or program title.
 可选	Optional
 可选，如 /jellyfin	Optional, e.g. /jellyfin
 合集	Collections
@@ -492,7 +490,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 已提交元数据刷新	Metadata refresh requested
 已收藏	Favorited
 已收起	Collapsed
-已显示全部频道	All channels shown
 已暂停	Paused
 已用 %1$s · 	Used %1$s · 
 已看 %1$s	Watched %1$s
@@ -609,10 +606,8 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 提前0.5秒	Advance 0.5 s
 搜索	Search
 搜索%1$s	Search %1$s
-搜索全部频道	Search all channels
 搜索媒体或人物	Search media or people
 搜索字幕	Search subtitles
-搜索已加载的 %1$s 个频道，可继续搜索全部频道	Searching %1$s loaded channels; you can search all channels
 搜索当前媒体库	Search this library
 搜索组件、版本或许可	Search components, versions or licenses
 搜索缺少的元数据	Search for missing metadata
@@ -935,7 +930,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 正在读取服务器信息	Loading server info
 正在读取服务器字幕…	Loading server subtitles…
 正在读取标签	Loading tags
-正在读取直播频道	Loading live channels
 正在读取离线许可…	Loading offline licenses…
 正在读取节目单	Loading guide
 正在读取许可全文…	Loading full license text…
@@ -1303,7 +1297,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 连接	Connect
 连接你的 Jellyfin 媒体库	Connect your Jellyfin library
 连接地址	Connection address
-连接当前服务器并读取频道与节目单。	Connects to the current server and loads channels and the guide.
 连接或读取失败，请检查网络与服务器后重试	Couldn't connect or load. Check the network and server and retry
 连接服务器后可清理	Available after connecting to a server
 连接服务器超时，请确认手机与服务器网络互通。	Timed out connecting to the server. Make sure your phone can reach the server.
@@ -1500,15 +1493,14 @@ GitHub 请求过于频繁，请稍后重试	Too many requests to GitHub. Please 
 已选中	Selected
 下一集 %1$s	Next episodes %1$s
 深色模式、主题色、导航与状态栏	Dark mode, accent color, navigation and status bar
-体育	Sports
-新闻	News
-少儿	Kids
 %1$s 个	%1$s
 全部频道	All channels
 其他频道	Other channels
-已载入 %1$s / %2$s	%1$s of %2$s loaded
 搜索频道、节目或台号	Search channels, programs or numbers
 上次观看	Last watched
 继续看	Resume
 重播	Rerun
 搜索频道	Search channels
+直播	Live
+频道	Channels
+跳到 %1$s	Jump to %1$s

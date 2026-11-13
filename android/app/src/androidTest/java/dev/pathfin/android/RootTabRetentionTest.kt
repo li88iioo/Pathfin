@@ -91,6 +91,28 @@ class RootTabRetentionTest {
         selectTab(Route.Favorites)
         compose.onNodeWithTag("label/${Route.Favorites.key}").assertTextEquals("favorites:1:favorites-update")
         compose.runOnIdle { assertEquals(1, mounts[Route.Favorites.key]) }
+        for (route in listOf(Route.LiveTv, Route.Search)) {
+            selectTab(route)
+            page(Route.Home).assertDoesNotExist()
+            page(route).assertVerificationDisplayed(compose)
+            val hidden = measurements[Route.Home.key]
+            compose.runOnIdle { state.value = state.value.copy(notice = route.key) }
+            compose.waitForIdle()
+            compose.onNodeWithTag(CANVAS).performVerificationTouchInput(compose) { click(center) }
+            compose.runOnIdle {
+                assertEquals(hidden, measurements[Route.Home.key])
+                assertEquals(false to false, capabilities[Route.Home.key])
+                assertEquals(true to true, capabilities[route.key])
+                if (route != Route.Search) assertEquals(1, clicks[route.key])
+            }
+            selectTab(Route.Home)
+            compose.runOnIdle {
+                assertEquals("底栏往返必须保留首页组合", 1, mounts[Route.Home.key])
+                assertEquals(1, mounts[route.key])
+                assertEquals(0, disposals[Route.Home.key] ?: 0)
+            }
+            page(route).assertDoesNotExist()
+        }
     }
 
     @Test fun automaticForegroundRefreshOnlyRunsOnTheVisibleRetainedTab() {
@@ -114,17 +136,33 @@ class RootTabRetentionTest {
             assertEquals(2, refreshes[Route.Home.key])
             assertEquals(2, refreshes[Route.Favorites.key])
         }
+        selectTab(Route.LiveTv)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals("直播活动时隐藏首页不刷新", 2, refreshes[Route.Home.key])
+            assertEquals("直播活动时隐藏收藏不刷新", 2, refreshes[Route.Favorites.key])
+            assertEquals(2, refreshes[Route.LiveTv.key])
+        }
+        selectTab(Route.Home)
+        compose.runOnIdle {
+            assertEquals(3, refreshes[Route.Home.key])
+            assertEquals("直播隐藏后不继续自动刷新", 2, refreshes[Route.LiveTv.key])
+        }
     }
 
     @Test fun completedDetailNavigationReleasesRetainedTabsAndProfileChangesStartIndependentPages() {
         show()
         selectTab(Route.Search)
+        selectTab(Route.LiveTv)
         selectTab(Route.Home)
         val detail = Route.Detail("synthetic-detail")
         navigate(listOf(Route.Home, detail))
         compose.runOnIdle {
             assertEquals("离开根页动画完成后释放首页", 1, disposals[Route.Home.key])
             assertEquals("离开根页同时释放隐藏的搜索页", 1, disposals[Route.Search.key])
+            assertEquals("离开根页同时释放隐藏的直播页", 1, disposals[Route.LiveTv.key])
         }
         page(Route.Home, unmerged = true).assertDoesNotExist()
         page(detail).assertVerificationDisplayed(compose)

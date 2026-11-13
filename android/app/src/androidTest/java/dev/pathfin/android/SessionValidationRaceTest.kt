@@ -74,7 +74,7 @@ class SessionValidationRaceTest {
     @Test fun liveTvOwnerSurvivesNavigationButIsReplacedAfterValidationAndExpiredCredentials() = withRestoredApp { app, fixture ->
         fixture.validation.awaitRequest()
         await(app, fixture) { !it.restoringSession && it.session != null }
-        main { app.openLiveTv() }
+        main { app.selectTab(Route.LiveTv) }
         val restored = checkNotNull(await(app, fixture) { it.route == Route.LiveTv }.liveTv)
         completeValidation(app, fixture)
         val validated = checkNotNull(app.state.value.liveTv)
@@ -82,7 +82,7 @@ class SessionValidationRaceTest {
         assertEquals(app.state.value.session, validated.session)
         main { validated.query = "四川"; app.back() }
         assertEquals(Route.Home, app.state.value.route)
-        main { app.openLiveTv() }
+        main { app.selectTab(Route.LiveTv) }
         val returned = await(app, fixture) { it.route == Route.LiveTv }
         assertSame("真实路由退出重进应复用同一份频道状态", validated, returned.liveTv)
         assertEquals("四川", returned.liveTv?.query)
@@ -93,7 +93,7 @@ class SessionValidationRaceTest {
         assertNull(app.state.value.liveTv)
         assertNull(app.state.value.reauthenticationProfile)
         assertEquals("退出恢复登录提示后不能遗留没有状态的空白直播路由", Route.Home, app.state.value.route)
-        main { app.openLiveTv() }
+        main { app.selectTab(Route.LiveTv) }
         val fresh = checkNotNull(await(app, fixture) { it.route == Route.LiveTv }.liveTv)
         assertNotSame(validated, fresh)
         assertEquals("", fresh.query)

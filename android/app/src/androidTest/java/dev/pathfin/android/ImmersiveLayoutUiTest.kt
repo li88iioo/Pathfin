@@ -1,12 +1,22 @@
 package dev.pathfin.android
 
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Rect as PixelRect
+import android.os.Handler
+import android.os.Looper
+import android.view.PixelCopy
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draw.drawWithContent
+import androidx.test.filters.SdkSuppress
+import kotlin.math.roundToInt
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -16,6 +26,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToKey
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -46,6 +59,8 @@ class ImmersiveLayoutUiTest {
     @get:Rule val compose = createVerificationComposeRule<ComponentActivity>()
     private var loader: ImageLoader? = null
     private lateinit var viewModel: AppViewModel
+    private val drawPulse = mutableIntStateOf(0)
+    private var onAppDraw: ((AppState) -> Unit)? = null
 
     @After fun release() {
         compose.runOnUiThread {
@@ -106,6 +121,150 @@ class ImmersiveLayoutUiTest {
         compose.onNodeWithText("显示名称").assertVerificationDisplayed(compose)
     }
 
+    @Test @SdkSuppress(minSdkVersion = 31)
+    fun returningToHomeKeepsTheAmbientHeaderDarkFromTheFirstCommittedFrame() {
+        val state = showApp(homeApp())
+        VerificationDisplay.awaitWindowReady(compose, "home-return-initial", compose.onNodeWithTag("home-more"))
+        val baseline = homeHeaderFrames(state).average()
+        assertTrue("固定深灰的首页顶栏必须已就绪：$baseline", baseline < 0.35)
+        val traces = linkedMapOf<String, List<Float>>()
+        val paths = listOf(listOf(Route.Search), listOf(Route.Favorites), listOf(Route.LiveTv),
+            listOf(Route.LiveTv, Route.Search), listOf(Route.LiveTv, Route.Favorites), listOf(Route.Settings))
+        for (path in paths) {
+            path.forEach { homeHeaderFrames(state, it) }
+            traces[path.joinToString("/") { it.key }] = homeHeaderFrames(state)
+        }
+        assertTrue("返回首页不能出现高于稳定背景的浅色首帧：baseline=$baseline traces=$traces",
+            traces.values.flatten().all { it < baseline + 0.15f })
+    }
+
+    @Test @SdkSuppress(minSdkVersion = 31)
+    fun returningHomePreservesPartialAndDeepScrollWithTheCorrectHeaderFromTheFirstFrame() {
+        val initial = homeApp()
+        val state = showApp(initial)
+        VerificationDisplay.awaitWindowReady(compose, "home-scroll-initial", compose.onNodeWithTag("home-more"))
+        val list = compose.onNodeWithTag("home-list")
+        list.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 48f * compose.activity.resources.displayMetrics.density) }
+        compose.waitForIdle()
+        val partial = bounds("home-ambient").bottom
+        val dark = homeHeaderFrames(state).average()
+        assertTrue("局部滚动仍有封面覆盖顶栏：$dark", dark < .35)
+        for (route in listOf(Route.LiveTv, Route.Search, Route.Favorites, Route.Settings)) {
+            homeHeaderFrames(state, route)
+            val frames = homeHeaderFrames(state)
+            assertTrue("$route 返回封面内不能闪浅色：$frames", frames.all { it < dark + .15 })
+            assertEquals("$route 返回不能重置部分滚动位置", partial, bounds("home-ambient").bottom, .5f)
+        }
+        val anchor = "library-shelf/${initial.home.libraries[1].id}"
+        list.performScrollToKey(anchor)
+        val before = bounds(anchor).top
+        val light = homeHeaderFrames(state).average()
+        assertTrue("封面滚出后顶栏应恢复浅色：$light", light > dark + .2)
+        for (route in listOf(Route.LiveTv, Route.Search, Route.Favorites, Route.Settings)) {
+            homeHeaderFrames(state, route)
+            val frames = homeHeaderFrames(state)
+            assertTrue("$route 返回非封面区不能闪深色：$frames", frames.all { it > light - .15 })
+            assertEquals("$route 返回不能重置深度滚动位置", before, bounds(anchor).top, .5f)
+        }
+    }
+
+    @Test @SdkSuppress(minSdkVersion = 31)
+    fun emptyPendingLoadedAndFailedHomeUseTheCorrectHeaderWithoutAnIntermediateWrongFrame() {
+        val initial = homeApp()
+        val empty = HomeState(loaded = true, complete = true, librariesLoaded = true, resumeLoaded = true, nextUpLoaded = true)
+        val state = showApp(initial.copy(home = empty))
+        VerificationDisplay.awaitWindowReady(compose, "home-empty-initial", compose.onNodeWithTag("home-more"))
+        val light = homeHeaderFrames(state).average()
+        assertTrue("没有氛围区的首页应为浅色：$light", light > .5)
+        homeHeaderFrames(state, Route.Settings)
+        assertTrue(homeHeaderFrames(state).all { it > light - .15 })
+        val pending = homeHeaderFrames(state) { it.copy(home = HomeState(loading = true)) }
+        assertTrue("氛围占位首帧就应使用深色：$pending", pending.all { it < light - .2 })
+        val loaded = homeHeaderFrames(state) { it.copy(home = initial.home) }
+        assertTrue("内容到达后保持深色：$loaded", loaded.all { it < light - .2 })
+        val cleared = homeHeaderFrames(state) { it.copy(home = empty) }
+        assertTrue("氛围区移除时直接恢复浅色：$cleared", cleared.all { it > light - .15 })
+        val failed = homeHeaderFrames(state) { it.copy(home = HomeState(error = "合成加载失败")) }
+        assertTrue("加载失败无封面时不能强制深色：$failed", failed.all { it > light - .15 })
+    }
+
+    private fun homeApp(): AppState {
+        val session = Session(ServerConfig("https://home-return.fixture.invalid"), "synthetic-token",
+            "synthetic-user", "返回测试", "synthetic-device")
+        val profile = ServerProfile(id = "synthetic-home-return", displayName = "返回测试", session = session)
+        val movie = MediaItem("home-return-movie", "合成续播影片", "Movie", positionTicks = 10, runTimeTicks = 100)
+        val libraries = List(6) { MediaItem("home-return-library-$it", "合成媒体库 $it", "CollectionFolder", isFolder = true) }
+        return AppState(session = session, profiles = listOf(profile), currentProfileId = profile.id,
+            home = HomeState(resume = listOf(movie), libraries = libraries,
+                libraryItems = libraries.associate { it.id to listOf(movie.copy(id = "movie-${it.id}")) },
+                loaded = true, complete = true, librariesLoaded = true, resumeLoaded = true, nextUpLoaded = true))
+    }
+
+    private fun homeHeaderFrames(state: MutableState<AppState>, selected: Route = Route.Home,
+        update: (AppState) -> AppState = { it }): List<Float> {
+        val root = compose.onNodeWithTag("browser-back-motion").fetchSemanticsNode()
+        val region = compose.runOnIdle {
+            val view = checkNotNull(root.root as? ViewRootForTest).view
+            val origin = IntArray(2).also(view::getLocationInWindow)
+            val status = requireNotNull(ViewCompat.getRootWindowInsets(view))
+                .getInsets(WindowInsetsCompat.Type.statusBars()).top
+            val x = (root.boundsInRoot.left + root.boundsInRoot.width * 0.6f).roundToInt() + origin[0]
+            val y = root.boundsInRoot.top.roundToInt() + origin[1] + status +
+                (20 * view.resources.displayMetrics.density).roundToInt()
+            PixelRect(x - 2, y - 2, x + 3, y + 3)
+        }
+        val samples = java.util.concurrent.CopyOnWriteArrayList<Float>()
+        val failures = java.util.concurrent.CopyOnWriteArrayList<Int>()
+        val view = compose.activity.window.decorView
+        val handler = Handler(Looper.getMainLooper())
+        var pending = false
+        var drawnState: AppState? = null
+        lateinit var expected: AppState
+        val listener = android.view.ViewTreeObserver.OnPreDrawListener {
+            if (!pending && samples.size < 8) {
+                pending = true
+                drawnState = null
+                view.viewTreeObserver.registerFrameCommitCallback {
+                    // 同一路由数据更新也必须排除更新前的帧。
+                    if (drawnState == expected) {
+                        val bitmap = Bitmap.createBitmap(5, 5, Bitmap.Config.ARGB_8888)
+                        PixelCopy.request(compose.activity.window, region, bitmap, { result ->
+                            if (result == PixelCopy.SUCCESS) {
+                                val pixels = IntArray(25)
+                                bitmap.getPixels(pixels, 0, 5, 0, 0, 5, 5)
+                                samples += pixels.map { (Color.red(it) + Color.green(it) + Color.blue(it)) / 765f }.average().toFloat()
+                            } else failures += result
+                            bitmap.recycle()
+                            pending = false
+                            drawPulse.intValue++
+                        }, handler)
+                    } else {
+                        pending = false
+                        drawPulse.intValue++
+                    }
+                }
+            }
+            true
+        }
+        try {
+            compose.runOnUiThread {
+                onAppDraw = { drawnState = it }
+                view.viewTreeObserver.addOnPreDrawListener(listener)
+                expected = update(state.value).copy(routes = listOf(selected))
+                state.value = expected
+                drawPulse.intValue++
+            }
+            compose.waitUntil(10_000) { samples.size == 8 || failures.isNotEmpty() }
+            assertTrue("首页首帧像素复制失败：$failures", failures.isEmpty())
+        } finally {
+            compose.runOnUiThread {
+                onAppDraw = null
+                view.viewTreeObserver.removeOnPreDrawListener(listener)
+            }
+        }
+        return samples.toList()
+    }
+
     private fun showApp(initial: AppState): MutableState<AppState> {
         check(compose.activity.packageName == "dev.pathfin.android.verification")
         val state = mutableStateOf(initial)
@@ -116,10 +275,15 @@ class ImmersiveLayoutUiTest {
         val images = ImageLoader.Builder(compose.activity).diskCache(null).build().also { loader = it }
         compose.setContent {
             PathfinTheme(ThemePreference.LIGHT) {
-                CompositionLocalProvider(LocalAppPreferences provides state.value.preferences) {
+                val snapshot = state.value
+                CompositionLocalProvider(LocalAppPreferences provides snapshot.preferences) {
                     AppSystemBars()
-                    Surface(Modifier.fillMaxSize()) {
-                        PathfinApp(viewModel, state.value, rememberSaveableStateHolder(), posterLoader = images)
+                    Surface(Modifier.fillMaxSize().drawWithContent {
+                        drawPulse.intValue
+                        drawContent()
+                        onAppDraw?.invoke(snapshot)
+                    }) {
+                        PathfinApp(viewModel, snapshot, rememberSaveableStateHolder(), posterLoader = images)
                     }
                 }
             }

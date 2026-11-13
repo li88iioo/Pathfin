@@ -157,6 +157,8 @@ object JsonMapping {
             endYear = json.nonBlankText("EndDate")?.let(::dateYear)?.takeIf { year == null || it >= year },
             productionLocations = strings(json.optJSONArray("ProductionLocations")).map(String::trim).filter(String::isNotEmpty).distinct().take(8),
             endDate = json.nonBlankText("EndDate"),
+            channelId = json.nonBlankText("ChannelId"),
+            channelName = json.nonBlankText("ChannelName"),
             originalTitle = json.nonBlankText("OriginalTitle"),
         )
     }

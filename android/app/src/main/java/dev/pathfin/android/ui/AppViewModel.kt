@@ -15,6 +15,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dev.pathfin.android.data.ApiException
 import dev.pathfin.android.data.JellyfinApi
+import dev.pathfin.android.data.LiveTvGroupSource
+import dev.pathfin.android.data.LiveTvSnapshotStore
 import dev.pathfin.android.data.VideoPreflightPolicy
 import dev.pathfin.android.data.LibrarySuggestionLimit
 import dev.pathfin.android.data.PerformanceTrace
@@ -224,6 +226,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val preferencesStore by lazy { AppPreferencesStore(application) }
     private val homeSnapshotStore by lazy { HomeSnapshotStore(application) }
     private val browserSnapshotStore by lazy { BrowserSnapshotStore(application) }
+    private val liveTvGroupSource by lazy { LiveTvGroupSource(application) }
+    private val liveTvSnapshots by lazy { LiveTvSnapshotStore(application) }
     private val mutableState = MutableStateFlow(AppState(restoringSession = true))
     private val storageMutex = Mutex()
     private val storageReady = CompletableDeferred<Unit>()
@@ -873,6 +877,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         cancelServerSwitch()
         cancelPendingPlayback()
         if (route != Route.Search) releaseSearchResults()
+        if (route == Route.LiveTv) { openLiveTv(); return }
         if ((route == Route.Home || route == Route.Libraries) && !state.value.home.complete && !state.value.home.loading) refreshHome()
         if (state.value.routes == listOf(route)) {
             if (route == Route.Favorites) ensureFavorites()
@@ -917,17 +922,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         invalidatePlaybackPrefetch()
         mutableState.update { it.copy(routes = it.routes + Route.Identification(item)) }
     }
-    fun openLiveTv() {
-        cancelServerSwitch()
+    private fun openLiveTv() {
         val session = state.value.session ?: return
+        if (state.value.routes == listOf(Route.LiveTv)) return
         val epoch = generation
         viewModelScope.launch {
             try {
                 ensureLocalNetworkAccess(session.server.baseUrl)
                 if (epoch == generation) {
                     invalidatePlaybackPrefetch()
-                    mutableState.update { it.copy(routes = it.routes + Route.LiveTv,
-                        liveTv = liveTvFor(session)) }
+                    mutableState.update { it.copy(routes = listOf(Route.LiveTv), playbackError = null, preparingPlay = false,
+                        sourceSelection = null, detailLoading = false, liveTv = liveTvFor(session)) }
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { if (epoch == generation) notify(message(error)) }
@@ -935,7 +940,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     private fun liveTvFor(session: Session): LiveTvState {
         state.value.liveTv?.let { if (it.session == session) return it else it.cancel() }
-        return LiveTvState(session, api, viewModelScope, { authenticationExpired(session) })
+        return LiveTvState(session, api, viewModelScope, { authenticationExpired(session) }, groupSource = liveTvGroupSource, snapshots = liveTvSnapshots)
     }
     fun openDownloads() {
         cancelServerSwitch()
@@ -1249,7 +1254,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun back() {
         if (state.value.pendingPlayback != null) { cancelPendingPlayback(); return }
-        if (state.value.routes == listOf(Route.Search) && !state.value.showServers) { selectTab(Route.Home); return }
+        if (state.value.routes.singleOrNull().let { it == Route.Search || it == Route.LiveTv } && !state.value.showServers) { selectTab(Route.Home); return }
         if (state.value.routes.size <= 1) { if (!state.value.showServers || state.value.route != Route.Home) showServers(); return }
         popRoutes(state.value.routes.size - 1)
     }
@@ -1264,6 +1269,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             logoTag = item.logoTag.takeIf { item.logoItemId == seriesId }, logoItemId = item.logoItemId.takeIf { it == seriesId },
             backdropTag = item.backdropTag.takeIf { item.backdropItemId == seriesId },
             backdropItemId = item.backdropItemId.takeIf { it == seriesId }))
+    }
+
+    private fun liveChannelOf(item: MediaItem): MediaItem? = when (item.type) {
+        "TvChannel", "LiveTvChannel" -> item
+        "Program", "LiveTvProgram", "TvProgram" -> item.channelId?.let { MediaItem(it, item.channelName ?: item.name, "TvChannel") }
+        else -> null
     }
 
     private fun popRoutes(size: Int) {
@@ -1288,6 +1299,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun open(item: MediaItem) {
+        // 搜索、收藏里的频道和节目没有详情页，直接播放频道（节目即其所属频道正在播出的内容）。
+        liveChannelOf(item)?.let { channel -> preparePlayback(channel, true); return }
         cancelServerSwitch()
         PerformanceTrace.navigation(if (item.isFolder) "open_library" else "open_detail")
         if (item.type == "MusicArtist") {
@@ -1655,7 +1668,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (old == selected) return
         if (selected.isNotEmpty()) {
-            searchDiscoveryCategories.filter { it !in selected }.forEach { other ->
+            searchCategories.filter { it !in selected }.forEach { other ->
                 val key = "search/${other.name}"
                 discoveryLoads.remove(key)
                 discoveryJobs.remove(key)?.cancel()
@@ -1670,10 +1683,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (state.value.search.query.isNotBlank()) ensureSearchSections()
     }
 
+    private val searchCategories get() = searchDiscoveryCategories.forLiveTv(state.value.preferences.liveTvEnabled)
+    private val favoriteCategories get() = favoriteDiscoveryCategories.forLiveTv(state.value.preferences.liveTvEnabled)
+
     private fun ensureSearchSections(force: Boolean = false) {
         val search = state.value.search
         if (search.query.isBlank()) return
-        searchDiscoveryCategories.filter { search.categories.isEmpty() || it in search.categories }.forEach {
+        searchCategories.filter { search.categories.isEmpty() || it in search.categories }.forEach {
             loadDiscoveryPage(favorite = false, category = it, force = force)
         }
     }
@@ -1687,7 +1703,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         cancelServerSwitch()
         val current = state.value
         if (current.session == null || current.loginBusy || current.reauthenticationProfile != null ||
-            (favorite && category !in favoriteDiscoveryCategories) || (!favorite && current.search.query.isBlank())) return
+            (favorite && category !in favoriteCategories) || (!favorite && current.search.query.isBlank())) return
         val route = Route.Discovery(category, favorite, if (favorite) "" else current.search.query)
         if (current.route == route) return
         invalidatePlaybackPrefetch()
@@ -1699,13 +1715,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun loadMoreDiscovery(category: DiscoveryCategory, favorite: Boolean) = loadDiscoveryPage(favorite, category, append = true)
 
     private fun ensureFavorites() {
-        favoriteDiscoveryCategories.forEach { loadDiscoveryPage(true, it) }
+        favoriteCategories.forEach { loadDiscoveryPage(true, it) }
     }
 
     fun refreshFavorites() {
         val current = state.value
         if (current.session == null || current.loginBusy || current.reauthenticationProfile != null) return
-        favoriteDiscoveryCategories.forEach { loadDiscoveryPage(true, it, force = true) }
+        favoriteCategories.forEach { loadDiscoveryPage(true, it, force = true) }
     }
 
     private fun cancelDiscoveryPages(favorite: Boolean, category: DiscoveryCategory? = null) {
@@ -1737,7 +1753,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun loadDiscoveryPage(favorite: Boolean, category: DiscoveryCategory, append: Boolean = false, force: Boolean = false) {
         val current = state.value
         val session = current.session ?: return
-        if (current.loginBusy || current.reauthenticationProfile != null || (favorite && category !in favoriteDiscoveryCategories)) return
+        if (current.loginBusy || current.reauthenticationProfile != null || (favorite && category !in favoriteCategories)) return
         val term = if (favorite) "" else current.search.query
         if (!favorite && term.isBlank()) return
         val queryKey = if (favorite) "favorites" else term

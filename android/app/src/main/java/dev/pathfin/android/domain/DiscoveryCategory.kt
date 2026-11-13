@@ -13,7 +13,9 @@ enum class DiscoveryCategory(val itemType: String, private val labelKey: String)
     ALBUMS("MusicAlbum", "专辑"),
     MUSIC("Audio", "音乐"),
     ARTISTS("MusicArtist", "歌手"),
-    PROGRAMS("Program", "节目");
+    // 与官方 Web 搜索一致：节目按 LiveTvProgram、频道按 TvChannel 查询。
+    PROGRAMS("LiveTvProgram", "节目"),
+    CHANNELS("TvChannel", "频道");
 
     val label: String get() = tr(labelKey)
 }
@@ -21,4 +23,9 @@ enum class DiscoveryCategory(val itemType: String, private val labelKey: String)
 val searchDiscoveryCategories = DiscoveryCategory.entries.toList()
 val favoriteDiscoveryCategories = listOf(DiscoveryCategory.MOVIES, DiscoveryCategory.SERIES,
     DiscoveryCategory.COLLECTIONS, DiscoveryCategory.PEOPLE, DiscoveryCategory.EPISODES,
-    DiscoveryCategory.SEASONS, DiscoveryCategory.ALBUMS, DiscoveryCategory.MUSIC)
+    DiscoveryCategory.SEASONS, DiscoveryCategory.ALBUMS, DiscoveryCategory.MUSIC, DiscoveryCategory.CHANNELS)
+private val liveTvDiscoveryCategories = setOf(DiscoveryCategory.PROGRAMS, DiscoveryCategory.CHANNELS)
+
+/** 未启用直播电视时，搜索与收藏不出现节目和频道。 */
+fun List<DiscoveryCategory>.forLiveTv(enabled: Boolean): List<DiscoveryCategory> =
+    if (enabled) this else filterNot { it in liveTvDiscoveryCategories }

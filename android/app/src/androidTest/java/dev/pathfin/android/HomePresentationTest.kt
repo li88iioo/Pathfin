@@ -3,6 +3,7 @@ package dev.pathfin.android
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHostState
@@ -33,6 +34,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import coil3.ImageLoader
@@ -45,6 +47,8 @@ import dev.pathfin.android.ui.HomeScreen
 import dev.pathfin.android.ui.HomeState
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalPosterLoader
+import dev.pathfin.android.ui.LocalPageTopInset
+import dev.pathfin.android.ui.PageTitleBar
 import dev.pathfin.android.ui.LibrariesScreen
 import dev.pathfin.android.ui.LocalNoticeHost
 import dev.pathfin.android.ui.PathfinSnackbarHost
@@ -347,12 +351,36 @@ class HomePresentationTest {
         compose.onNodeWithTag("home-ambient-play").assertTextEquals("继续播放").performVerificationClick(compose)
         compose.runOnIdle { assertSame("播放键播放当前选中的一集", second, played) }
 
-        compose.onNodeWithTag("home-list").performTouchInput { swipeUp(startY = height * .65f, endY = height * .55f, durationMillis = 1_000) }
+        val list = compose.onNodeWithTag("home-list")
+        list.performTouchInput { swipeUp(startY = height * .65f, endY = height * .55f, durationMillis = 1_000) }
+        VerificationDisplay.awaitWindowReady(compose, "home-cover-partial", list)
         compose.runOnIdle { assertEquals("内容滚入标题栏后，深色剧照仍覆盖时保持深色玻璃", true, covered.last()) }
-        compose.onNodeWithTag("home-list").performScrollToKey("library-shelf/${libraries.last().id}")
+        list.performScrollToKey("library-shelf/${libraries.last().id}")
+        VerificationDisplay.awaitWindowReady(compose, "home-cover-scrolled-out", list)
         compose.runOnIdle { assertEquals("剧照滚出标题栏后恢复底色", false, covered.last()) }
-        compose.onNodeWithTag("home-list").performScrollToIndex(0)
+        list.performScrollToIndex(0)
+        VerificationDisplay.awaitWindowReady(compose, "home-cover-returned-top", list)
         compose.runOnIdle { assertEquals(true, covered.last()) }
+    }
+
+    @Test fun headerChromeReadsTheMeasuredCoverWhenAmbientContentAppearsOrDisappears() {
+        val empty = HomeState(loaded = true, resumeLoaded = true, nextUpLoaded = true)
+        val home = mutableStateOf(empty)
+        val covers = mutableListOf<Boolean>()
+        showHome(home, onAmbientCovered = { covers += it })
+        VerificationDisplay.awaitWindowReady(compose, "home-chrome-empty", compose.onNodeWithTag("home-list"))
+        compose.runOnIdle { assertEquals(false, covers.first()) }
+        for ((next, expected) in listOf(HomeState(loading = true) to true, empty to false,
+            HomeState(resume = listOf(movie), loaded = true, resumeLoaded = true, nextUpLoaded = true) to true,
+            HomeState(error = "合成加载失败") to false)) {
+            compose.runOnIdle { covers.clear(); home.value = next }
+            VerificationDisplay.awaitWindowReady(compose, "home-chrome-cover-$expected", compose.onNodeWithTag("home-list"))
+            compose.runOnIdle {
+                assertTrue("每次内容更新都必须交付测量后的页头", covers.isNotEmpty())
+                // 首帧由窗口 PixelCopy 用例约束，这里验证完成测量后的组件状态。
+                assertEquals("测量后的页头应匹配当前封面覆盖", expected, covers.last())
+            }
+        }
     }
 
     @Test fun librariesKeepTheirPositionAndExposeRetryWhenRefreshingExistingContentFails() {
@@ -436,9 +464,16 @@ class HomePresentationTest {
             val density = LocalDensity.current.density
             CompositionLocalProvider(LocalDensity provides Density(density, fontScale.value),
                 LocalPosterLoader provides loader,
+                LocalPageTopInset provides 60.dp,
                 LocalAppPreferences provides AppPreferences(showPosterBadges = true)) {
                 PathfinTheme(theme.value) {
-                    Surface(Modifier.fillMaxSize()) { HomeScreen(home.value, session, api, onOpen, retry = {}, onPlay = onPlay, onAmbientCovered = onAmbientCovered) }
+                    Surface(Modifier.fillMaxSize()) {
+                        HomeScreen(home.value, session, api, onOpen, retry = {}, onPlay = onPlay, chrome = { covered ->
+                            PageTitleBar(Modifier.fillMaxWidth(), height = 60.dp, dark = covered) {
+                                androidx.compose.runtime.SideEffect { onAmbientCovered(covered) }
+                            }
+                        })
+                    }
                 }
             }
         }

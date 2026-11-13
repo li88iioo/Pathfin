@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -84,60 +85,76 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, retry: () -> Unit,
-    onPlay: ((MediaItem) -> Unit)? = null, preparingIds: Set<String> = emptySet(), onAmbientCovered: (Boolean) -> Unit = {}) {
+    onPlay: ((MediaItem) -> Unit)? = null, preparingIds: Set<String> = emptySet(), chrome: @Composable (Boolean) -> Unit = {}) {
     val bottomInset = LocalNavigationBottomInset.current
     val topInset = LocalPageTopInset.current
     val ambient = remember(home) { homeAmbientEntries(home) }
     val showAmbient = ambient.isNotEmpty() || homeAmbientPending(home)
     val list = rememberLazyListState()
     val coverLimitPx = with(LocalDensity.current) { (topInset + AmbientFade).roundToPx() }
-    val ambientShown by rememberUpdatedState(showAmbient)
     // 剧照的深色部分还在标题栏下方时用深色玻璃白字；只剩渐隐进底色的尾巴时换回浅色玻璃。
-    val covered by remember(coverLimitPx) { derivedStateOf {
+    val covered = {
         val first = list.layoutInfo.visibleItemsInfo.firstOrNull()
-        ambientShown && first != null && first.index == 0 && first.offset + first.size > coverLimitPx
-    } }
-    LaunchedEffect(covered) { onAmbientCovered(covered) }
+        showAmbient && first != null && first.index == 0 && first.offset + first.size > coverLimitPx
+    }
     val hasContent = ambient.isNotEmpty() || home.libraries.isNotEmpty() || home.recent.isNotEmpty()
     RefreshFailureNotice(home.error?.takeIf { hasContent }, settled = !home.loading, retry = retry)
-    RefreshablePage(home.loading, retry, Modifier.fillMaxSize(), refreshOnEntry = home.loaded || home.error != null) {
-        LazyColumn(
-            Modifier.fillMaxSize().testTag("home-list"),
-            state = list,
-            contentPadding = PaddingValues(top = if (showAmbient) 0.dp else topInset, bottom = bottomInset),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (showAmbient) item(key = "home-ambient") {
-                HomeAmbient(ambient, session, api, topInset, preparingIds, onOpen, onPlay)
-            }
-            item(key = "home-libraries") {
-                Box(Modifier.fillMaxWidth().height(40.dp).testTag("home-libraries-content"), contentAlignment = Alignment.Center) {
-                    if (home.libraries.isNotEmpty()) {
-                        LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(home.libraries, key = { it.id }) { library -> LibraryPill(library) { onOpen(library) } }
-                        }
-                    } else if (home.librariesLoaded) Text(tr("暂无可见媒体库"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+    HomePageLayout(covered = covered, chrome = chrome) {
+        RefreshablePage(home.loading, retry, Modifier.fillMaxSize()
+            .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)).topBarBlurSource(),
+            refreshOnEntry = home.loaded || home.error != null) {
+            LazyColumn(
+                Modifier.fillMaxSize().testTag("home-list"),
+                state = list,
+                contentPadding = PaddingValues(top = if (showAmbient) 0.dp else topInset, bottom = bottomInset),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (showAmbient) item(key = "home-ambient") {
+                    HomeAmbient(ambient, session, api, topInset, preparingIds, onOpen, onPlay)
+                }
+                item(key = "home-libraries") {
+                    Box(Modifier.fillMaxWidth().height(40.dp).testTag("home-libraries-content"), contentAlignment = Alignment.Center) {
+                        if (home.libraries.isNotEmpty()) {
+                            LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(home.libraries, key = { it.id }) { library -> LibraryPill(library) { onOpen(library) } }
+                            }
+                        } else if (home.librariesLoaded) Text(tr("暂无可见媒体库"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                    }
+                }
+                // 每栏标题就是库名，点击进入该库。
+                home.libraries.filter { it.supportsLatestItems }.forEach { library ->
+                    item(key = "library-shelf/${library.id}") {
+                        PosterShelf(
+                            library.name, home.libraryItems[library.id].orEmpty(), session, api, onOpen,
+                            onMore = { onOpen(library) }, compactHeading = true,
+                            loading = !home.libraryItems.containsKey(library.id),
+                            keepEmptySpace = true, leading = { LatestArrivalIcon(libraryTypeIcon(library)) },
+                            leadWide = library.collectionType.equals("movies", ignoreCase = true),
+                            modifier = Modifier.testTag("library-shelf/${library.id}"),
+                        )
+                    }
+                }
+                if (home.recent.isNotEmpty() && home.libraries.isEmpty()) item(key = "home-recent") {
+                    PosterShelf(tr("最近入库"), home.recent, session, api, onOpen, compactHeading = true)
+                }
+                home.error?.takeUnless { hasContent }?.let { error ->
+                    item(key = "home-error") { ErrorPanel(error, modifier = Modifier.padding(horizontal = 16.dp), retry = retry) }
                 }
             }
-            // 每栏标题就是库名，点击进入该库。
-            home.libraries.filter { it.supportsLatestItems }.forEach { library ->
-                item(key = "library-shelf/${library.id}") {
-                    PosterShelf(
-                        library.name, home.libraryItems[library.id].orEmpty(), session, api, onOpen,
-                        onMore = { onOpen(library) }, compactHeading = true,
-                        loading = !home.libraryItems.containsKey(library.id),
-                        keepEmptySpace = true, leading = { LatestArrivalIcon(libraryTypeIcon(library)) },
-                        leadWide = library.collectionType.equals("movies", ignoreCase = true),
-                        modifier = Modifier.testTag("library-shelf/${library.id}"),
-                    )
-                }
-            }
-            if (home.recent.isNotEmpty() && home.libraries.isEmpty()) item(key = "home-recent") {
-                PosterShelf(tr("最近入库"), home.recent, session, api, onOpen, compactHeading = true)
-            }
-            home.error?.takeUnless { hasContent }?.let { error ->
-                item(key = "home-error") { ErrorPanel(error, modifier = Modifier.padding(horizontal = 16.dp), retry = retry) }
-            }
+        }
+    }
+}
+
+@Composable
+private fun HomePageLayout(covered: () -> Boolean, chrome: @Composable (Boolean) -> Unit, content: @Composable () -> Unit) {
+    SubcomposeLayout(Modifier.fillMaxSize()) { constraints ->
+        // 在测量中读取覆盖值，避免页头先独立重组、读到正文更新前的布局。
+        val body = subcompose("body", content).single().measure(constraints)
+        val measuredCover = covered()
+        val header = subcompose("chrome") { chrome(measuredCover) }.map { it.measure(constraints.copy(minHeight = 0)) }
+        layout(body.width, body.height) {
+            body.placeRelative(0, 0)
+            header.forEach { it.placeRelative(0, 0) }
         }
     }
 }

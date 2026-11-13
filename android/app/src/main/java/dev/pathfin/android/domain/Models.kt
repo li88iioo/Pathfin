@@ -75,6 +75,9 @@ data class MediaItem(
     val productionLocations: List<String> = emptyList(),
     /** 人物的去世日期；剧集仍用 endYear 表示完结年份。 */
     val endDate: String? = null,
+    /** 直播节目所属频道；打开节目即播放该频道。 */
+    val channelId: String? = null,
+    val channelName: String? = null,
 )
 
 data class MediaChapter(val name: String, val startPositionTicks: Long, val imageTag: String? = null, val imageIndex: Int = -1)

@@ -470,13 +470,14 @@ internal fun PathfinSnackbarHost(state: SnackbarHostState, modifier: Modifier = 
     SnackbarHost(state, modifier.padding(horizontal = 16.dp, vertical = 12.dp)) { data ->
         val shape = RoundedCornerShape(24.dp)
         val trailing = data.visuals.actionLabel != null || data.visuals.withDismissAction
-        // 居中的胶囊：宽度随文字（最宽 560dp），过长时换行；毛玻璃底半透明，投影只在实色时保留。
+        // 居中的胶囊：宽度随文字（最宽 560dp），过长时换行。浮在内容上必须一眼可见：
+        // 玻璃底加浓到接近实色，并始终带一层柔和投影把它从页面上托起来。
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Row(
                 Modifier.widthIn(max = 560.dp)
-                    .then(if (frostedEnabled) Modifier else Modifier.shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = .10f),
-                        spotColor = Color.Black.copy(alpha = .14f))).clip(shape).frostedPanel()
-                    .border(PathfinAppearance.cardBorder, shape).heightIn(min = 48.dp)
+                    .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = .12f), spotColor = Color.Black.copy(alpha = .18f))
+                    .clip(shape).frostedCard(0.94f, radius = 32.dp)
+                    .border(PathfinAppearance.glassBorder, shape).heightIn(min = 48.dp)
                     .padding(start = 16.dp, end = if (trailing) 6.dp else 18.dp, top = 4.dp, bottom = 4.dp).testTag(tag),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

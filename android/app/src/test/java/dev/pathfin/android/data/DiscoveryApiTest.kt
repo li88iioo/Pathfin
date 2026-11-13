@@ -333,7 +333,8 @@ class DiscoveryApiTest {
             DiscoveryCategory.MOVIES to "Movie", DiscoveryCategory.SERIES to "Series",
             DiscoveryCategory.COLLECTIONS to "BoxSet", DiscoveryCategory.EPISODES to "Episode",
             DiscoveryCategory.SEASONS to "Season", DiscoveryCategory.ALBUMS to "MusicAlbum",
-            DiscoveryCategory.MUSIC to "Audio", DiscoveryCategory.PROGRAMS to "Program",
+            DiscoveryCategory.MUSIC to "Audio", DiscoveryCategory.PROGRAMS to "LiveTvProgram",
+            DiscoveryCategory.CHANNELS to "TvChannel",
         )
     }
 }

@@ -55,6 +55,7 @@ import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.domain.TimeUnits
 import dev.pathfin.android.domain.favoriteDiscoveryCategories
+import dev.pathfin.android.domain.forLiveTv
 import dev.pathfin.android.domain.searchDiscoveryCategories
 import dev.pathfin.android.i18n.tr
 import kotlinx.coroutines.delay
@@ -65,11 +66,13 @@ internal const val DISCOVERY_PREVIEW_LIMIT = 6
 internal fun SearchScreen(state: AppState, session: Session, vm: AppViewModel) = SearchContent(
     state.search, session, vm.api, { if (vm.state.value.route == Route.Search) vm.search(it) }, vm::toggleSearchCategory,
     vm::refreshSearch, { vm.openDiscovery(it, false) }, vm::open,
+    searchDiscoveryCategories.forLiveTv(state.preferences.liveTvEnabled),
 )
 
 @Composable
 internal fun FavoritesScreen(state: AppState, session: Session, vm: AppViewModel) = FavoritesContent(
     state.favorites, session, vm.api, vm::refreshFavorites, { vm.openDiscovery(it, true) }, vm::open,
+    favoriteDiscoveryCategories.forLiveTv(state.preferences.liveTvEnabled),
 )
 
 /** 输入与类型栏固定占位；请求只更新下方内容，不改变输入框与筛选项的位置。 */
@@ -83,6 +86,7 @@ internal fun SearchContent(
     onRefresh: () -> Unit,
     onShowAll: (DiscoveryCategory) -> Unit,
     onOpen: (MediaItem) -> Unit,
+    categories: List<DiscoveryCategory> = searchDiscoveryCategories,
 ) {
     var query by rememberSaveable(session.server.baseUrl, session.userId) { mutableStateOf(state.query) }
     val committedQuery by rememberUpdatedState(state.query)
@@ -118,7 +122,7 @@ internal fun SearchContent(
                             onToggleCategory(null)
                         })
                     }
-                    items(searchDiscoveryCategories, key = { it.name }) { category ->
+                    items(categories, key = { it.name }) { category ->
                         PathfinPill(category.label, category in state.categories, modifier = Modifier.testTag("search-filter/${category.name}"), toggle = true, onClick = {
                             if (query.trim() != state.query) onSearch(query)
                             onToggleCategory(category)
@@ -135,7 +139,7 @@ internal fun SearchContent(
                 } else {
                     key(state.query) {
                         DiscoveryResults(
-                            state.results, searchDiscoveryCategories.filter { state.categories.isEmpty() || it in state.categories },
+                            state.results, categories.filter { state.categories.isEmpty() || it in state.categories },
                             session, api, "search-results", onRefresh, onShowAll, onOpen,
                             topInset = headerHeight, emptyTitle = tr("没有找到相关内容"),
                         )
@@ -183,8 +187,9 @@ internal fun FavoritesContent(
     onRefresh: () -> Unit,
     onShowAll: (DiscoveryCategory) -> Unit,
     onOpen: (MediaItem) -> Unit,
+    categories: List<DiscoveryCategory> = favoriteDiscoveryCategories,
 ) {
-    DiscoveryResults(state, favoriteDiscoveryCategories, session, api, "favorites-results", onRefresh, onShowAll, onOpen,
+    DiscoveryResults(state, categories, session, api, "favorites-results", onRefresh, onShowAll, onOpen,
         topInset = LocalPageTopInset.current, emptyTitle = tr("还没有收藏"))
 }
 
@@ -313,7 +318,7 @@ internal fun DiscoveryGridContent(
 }
 
 private val DiscoveryCategory.isLandscape: Boolean
-    get() = this == DiscoveryCategory.EPISODES || this == DiscoveryCategory.PROGRAMS
+    get() = this == DiscoveryCategory.EPISODES || this == DiscoveryCategory.PROGRAMS || this == DiscoveryCategory.CHANNELS
 
 @Composable
 private fun DiscoveryMediaCard(

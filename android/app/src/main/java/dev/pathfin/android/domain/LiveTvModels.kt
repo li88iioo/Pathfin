@@ -19,6 +19,8 @@ data class LiveTvChannel(
 ) {
     val id: String get() = item.id
     val name: String get() = item.name
+    /** M3U 未写台号时，Jellyfin 会从播放地址里取一串数字当台号（如 608807420）；这种长串不显示。 */
+    val displayNumber: String? get() = number?.takeIf { it.length <= 4 }
 }
 
 data class LiveTvProgram(

@@ -18,6 +18,14 @@ class LiveTvProgramTest {
         assertEquals(1f, program.progress(start.plusSeconds(7200))!!, 0f)
     }
 
+    @Test fun onlyShortChannelNumbersAreShown() {
+        fun number(value: String?) = LiveTvChannel(MediaItem("c", "CCTV1", "TvChannel"), value).displayNumber
+        assertEquals("13", number("13"))
+        assertEquals("1001", number("1001"))
+        assertNull("从播放地址取出的长串不是台号", number("608807420"))
+        assertNull(number(null))
+    }
+
     @Test fun missingOrReversedTimesDoNotInventAiringOrProgress() {
         for (invalid in listOf(program.copy(start = null), program.copy(end = null), program.copy(end = start), program.copy(end = start.minusSeconds(1)))) {
             assertFalse(invalid.isAiring(start))

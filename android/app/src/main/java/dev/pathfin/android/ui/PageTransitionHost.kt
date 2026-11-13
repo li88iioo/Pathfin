@@ -37,7 +37,7 @@ internal suspend fun State<Boolean>.awaitSettled() {
 
 private class PageEntry(val key: String, val depth: Int, val direction: Int, var snapshot: AppState)
 
-private val rootTabs = setOf(Route.Home, Route.Search, Route.Favorites)
+private val rootTabs = setOf(Route.Home, Route.LiveTv, Route.Search, Route.Favorites)
 private val AppState.isRootTab: Boolean
     get() = session != null && !showServers && routes.size == 1 && route in rootTabs
 
@@ -48,7 +48,7 @@ internal fun PageTransitionHost(state: AppState, content: @Composable (AppState)
     // MainActivity 的首帧门控会在这期间保留系统启动页。
     if (state.restoringSession) return
     key(state.currentProfileId) {
-        // 三个底栏页面属于同一层级，在这个目标内按需保留组合；进入详情仍沿用原有推入/推出。
+        // 底栏页面属于同一层级，在这个目标内按需保留组合；进入详情仍沿用原有推入/推出。
         val pageKey = if (state.isRootTab) "root-tabs" else "${state.showServers}/${state.route.key}"
         val previous = remember { arrayOf<PageEntry?>(null) }
         val entry = remember(pageKey) {
@@ -95,7 +95,7 @@ internal fun PageTransitionHost(state: AppState, content: @Composable (AppState)
     }
 }
 
-/** 只保留访问过的三个根页；隐藏页不测量、不绘制、不接收触摸，也不触发页面刷新。 */
+/** 只保留访问过的底栏根页；隐藏页不测量、不绘制、不接收触摸，也不触发页面刷新。 */
 @Composable
 private fun RootTabPages(state: AppState, active: Boolean, content: @Composable (AppState) -> Unit) {
     val pages = remember { linkedMapOf<Route, AppState>() }
