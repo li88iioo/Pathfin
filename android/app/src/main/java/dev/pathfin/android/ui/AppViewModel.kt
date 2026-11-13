@@ -782,7 +782,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val current = state.value
         val pending = current.pendingPlayback?.takeIf { current.preparingPlay } ?: return
         cancelPendingPlayback()
-        beginPlaybackPreparation(pending.item, pending.fromStart, pending.sourceId, pending.loadDetails, pending.quality)
+        preparePlayback(pending.item, pending.fromStart, pending.sourceId, pending.loadDetails, pending.quality)
     }
 
     fun changePassword(profile: ServerProfile, current: String, new: String) = serverOperation(profile) {
@@ -1882,24 +1882,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(detailLoading = false, detailError = null) }
     }
 
-    fun preparePlayback(item: MediaItem, fromStart: Boolean = false, sourceId: String? = null, loadDetails: Boolean = false) {
-        beginPlaybackPreparation(item, fromStart, sourceId, loadDetails)
-    }
-
     /** 播放器内切集；quality 是当前手选画质，连播时沿用。 */
     fun prepareEpisodePlayback(item: MediaItem, quality: PlaybackQuality? = null) {
         if (item.type != "Episode") return
         val full = state.value.details[item.id]
-        beginPlaybackPreparation(full ?: item, fromStart = true,
+        preparePlayback(full ?: item, fromStart = true,
             loadDetails = full == null, quality = quality)
     }
 
     fun retryPendingPlayback() {
         val pending = state.value.pendingPlayback ?: return
-        beginPlaybackPreparation(pending.item, pending.fromStart, pending.sourceId, pending.loadDetails, pending.quality)
+        preparePlayback(pending.item, pending.fromStart, pending.sourceId, pending.loadDetails, pending.quality)
     }
 
-    private fun beginPlaybackPreparation(item: MediaItem, fromStart: Boolean,
+    fun preparePlayback(item: MediaItem, fromStart: Boolean = false,
         sourceId: String? = null, loadDetails: Boolean = false, quality: PlaybackQuality? = null) {
         val current = state.value
         val session = current.session ?: return
@@ -1968,7 +1964,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (selection.server != session.server) {
             // 选源框等待期间换了地址：按所选片源在新地址重新取得播放信息，保留同一起播意图。
             cancelPendingPlayback()
-            beginPlaybackPreparation(pending.item, pending.fromStart, sourceId, pending.loadDetails, pending.quality)
+            preparePlayback(pending.item, pending.fromStart, sourceId, pending.loadDetails, pending.quality)
             return
         }
         val epoch = generation
