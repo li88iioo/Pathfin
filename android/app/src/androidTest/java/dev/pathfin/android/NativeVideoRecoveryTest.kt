@@ -76,11 +76,8 @@ class NativeVideoRecoveryTest {
                         group.type == C.TRACK_TYPE_AUDIO && (0 until group.length).any { group.getTrackFormat(it).label == JAPANESE }
                     }
                     val index = (0 until group.length).single { group.getTrackFormat(it).label == JAPANESE }
-                    playback.onManualTrackSelection(owner, C.TRACK_TYPE_AUDIO, group.getTrackFormat(index), false)
-                    playback.onManualTrackSelection(owner, C.TRACK_TYPE_TEXT, null, true)
-                    owner.trackSelectionParameters = owner.trackSelectionParameters.buildUpon()
-                        .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index))
-                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+                    playback.selectTrack(owner, C.TRACK_TYPE_AUDIO, TrackSelectionOverride(group.mediaTrackGroup, index))
+                    playback.selectTrack(owner, C.TRACK_TYPE_TEXT, null, true)
                 }
             }
             compose.waitUntil(WAIT) { main {

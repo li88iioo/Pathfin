@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.C
-import androidx.media3.common.Format
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -99,7 +99,7 @@ internal fun PlayerControlsOverlay(
     onShowEpisodes: (() -> Unit)? = null,
     onShowChapters: (() -> Unit)? = null,
     onScreenshot: (() -> Unit)? = null,
-    onManualTrackSelection: (Player, Int, Format?, Boolean) -> Unit = { _, _, _, _ -> },
+    onTrackSelection: (Player, Int, TrackSelectionOverride?, Boolean) -> Unit,
     onSetSleepTimer: (Int?) -> Unit = {},
     sleepTimerLabel: String? = null,
     audioGainPercent: Int = 100,
@@ -309,7 +309,7 @@ internal fun PlayerControlsOverlay(
                 onPanelChange = { panel = it }, onShowQuality = onShowQuality,
                 showSpeed = !state.live && (state.errorMessage != null || state.ended), showQuality = !state.live,
                 showScreenshot = !landscape || state.errorMessage != null || state.ended,
-                onScreenshot = onScreenshot, onManualTrackSelection = onManualTrackSelection,
+                onScreenshot = onScreenshot, onTrackSelection = onTrackSelection,
                 onSetSleepTimer = onSetSleepTimer, sleepTimerLabel = sleepTimerLabel,
                 audioGainPercent = audioGainPercent, onAudioGainChange = onAudioGainChange, onAddSubtitle = onAddSubtitle,
                 onManageSubtitles = onManageSubtitles,

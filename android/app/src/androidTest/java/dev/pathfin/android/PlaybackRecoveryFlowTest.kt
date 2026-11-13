@@ -76,9 +76,8 @@ class PlaybackRecoveryFlowTest {
                 // 畸形源没有可seek的时间线；验证保留已有6秒续播点，不假设错误态还能拖动进度。
                 playback.setPlaybackSpeed(1.75f)
                 playback.setControlsLocked(true)
-                playback.onManualTrackSelection(owner, C.TRACK_TYPE_TEXT, null, true)
-                owner.trackSelectionParameters = owner.trackSelectionParameters.buildUpon()
-                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, audioOnly).build()
+                playback.selectTrack(owner, C.TRACK_TYPE_TEXT, null, true)
+                playback.selectTrack(owner, C.TRACK_TYPE_VIDEO, null, audioOnly)
                 owner
             }
             assertFalse("协商放行前不能提前打开新媒体", fixture.mediaRoutes.contains(SERVER_ROUTE))

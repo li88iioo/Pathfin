@@ -215,10 +215,8 @@ class ContinuousTracksFlowTest {
                 val current = checkNotNull(playback.player)
                 assertNotSame(before, current)
                 assertTrue(current.currentTracks.groups.isEmpty())
-                // 与真实 UI 相同的记录→应用顺序；旧候选尚未到达，不能反向覆盖新选择。
-                playback.onManualTrackSelection(current, C.TRACK_TYPE_TEXT, null, disabled)
-                current.trackSelectionParameters = current.trackSelectionParameters.buildUpon()
-                    .clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, disabled).build()
+                // 经过真实 UI 共用的选轨入口；旧候选尚未到达，不能反向覆盖新选择。
+                playback.selectTrack(current, C.TRACK_TYPE_TEXT, null, disabled)
             }
             fixture.releaseSecond.countDown()
             awaitPlayback(playback)

@@ -34,7 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.media3.common.C
-import androidx.media3.common.Format
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import dev.pathfin.android.playback.SubtitlePresentation
@@ -74,7 +74,7 @@ internal fun PlayerControlPopup(
     showQuality: Boolean,
     showScreenshot: Boolean,
     onScreenshot: (() -> Unit)?,
-    onManualTrackSelection: (Player, Int, Format?, Boolean) -> Unit,
+    onTrackSelection: (Player, Int, TrackSelectionOverride?, Boolean) -> Unit,
     onSetSleepTimer: (Int?) -> Unit,
     sleepTimerLabel: String?,
     audioGainPercent: Int,
@@ -111,7 +111,7 @@ internal fun PlayerControlPopup(
             val audioOnly = C.TRACK_TYPE_VIDEO in snapshot.selection.disabledTrackTypes
             add(MoreEntry(if (audioOnly) PathfinIcons.Video else PathfinIcons.Audio, if (audioOnly) tr("恢复画面") else tr("仅播放音频"), "player-audio-only",
                 enabled = player != null) {
-                player?.let { selectPlayerTrack(it, C.TRACK_TYPE_VIDEO, null, disabled = !audioOnly) }
+                player?.let { onTrackSelection(it, C.TRACK_TYPE_VIDEO, null, !audioOnly) }
                 onDismiss()
             })
             if (showScreenshot) add(MoreEntry(PathfinIcons.Camera, tr("保存截图"), "player-screenshot", enabled = onScreenshot != null) {
@@ -137,19 +137,18 @@ internal fun PlayerControlPopup(
                         val current = choices.firstOrNull { it.selected }?.label
                         if (choices.isNotEmpty()) item("automatic") { PlayerChoiceRow(tr("自动选择"), automatic, "player-track-auto",
                             detail = if (automatic) current?.let { tr("当前：%1\$s", it) } else null) {
-                            player?.let { onManualTrackSelection(it, type, null, false); selectPlayerTrack(it, type, null) }
+                            player?.let { onTrackSelection(it, type, null, false) }
                             onDismiss()
                         } }
                         if (choices.isNotEmpty()) item("off") { PlayerChoiceRow(if (type == C.TRACK_TYPE_AUDIO) tr("关闭音轨") else tr("关闭字幕"), disabled, "player-track-off") {
-                            player?.let { onManualTrackSelection(it, type, null, true); selectPlayerTrack(it, type, null, disabled = true) }
+                            player?.let { onTrackSelection(it, type, null, true) }
                             onDismiss()
                         } }
                         items(choices, key = { it.id }) { choice ->
                             PlayerChoiceRow(choice.label + if (choice.supported) "" else tr(" · 设备不支持"),
                                 selected = !disabled && !automatic && choice.selected, tag = "player-track-${choice.id}", enabled = choice.supported) {
                                 player?.let {
-                                    onManualTrackSelection(it, type, choice.group.getFormat(choice.index), false)
-                                    selectPlayerTrack(it, type, choice)
+                                    onTrackSelection(it, type, TrackSelectionOverride(choice.group, choice.index), false)
                                 }
                                 onDismiss()
                             }

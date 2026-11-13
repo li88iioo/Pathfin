@@ -412,7 +412,7 @@ fun PlayerScreen(
                     onEnterPictureInPicture = onEnterPictureInPicture, onToggleOrientation = onToggleOrientation,
                     onPrevious = onPrevious, onNext = onNext, onShowEpisodes = onShowEpisodes, onShowChapters = onShowChapters,
                     onScreenshot = captureScreenshot.takeIf { state.hasRenderedFrame && !screenshotBusy },
-                    onManualTrackSelection = viewModel::onManualTrackSelection,
+                    onTrackSelection = viewModel::selectTrack,
                     onSetSleepTimer = { minutes -> sleepDeadline = minutes?.let { SystemClock.elapsedRealtime() + it * 60_000L } ?: 0L },
                     sleepTimerLabel = sleepRemaining.takeIf { it > 0 }?.let { tr("%1\$s 分钟后关闭", (it + 59_999) / 60_000) },
                     audioGainPercent = preferences.audioGainPercent,

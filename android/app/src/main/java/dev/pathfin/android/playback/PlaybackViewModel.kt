@@ -856,24 +856,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         exoPlayer.setPlaybackSpeed(speed.coerceIn(0.25f, 4f))
     }
 
-    /** 仅由实际选轨界面调用；自动选轨事件本身绝不变成用户记忆。 */
-    fun onManualTrackSelection(owner: Player, type: Int, format: Format?, disabled: Boolean) {
+    /** 手动选轨统一验证、记忆并应用；自动恢复轨道不经过此入口。 */
+    fun selectTrack(owner: Player, type: Int, selection: TrackSelectionOverride?, disabled: Boolean = false) {
         val current = active ?: return
         if (player !== owner || mutableState.value.playerGeneration != current.playerGeneration ||
             owner.pathfinReleased() || !owner.isCommandAvailable(Player.COMMAND_SET_TRACK_SELECTION_PARAMETERS)) return
-        val rememberedType = rememberedType(type) ?: return
-        if (format != null && (disabled || owner.currentTracks.groups.none { group ->
-                group.type == type && (0 until group.length).any { group.isTrackSupported(it) && group.getTrackFormat(it) == format }
-            })) return
-        val remembered = when {
-            disabled -> RememberedTrack.Disabled
-            format != null -> stableTrackIdentity(format)?.let { RememberedTrack.Selected(it) }
-            else -> null
+        val format = selection?.let { choice ->
+            if (disabled || choice.type != type) return
+            val index = choice.trackIndices.singleOrNull() ?: return
+            val group = owner.currentTracks.groups.firstOrNull { it.mediaTrackGroup == choice.mediaTrackGroup } ?: return
+            if (index !in 0 until group.length || !group.isTrackSupported(index)) return
+            group.getTrackFormat(index)
         }
-        current.manualTrackRevision += 1
-        current.manualTracks = current.manualTracks.with(rememberedType, remembered)
-        // “自动”与“关闭”同样立即使旧 pending 失效；迟到 Tracks 不能覆盖新手选。
-        current.pendingManualTrackTypes.remove(rememberedType)
+        rememberedType(type)?.let { rememberedType ->
+            val remembered = when {
+                disabled -> RememberedTrack.Disabled
+                format != null -> stableTrackIdentity(format)?.let { RememberedTrack.Selected(it) }
+                else -> null
+            }
+            current.manualTrackRevision += 1
+            current.manualTracks = current.manualTracks.with(rememberedType, remembered)
+            // “自动”与“关闭”同样立即使旧 pending 失效；迟到 Tracks 不能覆盖新手选。
+            current.pendingManualTrackTypes.remove(rememberedType)
+        }
+        owner.trackSelectionParameters = owner.trackSelectionParameters.buildUpon().clearOverridesOfType(type)
+            .setTrackTypeDisabled(type, disabled).apply { selection?.let(::setOverrideForType) }.build()
     }
 
     fun configureAudioGain(percent: Int) {
@@ -940,9 +947,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             ?: candidates.filter { (group, index) -> group.getFormat(index).label == subtitle.label }.singleOrNull()
             ?: return
         current.pendingLocalSubtitle = null
-        owner.trackSelectionParameters = owner.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT)
-            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).setOverrideForType(TrackSelectionOverride(match.first, match.second)).build()
-        onManualTrackSelection(owner, C.TRACK_TYPE_TEXT, match.first.getFormat(match.second), false)
+        selectTrack(owner, C.TRACK_TYPE_TEXT, TrackSelectionOverride(match.first, match.second))
     }
 
     private fun applyRememberedTracks(current: ActivePlayback, owner: Player, tracks: Tracks) {

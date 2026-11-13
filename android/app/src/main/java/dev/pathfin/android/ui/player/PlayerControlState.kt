@@ -11,7 +11,6 @@ import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.Player
 import androidx.media3.common.TrackGroup
-import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -115,15 +114,6 @@ internal fun trackChoices(tracks: Tracks, type: Int): List<PlayerTrackChoice> = 
             ))
         }
     }
-}
-
-/** 只覆盖用户正在选择的轨道类型，保留另一类型的选择与用户语言偏好。 */
-@UnstableApi
-internal fun selectPlayerTrack(player: Player, type: Int, choice: PlayerTrackChoice?, disabled: Boolean = false) {
-    if (player.pathfinReleased() || !player.isCommandAvailable(Player.COMMAND_SET_TRACK_SELECTION_PARAMETERS)) return
-    val builder = player.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type, disabled)
-    if (choice != null && choice.supported) builder.setOverrideForType(TrackSelectionOverride(choice.group, choice.index))
-    player.trackSelectionParameters = builder.build()
 }
 
 @UnstableApi

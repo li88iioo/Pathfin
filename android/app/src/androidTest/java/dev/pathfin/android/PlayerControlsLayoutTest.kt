@@ -540,7 +540,8 @@ class PlayerControlsLayoutTest {
                             seekSeconds = 10, clock = clock, battery = battery, onBack = {}, onInteraction = {},
                             onKeepVisibleChange = {}, onTogglePlay = {}, onSeekBack = {}, onSeekForward = {},
                             onSeekTo = {}, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
-                            onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
+                            onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onTrackSelection = { _, _, _, _ -> },
+                            onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
                             onSetSleepTimer = onSetSleepTimer, onAudioGainChange = onAudioGainChange, titleLogo = titleLogo)
                     }
                 }

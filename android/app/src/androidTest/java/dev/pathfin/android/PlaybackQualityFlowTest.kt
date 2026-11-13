@@ -233,9 +233,7 @@ class PlaybackQualityFlowTest {
             choose(playback, C.TRACK_TYPE_AUDIO, "Japanese main")
             main {
                 val owner = checkNotNull(playback.player)
-                playback.onManualTrackSelection(owner, C.TRACK_TYPE_TEXT, null, true)
-                owner.trackSelectionParameters = owner.trackSelectionParameters.buildUpon()
-                    .clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+                playback.selectTrack(owner, C.TRACK_TYPE_TEXT, null, true)
             }
             fixture.includeUploadedSubtitle.set(true)
             val updated = main { checkNotNull(playback.currentRequest).item.copy(name = "Synthetic updated subtitle list") }
@@ -334,10 +332,7 @@ class PlaybackQualityFlowTest {
                 .map { group to it }
         }
         val (group, index) = candidates.single()
-        playback.onManualTrackSelection(owner, type, group.getTrackFormat(index), false)
-        owner.trackSelectionParameters = owner.trackSelectionParameters.buildUpon()
-            .clearOverridesOfType(type).setTrackTypeDisabled(type, false)
-            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index)).build()
+        playback.selectTrack(owner, type, TrackSelectionOverride(group.mediaTrackGroup, index))
     }
 
     private fun awaitPosition(playback: PlaybackViewModel, position: Long) = compose.waitUntil(WAIT) {
