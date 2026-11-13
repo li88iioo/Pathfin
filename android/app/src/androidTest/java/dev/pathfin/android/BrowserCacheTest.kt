@@ -71,6 +71,24 @@ import org.junit.runner.RunWith
 @androidx.annotation.OptIn(UnstableApi::class)
 class BrowserCacheTest {
     @Test
+    fun logoutCancelsMultiplePendingMediaActionsWithoutPublishingTheirResults() = withApp { app, fixture ->
+        val first = fixture.blockItem(MOVIE_A, captureResponse = false, allowClientDisconnect = true)
+        val second = fixture.blockItem(MOVIE_B, captureResponse = false, allowClientDisconnect = true)
+        try {
+            onMain {
+                app.prepareCast(MediaItem(MOVIE_A, "First pending cast", "Movie"))
+                app.prepareCast(MediaItem(MOVIE_B, "Second pending cast", "Movie"))
+            }
+            first.awaitRequest(); second.awaitRequest()
+            onMain { app.logout() }
+            first.release(); second.release()
+            awaitState(app, fixture, "退出登录必须完整取消所有媒体操作，不能被任务收尾中断") {
+                it.session == null && !it.loginBusy && it.actionBusy.isEmpty() && it.pendingCast == null
+            }
+        } finally { first.release(); second.release() }
+    }
+
+    @Test
     fun structuralMediaChangeRevalidatesVisibleFiltersWithoutDroppingExistingOptions() = withApp { app, fixture ->
         val library = app.state.value.home.libraries.single { it.id == LIBRARY_A }
         onMain { app.open(library) }

@@ -1024,23 +1024,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun dismissSubtitles() { mutableState.update { it.copy(pendingSubtitleManagement = null) } }
     fun dismissCast() { mutableState.update { it.copy(pendingCast = null) } }
-    fun prepareCast(item: MediaItem) {
-        val session = state.value.session ?: return
-        val key = "cast/${item.id}"
-        if (key in state.value.actionBusy) return
-        val epoch = generation
-        mutableState.update { it.copy(actionBusy = it.actionBusy + key) }
-        extraJobs[key] = viewModelScope.launch {
-            try {
-                ensureLocalNetworkAccess(session.server.baseUrl)
-                val target = if (item.type in setOf("Series", "Season")) resolveSeriesEpisode(session, item, false) else item
-                val full = api.item(session, target.id)
-                if (epoch == generation) mutableState.update { it.copy(pendingCast = full) }
-            } catch (cancelled: CancellationException) { throw cancelled }
-            catch (error: Exception) { if (epoch == generation && !handleAuthFailure(error)) notify(message(error)) }
-            finally { if (epoch == generation) mutableState.update { it.copy(actionBusy = it.actionBusy - key) } }
-        }
-    }
+    fun prepareCast(item: MediaItem) = runMediaAction(item, "cast", { session ->
+        val target = if (item.type in setOf("Series", "Season")) resolveSeriesEpisode(session, item, false) else item
+        api.item(session, target.id)
+    }) { _, full -> mutableState.update { it.copy(pendingCast = full) } }
     fun prepareDownload(item: MediaItem) {
         val session = state.value.session ?: return
         val profileId = state.value.currentProfileId ?: return
@@ -1105,14 +1092,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshMetadata(item: MediaItem, options: MetadataRefreshOptions = MetadataRefreshOptions()) = runMediaAction(item, "refresh", {
         MediaManagementApi(api).refreshItem(it, item.id, options)
-    }) { session ->
+    }) { session, _ ->
         notify(tr("已提交元数据刷新"))
         mediaChanged(session, item.id)
     }
 
     fun deleteMedia(item: MediaItem) = runMediaAction(item, "delete", {
         MediaManagementApi(api).deleteItem(it, item.id)
-    }) {
+    }) { _, _ ->
         removeDeletedMedia(item.id)
         finishMediaDeletion()
         notify(tr("媒体已删除"))
@@ -1184,26 +1171,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun runMediaAction(item: MediaItem, operation: String, action: suspend (Session) -> Unit,
-        onSuccess: (Session) -> Unit) {
+    private fun <T> runMediaAction(item: MediaItem, operation: String, action: suspend (Session) -> T,
+        onSuccess: (Session, T) -> Unit) {
         val session = state.value.session ?: return
         val key = "$operation/${item.id}"
         if (key in state.value.actionBusy) return
         val epoch = generation
         mutableState.update { it.copy(actionBusy = it.actionBusy + key) }
-        extraJobs[key] = viewModelScope.launch {
+        val job = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
                 ensureLocalNetworkAccess(session.server.baseUrl)
-                action(session)
+                val result = action(session)
                 currentCoroutineContext().ensureActive()
-                if (epoch == generation && session.hasSameAuthentication(state.value.session)) onSuccess(session)
+                if (epoch == generation && session.hasSameAuthentication(state.value.session)) onSuccess(session, result)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) {
                 if (epoch == generation && session.hasSameAuthentication(state.value.session) && !handleAuthFailure(error)) notify(message(error))
             } finally {
-                if (epoch == generation) mutableState.update { it.copy(actionBusy = it.actionBusy - key) }
+                if (epoch == generation && extraJobs[key] === currentCoroutineContext().job) {
+                    extraJobs.remove(key)
+                    mutableState.update { it.copy(actionBusy = it.actionBusy - key) }
+                }
             }
         }
+        extraJobs[key] = job
+        job.start()
     }
     private fun removeDeletedMedia(itemId: String) {
         invalidatePlaybackPrefetch(itemId)
@@ -2623,38 +2615,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleFavorite(item: MediaItem) = updateUserData(item, "favorite") { session -> api.setFavorite(session, item.id, !item.isFavorite) }
     fun togglePlayed(item: MediaItem) = updateUserData(item, "played") { session -> api.setPlayed(session, item.id, !item.played) }
-    private fun updateUserData(item: MediaItem, operation: String, action: suspend (Session) -> MediaUserData) {
-        val session = state.value.session ?: return
-        val key = "$operation/${item.id}"
-        if (key in state.value.actionBusy) return
-        val epoch = generation
-        mutableState.update { it.copy(actionBusy = it.actionBusy + key) }
-        viewModelScope.launch {
-            try {
-                ensureLocalNetworkAccess(session.server.baseUrl)
-                val data = action(session)
-                if (generation == epoch) {
-                    applyUserDataChange(BrowserUserDataChange(item, data,
-                        if (operation == "favorite") BrowserUserDataChange.Kind.FAVORITE else BrowserUserDataChange.Kind.PLAYED),
-                        if (operation == "favorite") DiscoveryCategory.entries.firstOrNull { it.itemType == item.type } else null)
-                    // 收藏写回后立即更新已显示的分组，返回时再重取受影响的列表。
-                    if (operation == "favorite" && item.isFavorite) mutableState.update { current ->
-                        current.copy(favorites = current.favorites.copy(sections = current.favorites.sections.mapValues { (_, section) ->
-                            val removed = section.items.count { it.id == item.id }
-                            section.copy(items = section.items.filterNot { it.id == item.id },
-                                total = (section.total - removed).coerceAtLeast(0),
-                                nextIndex = (section.nextIndex - removed).coerceAtLeast(0))
-                        }))
-                    }
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                if (generation == epoch && !handleAuthFailure(e)) mutableState.update { it.copy(notice = message(e)) }
-            } finally {
-                if (generation == epoch) mutableState.update { it.copy(actionBusy = it.actionBusy - key) }
+    private fun updateUserData(item: MediaItem, operation: String, action: suspend (Session) -> MediaUserData) =
+        runMediaAction(item, operation, action) { _, data ->
+            applyUserDataChange(BrowserUserDataChange(item, data,
+                if (operation == "favorite") BrowserUserDataChange.Kind.FAVORITE else BrowserUserDataChange.Kind.PLAYED),
+                if (operation == "favorite") DiscoveryCategory.entries.firstOrNull { it.itemType == item.type } else null)
+            // 收藏写回后立即更新已显示的分组，返回时再重取受影响的列表。
+            if (operation == "favorite" && item.isFavorite) mutableState.update { current ->
+                current.copy(favorites = current.favorites.copy(sections = current.favorites.sections.mapValues { (_, section) ->
+                    val removed = section.items.count { it.id == item.id }
+                    section.copy(items = section.items.filterNot { it.id == item.id },
+                        total = (section.total - removed).coerceAtLeast(0),
+                        nextIndex = (section.nextIndex - removed).coerceAtLeast(0))
+                }))
             }
         }
-    }
 
     private fun updateEverywhere(change: (MediaItem) -> MediaItem) {
         mutableState.update { s -> s.copy(
