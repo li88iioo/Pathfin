@@ -603,7 +603,11 @@ internal class GesturePlayerView(context: Context) : PlayerView(context) {
     }
 
     var subtitlePresentation = SubtitlePresentation()
-        set(value) { field = value; updateSubtitlePresentation() }
+        set(value) {
+            if (field == value) return
+            field = value
+            updateSubtitlePresentation()
+        }
     private fun updateSubtitlePresentation() {
         subtitleView?.let { subtitles ->
             // 不沿用系统字幕样式（多数机型默认黑底）：白字、透明底、黑色描边，文件自带样式仍优先。

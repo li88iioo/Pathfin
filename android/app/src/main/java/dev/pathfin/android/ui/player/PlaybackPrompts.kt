@@ -38,8 +38,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import dev.pathfin.android.domain.nextEpisodePromptRemainingSeconds
 import dev.pathfin.android.playback.PlaybackUiState
@@ -73,10 +76,11 @@ internal fun PlaybackPrompts(
     var nextDismissed by rememberSaveable(state.playerGeneration) { mutableStateOf(false) }
     var decodeWarningDismissed by rememberSaveable(state.playerGeneration, state.decodeWarning) { mutableStateOf(false) }
     if (!visible || player == null || player.pathfinReleased()) return
-    val snapshot = rememberPlayerControlSnapshot(player)
-    val nextSeconds = if (nextDismissed) null else nextEpisodePromptRemainingSeconds(
-        snapshot.positionMs, snapshot.durationMs, state.nextEpisodePromptSeconds, onNext != null, player.isCurrentMediaItemLive,
-    )
+    val nextSeconds = if (nextDismissed || onNext == null || state.live || state.nextEpisodePromptSeconds <= 0) null else {
+        val snapshot = rememberPlayerControlSnapshot(player)
+        nextEpisodePromptRemainingSeconds(snapshot.positionMs, snapshot.durationMs, state.nextEpisodePromptSeconds,
+            true, player.isCurrentMediaItemLive)
+    }
     val error = state.mediaSegmentsError?.takeIf { showStatus && state.introPrompt == null }
     val decodeWarning = state.decodeWarning?.takeUnless { decodeWarningDismissed }
     if (state.introPrompt == null && nextSeconds == null && error == null && decodeWarning == null) return
@@ -162,8 +166,17 @@ private fun PromptButton(tag: String, onClick: () -> Unit, progress: Float = 0f,
 @Composable
 internal fun AudioOnlyCover(player: Player?) {
     if (player == null || player.pathfinReleased()) return
-    val snapshot = rememberPlayerControlSnapshot(player)
-    if (C.TRACK_TYPE_VIDEO !in snapshot.selection.disabledTrackTypes) return
+    var audioOnly by remember(player) { mutableStateOf(C.TRACK_TYPE_VIDEO in player.trackSelectionParameters.disabledTrackTypes) }
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
+                audioOnly = C.TRACK_TYPE_VIDEO in parameters.disabledTrackTypes
+            }
+        }
+        player.addListener(listener)
+        onDispose { if (!player.pathfinReleased()) player.removeListener(listener) }
+    }
+    if (!audioOnly) return
     Box(Modifier.fillMaxSize().background(Color.Black).testTag("player-audio-only-cover"), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(PathfinIcons.Audio, null, Modifier.size(40.dp), tint = PlayerSecondary)
