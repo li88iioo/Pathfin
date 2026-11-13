@@ -70,6 +70,7 @@ import dev.pathfin.android.ui.AppSystemBars
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.LocalPlaybackFullscreen
 import androidx.compose.runtime.CompositionLocalProvider
+import dev.pathfin.android.ui.LocalPosterLoader
 import dev.pathfin.android.ui.rememberPosterLoader
 import dev.pathfin.android.ui.hasThumbnail
 import dev.pathfin.android.ui.player.PlayerDisplayPreferencesEffect
@@ -234,7 +235,7 @@ class MainActivity : ComponentActivity() {
                         val session = state.session
                         if (session != null && playbackItem != null) PosterRequests.logo(this@MainActivity, session, appViewModel.api, playbackItem) else null
                     }
-                    androidx.compose.runtime.CompositionLocalProvider(dev.pathfin.android.ui.LocalPosterLoader provides posterLoader) {
+                    CompositionLocalProvider(LocalPosterLoader provides posterLoader) {
                     PlayerScreen(
                         playbackViewModel,
                         preferences = state.preferences,
@@ -263,7 +264,7 @@ class MainActivity : ComponentActivity() {
                     )
                     }
                     if (!pictureInPicture) {
-                        if (showEpisodes) androidx.compose.runtime.CompositionLocalProvider(dev.pathfin.android.ui.LocalPosterLoader provides posterLoader) {
+                        if (showEpisodes) CompositionLocalProvider(LocalPosterLoader provides posterLoader) {
                             PlaybackEpisodesSheet(state.playbackEpisodes, state.activePlayback!!.item.id, state.preparingPlay,
                             onSelect = { showEpisodes = false; appViewModel.prepareEpisodePlayback(it, playbackViewModel.preferredQuality) },
                             onRefresh = { appViewModel.loadPlaybackEpisodes(refresh = true) },
@@ -271,7 +272,7 @@ class MainActivity : ComponentActivity() {
                             session = state.activePlayback!!.session, api = appViewModel.api,
                             grid = episodeGrid, onGridChange = { episodeGrid = it })
                         }
-                        if (showChapters) androidx.compose.runtime.CompositionLocalProvider(dev.pathfin.android.ui.LocalPosterLoader provides posterLoader) {
+                        if (showChapters) CompositionLocalProvider(LocalPosterLoader provides posterLoader) {
                             PlaybackChaptersSheet(state.activePlayback!!.item.chapters,
                                 onSelect = { chapter -> playbackViewModel.player?.seekTo(TimeUnits.ticksToMs(chapter.startPositionTicks)); showChapters = false },
                                 onDismiss = { showChapters = false }, session = state.activePlayback!!.session,

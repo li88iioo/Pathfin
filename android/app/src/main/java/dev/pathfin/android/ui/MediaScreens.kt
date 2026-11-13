@@ -293,7 +293,7 @@ private fun libraryCover(library: MediaItem, media: List<MediaItem>): MediaItem 
     else media.firstOrNull { !it.backdropTag.isNullOrBlank() || !it.imageTag.isNullOrBlank() } ?: library
 
 @Composable
-private fun LibraryCoverCard(library: MediaItem, cover: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, imageWidth: Dp? = null, onClick: () -> Unit) {
+private fun LibraryCoverCard(library: MediaItem, cover: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, onClick: () -> Unit) {
     val hasOwnCover = cover.id == library.id && (!cover.imageTag.isNullOrBlank() || !cover.backdropTag.isNullOrBlank())
     val shape = RoundedCornerShape(14.dp)
     Box(
@@ -305,7 +305,7 @@ private fun LibraryCoverCard(library: MediaItem, cover: MediaItem, session: Sess
         contentAlignment = Alignment.Center,
     ) {
         PosterImage(cover, session, api, Modifier.matchParentSize(), wide = true, shape = shape,
-            displayWidth = imageWidth, displayAspectRatio = 16f / 9f)
+            displayAspectRatio = 16f / 9f)
         // Jellyfin库图通常已包含标题。只有没有自己的库图时才保留可辨识的名称。
         if (!hasOwnCover) {
             Box(
@@ -658,7 +658,7 @@ private fun DetailContent(state: AppState, item: MediaItem?, session: Session, v
             }
         }
         if (item.type == "Episode" && extras?.siblings.orEmpty().isNotEmpty()) item(key = "detail-siblings") {
-            DetailResumeShelf(item.parentIndexNumber?.let { tr("来自第 %1\$s 季", it) } ?: tr("同季剧集"), extras?.siblings.orEmpty(), session, vm.api, vm::open, nextUp = true)
+            DetailResumeShelf(item.parentIndexNumber?.let { tr("来自第 %1\$s 季", it) } ?: tr("同季剧集"), extras?.siblings.orEmpty(), session, vm.api, vm::open)
         }
         if (state.preferences.showDetailChapters && item.type in setOf("Movie", "Episode") && item.chapters.any { !state.preferences.hideChaptersWithoutImage || it.hasThumbnail() }) item(key = "detail-chapters") {
             Box(Modifier.windowInsetsPadding(horizontalSafeArea)) {
@@ -831,11 +831,11 @@ private fun DetailInfo(item: MediaItem) {
 }
 
 @Composable
-private fun DetailResumeShelf(title: String, items: List<MediaItem>, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, nextUp: Boolean = false) {
+private fun DetailResumeShelf(title: String, items: List<MediaItem>, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit) {
     Column(Modifier.windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle(title)
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(items, key = { it.id }) { item -> ResumeCard(item, session, api, Modifier.width(196.dp), nextUp) { onOpen(item) } }
+            items(items, key = { it.id }) { item -> ResumeCard(item, session, api, Modifier.width(196.dp), nextUp = true) { onOpen(item) } }
         }
     }
 }
