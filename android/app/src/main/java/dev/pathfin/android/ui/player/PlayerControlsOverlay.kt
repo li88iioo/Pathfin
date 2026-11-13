@@ -194,7 +194,7 @@ internal fun PlayerControlsOverlay(
                     PlayerRoundButton(PathfinIcons.LockOpen, tr("锁定屏幕"), "player-lock", onClick = { interaction(onLock) })
                 }
             }
-            val speedVisible = state.errorMessage == null && !state.ended
+            val speedVisible = state.errorMessage == null && !state.ended && !state.live
             val speedEnabled = transportEnabled && snapshot.canChangeSpeed
             val speedWidth = if (largeText) 72.dp else 48.dp
             val bottomToolsWidth = if (landscape) { if (showSubtitles) 104.dp else 52.dp } else 0.dp
@@ -311,7 +311,7 @@ internal fun PlayerControlsOverlay(
                 onDismiss = { panel = null; onInteraction() },
                 onSpeedChange = onSpeedChange, onResizeModeChange = onResizeModeChange,
                 onPanelChange = { panel = it }, onShowQuality = onShowQuality,
-                showSpeed = state.errorMessage != null || state.ended,
+                showSpeed = !state.live && (state.errorMessage != null || state.ended), showQuality = !state.live,
                 showScreenshot = !landscape || state.errorMessage != null || state.ended,
                 onScreenshot = onScreenshot, onManualTrackSelection = onManualTrackSelection,
                 onSetSleepTimer = onSetSleepTimer, sleepTimerLabel = sleepTimerLabel,

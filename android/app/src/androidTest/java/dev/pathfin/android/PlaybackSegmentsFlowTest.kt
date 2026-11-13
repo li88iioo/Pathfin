@@ -167,6 +167,33 @@ class PlaybackSegmentsFlowTest {
         }
     }
 
+    @Test fun liveChannelsAlwaysPlayAtNormalSpeedWithoutChangingTheRememberedEpisodeSpeed() {
+        withFixture { fixture, playback ->
+            show(playback)
+            val saved = preferences().copy(serverIntroSkipEnabled = false, playbackSpeed = 1.5f)
+            main { playback.play(fixture.request(), saved) }
+            awaitFrame(playback)
+            main {
+                assertFalse(playback.state.value.live)
+                assertEquals("点播沿用记住的倍速", 1.5f, checkNotNull(playback.player).playbackParameters.speed, .001f)
+            }
+            main { playback.play(fixture.request(LIVE_ITEM, type = "TvChannel"), saved) }
+            awaitFrame(playback)
+            main {
+                val player = checkNotNull(playback.player)
+                assertTrue(playback.state.value.live)
+                assertEquals("直播不继承点播倍速", 1f, player.playbackParameters.speed, .001f)
+                playback.setPlaybackSpeed(2f)
+                playback.beginTemporarySpeed()
+                assertEquals("直播不接受调速与长按加速", 1f, player.playbackParameters.speed, .001f)
+                assertNull(playback.state.value.temporarySpeed)
+            }
+            main { playback.play(fixture.request(NEXT_ITEM), saved) }
+            awaitFrame(playback)
+            main { assertEquals("回到点播恢复记住的倍速", 1.5f, checkNotNull(playback.player).playbackParameters.speed, .001f) }
+        }
+    }
+
     @Test fun exoRapidDraggingProducesRealSeeksBeforeReleaseOnlyWhenEnabledAndAlwaysCommitsTheEnd() {
         withFixture { fixture, playback ->
             show(playback)
@@ -261,9 +288,9 @@ class PlaybackSegmentsFlowTest {
             }, "Pathfin-segments-fixture").apply { isDaemon = true }.start()
         }
 
-        fun request(itemId: String = ITEM): PlaybackRequest {
+        fun request(itemId: String = ITEM, type: String = "Episode"): PlaybackRequest {
             val source = MediaSource("synthetic-source", path = "$origin/media.mp4", protocol = "Http", container = "mp4", supportsDirectPlay = true)
-            val item = MediaItem(itemId, if (itemId == NEXT_ITEM) "Synthetic next" else "Synthetic segments", "Episode", runTimeTicks = 1_200_000_000L)
+            val item = MediaItem(itemId, if (itemId == NEXT_ITEM) "Synthetic next" else "Synthetic segments", type, runTimeTicks = 1_200_000_000L)
             return PlaybackRequest(item, PlaybackInfo(listOf(source), "synthetic-play-${playIds.incrementAndGet()}"), source,
                 ResolvedPlayback("$origin/media.mp4", emptyMap(), PlayMethod.DIRECT_PLAY, source.id, true, "video/mp4"), 0, session)
         }
@@ -333,5 +360,6 @@ class PlaybackSegmentsFlowTest {
         const val WAIT = 20_000L
         const val ITEM = "22222222222222222222222222222222"
         const val NEXT_ITEM = "44444444444444444444444444444444"
+        const val LIVE_ITEM = "55555555555555555555555555555555"
     }
 }

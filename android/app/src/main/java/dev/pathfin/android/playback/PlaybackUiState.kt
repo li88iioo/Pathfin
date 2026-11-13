@@ -10,6 +10,8 @@ import dev.pathfin.android.i18n.tr
 
 data class PlaybackUiState(
     val title: String = "",
+    /** 直播频道：始终 1× 播放，不提供倍速与画质调节。 */
+    val live: Boolean = false,
     val isPreparing: Boolean = false,
     val isBuffering: Boolean = false,
     val isPlaying: Boolean = false,

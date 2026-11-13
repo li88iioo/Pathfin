@@ -71,6 +71,7 @@ internal fun PlayerControlPopup(
     onPanelChange: (PlayerControlPanel) -> Unit,
     onShowQuality: () -> Unit,
     showSpeed: Boolean,
+    showQuality: Boolean,
     showScreenshot: Boolean,
     onScreenshot: (() -> Unit)?,
     onManualTrackSelection: (Player, Int, Format?, Boolean) -> Unit,
@@ -105,7 +106,7 @@ internal fun PlayerControlPopup(
             if (showSpeed) add(MoreEntry(PathfinIcons.Speed, tr("播放速度"), "player-menu-speed") { onPanelChange(PlayerControlPanel.SPEED) })
             add(MoreEntry(PathfinIcons.Info, tr("媒体信息"), "player-menu-information") { onPanelChange(PlayerControlPanel.INFO) })
             add(MoreEntry(PathfinIcons.Volume, tr("音量增益"), "player-audio-gain") { onPanelChange(PlayerControlPanel.GAIN) })
-            add(MoreEntry(PathfinIcons.Quality, tr("播放质量"), "player-tools") { onDismiss(); onShowQuality() })
+            if (showQuality) add(MoreEntry(PathfinIcons.Quality, tr("播放质量"), "player-tools") { onDismiss(); onShowQuality() })
             // 仅播放音频：关闭视频轨，解码与画面渲染一并停止；再次点按恢复画面。
             val audioOnly = C.TRACK_TYPE_VIDEO in snapshot.selection.disabledTrackTypes
             add(MoreEntry(if (audioOnly) PathfinIcons.Video else PathfinIcons.Audio, if (audioOnly) tr("恢复画面") else tr("仅播放音频"), "player-audio-only",

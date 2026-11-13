@@ -282,7 +282,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         mutableSubtitlePresentation.value = SubtitlePresentation(preferences.subtitleScale,
             preferences.subtitlePositionPercent, preferences.subtitleDelays[request.subtitlePreferenceKey()] ?: 0).normalized()
         startPlayback(request.copy(startPositionMs = position), request, tuning, manualTracks = inheritedTracks)
-        player?.setPlaybackSpeed(preferences.playbackSpeed.takeIf { it.isFinite() }?.coerceIn(.25f, 4f) ?: 1f)
+        // 记住的倍速只属于点播；直播追的是实时流，始终 1×，也不改写点播的倍速记忆。
+        player?.setPlaybackSpeed(if (request.item.type == "TvChannel") 1f
+            else preferences.playbackSpeed.takeIf { it.isFinite() }?.coerceIn(.25f, 4f) ?: 1f)
     }
 
     private fun capturePlayerState(owner: Player) = PlayerState(owner.currentPosition.coerceAtLeast(0),
@@ -331,6 +333,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     else -> item.name
                 }
             },
+            live = request.item.type == "TvChannel",
             isPreparing = true,
             controlsLocked = restored?.locked ?: false,
             isChangingQuality = rollback != null,
@@ -850,7 +853,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun setPlaybackSpeed(speed: Float) {
-        if (!speed.isFinite()) return
+        if (!speed.isFinite() || mutableState.value.live) return
         val exoPlayer = player ?: return
         if (!exoPlayer.isCommandAvailable(Player.COMMAND_SET_SPEED_AND_PITCH)) return
         endTemporarySpeed()
@@ -1008,7 +1011,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun beginTemporarySpeed() {
         val current = active ?: return
         val exoPlayer = player ?: return
-        if (!current.tuning.longPressSpeedEnabled || speedBeforeLongPress != null || !exoPlayer.isPlaying) return
+        if (!current.tuning.longPressSpeedEnabled || mutableState.value.live || speedBeforeLongPress != null || !exoPlayer.isPlaying) return
         speedBeforeLongPress = exoPlayer.playbackParameters.speed
         temporarySpeedPlayer = exoPlayer
         val speed = temporaryPlaybackSpeed(checkNotNull(speedBeforeLongPress), current.tuning.longPressSpeed) ?: run {

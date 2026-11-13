@@ -278,6 +278,27 @@ class PlayerControlsLayoutTest {
         } finally { compose.runOnUiThread { player.release() } }
     }
 
+    @Test fun livePlaybackOffersNoSpeedOrQualityControls() = assertLiveHidesSpeedAndQuality(ended = false)
+
+    @Test fun endedLivePlaybackStillOffersNoSpeedOrQualityInMore() = assertLiveHidesSpeedAndQuality(ended = true)
+
+    private fun assertLiveHidesSpeedAndQuality(ended: Boolean) {
+        lateinit var player: ClockPlayer
+        compose.runOnUiThread { player = ClockPlayer(40_000_000) }
+        try {
+            showControls(player, live = true, ended = ended)
+            compose.onNodeWithTag("player-speed").assertDoesNotExist()
+            openPanel("player-more", "player-popup-more")
+            compose.onNodeWithTag("player-menu-information").assertExists()
+            // 面板是惰性列表：逐项滚动查找，确认整个面板都没有这两项，而不只是不在可见区域。
+            val menu = compose.onNode(hasScrollToIndexAction())
+            for (tag in listOf("player-menu-speed", "player-tools")) {
+                assertThrows("直播面板不应有 $tag", AssertionError::class.java) { menu.performScrollToNode(hasTestTag(tag)) }
+            }
+            menu.performScrollToNode(hasTestTag("player-audio-gain"))
+        } finally { compose.runOnUiThread { player.release() } }
+    }
+
     @Test fun subtitleImportAndManagementStayAvailableWithoutTracksAndHaveNoDuplicateMoreEntry() {
         lateinit var player: ClockPlayer
         var imports = 0
@@ -504,7 +525,7 @@ class PlayerControlsLayoutTest {
 
     private fun showControls(player: Player, onEpisodes: (() -> Unit)? = null,
         onQuality: () -> Unit = {}, onScreenshot: (() -> Unit)? = null,
-        ended: Boolean = false, onSpeed: (Float) -> Unit = {}, burnedIn: Boolean = false,
+        ended: Boolean = false, onSpeed: (Float) -> Unit = {}, burnedIn: Boolean = false, live: Boolean = false,
         onAddSubtitle: (() -> Unit)? = null, onManageSubtitles: (() -> Unit)? = null,
         onSetSleepTimer: (Int?) -> Unit = {}, onAudioGainChange: (Int) -> Unit = {},
         clock: String? = null, battery: String? = null, titleLogo: coil3.request.ImageRequest? = null) {
@@ -515,7 +536,7 @@ class PlayerControlsLayoutTest {
                 dev.pathfin.android.ui.LocalPosterLoader provides loader) {
                 PathfinTheme(ThemePreference.DARK) {
                     Box(Modifier.fillMaxSize().background(Color.Black)) {
-                        PlayerControlsOverlay(player, PlaybackUiState(title = "Synthetic fixture", ended = ended, subtitlesBurnedIn = burnedIn), false, PlayerResizeMode.FIT,
+                        PlayerControlsOverlay(player, PlaybackUiState(title = "Synthetic fixture", ended = ended, subtitlesBurnedIn = burnedIn, live = live), false, PlayerResizeMode.FIT,
                             seekSeconds = 10, clock = clock, battery = battery, onBack = {}, onInteraction = {},
                             onKeepVisibleChange = {}, onTogglePlay = {}, onSeekBack = {}, onSeekForward = {},
                             onSeekTo = {}, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,

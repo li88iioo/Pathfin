@@ -318,7 +318,7 @@ fun PlayerScreen(
                 view.keepScreenOn = state.isPlaying
                 view.gesturesLocked = state.controlsLocked
                 view.allowPlaybackGestures = state.errorMessage == null && !state.ended && !isInPictureInPicture
-                view.longPressEnabled = preferences.longPressSpeedEnabled
+                view.longPressEnabled = preferences.longPressSpeedEnabled && !state.live
                 view.onSingleTap = {
                     if (!isInPictureInPicture && state.errorMessage == null && !state.ended) {
                         controlsVisible = !controlsVisible
