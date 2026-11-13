@@ -143,11 +143,13 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
 
 @Composable
 private fun HomePageLayout(covered: () -> Boolean, chrome: @Composable (Boolean) -> Unit, content: @Composable () -> Unit) {
+    // 每个覆盖值固定一个页头内容实例：滚动每帧重测时只有覆盖状态翻转才重组页头。
+    val overCover: @Composable () -> Unit = remember(chrome) { { chrome(true) } }
+    val clear: @Composable () -> Unit = remember(chrome) { { chrome(false) } }
     SubcomposeLayout(Modifier.fillMaxSize()) { constraints ->
         // 在测量中读取覆盖值，避免页头先独立重组、读到正文更新前的布局。
         val body = subcompose("body", content).single().measure(constraints)
-        val measuredCover = covered()
-        val header = subcompose("chrome") { chrome(measuredCover) }.map { it.measure(constraints.copy(minHeight = 0)) }
+        val header = subcompose("chrome", if (covered()) overCover else clear).map { it.measure(constraints.copy(minHeight = 0)) }
         layout(body.width, body.height) {
             body.placeRelative(0, 0)
             header.forEach { it.placeRelative(0, 0) }
