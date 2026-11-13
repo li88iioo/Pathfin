@@ -3,6 +3,7 @@ package dev.pathfin.android
 import android.os.SystemClock
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Offset
 import android.os.Looper
 import android.content.pm.ActivityInfo
 import androidx.activity.enableEdgeToEdge
@@ -19,6 +20,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasTestTag
@@ -116,6 +119,33 @@ class PlayerControlsLayoutTest {
             compose.onNodeWithTag("player-sleep-timer").assertVerificationDisplayed(compose).clickWhenStationary()
             compose.onNodeWithTag("player-sleep-15").assertVerificationDisplayed(compose).clickWhenStationary()
             compose.runOnIdle { assertEquals(15, timer) }
+        } finally {
+            compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+        }
+    }
+
+    @Test fun landscapeEpisodeShortcutIgnoresEmptySpaceBesideTheTitle() {
+        lateinit var player: ClockPlayer
+        var episodes = 0
+        compose.runOnUiThread {
+            compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            player = ClockPlayer(40_000_000)
+        }
+        try {
+            awaitOrientation(android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+            showControls(player, onEpisodes = { episodes++ })
+            val controls = compose.onNodeWithTag("player-controls")
+            val title = compose.onNodeWithTag("player-title")
+            val controlsBounds = controls.readVerificationNode(compose) { it.boundsInRoot }
+            val titleBounds = title.readVerificationNode(compose) { it.boundsInRoot }
+            controls.performVerificationTouchInput(compose) {
+                click(Offset(width * .9f, titleBounds.center.y - controlsBounds.top))
+            }
+            compose.runOnIdle { assertEquals("标题右侧的空白不能打开选集", 0, episodes) }
+            title.clickWhenStationary()
+            compose.runOnIdle { assertEquals(1, episodes) }
+            compose.onNodeWithContentDescription("选集", useUnmergedTree = true).clickWhenStationary()
+            compose.runOnIdle { assertEquals(2, episodes) }
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
         }

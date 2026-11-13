@@ -232,8 +232,8 @@ internal fun PlayerControlsOverlay(
                                 onClick = { onNext?.let { interaction(it) } })
                             Spacer(Modifier.width(8.dp))
                         }
-                        // 标题即选集入口：有选集时右侧带一个小箭头提示可点。
-                        Row(Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(12.dp))
+                        // 标题即选集入口，点击范围随内容收紧，右侧空白不响应选集。
+                        Row(Modifier.weight(1f, fill = false).widthIn(min = 48.dp).height(48.dp).clip(RoundedCornerShape(12.dp))
                             .clickable(enabled = onShowEpisodes != null) { onShowEpisodes?.let { interaction(it) } }
                             .padding(horizontal = 4.dp).testTag("player-title"), verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)) {
