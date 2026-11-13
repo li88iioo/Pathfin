@@ -12,10 +12,6 @@ import dev.pathfin.android.domain.Session
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.security.MessageDigest
 
 /**
  * 媒体库首屏的有限展示快照。所有调用均放在既有存储 IO 队列；加载成功仍须向服务器重验。
@@ -24,7 +20,7 @@ import java.security.MessageDigest
 internal class BrowserSnapshotStore(private val directory: File) {
     constructor(context: Context) : this(File(context.cacheDir, "browser-snapshots"))
 
-    fun load(session: Session, key: BrowserPageKey): MediaPage? {
+    fun load(session: Session, key: BrowserPageKey): MediaPage? = synchronized(SnapshotFiles.lock) {
         if (!eligible(session, key)) return null
         val file = file(session, key)
         val entry = read(file) ?: return null
@@ -33,7 +29,7 @@ internal class BrowserSnapshotStore(private val directory: File) {
         return entry.page
     }
 
-    fun save(session: Session, key: BrowserPageKey, page: MediaPage): Boolean {
+    fun save(session: Session, key: BrowserPageKey, page: MediaPage): Boolean = synchronized(SnapshotFiles.lock) {
         if (!eligible(session, key)) return false
         val entry = Entry(key.browserId, key.parentId, key.query, page.copy(items = page.items.take(MAX_ITEMS)))
         val file = file(session, key)
@@ -42,19 +38,21 @@ internal class BrowserSnapshotStore(private val directory: File) {
         return true
     }
 
-    fun removeProfile(profileId: String) {
-        val prefix = "${digest(profileId)}-"
+    fun removeProfile(profileId: String) = synchronized(SnapshotFiles.lock) {
+        val prefix = "${SnapshotFiles.digest(profileId)}-"
         directory.listFiles()?.filter { it.name.startsWith(prefix) }?.forEach { it.delete() }
+        Unit
     }
 
     /** 主动刷新同时失效同父库下的字母、筛选及入口别名，保留其他会话与父库。 */
-    fun invalidate(session: Session, scope: ProfileHomeKey, parentId: String?) {
+    fun invalidate(session: Session, scope: ProfileHomeKey, parentId: String?) = synchronized(SnapshotFiles.lock) {
         if (scope != ProfileHomeKey.of(scope.profileId, session)) return
         val prefix = profileSessionPrefix(scope.profileId, session)
         directory.listFiles()?.filter { it.extension == "json" && it.name.startsWith(prefix) }?.forEach { file ->
             val entry = read(file) ?: return@forEach
             if (entry.parentId == parentId) file.delete()
         }
+        Unit
     }
 
     /** 用户状态变化只修改已有条目；影响成员或排序的查询直接丢弃，交由下次网络请求重建。 */
@@ -63,7 +61,7 @@ internal class BrowserSnapshotStore(private val directory: File) {
         profileId: String,
         change: (MediaItem) -> MediaItem,
         invalidates: (LibraryQuery) -> Boolean,
-    ) {
+    ) = synchronized(SnapshotFiles.lock) {
         val prefix = profileSessionPrefix(profileId, session)
         directory.listFiles()?.filter { it.extension == "json" && it.name.startsWith(prefix) }?.forEach { file ->
             val entry = read(file) ?: return@forEach
@@ -93,13 +91,11 @@ internal class BrowserSnapshotStore(private val directory: File) {
 
     private fun file(session: Session, key: BrowserPageKey): File {
         val entry = Entry(key.browserId, key.parentId, key.query, MediaPage(emptyList(), 0))
-        return File(directory, "${profileSessionPrefix(key.scope.profileId, session)}${digest(entry.keyJson().toString())}.json")
+        return File(directory, "${profileSessionPrefix(key.scope.profileId, session)}${SnapshotFiles.digest(entry.keyJson().toString())}.json")
     }
 
     private fun profileSessionPrefix(profileId: String, session: Session): String {
-        val identity = listOf(session.serverIdentity, session.userId, session.accessToken, session.deviceId,
-            session.isAdministrator, session.canDownload, session.canDelete).joinToString("\u0000")
-        return "${digest(profileId)}-${digest(identity)}-"
+        return "${SnapshotFiles.digest(profileId)}-${SnapshotFiles.sessionFingerprint(session)}-"
     }
 
     private fun read(file: File): Entry? {
@@ -114,7 +110,7 @@ internal class BrowserSnapshotStore(private val directory: File) {
                 query(json.getJSONObject("query")), MediaPage(MediaSnapshotJson.items(values), json.getInt("totalCount")))
             require(entry.query.searchTerm.isEmpty() && !entry.browserId.startsWith("library-search/"))
             require(entry.page.totalCount >= entry.page.items.size)
-            require(file.name.endsWith("-${digest(entry.keyJson().toString())}.json"))
+            require(file.name.endsWith("-${SnapshotFiles.digest(entry.keyJson().toString())}.json"))
             entry
         } catch (_: Exception) {
             file.delete()
@@ -123,21 +119,13 @@ internal class BrowserSnapshotStore(private val directory: File) {
     }
 
     private fun write(file: File, entry: Entry): Boolean {
-        var temporary: File? = null
         return try {
             if (entry.page.totalCount < entry.page.items.size) return false
-            val bytes = entry.keyJson().put("version", VERSION).put("totalCount", entry.page.totalCount)
-                .put("items", MediaSnapshotJson.items(entry.page.items)).toString().toByteArray(Charsets.UTF_8)
-            if (bytes.size > MAX_FILE_BYTES) return false
-            if (!directory.isDirectory && !directory.mkdirs()) return false
-            temporary = File.createTempFile("browser-", ".tmp", directory)
-            FileOutputStream(temporary).use { output -> output.write(bytes); output.fd.sync() }
-            Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-            true
+            val json = entry.keyJson().put("version", VERSION).put("totalCount", entry.page.totalCount)
+                .put("items", MediaSnapshotJson.items(entry.page.items))
+            SnapshotFiles.write(file, json, MAX_FILE_BYTES.toLong())
         } catch (_: Exception) {
             false
-        } finally {
-            temporary?.delete()
         }
     }
 
@@ -172,9 +160,6 @@ internal class BrowserSnapshotStore(private val directory: File) {
         const val MAX_TOTAL_ENTRIES = 64
         const val MAX_FILE_BYTES = 2 * 1024 * 1024
         const val MAX_TOTAL_BYTES = 32 * 1024 * 1024
-
-        fun digest(value: String): String = MessageDigest.getInstance("SHA-256")
-            .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
         fun queryJson(query: LibraryQuery) = JSONObject()
             .put("tab", query.tab.name).put("sort", query.sort.name).put("descending", query.descending)

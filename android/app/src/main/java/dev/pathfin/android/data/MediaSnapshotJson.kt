@@ -1,8 +1,52 @@
 package dev.pathfin.android.data
 
 import dev.pathfin.android.domain.MediaItem
+import dev.pathfin.android.domain.Session
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import org.json.JSONArray
 import org.json.JSONObject
+
+/** 同进程快照的文件事务；写入、删除及容量清扫共用一把锁，不会碰到另一份正在写的临时文件。 */
+internal object SnapshotFiles {
+    val lock = Any()
+
+    fun digest(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+
+    fun sessionFingerprint(session: Session): String = digest(listOf(session.serverIdentity, session.userId,
+        session.accessToken, session.deviceId, session.isAdministrator, session.canDownload, session.canDelete).joinToString("\u0000"))
+
+    fun write(target: File, json: JSONObject, maxBytes: Long, context: CoroutineContext? = null): Boolean = synchronized(lock) {
+        var temporary: File? = null
+        try {
+            context?.ensureActive()
+            val bytes = json.toString().toByteArray(Charsets.UTF_8)
+            if (bytes.size > maxBytes) return@synchronized false
+            val directory = target.parentFile ?: return@synchronized false
+            if (!directory.isDirectory && !directory.mkdirs()) return@synchronized false
+            temporary = File.createTempFile("snapshot-", ".tmp", directory)
+            FileOutputStream(temporary).use { output -> output.write(bytes); output.fd.sync() }
+            // 取消与清理共用提交边界；排在删账号之后的旧写入不能重新创建快照。
+            context?.ensureActive()
+            Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            true
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { false }
+        finally { temporary?.delete() }
+    }
+
+    fun retain(directory: File, names: Set<String>) = synchronized(lock) {
+        directory.listFiles()?.filter { it.isFile && it.extension == "json" && it.name !in names }?.forEach { it.delete() }
+        Unit
+    }
+}
 
 /** 首页与媒体库共用的展示字段；请求头、播放地址和媒体源不进入磁盘快照。 */
 internal object MediaSnapshotJson {

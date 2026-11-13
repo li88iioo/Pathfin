@@ -176,11 +176,12 @@ class LiveTvState(val session: Session, val api: JellyfinApi, private val scope:
     fun denyAccess() {
         cancel(); access = LiveTvCapabilities(false, false, false); error = null
         channels = emptyList(); loadedAt = clock()
-        scope.launch { snapshots?.save(session, emptyList()) }
+        job = scope.launch { snapshots?.save(session, emptyList()) }
     }
 
     fun load() {
         if (refreshing) return
+        job?.cancel()
         refreshGroups()
         refreshing = true; error = null
         job = scope.launch {

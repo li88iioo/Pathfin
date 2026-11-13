@@ -5,10 +5,10 @@ import dev.pathfin.android.domain.LiveTvChannel
 import dev.pathfin.android.domain.LiveTvProgram
 import dev.pathfin.android.domain.Session
 import java.io.File
-import java.io.IOException
-import java.security.MessageDigest
 import java.time.Instant
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -21,7 +21,7 @@ class LiveTvSnapshotStore(private val directory: File) {
     constructor(context: Context) : this(File(context.filesDir, "live-tv-snapshots"))
 
     suspend fun load(session: Session): List<LiveTvChannel>? = withContext(Dispatchers.IO) {
-        runCatching {
+        synchronized(SnapshotFiles.lock) { runCatching {
             val file = file(session).takeIf { it.isFile && it.length() <= MaxBytes } ?: return@runCatching null
             val json = JSONObject(file.readText())
             require(json.getInt("version") == 1)
@@ -33,12 +33,12 @@ class LiveTvSnapshotStore(private val directory: File) {
                 LiveTvChannel(item, extra.text("number"), extra.optJSONObject("program")?.let { program(it, item.id) },
                     extra.text("lastPlayedAt")?.let(Instant::parse))
             }
-        }.getOrNull()
+        }.getOrNull() }
     }
 
     suspend fun save(session: Session, channels: List<LiveTvChannel>) = withContext(Dispatchers.IO) {
-        runCatching {
-            directory.mkdirs()
+        val context = currentCoroutineContext()
+        try {
             val extras = JSONArray(channels.map { channel ->
                 JSONObject().put("number", channel.number).put("lastPlayedAt", channel.lastPlayedAt?.toString())
                     .put("program", channel.currentProgram?.let { program ->
@@ -47,13 +47,14 @@ class LiveTvSnapshotStore(private val directory: File) {
                     })
             })
             val json = JSONObject().put("version", 1).put("items", MediaSnapshotJson.items(channels.map { it.item })).put("extras", extras)
-            val target = file(session)
-            val temp = File(directory, "${target.name}.tmp")
-            temp.writeText(json.toString())
-            if (!temp.renameTo(target)) { temp.delete(); throw IOException("rename failed") }
-        }
+            SnapshotFiles.write(file(session), json, MaxBytes, context)
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) {}
         Unit
     }
+
+    /** 已删除资料不再保留快照；同一服务器账号的其他地址仍共享这一份文件。需从存储 IO 队列调用。 */
+    fun retainAccounts(sessions: List<Session>) = SnapshotFiles.retain(directory, sessions.mapTo(mutableSetOf()) { file(it).name })
 
     private fun program(json: JSONObject, channelId: String) = LiveTvProgram(json.getString("id"), channelId, json.getString("name"),
         start = json.text("start")?.let(Instant::parse), end = json.text("end")?.let(Instant::parse))
@@ -61,8 +62,7 @@ class LiveTvSnapshotStore(private val directory: File) {
     private fun JSONObject.text(key: String): String? = (opt(key) as? String)?.takeIf(String::isNotEmpty)
 
     private fun file(session: Session): File {
-        val digest = MessageDigest.getInstance("SHA-256").digest("${session.serverIdentity}/${session.userId}".toByteArray())
-        return File(directory, digest.joinToString("") { "%02x".format(it) } + ".json")
+        return File(directory, SnapshotFiles.digest("${session.serverIdentity}/${session.userId}") + ".json")
     }
 
     private companion object { const val MaxBytes = 8L * 1024 * 1024 }

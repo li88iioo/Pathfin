@@ -5,10 +5,6 @@ import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.Session
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-import java.security.MessageDigest
 
 /** 仅保存首页展示数据；播放器地址、请求头和会话凭据不进入快照。 */
 internal data class HomeSnapshot(
@@ -30,7 +26,7 @@ internal data class HomeSnapshot(
 internal class HomeSnapshotStore(private val directory: File) {
     constructor(context: Context) : this(File(context.cacheDir, "home-snapshots"))
 
-    fun load(profileId: String, session: Session): HomeSnapshot? {
+    fun load(profileId: String, session: Session): HomeSnapshot? = synchronized(SnapshotFiles.lock) {
         val file = file(profileId, session)
         if (!file.isFile) return null
         return try {
@@ -58,9 +54,7 @@ internal class HomeSnapshotStore(private val directory: File) {
     }
 
     fun save(profileId: String, session: Session, snapshot: HomeSnapshot): Boolean {
-        var temporary: File? = null
         return try {
-            if (!directory.isDirectory && !directory.mkdirs()) return false
             val json = JSONObject().put("version", 1)
                 .put("libraries", MediaSnapshotJson.items(snapshot.libraries)).put("recent", MediaSnapshotJson.items(snapshot.recent))
                 .put("resume", MediaSnapshotJson.items(snapshot.resume)).put("nextUp", MediaSnapshotJson.items(snapshot.nextUp))
@@ -68,37 +62,22 @@ internal class HomeSnapshotStore(private val directory: File) {
                 .put("loaded", snapshot.loaded).put("complete", snapshot.complete)
                 .put("librariesLoaded", snapshot.librariesLoaded).put("resumeLoaded", snapshot.resumeLoaded)
                 .put("nextUpLoaded", snapshot.nextUpLoaded).put("initialized", snapshot.initialized)
-            val encoded = json.toString().toByteArray(Charsets.UTF_8)
-            if (encoded.size > MaxSnapshotBytes) return false
-            temporary = File.createTempFile("home-", ".tmp", directory)
-            FileOutputStream(temporary).use { output ->
-                output.write(encoded)
-                output.fd.sync()
-            }
-            Files.move(temporary.toPath(), file(profileId, session).toPath(),
-                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-            true
+            SnapshotFiles.write(file(profileId, session), json, MaxSnapshotBytes.toLong())
         } catch (_: Exception) {
             false // 快照可以重新获取，存储失败不影响真实内容与登录。
-        } finally {
-            temporary?.delete()
         }
     }
 
-    fun removeProfile(profileId: String) {
-        val prefix = "${digest(profileId)}-"
+    fun removeProfile(profileId: String) = synchronized(SnapshotFiles.lock) {
+        val prefix = "${SnapshotFiles.digest(profileId)}-"
         directory.listFiles()?.filter { it.name.startsWith(prefix) }?.forEach { it.delete() }
+        Unit
     }
 
     private fun file(profileId: String, session: Session): File {
         // 会话与权限变化只改变不可逆指纹，磁盘内容和文件名都不保存 token/deviceId。
-        val identity = listOf(session.serverIdentity, session.userId, session.accessToken, session.deviceId,
-            session.isAdministrator, session.canDownload, session.canDelete).joinToString("\u0000")
-        return File(directory, "${digest(profileId)}-${digest(identity)}.json")
+        return File(directory, "${SnapshotFiles.digest(profileId)}-${SnapshotFiles.sessionFingerprint(session)}.json")
     }
-
-    private fun digest(value: String): String = MessageDigest.getInstance("SHA-256")
-        .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
 
     private companion object {
         const val MaxSnapshotBytes = 8 * 1024 * 1024

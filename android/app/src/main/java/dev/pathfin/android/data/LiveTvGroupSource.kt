@@ -6,9 +6,10 @@ import dev.pathfin.android.domain.ServerUrls
 import dev.pathfin.android.domain.Session
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,12 +26,15 @@ class LiveTvGroupSource(private val directory: File, private val client: OkHttpC
         this(File(context.filesDir, "live-tv-groups"), ensureNetworkAccess = ensureNetworkAccess)
 
     suspend fun cached(session: Session): LiveTvGroups? = withContext(Dispatchers.IO) {
-        runCatching {
+        synchronized(SnapshotFiles.lock) { runCatching {
             val file = file(session).takeIf { it.isFile && it.length() <= MaxCacheBytes } ?: return@runCatching null
             val channels = JSONObject(file.readText()).getJSONArray("channels")
             LiveTvGroups((0 until channels.length()).map { channels.getJSONArray(it).let { entry -> entry.getString(0) to entry.getString(1) } })
-        }.getOrNull()
+        }.getOrNull() }
     }
+
+    /** 分组按服务器共享；最后一条服务器资料移除后才清理。需从存储 IO 队列调用。 */
+    fun retainAccounts(sessions: List<Session>) = SnapshotFiles.retain(directory, sessions.mapTo(mutableSetOf()) { file(it).name })
 
     /** 非管理员读不到调谐器地址；任一播放列表读取失败时返回 null，不用残缺结果覆盖缓存。 */
     suspend fun refresh(session: Session, api: JellyfinApi): LiveTvGroups? {
@@ -45,7 +49,14 @@ class LiveTvGroupSource(private val directory: File, private val client: OkHttpC
             withContext(Dispatchers.IO) { runCatching { LiveTvGroups.parse(download(url, userAgent)) }.getOrNull() } ?: return null
         }
         val merged = LiveTvGroups(parsed.flatMap { it.entries }.distinctBy { it.first })
-        withContext(Dispatchers.IO) { runCatching { save(session, merged) } }
+        withContext(Dispatchers.IO) {
+            val context = currentCoroutineContext()
+            try {
+                val json = JSONObject().put("channels", JSONArray(merged.entries.map { (name, group) -> JSONArray(listOf(name, group)) }))
+                SnapshotFiles.write(file(session), json, MaxCacheBytes, context)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {}
+        }
         return merged
     }
 
@@ -65,18 +76,8 @@ class LiveTvGroupSource(private val directory: File, private val client: OkHttpC
         }
     }
 
-    private fun save(session: Session, groups: LiveTvGroups) {
-        directory.mkdirs()
-        val json = JSONObject().put("channels", JSONArray(groups.entries.map { (name, group) -> JSONArray(listOf(name, group)) }))
-        val target = file(session)
-        val temp = File(directory, "${target.name}.tmp")
-        temp.writeText(json.toString())
-        if (!temp.renameTo(target)) { temp.delete(); throw IOException("rename failed") }
-    }
-
     private fun file(session: Session): File {
-        val digest = MessageDigest.getInstance("SHA-256").digest(session.serverIdentity.toByteArray())
-        return File(directory, digest.joinToString("") { "%02x".format(it) } + ".json")
+        return File(directory, SnapshotFiles.digest(session.serverIdentity) + ".json")
     }
 
     private companion object {

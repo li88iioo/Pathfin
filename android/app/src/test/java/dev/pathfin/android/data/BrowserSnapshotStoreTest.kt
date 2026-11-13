@@ -12,6 +12,9 @@ import dev.pathfin.android.domain.MediaUserData
 import dev.pathfin.android.domain.ProfileHomeKey
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Rule
@@ -312,5 +315,34 @@ class BrowserSnapshotStoreTest {
         assertFalse(writable.save(session, key(), page.copy(totalCount = -1)))
         assertFalse(writable.save(session, key(), page.copy(totalCount = 0)))
         assertNull(writable.load(session, key()))
+    }
+
+    @Test fun concurrentStoreInstancesCannotPruneEachOthersActiveAtomicWrites() {
+        val directory = temporary.newFolder()
+        val executor = Executors.newFixedThreadPool(2)
+        val start = CountDownLatch(1)
+        val overview = "缓存".repeat(64 * 1024)
+        try {
+            val writers = (0 until 2).map { writer -> executor.submit {
+                check(start.await(5, TimeUnit.SECONDS))
+                val store = BrowserSnapshotStore(directory)
+                repeat(6) {
+                    repeat(6) { index ->
+                        val expected = MediaPage(listOf(episode.copy(name = "writer-$writer-$index", overview = overview)), 1)
+                        assertTrue("另一实例的容量清扫不能删除正在写的临时文件",
+                            store.save(session, key(browserId = "writer-$writer-$index"), expected))
+                    }
+                }
+            } }
+            start.countDown()
+            writers.forEach { it.get(20, TimeUnit.SECONDS) }
+            val reloaded = BrowserSnapshotStore(directory)
+            repeat(2) { writer -> repeat(6) { index ->
+                val expected = MediaPage(listOf(episode.copy(name = "writer-$writer-$index", overview = overview)), 1)
+                assertEquals(expected, reloaded.load(session, key(browserId = "writer-$writer-$index")))
+            } }
+            assertEquals(12, directory.listFiles()!!.size)
+            assertTrue("所有写入完成后只能保留完整 JSON", directory.listFiles()!!.all { it.extension == "json" })
+        } finally { start.countDown(); executor.shutdownNow(); executor.awaitTermination(5, TimeUnit.SECONDS) }
     }
 }

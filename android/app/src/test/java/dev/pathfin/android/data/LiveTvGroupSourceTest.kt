@@ -8,12 +8,16 @@ import dev.pathfin.android.domain.Session
 import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -106,6 +110,71 @@ class LiveTvGroupSourceTest {
             addLocalTuner = true
             assertNull("任何一个 M3U 无法读取时不能只返回其余播放列表", runBlocking { source.refresh(session, JellyfinApi()) })
             assertEquals("完整分组缓存保持不变", first, runBlocking { source.cached(session) })
+        }
+    }
+
+    @Test fun oversizedGroupCacheKeepsThePreviousReadableGroupsWhileReturningTheFreshResult() {
+        val currentPlaylist = AtomicReference(playlist)
+        withServer({ exchange ->
+            when (exchange.requestURI.path) {
+                "/jf/System/Configuration/livetv" -> exchange.send("""{"TunerHosts":[{"Type":"m3u","Url":"${exchange.base()}/tuner.m3u"}]}""")
+                else -> exchange.send(currentPlaylist.get())
+            }
+        }) { session, source ->
+            val first = runBlocking { source.refresh(session, JellyfinApi()) }
+            currentPlaylist.set("#EXTM3U\n#EXTINF:-1 group-title=\"${"影".repeat(800_000)}\",CCTV1\nhttp://a.example/1\n")
+            val fresh = runBlocking { source.refresh(session, JellyfinApi()) }
+            assertEquals("在线读取仍成功返回新分组", 800_000, fresh?.entries?.single()?.second?.length)
+            assertEquals("超过缓存读取上限时保留原文件", first, runBlocking { source.cached(session) })
+        }
+    }
+
+    @Test fun retainedAccountsSharePlaylistGroupsAcrossUsersAndRemoveOnlyUnreferencedServers() {
+        withServer({ exchange ->
+            when (exchange.requestURI.path) {
+                "/jf/System/Configuration/livetv" -> exchange.send("""{"TunerHosts":[{"Type":"m3u","Url":"${exchange.base()}/tuner.m3u"}]}""")
+                else -> exchange.send(playlist)
+            }
+        }) { session, source ->
+            val otherServer = session.copy(serverId = "server-b")
+            val first = runBlocking { source.refresh(session, JellyfinApi()) }
+            runBlocking { source.refresh(otherServer, JellyfinApi()) }
+            source.retainAccounts(listOf(session.copy(userId = "remaining-user", accessToken = "other-token")))
+            assertEquals("同服务器还有其他账号时保留公共分组", first, runBlocking { source.cached(session) })
+            assertNull("最后一个资料已移除的服务器不再保留分组", runBlocking { source.cached(otherServer) })
+            source.retainAccounts(emptyList())
+            assertNull(runBlocking { source.cached(session) })
+        }
+    }
+
+    @Test fun cancelledPlaylistResponseCannotRecreateGroupsAfterAccountCleanup() {
+        val downloads = AtomicInteger()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        withServer({ exchange ->
+            when (exchange.requestURI.path) {
+                "/jf/System/Configuration/livetv" -> exchange.send("""{"TunerHosts":[{"Type":"m3u","Url":"${exchange.base()}/tuner.m3u"}]}""")
+                else -> {
+                    if (downloads.incrementAndGet() == 2) {
+                        started.countDown()
+                        check(release.await(5, TimeUnit.SECONDS)) { "playlist response was not released" }
+                    }
+                    exchange.send(playlist)
+                }
+            }
+        }) { session, source ->
+            runBlocking {
+                source.refresh(session, JellyfinApi())
+                val pending = async(Dispatchers.Default) { source.refresh(session, JellyfinApi()) }
+                try {
+                    assertTrue("第二次播放列表请求必须实际到达", started.await(5, TimeUnit.SECONDS))
+                    pending.cancel()
+                    source.retainAccounts(emptyList())
+                    release.countDown()
+                    withTimeout(5_000) { pending.join() }
+                    assertNull("已经取消的迟到响应不能复活被清理的分组", source.cached(session))
+                } finally { release.countDown(); pending.cancelAndJoin() }
+            }
         }
     }
 
