@@ -2816,18 +2816,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { current -> current.copy(
             reauthenticationProfile = profile, loginBusy = false,
             loginError = tr("此账号登录已失效，请重新登录"), notice = null,
-            preparingPlay = false, sourceSelection = null,
-            activePlayback = null, pendingCast = null, pendingDownload = null,
+            activePlayback = null, pendingCast = null,
             detailLoading = false,
-            home = current.home.copy(loading = false),
-            search = current.search.copy(results = current.search.results.copy(sections = current.search.results.sections.mapValues { (_, c) ->
-                c.copy(loading = false, loadingMore = false) }), suggestions = current.search.suggestions.copy(loading = false)),
-            favorites = current.favorites.copy(sections = current.favorites.sections.mapValues { (_, c) -> c.copy(loading = false, loadingMore = false) }),
             playbackEpisodes = current.playbackEpisodes.copy(loading = false, loadingMore = false),
             folders = current.folders.mapValues { (_, value) -> value.copy(loading = false, loadingMore = false) },
             browsers = current.browsers.mapValues { (_, value) -> value.copy(filtersLoading = false,
                 content = value.content.copy(loading = false, loadingMore = false)) },
-            detailExtras = current.detailExtras.mapValues { (_, value) -> value.copy(loading = false) },
         ) }
     }
 
