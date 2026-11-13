@@ -98,7 +98,8 @@ class MediaDownloadWorker(context: Context, parameters: WorkerParameters) : Coro
                     }) { bytes, total ->
                         currentCoroutineContext().ensureActive()
                         requirePermission(source.url)
-                        ensureCurrent(store, task)
+                        // 进度回调不再逐次解密账号列表：删除账号时 recover() 已把任务置为取消，
+                        // 下面的 update 随即抛出取消；起写前与完成前仍各校验一次账号。
                         val updated = store.update(task.id, task.workId) {
                             if (!it.isActive) throw CancellationException("Download cancelled")
                             it.copy(status = DownloadStatus.DOWNLOADING, downloadedBytes = bytes, totalBytes = total)
