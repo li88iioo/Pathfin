@@ -67,7 +67,10 @@ class ServerProfilesStoreTest {
         assertEquals(listOf("first", "second"), store.loadProfiles().map { it.id })
         store.selectProfile(second.id)
         assertEquals(second.session, store.load())
+        // 投屏等常驻任务按此版本决定是否重新校验账号；删除账号必须让版本变化。
+        val revision = SessionStore.profilesRevision
         store.removeProfile(second.id)
+        assertNotEquals(revision, SessionStore.profilesRevision)
         assertNull(store.load())
         assertNull(store.activeProfileId())
         assertEquals(listOf(changed), store.loadProfiles())

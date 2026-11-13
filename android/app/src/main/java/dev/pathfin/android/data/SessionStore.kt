@@ -191,6 +191,7 @@ class SessionStore(context: Context) {
         val editor = preferences.edit().putString(PROFILES, encrypted)
         editor.extra()
         check(editor.commit()) { tr("无法保存服务器列表，请检查设备存储空间。") }
+        profilesRevision++
     }
 
     private fun profileFor(session: Session): ServerProfile {
@@ -278,6 +279,7 @@ class SessionStore(context: Context) {
     @SuppressLint("UseKtx") // KTX edit 返回 Unit；这里必须检查同步 commit 是否成功。
     private fun discardUnreadableProfiles(): List<ServerProfile> {
         check(preferences.edit().remove(PROFILES).remove(ACTIVE_PROFILE).commit()) { tr("无法清除损坏的服务器列表。") }
+        profilesRevision++
         return emptyList()
     }
 
@@ -308,16 +310,19 @@ class SessionStore(context: Context) {
     private fun encode(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)
     private fun decode(value: String): ByteArray = Base64.decode(value, Base64.NO_WRAP)
 
-    private companion object {
+    companion object {
+        /** 服务器列表每次写入或丢弃都加一；常驻任务据此判断是否需要重新解密校验账号。 */
+        @Volatile var profilesRevision = 0L
+            private set
         /** 同进程内 UI、下载与投屏各自创建实例；读改写必须共用一把锁，否则并发写会互相覆盖。 */
-        val LOCK = Any()
-        const val SESSION = "encrypted_session_v1"
-        const val PROFILES = "encrypted_profiles_v2"
-        const val ACTIVE_PROFILE = "active_profile_id"
-        const val DEVICE_ID = "device_id"
-        const val KEY_ALIAS = "dev.pathfin.android.session.v1"
-        const val TRANSFORMATION = "AES/GCM/NoPadding"
-        val SESSION_AAD = "Pathfin session v1".toByteArray(Charsets.UTF_8)
-        val PROFILES_AAD = "Pathfin profiles v2".toByteArray(Charsets.UTF_8)
+        private val LOCK = Any()
+        private const val SESSION = "encrypted_session_v1"
+        private const val PROFILES = "encrypted_profiles_v2"
+        private const val ACTIVE_PROFILE = "active_profile_id"
+        private const val DEVICE_ID = "device_id"
+        private const val KEY_ALIAS = "dev.pathfin.android.session.v1"
+        private const val TRANSFORMATION = "AES/GCM/NoPadding"
+        private val SESSION_AAD = "Pathfin session v1".toByteArray(Charsets.UTF_8)
+        private val PROFILES_AAD = "Pathfin profiles v2".toByteArray(Charsets.UTF_8)
     }
 }

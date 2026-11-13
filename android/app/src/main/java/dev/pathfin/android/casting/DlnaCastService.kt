@@ -134,7 +134,10 @@ class DlnaCastService : Service() {
     private data class ActiveCast(val profileId: String, val request: PlaybackRequest, val api: JellyfinApi,
         val apiClient: OkHttpClient, val av: AvTransportClient, val relay: CastRelay, val device: CastDevice,
         var reported: Boolean = false, var lastReportNanos: Long = 0,
-        var positionTicks: Long = TimeUnits.msToTicks(request.startPositionMs))
+        var positionTicks: Long = TimeUnits.msToTicks(request.startPositionMs)) {
+        /** 上次校验时的服务器列表版本与结果；列表未变时轮询不再逐次解密。 */
+        @Volatile var profileCheck: Pair<Long, Boolean>? = null
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -362,9 +365,13 @@ class DlnaCastService : Service() {
         return stopped
     }
 
-    private fun profileExists(cast: ActiveCast): Boolean = SessionStore(this).loadProfiles().any {
-        it.id == cast.profileId && it.session.userId == cast.request.session.userId && it.session.server == cast.request.session.server &&
-            it.session.accessToken == cast.request.session.accessToken
+    private fun profileExists(cast: ActiveCast): Boolean {
+        val revision = SessionStore.profilesRevision
+        cast.profileCheck?.takeIf { it.first == revision }?.let { return it.second }
+        return SessionStore(this).loadProfiles().any {
+            it.id == cast.profileId && it.session.userId == cast.request.session.userId && it.session.server == cast.request.session.server &&
+                it.session.accessToken == cast.request.session.accessToken
+        }.also { cast.profileCheck = revision to it }
     }
 
     private fun checkProfile(cast: ActiveCast) {
