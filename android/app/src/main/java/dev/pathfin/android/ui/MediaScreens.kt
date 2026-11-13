@@ -6,10 +6,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import android.os.Build
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
@@ -21,14 +19,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -225,7 +221,7 @@ internal fun PosterShelf(
             ) {
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
                     if (leadWide && index == 0 && !item.backdropTag.isNullOrBlank()) LatestLeadCard(item, session, api) { onOpen(item) }
-                    else PosterCard(item, session, api, Modifier.width(112.dp), compact = true) { onOpen(item) }
+                    else PosterCard(item, session, api, Modifier.width(112.dp)) { onOpen(item) }
                 }
             }
         }
@@ -424,41 +420,8 @@ internal fun resumeSubtitle(item: MediaItem, title: String): String {
 }
 
 @Composable
-internal fun MediaGrid(content: ContentState, session: Session, api: JellyfinApi, onOpen: (MediaItem) -> Unit, onRetry: () -> Unit, onMore: () -> Unit, modifier: Modifier = Modifier) {
-    val fontScale = LocalDensity.current.fontScale
-    val bottomInset = LocalNavigationBottomInset.current
-    val grid = rememberLazyGridState()
-    AutomaticGridPagination(grid, content.pagination, content.queryKey, onMore)
-    RefreshFailureNotice(content.error?.takeIf { !content.retryAppend && content.items.isNotEmpty() }, settled = !content.loading, retry = onRetry)
-    RefreshablePage(content.loading || content.loadingMore, onRetry, modifier.fillMaxSize()) {
-    LazyVerticalGrid(
-        GridCells.Adaptive(if (fontScale >= 1.5f) 144.dp else 104.dp),
-        Modifier.fillMaxSize().testTag("media-grid"),
-        state = grid,
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = LocalPageTopInset.current, bottom = bottomInset),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        content.error?.takeIf { !content.retryAppend && content.items.isEmpty() }?.let { error ->
-            item(span = { GridItemSpan(maxLineSpan) }, key = "media-error") { ErrorPanel(error, retry = onRetry) }
-        }
-        gridItems(content.items, key = { it.id }) { item -> PosterCard(item, session, api, Modifier.fillMaxWidth()) { onOpen(item) } }
-        if (content.items.isEmpty() && content.error == null) item(span = { GridItemSpan(maxLineSpan) }, key = "media-empty") {
-            Column {
-                EmptyPanel(if (content.loading) tr("正在读取媒体") else tr("没有找到内容"), if (content.loading) tr("请稍候…") else tr("尝试刷新，或调整搜索条件。"), loading = content.loading)
-            }
-        }
-        content.error?.takeIf { content.retryAppend }?.let { error ->
-            item(span = { GridItemSpan(maxLineSpan) }, key = "media-append-error") { InlineError(error) }
-        }
-    }
-    }
-}
-
-@Composable
-private fun PosterCard(item: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, compact: Boolean = false, onClick: () -> Unit) {
-    BrowserMediaCard(item, session, api, PosterStyle.POSTER, modifier, compact = compact,
-        imageWidth = if (compact) 112.dp else null, onOpen = onClick)
+private fun PosterCard(item: MediaItem, session: Session, api: JellyfinApi, modifier: Modifier, onClick: () -> Unit) {
+    BrowserMediaCard(item, session, api, PosterStyle.POSTER, modifier, compact = true, imageWidth = 112.dp, onOpen = onClick)
 }
 
 @Composable

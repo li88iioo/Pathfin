@@ -4,10 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SwitchColors
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -71,20 +67,6 @@ internal object PathfinAppearance {
         if (isDark()) Color(0x14FFFFFF) else Color(0xFFECEEF2),
     )
 
-    @Composable
-    fun switchColors(): SwitchColors = SwitchDefaults.colors(
-        checkedThumbColor = onAccent,
-        checkedTrackColor = accent,
-        checkedBorderColor = Color.Transparent,
-        uncheckedThumbColor = if (isDark()) Color(0xFFA9A9B2) else Color(0xFF7A7A83),
-        uncheckedTrackColor = softFill,
-        uncheckedBorderColor = if (isDark()) Color(0xFF3A3A40) else Color(0xFFD6D6DC),
-        disabledCheckedThumbColor = onAccent.copy(alpha = 0.6f),
-        disabledCheckedTrackColor = accent.copy(alpha = 0.4f),
-        disabledUncheckedThumbColor = textMuted.copy(alpha = 0.4f),
-        disabledUncheckedTrackColor = softFill.copy(alpha = 0.5f),
-        disabledUncheckedBorderColor = Color.Transparent,
-    )
 }
 
 @Composable
@@ -99,29 +81,4 @@ internal fun PageTitleBar(modifier: Modifier = Modifier,
             content()
         }
     }
-}
-
-@Composable
-internal fun elevatedCardColor(): Color = PathfinAppearance.card
-
-@Composable
-internal fun elevatedCardBorder(highlighted: Boolean = false): BorderStroke =
-    if (highlighted) BorderStroke(1.dp, PathfinAppearance.accent.copy(alpha = 0.45f))
-    else PathfinAppearance.cardBorder
-
-@Composable
-internal fun dialogSurfaceColor(): Color = PathfinAppearance.card
-
-@Composable
-internal fun refinedTextFieldColors(): TextFieldColors {
-    val dark = PathfinAppearance.isDark()
-    return OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = if (dark) Color(0xFF232327) else Color.White,
-        unfocusedContainerColor = PathfinAppearance.softFill.copy(alpha = if (dark) 0.7f else 0.65f),
-        disabledContainerColor = PathfinAppearance.softFill.copy(alpha = 0.35f),
-        focusedBorderColor = PathfinAppearance.accent,
-        unfocusedBorderColor = if (dark) Color(0xFF33333A) else Color(0xFFE5E7EB),
-        focusedLabelColor = PathfinAppearance.accent,
-        unfocusedLabelColor = PathfinAppearance.textSub,
-    )
 }

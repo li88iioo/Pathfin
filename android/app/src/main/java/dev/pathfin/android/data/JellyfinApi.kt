@@ -94,11 +94,6 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         return execute(session.server, path, query = query, headers = PlaybackHeaders.serverHeaders(session))
     }
 
-    internal suspend fun authenticatedArray(session: Session, path: String, query: Map<String, String> = emptyMap()): JSONArray {
-        require(path.matches(Regex("[A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*"))) { tr("接口路径无效") }
-        return executeArray(session.server, path, query, PlaybackHeaders.serverHeaders(session))
-    }
-
     suspend fun libraries(session: Session): List<MediaItem> =
         mapMediaPage(execute(
             session.server,

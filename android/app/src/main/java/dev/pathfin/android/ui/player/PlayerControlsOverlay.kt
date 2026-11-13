@@ -31,12 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -45,7 +42,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -403,7 +399,6 @@ internal val PlayerText = Color(0xFFF4F4F6)
 internal val PlayerSecondary = Color(0xFFF4F4F6).copy(alpha = .62f)
 internal val PlayerDisabled = Color(0xFFF4F4F6).copy(alpha = .3f)
 internal val PlayerSurface = Color(0xFF1C1D20).copy(alpha = .94f)
-internal val PlayerDivider = Color.White.copy(alpha = .08f)
 
 /** 裸白色细线图标按钮：48dp 起的触控区，不带底色，依靠顶部/底部暗角保证可读。 */
 @Composable

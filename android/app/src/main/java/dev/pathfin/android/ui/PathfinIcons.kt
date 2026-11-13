@@ -200,10 +200,6 @@ internal object PathfinIcons {
         moveTo(3.5f, 7.5f); quadTo(3.5f, 5f, 6f, 5f); lineTo(9.5f, 5f); lineTo(11.5f, 7.5f); lineTo(18f, 7.5f); quadTo(20.5f, 7.5f, 20.5f, 10f)
         lineTo(20.5f, 17.5f); quadTo(20.5f, 20f, 18f, 20f); lineTo(6f, 20f); quadTo(3.5f, 20f, 3.5f, 17.5f); close()
     } }
-    val Tag by lazy { strokeIcon("Tag") {
-        moveTo(3.5f, 4.5f); quadTo(3.5f, 3.5f, 4.5f, 3.5f); lineTo(11f, 3.5f); lineTo(20.5f, 13f); lineTo(13f, 20.5f); lineTo(3.5f, 11f); close()
-        dot(8f, 8f)
-    } }
     val Shapes by lazy { strokeIcon("Shapes") { circle(7.5f, 7.5f, 3.5f); roundRect(13.5f, 4f, 20f, 10.5f, 1.5f); moveTo(7.5f, 13.5f); lineTo(11f, 20f); lineTo(4f, 20f); close(); circle(16.75f, 16.75f, 3.25f) } }
     val Clock by lazy { strokeIcon("Clock") { circle(12f, 12f, 9f); moveTo(12f, 7f); lineTo(12f, 12f); lineTo(15.5f, 14f) } }
     val Alert by lazy { strokeIcon("Alert") {

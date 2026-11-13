@@ -1017,15 +1017,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         mutableState.update { it.copy(temporarySpeed = speed) }
     }
 
-    fun updateTemporarySpeed(speed: Float) {
-        if (active?.tuning?.longPressSlideSpeedEnabled != true) return
-        val owner = temporarySpeedPlayer ?: return
-        if (speedBeforeLongPress == null || owner !== player || !speed.isFinite()) return
-        val bounded = (kotlin.math.round(speed * 4) / 4).coerceIn(.25f, 4f)
-        owner.setPlaybackSpeed(bounded)
-        mutableState.update { it.copy(temporarySpeed = bounded) }
-    }
-
     fun updateTemporarySpeedBySlide(fraction: Float) {
         val current = active ?: return
         if (!current.tuning.longPressSlideSpeedEnabled || !fraction.isFinite()) return

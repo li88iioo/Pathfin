@@ -44,8 +44,8 @@ data class LiveTvGroups(val entries: List<Pair<String, String>> = emptyList()) {
             var name = if (parts.size > 1) parts.last().trim() else null
             // SatIp 格式“84. VOX”“84.0 - VOX”：服务器去掉前面的数字台号。
             name?.indexOf(' ')?.takeIf { it > 0 }?.let { index ->
-                if (name!!.substring(0, index).trim(' ', '.').toDoubleOrNull() != null)
-                    name = name!!.substring(index + 1).trim(' ', '-')
+                if (name.substring(0, index).trim(' ', '.').toDoubleOrNull() != null)
+                    name = name.substring(index + 1).trim(' ', '-')
             }
             return name?.takeIf(String::isNotBlank)
                 ?: attributes["tvg-name"]?.takeIf(String::isNotBlank)

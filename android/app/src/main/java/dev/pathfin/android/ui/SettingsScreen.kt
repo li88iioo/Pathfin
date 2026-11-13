@@ -31,8 +31,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
@@ -380,15 +378,6 @@ internal fun PresetChip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(label, fontSize = 13.sp, color = if (selected) PathfinAppearance.textMain else PathfinAppearance.textSub)
     }
-}
-
-@Composable
-internal fun SettingsCard(
-    modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    GroupCard(modifier) { Column(Modifier.padding(contentPadding), content = content) }
 }
 
 /** 按位置拼接成一张分组卡片：首尾圆角、组间留白，行间细线从 dividerStartPadding 起画。 */

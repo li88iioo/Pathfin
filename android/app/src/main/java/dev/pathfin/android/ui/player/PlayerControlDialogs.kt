@@ -363,10 +363,6 @@ private fun LazyListScope.information(label: String, value: String) = item { Row
 } }
 
 @Composable
-private fun PlayerSectionLabel(title: String) { Text(title, Modifier.padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 6.dp),
-    fontSize = 12.5.sp, lineHeight = 17.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .4.sp, color = PlayerSecondary) }
-
-@Composable
 private fun PlayerChoiceRow(label: String, selected: Boolean, tag: String, enabled: Boolean = true, detail: String? = null, onClick: () -> Unit) {
     val accent = playerAccent()
     Row(Modifier.fillMaxWidth().clip(PlayerOptionShape)

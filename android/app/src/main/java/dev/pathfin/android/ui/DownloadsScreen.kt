@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,15 +23,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -207,7 +206,7 @@ private fun DownloadRow(task: DownloadTask, busy: Boolean, onPrimary: () -> Unit
             }
             Box {
                 PathfinIconButton(MediaNavigationIcons.More, tr("下载操作"), { menu = true }, enabled = !busy, size = 40.dp)
-                AppDropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(CardRadius), containerColor = dialogSurfaceColor()) {
+                AppDropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(CardRadius), containerColor = PathfinAppearance.card) {
                     if (task.status == DownloadStatus.FAILED || task.status == DownloadStatus.CANCELLED) {
                         MenuRow(tr("重新选择保存位置"), { menu = false; onRelocate() }, icon = PathfinIcons.Folder)
                     }

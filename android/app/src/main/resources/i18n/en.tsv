@@ -102,14 +102,10 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 下载媒体	Download media
 下载媒体标识无效	Invalid download media ID
 下载完成 · %1$s，点击用本机播放器打开	Download complete · %1$s. Tap to open with an on-device player
-下载已标记停止，但系统任务取消未完成，请重新打开应用确认	The download was marked as stopped, but the system task was not cancelled. Reopen the app to check
 下载操作	Download actions
 下载未完成，请打开 Pathfin 后重试	Download incomplete. Open Pathfin and retry
-下载未完成，请重试	Download incomplete. Please retry
 下载目录不可用，请重新选择保存位置	The download folder is unavailable. Choose a save location again
 下载目录不可用，请重新选择目录或使用系统另存为	The download folder is unavailable. Choose a folder again or use the system Save As
-下载网络规则已保存，部分任务未能重新排队，请在下载任务中重试	Download network rules saved, but some tasks could not be requeued. Retry them in Downloads
-下载记录已更新，请重试	Download record updated. Please retry
 下载记录已移除	Download record removed
 不允许读取此媒体地址	Reading this media address is not allowed
 不到 1 分	Under 1 min
@@ -118,7 +114,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 不支持的字幕格式	Unsupported subtitle format
 不支持的请求方法	Unsupported request method
 不是有效的 Pathfin 设置备份	Not a valid Pathfin settings backup
-不能把 STRM 地址文件作为影片下载	An STRM address file can't be downloaded as a video
 不计费属性由系统判断。更改规则会重新排队，未完成的下载从头开始。	The system decides whether a network is unmetered. Changing the rule requeues tasks; unfinished downloads restart.
 专辑	Albums
 中文	Chinese
@@ -201,7 +196,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 光盘	Disc
 全部	All
 全部来源	All sources
-全部标签	All tags
 全部语言	All languages
 共 %1$s 条记录	%1$s records
 共 %1$s 集	%1$s episodes
@@ -227,11 +221,9 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 关闭定时	Cancel timer
 关闭提示	Dismiss
 关闭播放质量	Close playback quality
-关闭更多操作	Close more actions
 关闭片头提示	Dismiss intro prompt
 关闭片头错误提示	Dismiss intro error
 关闭画中画	Close picture-in-picture
-关闭简介	Close synopsis
 关闭解码提示	Dismiss decoding notice
 关闭错误提示	Dismiss error
 关闭音轨	Audio off
@@ -294,7 +286,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 单声道	Mono
 单集播放完毕后自动连播下一集	Automatically play the next episode when one finishes
 单集详情优先采用当前集画面作为背景	Episode details prefer the episode's own image as the background
-即将上映	Upcoming
 即将播出	Airing soon
 原图预览	Original image preview
 原始HTTP播放地址已不可用，请重新选择片源	The original HTTP playback address is no longer available. Choose another source
@@ -471,7 +462,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 将添加为一张背景图。	Will be added as a backdrop.
 将连接 %1$s	Will connect to %1$s
 尚未确认服务器字幕更新	Server subtitle update not confirmed yet
-尝试刷新，或调整搜索条件。	Try refreshing, or adjust the search.
 尝试调整分类或筛选条件。	Try adjusting the category or filters.
 局域网连接已断开，临时媒体地址已撤销	The local network connection dropped; the temporary media address was revoked
 已下载 %1$s	Downloaded %1$s
@@ -654,12 +644,10 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 文件保存到你选择的位置，可在后台继续；中断后重试会从头下载。	Files are saved to the location you choose and can continue in the background; retrying after an interruption starts from the beginning.
 文件信息	File info
 文件大小	File size
-文件媒体信息	File media info
 文件已保存，无需重新下载	The file is saved; no need to download again
 文件服务不可用	File service unavailable
 文件服务未返回可读写文件	The file service didn't return a readable and writable file
 文件服务正忙，请稍后重试	The file service is busy. Please try again later
-文件未完整保存，请重新下载	The file wasn't saved completely. Download again
 新密码	New password
 无效的播放上报事件	Invalid playback report event
 无效的服务器接口路径	Invalid server API path
@@ -682,7 +670,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 无法切换服务器，请检查设备存储空间。	Couldn't switch server. Check the device's storage space.
 无法创建下载	Couldn't create the download
 无法创建下载，请重新选择保存位置	Couldn't create the download. Choose a save location again
-无法创建下载，请重试	Couldn't create the download. Please retry
 无法创建截图文件	Couldn't create the screenshot file
 无法初始化播放器，请返回后重试。	Couldn't initialize the player. Go back and retry.
 无法取得可下载的实际媒体文件，请检查该媒体是否支持下载	Couldn't get a downloadable media file. Check whether this media supports downloading
@@ -692,9 +679,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 无法建立局域网临时媒体转发	Couldn't set up the temporary local media relay
 无法恢复播放，请检查服务器转码权限或网络后重试。	Couldn't resume playback. Check server transcoding permission or the network and retry.
 无法打开保存位置，请检查目标文件与剩余空间	Couldn't open the save location. Check the destination file and free space
-无法打开保存位置，请重新选择文件	Couldn't open the save location. Choose the file again
 无法打开文件，文件可能已移除或尚未安装对应播放器	Couldn't open the file. It may have been removed, or no matching player is installed
-无法更新下载队列，请检查本机存储空间后重试	Couldn't update the download queue. Check the device's storage space and retry
 无法更新播放源，请检查服务器转码权限或网络；当前播放保持不变	Couldn't update the playback source. Check server transcoding permission or the network; current playback is unchanged
 无法清除损坏的服务器列表。	Couldn't clear the corrupted server list.
 无法清除损坏的登录会话。	Couldn't clear the corrupted sign-in session.
@@ -745,7 +730,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 暂停视频	Pause video
 暂无%1$s	No %1$s
 暂无参演作品	No credits
-暂无可用标签	No tags available
 暂无可见剧集	No visible episodes
 暂无可见媒体	No visible media
 暂无可见媒体库	No visible libraries
@@ -757,7 +741,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 暂无系统日志	No system logs
 暂无背景图	No backdrops
 暂无节目信息	No program info
-暂无观看记录	No watch history
 暂无计划任务	No scheduled tasks
 曲目 %1$s	Track %1$s
 更多	More
@@ -772,7 +755,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 最多显示前 512 KiB / 10000 行；账号凭据已隐藏	Shows at most the first 512 KiB / 10000 lines; account credentials are hidden
 最新上线	Latest
 最近入库	Recently added
-最近入库 · %1$s	Recently added · %1$s
 服务器	Server
 服务器仅支持 HTTP 或 HTTPS	The server only supports HTTP or HTTPS
 服务器使用 HTTP，请先在服务器设置中明确允许	The server uses HTTP. Allow it explicitly in server settings first
@@ -929,7 +911,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 正在读取字幕轨道…	Loading subtitle tracks…
 正在读取服务器信息	Loading server info
 正在读取服务器字幕…	Loading server subtitles…
-正在读取标签	Loading tags
 正在读取离线许可…	Loading offline licenses…
 正在读取节目单	Loading guide
 正在读取许可全文…	Loading full license text…
@@ -985,7 +966,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 深色	Dark
 深色模式	Dark mode
 添加	Add
-添加一台 Jellyfin 服务器	Add a Jellyfin server
 添加到服务器	Add to server
 添加备用地址	Add alternate address
 添加媒体库或调整账号权限后，可以重新读取。	Add libraries or adjust account permissions, then reload.
@@ -1118,7 +1098,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 缩略图	Thumbnail
 缺少外部编号，无法应用此结果	Missing external IDs; can't apply this result
 缺少局域网访问权限，请回到服务器页面允许后重试下载	Local network access is missing. Go back to the server page, allow it and retry the download
-网络规则已更改，任务重排失败，请重试	Network rules changed but requeuing tasks failed. Please retry
 背景优先使用集截图	Backdrops prefer episode screenshots
 背景图	Backdrop
 背景模糊	Background blur
@@ -1217,7 +1196,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 请使用服务器管理员账号管理服务器。	Use a server administrator account to manage the server.
 请先取消正在进行的下载	Cancel the ongoing download first
 请先确认允许 HTTP 明文连接	Confirm allowing plain HTTP connections first
-请先读取文档	Load the document first
 请先选择可播放的影片或剧集	Choose a playable movie or series first
 请在 Jellyfin 中为账号授予所需权限。	Grant the account the required permissions in Jellyfin.
 请在 Jellyfin 服务端配置直播源及节目指南，然后刷新频道。	Configure live sources and the program guide on the Jellyfin server, then refresh channels.
@@ -1260,7 +1238,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 账号已移除；下载队列更新未完成，请重新打开下载任务确认	The account was removed; the download queue could not finish updating. Reopen Downloads to check its status
 账号或媒体已经变化，请重新搜索识别结果	The account or media changed. Search for identification results again
 账号或密码错误，请重试	Incorrect username or password. Please retry
-账号标识无效	Invalid account ID
 起播跳过	Skip at start
 超过100%可能造成失真	Above 100% may distort
 跟随传感器	Sensor
@@ -1295,7 +1272,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 进入播放器时的屏幕方向；跟随传感器时随手机旋转	Screen orientation when entering the player; with sensor, it rotates with the phone
 进入画中画	Enter picture-in-picture
 连接	Connect
-连接你的 Jellyfin 媒体库	Connect your Jellyfin library
 连接地址	Connection address
 连接或读取失败，请检查网络与服务器后重试	Couldn't connect or load. Check the network and server and retry
 连接服务器后可清理	Available after connecting to a server
@@ -1309,7 +1285,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 选择播放版本	Choose playback version
 选择文件夹…	Choose folder…
 自动选择时优先使用局域网地址，连不上再换用其他地址	Auto select prefers LAN addresses and falls back to others when they are unreachable
-选择标签	Choose tags
 选择账号	Choose account
 选用图片	Use image
 选用这张%1$s？	Use this %1$s?
