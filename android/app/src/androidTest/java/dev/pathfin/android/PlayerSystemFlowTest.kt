@@ -16,6 +16,7 @@ import android.graphics.Rect
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.Settings
@@ -525,9 +526,7 @@ class PlayerSystemFlowTest {
         Rect(origin[0], origin[1], origin[0] + view.width, origin[1] + view.height).also { check(!it.isEmpty) }
     }
 
-    private inner class TouchSequence(private val bounds: Rect, x: Float, y: Float, crossWindow: Boolean = false) : Closeable {
-        // PiP 菜单属于系统窗口，必须先取得跨窗口连接再取时间；应用内触摸直接经 InputManager 注入。
-        private val crossWindowInput = if (crossWindow) ui else null
+    private inner class TouchSequence(private val bounds: Rect, x: Float, y: Float) : Closeable {
         private val down = SystemClock.uptimeMillis()
         private var px = bounds.left + bounds.width() * x
         private var py = bounds.top + bounds.height() * y
@@ -544,7 +543,7 @@ class PlayerSystemFlowTest {
         }
         fun finish() {
             if (!finished) {
-                // PiP 菜单使用真实短触，不发同一毫秒的 DOWN/UP。
+                // 短触保持真实按下时长，不发同一毫秒的 DOWN/UP。
                 val remaining = 64L - (SystemClock.uptimeMillis() - down)
                 if (remaining > 0) SystemClock.sleep(remaining)
                 send(MotionEvent.ACTION_UP); finished = true
@@ -554,10 +553,7 @@ class PlayerSystemFlowTest {
         private fun send(action: Int) {
             val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, px, py, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
             try {
-                if (crossWindowInput != null)
-                    assertTrue("系统必须注入真实触摸事件 action=$action down=$down event=${event.eventTime}", crossWindowInput.injectInputEvent(event, true))
-                else
-                    instrumentation.sendPointerSync(event)
+                instrumentation.sendPointerSync(event)
             }
             finally { event.recycle() }
         }
@@ -566,17 +562,21 @@ class PlayerSystemFlowTest {
 
     private fun clickPipAction(label: String, match: (AccessibilityNodeInfo) -> Boolean) {
         try {
+            var stable: Rect? = null
+            var stableAt = 0L
+            await("系统必须暴露稳定的当前应用PiP窗口", 5_000) {
+                val current = pipWindowBounds()
+                val now = SystemClock.uptimeMillis()
+                if (current == null || current != stable) { stable = current; stableAt = now }
+                current != null && now - stableAt >= 600
+            }
+            // 入场稳定后再决定是否展开，不能用动画开始时的旧结果把已出现的菜单点掉。
             if (findSystemNode(match) == null) {
-                var stable: Rect? = null
-                var stableAt = 0L
-                await("系统必须暴露稳定的当前应用PiP窗口", 5_000) {
-                    val current = pipWindowBounds()
-                    val now = SystemClock.uptimeMillis()
-                    if (current == null || current != stable) { stable = current; stableAt = now }
-                    // PiP 容器边界会先于 SystemUI 菜单转为可触摸稳定；覆盖进入/展开动画后只点一次。
-                    current != null && now - stableAt >= 600
-                }
-                TouchSequence(checkNotNull(stable), .5f, .5f, crossWindow = true).use { it.finish() }
+                val bounds = checkNotNull(stable)
+                // 系统输入工具生成完整触摸；避免 UiAutomation 在 DOWN 注入中等待窗口动画，令手势时间过期。
+                ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand(
+                    "input tap ${bounds.centerX()} ${bounds.centerY()}"
+                )).use { it.readBytes() }
             }
             var found: AccessibilityNodeInfo? = null
             await("SystemUI 必须展示本次实际RemoteAction：$label", 5_000) { found = findSystemNode(match); found != null }
