@@ -77,7 +77,7 @@ def main():
     prefix = cache / "prefix/arm64-v8a"
     build = cache / "build/arm64-v8a"
     venv = cache / "venv"
-    env = dict(os.environ, SOURCE_DATE_EPOCH=str(EPOCH), LC_ALL="C.UTF-8",
+    env = dict(os.environ, SOURCE_DATE_EPOCH=str(EPOCH), LC_ALL="C.UTF-8", GIT_CEILING_DIRECTORIES=str(physical / "src"),
                PKG_CONFIG_LIBDIR=str(prefix / "lib/pkgconfig"), PKG_CONFIG_PATH=str(prefix / "lib/pkgconfig"))
     env["PATH"] = str(venv / "bin") + os.pathsep + str(toolchain) + os.pathsep + env["PATH"]
     def run(name, command, cwd=None, extra=None):

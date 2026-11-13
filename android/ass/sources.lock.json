@@ -51,7 +51,7 @@
     },
     {
       "path": "build_native.py",
-      "sha256": "b073d5c5a6230f1cc8dea261235f84ed723ca6aa3a0ade17bbc96b5280282bbe"
+      "sha256": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24"
     },
     {
       "path": "consumer-rules.pro",
@@ -67,7 +67,7 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssMediaSource.kt",
-      "sha256": "00212d8ea4293ead125d03aef0e63b19d6b059175768ca3bad3f988686a04944"
+      "sha256": "1408a1cf0740b1697e79d0b30bef4f7f614eefc24a49e298a3f0bc0f2452b088"
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssNative.kt",
