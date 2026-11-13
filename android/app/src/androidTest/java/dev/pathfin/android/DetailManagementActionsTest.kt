@@ -329,7 +329,12 @@ class DetailManagementActionsTest {
     }
 
     private fun openDetail(fixture: Fixture, vm: AppViewModel) {
-        compose.onAllNodesWithText(TITLE, substring = false).onFirst().performScrollTo().assertVerificationDisplayed(compose, "open-synthetic-detail").performVerificationClick(compose)
+        // 同名内容还在缩略图与最近入库中；明确点击主图详情入口，不能依赖文字查询的首个节点。
+        val tag = "home-ambient-hero/$ITEM_ID"
+        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
+        val entry = compose.onNodeWithTag(tag).performScrollTo()
+        VerificationDisplay.awaitWindowReady(compose, "open-synthetic-detail", entry)
+        entry.assertVerificationDisplayed(compose, "open-synthetic-detail").performVerificationClick(compose)
         await(fixture, vm, "合成媒体详情必须完成真实读取") {
             it.route == Route.Detail(ITEM_ID) && !it.detailLoading &&
                 it.details[ITEM_ID]?.name == TITLE && it.detailExtras[ITEM_ID]?.loading == false
@@ -384,7 +389,12 @@ class DetailManagementActionsTest {
 
     private fun await(fixture: Fixture, vm: AppViewModel, reason: String, condition: (AppState) -> Boolean) {
         try { compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); condition(vm.state.value) } }
-        catch (failure: Throwable) { throw AssertionError(reason, failure) }
+        catch (failure: Throwable) {
+            val state = vm.state.value
+            throw AssertionError("$reason; route=${state.route}, detailLoading=${state.detailLoading}, " +
+                "detailError=${state.detailError}, detail=${state.details[ITEM_ID]?.name}, " +
+                "extrasLoading=${state.detailExtras[ITEM_ID]?.loading}, activePlayback=${state.activePlayback?.item?.id}", failure)
+        }
     }
 
     private fun clearViewModel() { owner?.let { main { it.viewModelStore.clear() } }; owner = null }
