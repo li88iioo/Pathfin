@@ -736,7 +736,7 @@ class DiscoveryFlowTest {
             while (!closed.get()) try {
                 val socket = server.accept()
                 sockets.add(socket)
-                workers.execute { serve(socket) }
+                try { workers.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
             } catch (error: SocketException) { if (!closed.get()) errors.add(error) }
         }, "pathfin-discovery-accept").apply { isDaemon = true; start() }
 

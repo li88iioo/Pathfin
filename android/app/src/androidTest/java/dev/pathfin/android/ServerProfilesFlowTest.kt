@@ -774,7 +774,7 @@ class ServerProfilesFlowTest {
             while (!closed.get()) try {
                 val socket = server.accept()
                 sockets.add(socket)
-                executor.execute { serve(socket) }
+                try { executor.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
             } catch (error: SocketException) { if (!closed.get()) failures.add(error) }
         }, "pathfin-profile-accept-$label").apply { isDaemon = true; start() }
         fun assertHealthy() { failures.peek()?.let { throw AssertionError("合成入口 $label HTTP 契约失败", it) } }

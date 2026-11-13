@@ -250,7 +250,7 @@ class MediaMetadataPresentationTest {
         private val accept = Thread({
             while (!closed.get()) try {
                 val socket = server.accept(); sockets.add(socket)
-                executor.execute { serve(socket) }
+                try { executor.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
             } catch (error: SocketException) { if (!closed.get()) failures.add(error) }
         }, "metadata-presentation-accept").apply { isDaemon = true; start() }
 

@@ -717,7 +717,7 @@ class HomeLoadingTest {
                 try {
                     val socket = server.accept()
                     sockets.add(socket)
-                    executor.execute { serve(socket) }
+                    try { executor.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
                 } catch (failure: SocketException) {
                     if (!closed.get()) failures.add(failure)
                 }

@@ -273,7 +273,7 @@ class MediaImagesUiTest {
         val url = "http://127.0.0.1:${socket.localPort}"
         private val accept = Thread({
             while (!closed.get()) try {
-                val connection = socket.accept(); sockets.add(connection); executor.execute { serve(connection) }
+                val connection = socket.accept(); sockets.add(connection); try { executor.execute { serve(connection) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { connection.close() } }
             } catch (error: SocketException) { if (!closed.get()) failures.add(error) }
         }, "pathfin-images-accept").apply { isDaemon = true; start() }
         private fun serve(connection: Socket) {

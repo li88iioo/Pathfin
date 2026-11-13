@@ -468,7 +468,7 @@ class PendingPlaybackCancellationTest {
         private val accept = Thread({
             while (!closed.get()) try {
                 val socket = server.accept(); sockets += socket
-                workers.execute { serve(socket) }
+                try { workers.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
             } catch (error: SocketException) { if (!closed.get()) failures += error }
         }, "pathfin-pending-playback-accept").apply { isDaemon = true; start() }
 

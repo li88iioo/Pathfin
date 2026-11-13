@@ -430,7 +430,7 @@ class DetailManagementActionsTest {
         val baseUrl = "http://127.0.0.1:${server.localPort}"
         private val accept = Thread({
             while (!closed.get()) try {
-                val socket = server.accept(); sockets.add(socket); executor.execute { serve(socket) }
+                val socket = server.accept(); sockets.add(socket); try { executor.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
             } catch (error: SocketException) { if (!closed.get()) failures.add(error) }
         }, "pathfin-detail-management-accept").apply { isDaemon = true; start() }
 

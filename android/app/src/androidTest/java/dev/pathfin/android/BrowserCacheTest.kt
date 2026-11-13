@@ -1304,7 +1304,8 @@ class BrowserCacheTest {
                 try {
                     val socket = server.accept()
                     sockets.add(socket)
-                    executor.execute { serve(socket) }
+                    // 关闭与 accept 竞争时迟到的连接直接关掉；不能让线程池拒绝异常打崩整个测试进程。
+                    try { executor.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { socket.close() }
                 } catch (failure: SocketException) {
                     if (!closed.get()) failures.add(failure)
                 }

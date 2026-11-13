@@ -1232,7 +1232,7 @@ class LibrarySearchFlowTest {
             while (!closed.get()) try {
                 val socket = server.accept()
                 sockets.add(socket)
-                workers.execute { serve(socket) }
+                try { workers.execute { serve(socket) } } catch (_: java.util.concurrent.RejectedExecutionException) { runCatching { socket.close() } }
             } catch (error: SocketException) { if (!closed.get()) errors.add(error) }
         }, "pathfin-library-search-accept").apply { isDaemon = true; start() }
 
