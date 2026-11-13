@@ -26,7 +26,9 @@ internal class ScopedPlaybackInterceptor(
         val subtitleCall = initialUrl.toString() in subtitleUris
         val cleartextAllowed = if (subtitleCall) SubtitleHeaders.allowsCleartext(playback, initialUrl.toString())
             else PlaybackHeaders.allowsCleartext(playback)
-        if (request.url.scheme == "http" &&
+        // 直连直播源常经 HTTPS 跳到 HTTP CDN；外部片源跨源或降级后只带 User-Agent，不会泄露凭据。
+        val liveDowngradeAllowed = !subtitleCall && PlaybackHeaders.isExternalLive(playback)
+        if (request.url.scheme == "http" && !liveDowngradeAllowed &&
             (initialUrl.isHttps || !cleartextAllowed)) {
             throw IOException(tr("已阻止未经允许的 HTTP 连接或 HTTPS 降级跳转"))
         }
@@ -42,7 +44,7 @@ internal class ScopedPlaybackInterceptor(
         }
         val response = chain.proceed(builder.build())
         // 检查每一跳的响应，HTTP→HTTPS→HTTP 也不能绕过。此时尚未发出下一跳请求。
-        if (response.code in REDIRECT_CODES && response.request.url.isHttps &&
+        if (!liveDowngradeAllowed && response.code in REDIRECT_CODES && response.request.url.isHttps &&
             response.header("Location")?.let(response.request.url::resolve)?.scheme == "http") {
             response.close()
             throw IOException(tr("已阻止片源从 HTTPS 降级到 HTTP"))

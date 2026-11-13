@@ -170,6 +170,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         return true
     }
 
+    private fun retryLiveAsHls(current: ActivePlayback, owner: ExoPlayer, error: PlaybackException): Boolean {
+        val request = current.request
+        if (!retriesAsHls(request, error.errorCode)) return false
+        mainHandler.post {
+            if (active !== current || player !== owner) return@post
+            startPlayback(request.copy(stream = request.stream.copy(mimeType = MimeTypes.APPLICATION_M3U8)),
+                current.originalRequest, current.tuning, current.introHistory, current.manualTracks,
+                current.localSubtitles.toList(), recoveryPolicy = current.recoveryPolicy)
+        }
+        return true
+    }
+
     private fun handlePlaybackFailure(current: ActivePlayback, owner: ExoPlayer, error: PlaybackException) {
         if (active !== current || player !== owner) return
         if (restorePreviousSource(current)) return
@@ -1111,6 +1123,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             if (active !== current) return
             endTemporarySpeed()
             if (recoverLocalDecoder(current, exoPlayer, error)) return
+            if (retryLiveAsHls(current, exoPlayer, error)) return
             handlePlaybackFailure(current, exoPlayer, error)
         }
 

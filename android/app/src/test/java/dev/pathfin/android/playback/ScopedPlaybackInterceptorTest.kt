@@ -94,6 +94,33 @@ class ScopedPlaybackInterceptorTest {
         }
     }
 
+    @Test fun directLiveMayRedirectToHttpCdnCarryingOnlyItsUserAgent() {
+        val required = mapOf("User-Agent" to "qqlive", "Authorization" to "Bearer media-only")
+        val live = request(trustedServer = false, headers = required).let { it.copy(item = it.item.copy(type = "TvChannel")) }
+        var hops = 0
+        val sent = interceptChain(live, Request.Builder().url("https://media.example/live.m3u8").build()) { incoming ->
+            hops++
+            if (incoming.url.isHttps) Response.Builder().request(incoming).protocol(Protocol.HTTP_1_1).code(302).message("Found")
+                .header("Location", "http://cdn.example:8080/live/index.m3u8").body("".toResponseBody()).build()
+            else Response.Builder().request(incoming).protocol(Protocol.HTTP_1_1).code(200).message("OK").body("".toResponseBody()).build()
+        }
+        assertEquals(2, hops)
+        assertEquals("qqlive", sent.first().header("User-Agent"))
+        assertEquals("Bearer media-only", sent.first().header("Authorization"))
+        assertEquals("http://cdn.example:8080/live/index.m3u8", sent.last().url.toString())
+        assertEquals("UA 跟随跳转", "qqlive", sent.last().header("User-Agent"))
+        assertNull("降级后的明文跳转不能带片源凭据", sent.last().header("Authorization"))
+    }
+
+    @Test fun vodSourceStillCannotFollowHttpsDowngrade() {
+        assertThrows(IOException::class.java) {
+            interceptChain(request(trustedServer = false), Request.Builder().url("https://media.example/video.mkv").build()) { incoming ->
+                Response.Builder().request(incoming).protocol(Protocol.HTTP_1_1).code(302).message("Found")
+                    .header("Location", "http://cdn.example/video.mkv").body("".toResponseBody()).build()
+            }
+        }
+    }
+
     @Test fun redirectedUrlCannotSendEncodedJellyfinCredentialToExternalHost() {
         assertThrows(IOException::class.java) {
             intercept(request(trustedServer = false), Request.Builder()
@@ -111,6 +138,28 @@ class ScopedPlaybackInterceptorTest {
             trustedServer,
         )
         return PlaybackRequest(MediaItem("item", "Movie", "Movie"), PlaybackInfo(listOf(source), "play-session"), source, stream, 0, session)
+    }
+
+    /** 外层拦截器模拟 OkHttp 逐跳跟随一次重定向，内层看到的初始 URL 仍是调用的原始地址；返回每一跳实际发出的请求。 */
+    private fun interceptChain(playback: PlaybackRequest, incoming: Request, response: (Request) -> Response): List<Request> {
+        val sent = mutableListOf<Request>()
+        val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val first = chain.proceed(chain.request())
+                val location = first.header("Location")?.takeIf { first.code == 302 } ?: return@addInterceptor first
+                first.close()
+                chain.proceed(chain.request().newBuilder().url(checkNotNull(first.request.url.resolve(location))).build())
+            }
+            .addInterceptor(ScopedPlaybackInterceptor(playback))
+            .addInterceptor { chain -> sent += chain.request(); response(chain.request()) }
+            .build()
+        try {
+            client.newCall(incoming).execute().close()
+        } finally {
+            client.dispatcher.executorService.shutdown()
+            client.connectionPool.evictAll()
+        }
+        return sent
     }
 
     /** 无真实网络的终止拦截器；模拟每一跳携带旧 Header 时的实际请求重写。 */

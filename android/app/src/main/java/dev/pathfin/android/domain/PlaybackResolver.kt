@@ -42,7 +42,7 @@ object PlaybackResolver {
             return serverResult(session, source, url, PlayMethod.TRANSCODE)
         }
 
-        val original = source.path?.takeIf { ServerUrls.httpUri(it) != null }
+        val original = source.path?.takeIf { ServerUrls.httpUri(it) != null && liveSourceReachable(session, item, it) }
         val compatibleProtocol = source.protocol.isNullOrBlank() || source.protocol.equals("Http", true)
         val direct = serverMediaUrl(session.server, source.directStreamUrl)
         val transcode = serverMediaUrl(session.server, source.transcodingUrl)
@@ -75,6 +75,11 @@ object PlaybackResolver {
         }
         throw IllegalArgumentException(tr("该媒体源没有可播放的 HTTP 地址"))
     }
+
+    /** 内网直播源（如 M3U 调谐器代理）只在经内网地址连接服务器时直连；经公网访问时交给服务器代拉。 */
+    private fun liveSourceReachable(session: Session, item: MediaItem, url: String): Boolean =
+        item.type != "TvChannel" || !LocalNetworkDestination.isLocalHost(URI(url).host.orEmpty()) ||
+            ServerAddressSelection.isLocal(session.server)
 
     private fun serverResult(session: Session, source: MediaSource, url: String, method: PlayMethod) =
         ResolvedPlayback(
@@ -127,14 +132,24 @@ object PlaybackHeaders {
     fun forUrl(request: PlaybackRequest, url: String): Map<String, String> {
         val parsed = ServerUrls.httpUri(url) ?: return emptyMap()
         if (containsExternalServerCredential(request.session, url)) return emptyMap()
-        if (parsed.scheme.equals("http", true) && !allowsCleartext(request)) return emptyMap()
+        // 外部直播降级到 HTTP 必然跨 origin，下面只会带 User-Agent。
+        if (parsed.scheme.equals("http", true) && !allowsCleartext(request) && !isExternalLive(request)) return emptyMap()
         return if (request.stream.trustedServer) {
             if (ServerUrls.isWithinBase(request.session.server, url)) serverHeaders(request.session) else emptyMap()
         } else {
-            if (ServerUrls.sameOrigin(request.stream.uri, url))
-                sourceHeaders(request.session, request.stream.headers) else emptyMap()
+            val headers = sourceHeaders(request.session, request.stream.headers)
+            when {
+                ServerUrls.sameOrigin(request.stream.uri, url) -> headers
+                // User-Agent 不是凭据；直播源常按 UA 放行跳转后的 CDN，与服务端代拉时一致。
+                isExternalLive(request) -> headers.filterKeys { it.equals("User-Agent", true) }
+                else -> emptyMap()
+            }
         }
     }
+
+    /** 用户开启“直连直播源”后的外部频道地址。 */
+    internal fun isExternalLive(request: PlaybackRequest): Boolean =
+        !request.stream.trustedServer && request.item.type == "TvChannel"
 
     fun serverHeaders(session: Session): Map<String, String> =
         JellyfinAuthorization.headers(session.deviceId, session.accessToken)

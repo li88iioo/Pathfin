@@ -4,6 +4,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.HttpDataSource
 import dev.pathfin.android.domain.PlayMethod
+import dev.pathfin.android.domain.PlaybackHeaders
 import dev.pathfin.android.domain.PlaybackDelivery
 import dev.pathfin.android.domain.PlaybackRequest
 import dev.pathfin.android.domain.PlaybackResolver
@@ -30,6 +31,11 @@ internal class PlaybackRecoveryPolicy {
         }
     }
 }
+
+/** 直连直播地址常省略 .m3u8（如 /163189/rthk31）；渐进式解析器全部不认时按 HLS 重试一次，已指定类型不再重试。 */
+internal fun retriesAsHls(request: PlaybackRequest, errorCode: Int): Boolean =
+    PlaybackHeaders.isExternalLive(request) && request.stream.mimeType == null &&
+        errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
 
 /** 只把明确的媒体错误升级；凭据、TLS、DRM等问题不能靠转码绕过。 */
 @UnstableApi

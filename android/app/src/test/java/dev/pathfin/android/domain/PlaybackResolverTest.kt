@@ -79,6 +79,21 @@ class PlaybackResolverTest {
         assertEquals("手动降画质仍由服务器转码", PlayMethod.TRANSCODE, lowered.method)
     }
 
+    @Test fun lanOnlyLiveSourceDirectPlaysOnlyWhenTheServerIsReachedOverLan() {
+        val channel = MediaItem("channel", "CQTV", "TvChannel")
+        val tuner = "http://192.168.88.110:1905/proxy/chongqing-6.m3u8"
+        val source = MediaSource("live", path = tuner, protocol = "Http", transcodingUrl = "/videos/channel/master.m3u8")
+        val info = PlaybackInfo(listOf(source), "play")
+        val remote = PlaybackResolver.resolve(session, channel, info, source.id, preferOriginal = true)
+        assertTrue("经公网连接时手机多半不在调谐器内网，交给服务器", remote.trustedServer)
+        assertEquals(PlayMethod.TRANSCODE, remote.method)
+        val lanSession = session.copy(server = ServerConfig("http://192.168.88.2:8096", allowInsecureHttp = true))
+        assertEquals("经内网连接服务器时直连内网源", tuner, PlaybackResolver.resolve(lanSession, channel, info, source.id).uri)
+        val publicSource = source.copy(path = "https://cdn.example/163189/rthk31")
+        assertEquals("公网源不受服务器地址影响", publicSource.path,
+            PlaybackResolver.resolve(session, channel, PlaybackInfo(listOf(publicSource), "play"), source.id).uri)
+    }
+
     @Test fun liveSwitchAndStrmSwitchAreIndependent() {
         val preferences = AppPreferences(originalPathEnabled = false, liveTvDirectPlay = true)
         assertTrue(preferences.prefersOriginalSource(MediaItem("c", "Channel", "TvChannel")))

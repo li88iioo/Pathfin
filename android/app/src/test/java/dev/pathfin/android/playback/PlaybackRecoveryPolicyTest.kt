@@ -105,6 +105,18 @@ class PlaybackRecoveryPolicyTest {
         }
     }
 
+    @Test fun extensionlessDirectLiveRetriesAsHlsOnlyOnceAndOnlyForUnrecognizedContainers() {
+        val unsupported = PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED
+        val live = originalHttpRequest().let { it.copy(item = it.item.copy(type = "TvChannel"),
+            stream = it.stream.copy(uri = "https://cdn.example/163189/rthk31")) }
+        assertTrue(retriesAsHls(live, unsupported))
+        assertFalse("已按 HLS 起播的不再重试，避免循环",
+            retriesAsHls(live.copy(stream = live.stream.copy(mimeType = "application/x-mpegURL")), unsupported))
+        assertFalse("网络与 HTTP 错误不是封装识别问题", retriesAsHls(live, PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS))
+        assertFalse("经服务器的直播由服务器决定封装", retriesAsHls(live.copy(stream = live.stream.copy(trustedServer = true)), unsupported))
+        assertFalse("点播原始直连不猜测封装", retriesAsHls(originalHttpRequest(), unsupported))
+    }
+
     private fun httpFailure(status: Int): PlaybackException {
         // 这里只分类 HTTP 状态；反射传入未使用的 null DataSpec，避免 JVM 测试调用 Android Uri 桩。
         val cause = HttpDataSource.InvalidResponseCodeException::class.java.constructors.single()
