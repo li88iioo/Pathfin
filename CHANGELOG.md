@@ -4,6 +4,32 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.6] - 2026-11-14
+
+### 新增
+
+- [直播电视支持分组与全局搜索](https://github.com/li88iioo/Pathfin/commit/44526cebda46fe32edd06c958e145a2f458e685e)：从调谐器 M3U 读取分组，默认“全部”标签，可左右滑动切换；直播电视进入底栏第二位（可在设置中隐藏），全局搜索与收藏可找到频道和节目；播放返回后保留分组与频道位置。
+
+### 优化
+
+- [直播频道改回自适应列数的台标网格](https://github.com/li88iioo/Pathfin/commit/44526cebda46fe32edd06c958e145a2f458e685e)：搜索结果从顶部显示，取消搜索立即回到原位；没有上次观看时不再留空页头，搜索入口并入分组行。
+- [直播固定 1× 播放](https://github.com/li88iioo/Pathfin/commit/0f9487d6eb25da2fd95aed6f06dd3bd5bc9777d5)：点播记住的倍速不再带入直播，直播播放器不再提供倍速与画质调节；[流内没有字幕轨时隐藏字幕入口](https://github.com/li88iioo/Pathfin/commit/a044e14fb14cd235a7f27b79ed9c3d5fff975694)，也不提供本机导入与在线搜索。
+- 更流畅：[首页滚动时页头不再整体重绘](https://github.com/li88iioo/Pathfin/commit/b8a05802ae5dbd99af08e3d1a8f871ef8ad43757)；[批量标记已播放或未播放](https://github.com/li88iioo/Pathfin/commit/ab16c9136c6f2f09b77b3b48911920b61c458852)整批只保存与刷新一次；播放器[停止无效的位置轮询](https://github.com/li88iioo/Pathfin/commit/389cca65eabec5c82251f8efbe86276b419b33c1)；[下载进度](https://github.com/li88iioo/Pathfin/commit/4d1666a27c6013528a5f31aab85a421748b03e50)与[投屏](https://github.com/li88iioo/Pathfin/commit/6770363bf63737991110fdfb82a9aaef97a420ec)不再反复解密账号列表。
+
+### 修复
+
+- [修复直连直播部分源无法播放](https://github.com/li88iioo/Pathfin/commit/d891fa8b5b32485ebcc02cb4193c9946968f22aa)：支持省略 .m3u8 后缀的 HLS 地址与 HTTPS 跳转到 HTTP 的源；经公网连接服务器时，内网直播源改由服务器代拉。
+- [修复从直播、搜索或收藏返回首页时顶部闪白](https://github.com/li88iioo/Pathfin/commit/44526cebda46fe32edd06c958e145a2f458e685e)。
+- [单条服务器资料损坏不再清空整个服务器列表](https://github.com/li88iioo/Pathfin/commit/4e3cc83fd955721dbac9ab54232bab170d2f413d)，多处同时保存账号时也不再互相覆盖。
+- [关闭播放器后立即打开另一部详情](https://github.com/li88iioo/Pathfin/commit/549b83b807ce105e4fe0928c45537f71b15f521d)，详情不再缺少演职员、片源等内容，观看进度也能正常写回列表。
+- [字幕回退、解码回退与切换画质后保留播放现场](https://github.com/li88iioo/Pathfin/commit/63b405d945d08653b68f577a2e3bfad276193ac5)：锁屏、仅音频模式与音量增益不再丢失，片尾跳过状态不再重置。
+- 直播分组[读到空分组时清除旧标签](https://github.com/li88iioo/Pathfin/commit/08edd133dbb142dc7bab5c4e8d06c7b9a3ad4370)；删除账号时[清理不再使用的直播缓存](https://github.com/li88iioo/Pathfin/commit/03279af40677c113a7a2e3c90a3e2f3b20131a4f)，并[及时取消该账号的下载](https://github.com/li88iioo/Pathfin/commit/5963021f9fac46ecc6c6953b725ad105fdd6f056)。
+- [下载重试任务不会被迟到的删除误删](https://github.com/li88iioo/Pathfin/commit/bc8f956e4934ce33317ccedfa2c5f88088567f82)。
+- 投屏[停止电视失败时仍结束服务器会话](https://github.com/li88iioo/Pathfin/commit/710e987c755ec80fe7066ff1858723f8ea5a6252)，[重复停止返回一致结果](https://github.com/li88iioo/Pathfin/commit/7845d041defd96d913edf336787afd72978afd99)。
+- [已停用的账号不再能管理字幕](https://github.com/li88iioo/Pathfin/commit/0e18151cce8303f10de9c8e509e99197ff1e0718)。
+- [管理页切换服务器地址时保留编辑中的元数据与识别内容](https://github.com/li88iioo/Pathfin/commit/21c5a212a42068fff8ac77695f5751eae921b7b2)。
+- [播放器标题只在文字范围内打开选集](https://github.com/li88iioo/Pathfin/commit/7698381c65161fc5ce5cb00c7e14b5f8da3679b1)，右侧空白不再误触。
+
 ## [0.1.5] - 2026-11-12
 
 ### 新增
@@ -123,6 +149,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.6]: https://github.com/li88iioo/Pathfin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/li88iioo/Pathfin/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/li88iioo/Pathfin/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/li88iioo/Pathfin/compare/v0.1.2...v0.1.3
