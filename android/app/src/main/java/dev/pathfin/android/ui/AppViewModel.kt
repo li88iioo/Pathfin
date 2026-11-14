@@ -28,6 +28,7 @@ import dev.pathfin.android.data.HomeSnapshotStore
 import dev.pathfin.android.data.BrowserSnapshotStore
 import dev.pathfin.android.data.LocalNetworkPermission
 import dev.pathfin.android.data.LocalNetworkPermissionDenied
+import dev.pathfin.android.data.MediaIdentificationApi
 import dev.pathfin.android.data.MediaManagementApi
 import dev.pathfin.android.data.LegacyTraktCleanup
 import kotlinx.coroutines.CompletableDeferred
@@ -916,7 +917,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun openIdentification(item: MediaItem) {
         val session = state.value.session ?: return
-        if (!dev.pathfin.android.data.MediaIdentificationApi.supports(session, item)) return
+        if (!MediaIdentificationApi.supports(session, item)) return
         invalidatePlaybackPrefetch()
         mutableState.update { it.copy(routes = it.routes + Route.Identification(item)) }
     }
@@ -1095,6 +1096,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }) { session, _ ->
         notify(tr("已提交元数据刷新"))
         mediaChanged(session, item.id)
+    }
+
+    /** 服务器同步抓取元数据可能较慢：确认后立即离开识别页，应用在后台完成后通知并刷新。 */
+    fun applyIdentification(item: MediaItem, result: MediaIdentificationResult, options: MediaIdentificationOptions) {
+        if (state.value.session == null) return
+        // 同一条目仍在应用时不受理新结果，留在识别页说明原因，避免旧结果的成功通知被误认作新结果。
+        if ("identify/${item.id}" in state.value.actionBusy) return notify(tr("上一个识别结果仍在应用，完成后再试"))
+        notify(tr("正在应用识别结果，完成后自动刷新"))
+        runMediaAction(item, "identify", { MediaIdentificationApi(api).apply(it, item, result, options) }) { session, _ ->
+            notify(tr("识别结果已应用，信息已更新"))
+            mediaChanged(session, item.id)
+        }
+        if ((state.value.route as? Route.Identification)?.item?.id == item.id) back()
     }
 
     fun deleteMedia(item: MediaItem) = runMediaAction(item, "delete", {

@@ -37,10 +37,11 @@ import dev.pathfin.android.i18n.tr
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-/** 搜索和确认分开；Apply 后只提示刷新结果，不会因重读失败重复提交。 */
+/** 搜索和确认分开；确认后交由后台应用并离开本页，服务器重新抓取元数据期间不阻塞界面。 */
 @Composable
 fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinApi, onBack: () -> Unit,
-    onChanged: () -> Unit, onAuthExpired: () -> Unit = {}) =
+    onApply: (MediaIdentificationResult, MediaIdentificationOptions) -> Unit, onAuthExpired: () -> Unit = {},
+    applyBusy: Boolean = false) =
     key(session.serverIdentity, session.serverId, session.userId, session.accessToken, session.deviceId, item.id) {
     val identification = remember(api) { MediaIdentificationApi(api) }
     val currentSession by rememberUpdatedState(session)
@@ -53,9 +54,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     var idFields by remember { mutableStateOf<List<ExternalIdField>?>(null) }
     var idFieldsError by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
-    var applying by remember { mutableStateOf(false) }
     var searched by remember { mutableStateOf(false) }
-    var applied by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var results by remember { mutableStateOf<List<MediaIdentificationResult>>(emptyList()) }
     var resultForm by remember { mutableStateOf<MediaIdentificationQuery?>(null) }
@@ -75,7 +74,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     val form = MediaIdentificationQuery(name.trim(), if (byYear) year.toIntOrNull() else null, providerIds.toMap())
     val filledIds = fields.mapNotNull { field -> providerValue(field.key).trim().takeIf(String::isNotEmpty)?.let { field.key to it } }.toMap()
     val query = form.copy(providerIds = filledIds)
-    val canApply = enabled && !searching && !applying && !applied && validYear && resultForm == form
+    val canApply = enabled && !applyBusy && !searching && validYear && resultForm == form
 
     fun failure(exception: Exception) {
         if (exception is CancellationException) throw exception
@@ -83,8 +82,8 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
         error = identificationError(exception)
     }
     fun search() {
-        if (searching || applying || !enabled || (byYear && !validYear)) return
-        searching = true; searched = true; error = null; selected = null; applied = false; resultForm = null
+        if (searching || !enabled || (byYear && !validYear)) return
+        searching = true; searched = true; error = null; selected = null; resultForm = null
         scope.launch {
             try {
                 results = identification.search(currentSession, item, query)
@@ -95,7 +94,6 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
             finally { searching = false }
         }
     }
-    BackHandler(enabled = LocalPageActive.current && applying) { }
     // 读不到编号清单时仍可按名称搜索，不扩大服务器提供程序的范围。
     // 清单常在切页滑动中途到达：等滑动结束再铺开整组输入框，滑入不被打断。
     val settled = LocalPageSettled.current
@@ -113,7 +111,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     }
 
     // 搜索成功后进入独立的结果页（带海报/头像，便于区分同名条目）；返回键回到表单修改条件。
-    BackHandler(enabled = LocalPageActive.current && resultsPage && !applying) { resultsPage = false }
+    BackHandler(enabled = LocalPageActive.current && resultsPage) { resultsPage = false }
     val person = item.type == "Person"
     val topInset = LocalPageTopInset.current
     val density = LocalDensity.current
@@ -123,7 +121,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     Column(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Bottom)).testTag("identification-screen")) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             RefreshablePage(searching, ::search, Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas), refreshOnEntry = false,
-                enabled = enabled && searched && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty()), indicatorTopInset = contentTop) {
+                enabled = enabled && searched && validYear && (name.isNotBlank() || filledIds.isNotEmpty()), indicatorTopInset = contentTop) {
                 if (!enabled) {
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
                         EmptyPanel(tr("无法识别此媒体"), if (!session.isAdministrator) tr("需要服务器管理员权限。") else tr("此类型没有可用的远程识别接口。"))
@@ -132,7 +130,10 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 8.dp, bottom = LocalNavigationBottomInset.current),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
-                    if (applied) item { AppliedBanner() }
+                    if (applyBusy) item {
+                        Text(tr("上一个识别结果仍在后台应用，完成后才能再次应用"), Modifier.testTag("identification-busy"),
+                            fontSize = 13.sp, lineHeight = 19.sp, color = PathfinAppearance.textSub)
+                    }
                     items(results, key = { it.key }) { result ->
                         IdentificationResultCard(result, person, canApply) { selected = result; replaceImages = false }
                     }
@@ -145,7 +146,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                         SettingsGroupItem(if (fieldRows.isEmpty()) GroupPosition.SINGLE else GroupPosition.TOP, dividerStartPadding = GroupTextInset) {
                             GroupField(name, { name = it }, if (person) tr("姓名") else tr("名称"),
                                 if (person) tr("人物姓名") else tr("片名或剧名"), PathfinIcons.Type, Modifier.testTag("identification-name"),
-                                divider = false, readOnly = searching || applying)
+                                divider = false, readOnly = searching)
                         }
                     }
                     itemsIndexed(fieldRows, key = { _, row -> row.first()?.let { "identification-ids/${it.key}" } ?: "identification-year-row" }) { index, row ->
@@ -153,10 +154,10 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                             Row(Modifier.fillMaxWidth()) {
                                 row.forEach { field -> key(field?.key) {
                                     if (field == null) GroupField(year, { year = it }, tr("年份"), tr("可选"), PathfinIcons.Calendar,
-                                        Modifier.weight(1f).testTag("identification-year"), divider = false, readOnly = searching || applying,
+                                        Modifier.weight(1f).testTag("identification-year"), divider = false, readOnly = searching,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                                     else GroupField(providerValue(field.key), { providerIds = providerIds + (field.key to it) }, field.name, tr("可选"), PathfinIcons.Hash,
-                                        Modifier.weight(1f).testTag("identification-id/${field.key}"), divider = false, readOnly = searching || applying)
+                                        Modifier.weight(1f).testTag("identification-id/${field.key}"), divider = false, readOnly = searching)
                                 } }
                                 if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
@@ -169,7 +170,6 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                     }
                     idFieldsError?.let { message -> item(key = "identification-fields-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp)) } }
                     error?.let { message -> item(key = "identification-error") { InlineError(message, modifier = Modifier.padding(bottom = 12.dp).testTag("identification-error")) } }
-                    if (applied) item(key = "identification-applied") { Box(Modifier.padding(bottom = 12.dp)) { AppliedBanner() } }
                     // 已有结果时可直接回到结果页，不必重新搜索。
                     if (results.isNotEmpty() && resultForm == form) item {
                         QuietButton(tr("查看 %1\$s 个匹配结果", results.size), { resultsPage = true }, Modifier.fillMaxWidth().testTag("identification-show-results"),
@@ -181,7 +181,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                 Row(Modifier.fillMaxWidth().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
                     .heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     PathfinIconButton(PathfinIcons.Back, if (resultsPage) tr("返回搜索条件") else tr("返回"), { if (resultsPage) resultsPage = false else onBack() },
-                        Modifier.testTag("identification-back"), enabled = !applying, tint = PathfinAppearance.textMain, size = 44.dp)
+                        Modifier.testTag("identification-back"), tint = PathfinAppearance.textMain, size = 44.dp)
                     Column(Modifier.weight(1f).padding(start = 4.dp)) {
                         Text(if (resultsPage) tr("选择匹配结果") else if (person) tr("识别人物") else tr("识别媒体"), fontSize = 19.sp, lineHeight = 25.sp,
                             fontWeight = FontWeight.SemiBold, color = PathfinAppearance.textMain)
@@ -193,7 +193,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
         }
         // 编号清单异步到达只增补可滚动的字段，搜索动作始终固定，避免按钮随表单高度跳动。
         if (enabled && !resultsPage) {
-            val canSearch = !searching && !applying && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
+            val canSearch = !searching && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
             Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 InkButton(::search, Modifier.fillMaxWidth().testTag("identification-search"), enabled = canSearch, muted = !canSearch) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -205,35 +205,16 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
         }
     }
     selected?.let { candidate ->
-        AppAlertDialog(onDismissRequest = { if (!applying) selected = null }, title = { Text(tr("应用识别结果？")) },
+        AppAlertDialog(onDismissRequest = { selected = null }, title = { Text(tr("应用识别结果？")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(candidate.name + (candidate.productionYear?.let { tr("（%1\$s）", it) } ?: ""))
                 Text(tr("服务器将重新获取并替换此条目的元数据，包括已有的手动编辑内容。"))
-                PathfinCheckbox(tr("同时替换全部图片"), replaceImages, { replaceImages = it }, Modifier.testTag("identification-replace-images"),
-                    enabled = !applying)
+                PathfinCheckbox(tr("同时替换全部图片"), replaceImages, { replaceImages = it }, Modifier.testTag("identification-replace-images"))
             } }, confirmButton = {
                 DialogAction(tr("确认应用"), {
-                    if (canApply && !applying) {
-                        applying = true; error = null
-                        scope.launch {
-                            try {
-                                identification.apply(currentSession, item, candidate, MediaIdentificationOptions(replaceImages))
-                                applied = true; selected = null; onChanged()
-                            } catch (exception: Exception) { selected = null; failure(exception) }
-                            finally { applying = false }
-                        }
-                    }
+                    if (canApply) { selected = null; onApply(candidate, MediaIdentificationOptions(replaceImages)) }
                 }, Modifier.testTag("identification-confirm"), enabled = canApply && candidate.providerIds.isNotEmpty(), role = DialogActionRole.Primary)
-            }, dismissButton = { DialogAction(tr("取消"), { selected = null }, enabled = !applying) })
-    }
-}
-
-@Composable
-private fun AppliedBanner() {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(CardRadius)).background(PathfinAppearance.accentSoft).padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Icon(PathfinIcons.CheckCircle, null, Modifier.size(20.dp), tint = PathfinAppearance.accent)
-        Text(tr("识别结果已应用，信息已更新。"), Modifier.testTag("identification-success"), fontSize = 14.sp, color = PathfinAppearance.textMain)
+            }, dismissButton = { DialogAction(tr("取消"), { selected = null }) })
     }
 }
 

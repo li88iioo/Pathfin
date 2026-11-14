@@ -409,7 +409,8 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
                             onChanged = { vm.mediaChanged(session, route.item.id) }, onAuthExpired = { vm.authenticationExpired(session) })
                     } else if (route is Route.Identification && session != null) {
                         MediaIdentificationScreen(route.item, session, vm.api, onBack = { vm.back() },
-                            onChanged = { vm.mediaChanged(session, route.item.id) }, onAuthExpired = { vm.authenticationExpired(session) })
+                            onApply = { result, options -> vm.applyIdentification(route.item, result, options) }, onAuthExpired = { vm.authenticationExpired(session) },
+                            applyBusy = "identify/${route.item.id}" in state.actionBusy)
                     } else if (route == Route.LiveTv && session != null) {
                         state.liveTv?.let { liveTv -> LiveTvScreen(liveTv, onBack = { vm.back() }, onPlay = { vm.preparePlayback(it, true) },
                             preparingId = state.pendingPlayback?.item?.id?.takeIf { state.preparingPlay }, onAmbientCovered = { liveAmbientCovered = it }) }

@@ -17,6 +17,9 @@ import dev.pathfin.android.createVerificationComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.JellyfinApi
+import dev.pathfin.android.data.MediaIdentificationApi
+import dev.pathfin.android.domain.MediaIdentificationOptions
+import dev.pathfin.android.domain.MediaIdentificationResult
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.Session
@@ -47,6 +50,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Rule
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
@@ -77,13 +81,13 @@ class ManagementFeaturesUiTest {
         }
     }
 
-    @Test fun identificationRequiresConfirmationAndBlocksBackOnlyWhileApplying() {
+    @Test fun identificationRequiresConfirmationAndHandsTheChosenResultToBackgroundApply() {
         Fixture(holdExternalIds = true, holdSearch = true).use { fixture ->
-            val shown = mutableStateOf(true); val changed = AtomicInteger(); val backs = AtomicInteger()
+            val shown = mutableStateOf(true); val applied = AtomicReference<Pair<MediaIdentificationResult, MediaIdentificationOptions>?>(); val backs = AtomicInteger()
             val api = JellyfinApi(); val session = fixture.session()
             compose.setContent { ManagementContent {
                 if (shown.value) MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Movie", year = 2024), session, api,
-                    onBack = { backs.incrementAndGet(); shown.value = false }, onChanged = { changed.incrementAndGet() })
+                    onBack = { backs.incrementAndGet(); shown.value = false }, onApply = { result, options -> applied.set(result to options) })
             } }
             assertTrue("必须在外部编号请求尚未完成时检查布局", fixture.externalIdsStarted.await(5, TimeUnit.SECONDS))
             VerificationDisplay.awaitWindowReady(compose, "identification-fields-pending", compose.onNodeWithTag("identification-search"))
@@ -134,16 +138,11 @@ class ManagementFeaturesUiTest {
             compose.onNodeWithTag("identification-result").performVerificationClick(compose)
             compose.onNodeWithTag("identification-replace-images").assertIsOff()
             compose.onNodeWithTag("identification-confirm").performVerificationClick(compose)
-            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); fixture.applies.get() == 1 }
-            compose.onNodeWithTag("identification-back").assertIsNotEnabled()
-            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-            assertEquals(0, backs.get()); assertEquals(0, changed.get())
-            assertEquals("false", fixture.replaceImages.get())
-            fixture.allowApply.countDown()
-            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); changed.get() == 1 }
-            scrollIdentification("identification-success")
-            compose.onNodeWithTag("identification-success").assertVerificationDisplayed(compose)
-            assertEquals(1, fixture.applies.get())
+            compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); !exists("identification-confirm") }
+            val (result, options) = requireNotNull(applied.get()) { "确认后弹窗立即关闭并交出所选结果" }
+            assertEquals("Synthetic match", result.name)
+            assertFalse("未勾选时不替换图片", options.replaceAllImages)
+            assertEquals("应用交给后台，识别页自身不发请求", 0, fixture.applies.get())
             // 结果页的返回先回到搜索条件，再次返回才离开识别页。
             compose.onNodeWithTag("identification-back").assertIsEnabled().performVerificationClick(compose)
             compose.onNodeWithTag("identification-list").assertVerificationDisplayed(compose)
@@ -156,13 +155,12 @@ class ManagementFeaturesUiTest {
 
     @Test fun sameAuthenticationAddressChangeKeepsIdentificationAndUsesTheNewAddressBeforeCredentialsChange() {
         Fixture().use { fixture ->
-            fixture.allowApply.countDown()
             val session = mutableStateOf(fixture.session().copy(serverId = "identification-address-server"))
-            val changed = AtomicInteger()
+            val applied = AtomicReference<Pair<MediaIdentificationResult, MediaIdentificationOptions>?>()
             val api = JellyfinApi()
             compose.setContent { ManagementContent {
                 MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Movie", year = 2024), session.value, api,
-                    {}, { changed.incrementAndGet() })
+                    {}, { result, options -> applied.set(result to options) })
             } }
             awaitIdentification(fixture, "address-provider-fields") { exists("identification-id/Imdb") }
             scrollIdentification("identification-name")
@@ -197,7 +195,10 @@ class ManagementFeaturesUiTest {
             assertEquals("降权后不能应用仍保留的候选", 0, fixture.applies.get())
             compose.runOnIdle { session.value = updated }
             compose.onNodeWithTag("identification-confirm").performVerificationClick(compose)
-            awaitIdentification(fixture, "address-identification-applied") { fixture.applies.get() == 1 && changed.get() == 1 }
+            awaitIdentification(fixture, "address-identification-handed-off") { applied.get() != null }
+            // 后台按当前会话应用：换址前搜到的候选须打到新地址。
+            val (result, options) = requireNotNull(applied.get())
+            runBlocking { MediaIdentificationApi(api).apply(session.value, MediaItem("item", "Synthetic title", "Movie", year = 2024), result, options) }
             assertEquals("换址不能重放搜索", 1, fixture.searches.get())
             assertEquals("只向当前地址应用一次", listOf("/alternate/proxy/Items/RemoteSearch/Apply/item"),
                 fixture.requests.filter { it.first == "POST" && it.second.contains("/RemoteSearch/Apply/") }.map { it.second })
@@ -217,7 +218,7 @@ class ManagementFeaturesUiTest {
             fixture.failSearch.set(true)
             val session = mutableStateOf(fixture.session()); val api = JellyfinApi()
             compose.setContent { ManagementContent {
-                MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Series"), session.value, api, {}, {})
+                MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Series"), session.value, api, {}, { _, _ -> })
             } }
             scrollIdentification("identification-search")
             compose.onNodeWithTag("identification-search").performVerificationClick(compose)
@@ -257,7 +258,7 @@ class ManagementFeaturesUiTest {
         Fixture().use { fixture ->
             val api = JellyfinApi(); val session = fixture.session()
             val person = MediaItem("item", "Synthetic actor", "Person", providerIds = mapOf("Tmdb" to "85718", "Douban" to "not-offered"))
-            compose.setContent { ManagementContent { MediaIdentificationScreen(person, session, api, {}, {}) } }
+            compose.setContent { ManagementContent { MediaIdentificationScreen(person, session, api, {}, { _, _ -> }) } }
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("identification-id/Imdb") }
             compose.onNodeWithText("识别人物").assertVerificationDisplayed(compose)
             compose.onNodeWithTag("identification-year").assertDoesNotExist()
@@ -282,13 +283,43 @@ class ManagementFeaturesUiTest {
         }
     }
 
+    @Test fun identificationCannotApplyAnotherResultWhileTheItemIsStillApplying() {
+        Fixture().use { fixture ->
+            val busy = mutableStateOf(true); val applied = AtomicInteger()
+            val api = JellyfinApi(); val session = fixture.session()
+            compose.setContent { ManagementContent {
+                MediaIdentificationScreen(MediaItem("item", "Synthetic title", "Movie", year = 2024), session, api, {},
+                    { _, _ -> applied.incrementAndGet() }, applyBusy = busy.value)
+            } }
+            awaitIdentification(fixture, "busy-provider-fields") { exists("identification-id/Imdb") }
+            scrollIdentification("identification-search")
+            compose.onNodeWithTag("identification-search").performVerificationClick(compose)
+            awaitIdentification(fixture, "busy-results") { exists("identification-results") }
+            compose.onNodeWithTag("identification-busy").assertVerificationDisplayed(compose)
+            scrollIdentification("identification-result")
+            compose.onNodeWithTag("identification-result").assertIsNotEnabled()
+
+            compose.runOnIdle { busy.value = false }
+            compose.onNodeWithTag("identification-busy").assertDoesNotExist()
+            compose.onNodeWithTag("identification-result").assertIsEnabled().performVerificationClick(compose)
+            awaitIdentification(fixture, "busy-dialog") { exists("identification-confirm") }
+            compose.runOnIdle { busy.value = true }
+            compose.onNodeWithTag("identification-confirm").assertIsNotEnabled()
+            assertEquals("仍在应用时不能交出新结果", 0, applied.get())
+            compose.runOnIdle { busy.value = false }
+            compose.onNodeWithTag("identification-confirm").assertIsEnabled().performVerificationClick(compose)
+            awaitIdentification(fixture, "busy-cleared-applied") { applied.get() == 1 }
+            assertEquals("识别页自身不发应用请求", 0, fixture.applies.get())
+        }
+    }
+
     @Test fun failedNewIdentificationQueryCannotApplyCandidatesFromThePreviousQuery() {
         Fixture().use { fixture ->
-            val changed = AtomicInteger()
+            val applied = AtomicReference<MediaIdentificationResult?>()
             val api = JellyfinApi(); val session = fixture.session()
             fixture.candidateName.set("Synthetic match A")
             compose.setContent { ManagementContent {
-                MediaIdentificationScreen(MediaItem("item", "Query A", "Movie"), session, api, {}, { changed.incrementAndGet() })
+                MediaIdentificationScreen(MediaItem("item", "Query A", "Movie"), session, api, {}, { result, _ -> applied.set(result) })
             } }
             search(fixture)
             scrollIdentification("identification-result")
@@ -306,7 +337,7 @@ class ManagementFeaturesUiTest {
             runCatching { scrollIdentification("identification-result") }
             compose.onAllNodes(hasTestTag("identification-result") and isEnabled()).assertCountEquals(0)
             assertEquals("新查询失败不能把上一查询的候选写入媒体", 0, fixture.applies.get())
-            assertEquals(0, changed.get())
+            assertNull(applied.get())
 
             fixture.failSearch.set(false)
             fixture.candidateName.set("Synthetic match B")
@@ -324,11 +355,9 @@ class ManagementFeaturesUiTest {
             compose.onAllNodesWithText("Synthetic match A").assertCountEquals(0)
             compose.onNodeWithTag("identification-result").performVerificationClick(compose)
             compose.onNodeWithText("应用识别结果？").assertVerificationDisplayed(compose)
-            fixture.allowApply.countDown()
             compose.onNodeWithTag("identification-confirm").performVerificationClick(compose)
-            awaitIdentification(fixture, "only-new-candidate-applied") { changed.get() == 1 }
-            assertEquals(1, fixture.applies.get())
-            assertEquals("Synthetic match B", fixture.appliedName.get())
+            awaitIdentification(fixture, "only-new-candidate-handed-off") { applied.get() != null }
+            assertEquals("Synthetic match B", applied.get()?.name)
         }
     }
 
@@ -928,8 +957,7 @@ class ManagementFeaturesUiTest {
         val failSearch = AtomicBoolean(); val failTaskReads = AtomicBoolean(); val running = AtomicBoolean()
         val backgroundTaskRunning = AtomicBoolean(); val holdNextTaskRead = AtomicBoolean()
         val taskPollStarted = CountDownLatch(1); val releaseTaskPoll = CountDownLatch(1); val taskPollDelivered = CountDownLatch(1)
-        val allowApply = CountDownLatch(1); val replaceImages = AtomicReference<String?>()
-        val candidateName = AtomicReference("Synthetic match"); val appliedName = AtomicReference<String?>(); val lastQuery = AtomicReference<String?>()
+        val candidateName = AtomicReference("Synthetic match"); val lastQuery = AtomicReference<String?>()
         val lastSearchInfo = AtomicReference<JSONObject?>()
         private val failure = AtomicReference<Throwable?>()
         private val sockets = Collections.synchronizedSet(mutableSetOf<Socket>())
@@ -969,11 +997,9 @@ class ManagementFeaturesUiTest {
             when {
                 path.startsWith("/proxy/Items/RemoteSearch/Apply/") -> {
                     assertEquals("POST", method); applies.incrementAndGet()
-                    replaceImages.set(uri.query.substringAfter("replaceAllImages="))
                     val candidate = JSONObject(bytes.decodeToString())
-                    appliedName.set(candidate.getString("Name"))
                     assertEquals("42", candidate.getJSONObject("ProviderIds").getString("Tmdb"))
-                    check(allowApply.await(15, TimeUnit.SECONDS)); code = 204
+                    code = 204
                 }
                 path.endsWith("/ExternalIdInfos") -> {
                     assertEquals("GET", method)
@@ -1070,7 +1096,7 @@ class ManagementFeaturesUiTest {
         }
         override fun close() {
             allowExternalIds.countDown(); allowSearch.countDown()
-            closed = true; allowApply.countDown(); releaseActivityRefresh.countDown(); releaseActivityRemainder.countDown(); releaseTaskPoll.countDown(); releaseInfoRead.countDown(); releaseLogRead.countDown(); server.close()
+            closed = true; releaseActivityRefresh.countDown(); releaseActivityRemainder.countDown(); releaseTaskPoll.countDown(); releaseInfoRead.countDown(); releaseLogRead.countDown(); server.close()
             synchronized(sockets) { sockets.toList() }.forEach { runCatching { it.close() } }; executor.shutdownNow()
             assertHealthy()
         }

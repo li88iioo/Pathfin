@@ -1168,7 +1168,8 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 评分与观看状态	Ratings & watch status
 识别人物	Identify person
 识别媒体	Identify media
-识别结果已应用，信息已更新。	Identification applied; info updated.
+识别结果已应用，信息已更新	Identification applied; info updated
+正在应用识别结果，完成后自动刷新	Applying identification; will refresh when done
 识别结果过多，请填写年份或外部编号缩小搜索范围	Too many identification results. Enter a year or external ID to narrow the search
 识别请求未完成，请检查连接后重试	Identification request incomplete. Check the connection and retry
 试试其他片名。	Try another title.
@@ -1478,3 +1479,5 @@ GitHub 请求过于频繁，请稍后重试	Too many requests to GitHub. Please 
 直播	Live
 频道	Channels
 跳到 %1$s	Jump to %1$s
+上一个识别结果仍在应用，完成后再试	The previous identification is still applying; try again when it finishes
+上一个识别结果仍在后台应用，完成后才能再次应用	The previous identification is still applying in the background; you can apply again when it finishes

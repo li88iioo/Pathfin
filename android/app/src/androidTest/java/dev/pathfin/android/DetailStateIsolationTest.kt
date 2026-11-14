@@ -12,6 +12,9 @@ import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.AppPreferences
+import dev.pathfin.android.domain.MediaIdentificationOptions
+import dev.pathfin.android.domain.MediaIdentificationResult
+import dev.pathfin.android.domain.MediaIdentificationType
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.MetadataRefreshOptions
 import dev.pathfin.android.domain.ServerConfig
@@ -414,6 +417,53 @@ class DetailStateIsolationTest {
         }
 
     @Test
+    fun identificationAppliesInTheBackgroundAfterLeavingThePageAndRefreshesTheDetail() =
+        withApp { fixture, app ->
+            val original = requireNotNull(openA(fixture, app).details[ITEM_A])
+            main { app.openIdentification(original) }
+            val candidate = candidate(app, ITEM_A)
+            main {
+                app.applyIdentification(original, candidate, MediaIdentificationOptions(replaceAllImages = true))
+                assertEquals("确认后立即回到详情，不等待服务器抓取元数据", Route.Detail(ITEM_A), app.state.value.route)
+                assertEquals("正在应用识别结果，完成后自动刷新", app.state.value.notice)
+                // 后台未完成时重新进入识别页再确认：不受理、不离开页面，并说明原因。
+                app.openIdentification(original)
+                app.applyIdentification(original, candidate, MediaIdentificationOptions())
+                assertEquals("应用中再次确认须留在识别页", Route.Identification(original), app.state.value.route)
+                assertEquals("上一个识别结果仍在应用，完成后再试", app.state.value.notice)
+                app.back()
+            }
+            fixture.identify.awaitRequest("识别结果必须到达真实 Apply POST")
+            fixture.identify.release()
+            await(app, fixture, "后台应用完成后通知并重读详情") {
+                "identify/$ITEM_A" !in it.actionBusy && it.notice == "识别结果已应用，信息已更新" &&
+                    !it.detailLoading && it.details[ITEM_A]?.overview == overview(ITEM_A, 2)
+            }
+            assertEquals("应用期间重复确认不能再次提交", 1, fixture.identifyPosts.get())
+        }
+
+    @Test
+    fun failedBackgroundIdentificationReportsTheServerError() =
+        withApp { fixture, app ->
+            val item = MediaItem(ITEM_B, "Synthetic summary B", "Movie")
+            main {
+                app.openIdentification(item)
+                app.applyIdentification(item, candidate(app, ITEM_B), MediaIdentificationOptions())
+                assertFalse("确认后立即离开识别页", app.state.value.route is Route.Identification)
+            }
+            val failed = await(app, fixture, "失败须结束后台状态并提示原因") {
+                "identify/$ITEM_B" !in it.actionBusy && it.notice != null && it.notice != "正在应用识别结果，完成后自动刷新"
+            }
+            assertNotEquals("识别结果已应用，信息已更新", failed.notice)
+            assertEquals(1, fixture.failedIdentifyPosts.get())
+        }
+
+    private fun candidate(app: AppViewModel, itemId: String) = MediaIdentificationResult("synthetic-match", "Synthetic match", 2024,
+        mapOf("Tmdb" to "1"), "TheMovieDb", null, null,
+        JSONObject().put("Name", "Synthetic match").put("ProviderIds", JSONObject().put("Tmdb", "1")).toString(),
+        requireNotNull(app.state.value.session), itemId, MediaIdentificationType.MOVIE)
+
+    @Test
     fun fastResumeAndNextUpPublishWhileRecommendationsAreStillBlocked() =
         withApp(blockASimilar = true, aType = "Series") { fixture, app ->
             openA(fixture, app)
@@ -737,6 +787,7 @@ class DetailStateIsolationTest {
         @Volatile var children = Gate(false)
         @Volatile var siblings = Gate(false)
         val refresh = Gate(true)
+        val identify = Gate(true)
         val delete = Gate(true)
         val aVersion = AtomicInteger(1)
         val aDetailReads = AtomicInteger()
@@ -748,6 +799,8 @@ class DetailStateIsolationTest {
         private val aSimilarReads = AtomicInteger()
         val bDetailReads = AtomicInteger()
         val refreshPosts = AtomicInteger()
+        val identifyPosts = AtomicInteger()
+        val failedIdentifyPosts = AtomicInteger()
         val failedRefreshPosts = AtomicInteger()
         val homeReads = AtomicInteger()
         val deletes = AtomicInteger()
@@ -916,6 +969,16 @@ class DetailStateIsolationTest {
                 failedRefreshPosts.incrementAndGet()
                 503 to "{}"
             }
+            "POST /Items/RemoteSearch/Apply/$ITEM_A" -> {
+                check(JSONObject(body.toString(Charsets.UTF_8)).getString("Name") == "Synthetic match")
+                check(url.queryParameter("replaceAllImages") == "true")
+                identifyPosts.incrementAndGet(); identify.enter(); aVersion.set(2)
+                204 to null
+            }
+            "POST /Items/RemoteSearch/Apply/$ITEM_B" -> {
+                failedIdentifyPosts.incrementAndGet()
+                503 to "{}"
+            }
             "DELETE /Items/$ITEM_A" -> {
                 check(body.isEmpty())
                 deletes.incrementAndGet(); delete.enter()
@@ -955,7 +1018,7 @@ class DetailStateIsolationTest {
         }
         override fun close() {
             closed.set(true)
-            listOf(firstA, secondA, bDetail, aSimilar, secondASimilar, seriesResume, playResume, seriesNextUp, children, siblings, refresh, delete).forEach { it.release() }
+            listOf(firstA, secondA, bDetail, aSimilar, secondASimilar, seriesResume, playResume, seriesNextUp, children, siblings, refresh, identify, delete).forEach { it.release() }
             server.close()
             accept.join(1_000)
             sockets.forEach { runCatching { it.close() } }
