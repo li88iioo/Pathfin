@@ -28,6 +28,7 @@
 - 投屏[停止电视失败时仍结束服务器会话](https://github.com/li88iioo/Pathfin/commit/710e987c755ec80fe7066ff1858723f8ea5a6252)，[重复停止返回一致结果](https://github.com/li88iioo/Pathfin/commit/7845d041defd96d913edf336787afd72978afd99)。
 - [已停用的账号不再能管理字幕](https://github.com/li88iioo/Pathfin/commit/0e18151cce8303f10de9c8e509e99197ff1e0718)。
 - [管理页切换服务器地址时保留编辑中的元数据与识别内容](https://github.com/li88iioo/Pathfin/commit/21c5a212a42068fff8ac77695f5751eae921b7b2)。
+- [系统单色主题下壁纸取色改用黑白](https://github.com/li88iioo/Pathfin/commit/7878f7c14cb1a3a3100a40123c4bda81946a259d)：与系统及其他应用一致，不再退回默认蓝。
 - [播放器标题只在文字范围内打开选集](https://github.com/li88iioo/Pathfin/commit/7698381c65161fc5ce5cb00c7e14b5f8da3679b1)，右侧空白不再误触。
 
 ## [0.1.5] - 2026-11-12
