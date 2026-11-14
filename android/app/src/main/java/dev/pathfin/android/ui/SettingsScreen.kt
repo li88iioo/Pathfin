@@ -473,20 +473,18 @@ internal fun SettingsRow(
 
 /**
  * 主题色：色样即该色在当前深浅模式下校正后的真实强调色；壁纸取色需 Android 12，
- * 系统为单色主题时如实告知已沿用默认蓝。
+ * 系统为单色主题时随系统使用黑白强调色。
  */
 @Composable
 private fun AccentColorPicker(selected: AccentColor, onChange: (AccentColor) -> Unit) {
     val wallpaperSupported = android.os.Build.VERSION.SDK_INT >= 31
-    val achromatic = dev.pathfin.android.ui.theme.LocalAccentPalette.current.achromaticSource
     val dark = PathfinAppearance.canvas.luminance() < 0.5f
     val subtitle = when {
         selected == AccentColor.WALLPAPER && !wallpaperSupported -> tr("壁纸取色需要 Android 12，已使用默认蓝")
-        selected == AccentColor.WALLPAPER && achromatic -> tr("系统主题色为黑白，已沿用默认蓝")
         selected == AccentColor.WALLPAPER -> tr("已跟随系统主题色")
         else -> selected.label
     }
-    val colorLabel = if (selected == AccentColor.WALLPAPER && (!wallpaperSupported || achromatic))
+    val colorLabel = if (selected == AccentColor.WALLPAPER && !wallpaperSupported)
         "${selected.label} · ${AccentColor.PATHFIN.label}" else selected.label
     SettingsGroupItem(GroupPosition.BOTTOM) {
         Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 14.dp),

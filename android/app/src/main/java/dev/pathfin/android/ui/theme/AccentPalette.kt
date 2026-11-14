@@ -17,8 +17,6 @@ data class AccentPalette(
     val accentSoft: Color,
     val accentWash: Color,
     val accentShadow: Color,
-    /** 输入的壁纸色没有可用色相（黑白灰或系统单色主题），已退回品牌蓝。 */
-    val achromaticSource: Boolean = false,
 )
 
 internal val DefaultWallpaperAccent = Color(0xFF2563EB)
@@ -29,10 +27,9 @@ private const val SoftLightSeparation = 1.06f
 private const val SoftDarkSeparation = 1.15f
 
 fun accentPalette(wallpaperAccentColor: Color, dark: Boolean): AccentPalette {
-    // 黑白灰及近白近黑壁纸没有可靠色相，退回品牌蓝；高饱和的红黄绿压到可读区间。
-    val achromatic = wallpaperAccentColor.chroma() < MinChroma
-    val source = if (achromatic) DefaultWallpaperAccent else wallpaperAccentColor
-    val (hue, saturation) = source.hueAndSaturation()
+    // 系统单色主题或黑白灰壁纸没有色相，与系统一致改用黑白强调色；高饱和的红黄绿压到可读区间。
+    if (wallpaperAccentColor.chroma() < MinChroma) return monochromePalette(dark)
+    val (hue, saturation) = wallpaperAccentColor.hueAndSaturation()
     // 强调色是中性界面里唯一的彩色，须一眼可辨：饱和度抬到中高区间，只削掉荧光级的极端值。
     val sat = saturation.coerceIn(0.45f, 0.78f)
     val onAccent = if (dark) Color(0xFF0F0F11) else Color.White
@@ -58,9 +55,17 @@ fun accentPalette(wallpaperAccentColor: Color, dark: Boolean): AccentPalette {
         accentSoft = soft,
         accentWash = Color.hsl(hue, minOf(sat, 0.70f), if (dark) 0.55f else 0.60f, if (dark) 0.11f else 0.09f),
         accentShadow = Color.hsl(hue, sat, 0.42f, if (dark) 0.45f else 0.30f),
-        achromaticSource = achromatic,
     )
 }
+
+/** 浅色以近黑、深色以近白作强调，选中底为与画布拉开明度的中性灰。 */
+private fun monochromePalette(dark: Boolean) = AccentPalette(
+    accent = if (dark) Color(0xFFEDEDF0) else Color(0xFF1A1C1E),
+    onAccent = if (dark) Color(0xFF0F0F11) else Color.White,
+    accentSoft = if (dark) Color(0xFF38383E) else Color(0xFFDCDFE4),
+    accentWash = Color.hsl(0f, 0f, if (dark) 0.55f else 0.60f, if (dark) 0.11f else 0.09f),
+    accentShadow = Color.hsl(0f, 0f, 0.42f, if (dark) 0.45f else 0.30f),
+)
 
 val LocalAccentPalette = staticCompositionLocalOf { accentPalette(DefaultWallpaperAccent, dark = false) }
 

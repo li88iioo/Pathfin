@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.Color
 import dev.pathfin.android.domain.AccentColor
 import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -58,20 +57,24 @@ class AccentPaletteTest {
         }
     }
 
-    @Test fun achromaticWallpapersFallBackToBrandBlue() {
+    @Test fun achromaticWallpapersFollowSystemMonochrome() {
         val cream = Color(0xFFFFF8F0)
         for (dark in listOf(false, true)) {
-            val brand = accentPalette(DefaultWallpaperAccent, dark)
+            val canvas = if (dark) Color(0xFF0F0F11) else Color(0xFFF5F6F8)
+            val mono = accentPalette(Color.Gray, dark)
+            assertTrue("dark=$dark 单色主题不得退回品牌蓝", mono != accentPalette(DefaultWallpaperAccent, dark))
+            assertTrue("dark=$dark 强调色为中性色", hsl(mono.accent).second < 0.1f)
+            assertTrue("dark=$dark 浅色近黑、深色近白", if (dark) mono.accent.luminance() > 0.8f else mono.accent.luminance() < 0.05f)
+            for (other in listOf(mono.onAccent, mono.accentSoft, canvas)) assertTrue("dark=$dark 对 $other 对比度不足", contrast(mono.accent, other) >= 4.5f)
+            assertTrue("dark=$dark 选中底须与画布拉开", contrast(mono.accentSoft, canvas) >= 1.15f)
+            assertTrue("dark=$dark 环境光与投影保持半透明", mono.accentWash.alpha <= 0.12f && mono.accentShadow.alpha in 0.1f..0.5f)
             for (color in listOf(Color.White, Color.Black, Color(0xFF808080), Color(0xFF1A1B1C), cream)) {
-                val palette = accentPalette(color, dark)
-                assertTrue("$color 须标记为无彩色来源，供设置页说明", palette.achromaticSource)
-                assertEquals("$color dark=$dark", brand, palette.copy(achromaticSource = false))
+                assertEquals("$color dark=$dark", mono, accentPalette(color, dark))
             }
         }
     }
 
     @Test fun defaultBrandStaysCloseToTheExistingBlue() {
-        assertFalse(accentPalette(DefaultWallpaperAccent, false).achromaticSource)
         val (hue, _, _) = hsl(accentPalette(DefaultWallpaperAccent, false).accent)
         assertEquals(hsl(DefaultWallpaperAccent).first, hue, 2f)
         assertEquals(accentPalette(DefaultWallpaperAccent, true), accentPalette(DefaultWallpaperAccent, true))
@@ -83,7 +86,7 @@ class AccentPaletteTest {
         for (dark in listOf(false, true)) {
             val hues = presets().map { (name, color) ->
                 val palette = accentPalette(color, dark)
-                assertFalse("$name 不得退回默认蓝", palette.achromaticSource)
+                assertTrue("$name 不得变成黑白", hsl(palette.accent).second >= 0.44f)
                 name to hsl(palette.accent).first
             }
             for ((i, a) in hues.withIndex()) for (b in hues.drop(i + 1)) {

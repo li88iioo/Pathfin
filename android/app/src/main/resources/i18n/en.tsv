@@ -1067,7 +1067,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 类型或标签无效	Invalid genre or tag
 类型（逗号分隔）	Genres (comma-separated)
 精准匹配	Exact match
-系统主题色为黑白，已沿用默认蓝	The system theme color is monochrome; using the default blue
 系统日志	System logs
 系统日志名称无效	Invalid system log name
 系统日志缺少名称	A system log is missing a name
