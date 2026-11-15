@@ -8,6 +8,7 @@ import java.net.InetSocketAddress
 import java.time.LocalDate
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
@@ -797,8 +798,12 @@ class JellyfinLibraryApiTest {
             val session = Session(ServerConfig("http://127.0.0.1:${server.address.port}/proxy", true), "fixture-token", "user", "Alice", "device")
             block(session)
         } finally {
-            server.stop(0); executor.shutdownNow()
-            failure.get()?.let { throw AssertionError("Fixture contract assertion failed", it) }
+            // 客户端收到错误状态就可能返回；先等响应写入和服务端断言结束，再关闭连接。
+            executor.shutdown()
+            try {
+                check(executor.awaitTermination(5, TimeUnit.SECONDS)) { "Fixture handlers did not finish" }
+                failure.get()?.let { throw AssertionError("Fixture contract assertion failed", it) }
+            } finally { server.stop(0); executor.shutdownNow() }
         }
     }
 
