@@ -44,6 +44,7 @@ $1[已隐藏]	$1[hidden]
 %1$s，但重新读取失败；可重试加载，请勿重复提交。	%1$s, but reloading failed. You can retry loading; do not submit again.
 %1$s：%2$s	%1$s: %2$s
 +%1$s 秒	+%1$s s
+音频正在直通，请在输出设备上调节音量	Audio passthrough is active. Adjust the volume on the output device.
 100% 为原音量，增强后可能失真	100% is the original volume; boosting may distort
 16–65536 MB，每个账号独立计算	16–65536 MB, counted separately for each account
 18禁	Adult
@@ -904,7 +905,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 正在播放	Now playing
 正在更新服务器字幕…	Updating server subtitles…
 正在清理	Cleaning up
-正在等待音频会话以启用音量增益…	Waiting for the audio session to enable volume boost…
 正在读取…	Loading…
 正在读取媒体	Loading media
 正在读取媒体轨道…	Loading media tracks…
@@ -929,7 +929,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 此结果没有外部编号，无法可靠识别；请选择其他结果	This result has no external IDs and can't be identified reliably; choose another result
 此视频输出不支持截图	This video output doesn't support screenshots
 此设备或片源不支持跳转进度	This device or source doesn't support seeking
-此设备无法启用音量增益，已恢复 100% 原音量	This device can't enable volume boost; restored the original 100% volume
 此设备未提供可用的 AVTransport 控制服务	This device doesn't provide a usable AVTransport control service
 此账号已移除，临时媒体地址已撤销	This account was removed; the temporary media address was revoked
 此账号已移除，请重新登录后投屏	This account was removed. Sign in again to cast
@@ -1337,7 +1336,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 音轨索引无效	Invalid audio track index
 音轨语言	Audio language
 音量	Volume
-音量增强已停止	Volume boost stopped
 音量增益	Volume boost
 音频	Audio
 音频解码	Audio decoding

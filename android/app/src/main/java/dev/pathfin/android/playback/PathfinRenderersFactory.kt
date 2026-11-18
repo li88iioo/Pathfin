@@ -5,13 +5,20 @@ import android.os.Handler
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 import dev.pathfin.ffmpeg.video.NativeVideoRenderer
 
 /** 保留系统硬解优先；视频补解的顺序与音频扩展偏好相互独立。 */
 @androidx.annotation.OptIn(UnstableApi::class)
-internal class PathfinRenderersFactory(context: Context, private val hardwareVideo: Boolean) : DefaultRenderersFactory(context) {
+internal class PathfinRenderersFactory(context: Context, private val hardwareVideo: Boolean,
+    private val pcm: PlaybackPcmProcessor = PlaybackPcmProcessor(mediaUsesSpeaker(context)),
+    private val onRouteChanged: ((Boolean) -> Unit)? = null,
+    private val onPassthroughChanged: ((Boolean) -> Unit)? = null) : DefaultRenderersFactory(context) {
+    override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
+        playbackAudioSink(context, pcm, enableAudioOutputPlaybackParams, onRouteChanged = onRouteChanged, onPassthroughChanged = onPassthroughChanged)
+
     override fun buildVideoRenderers(context: Context, extensionRendererMode: Int, mediaCodecSelector: MediaCodecSelector,
         enableDecoderFallback: Boolean, eventHandler: Handler, eventListener: VideoRendererEventListener,
         allowedVideoJoiningTimeMs: Long, out: ArrayList<Renderer>) {

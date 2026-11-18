@@ -27,11 +27,14 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.AudioTrackAudioOutput
 import androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.ForwardingAudioOutput
 import androidx.media3.exoplayer.audio.ForwardingAudioOutputProvider
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.pathfin.android.playback.PlaybackPcmProcessor
 import dev.pathfin.android.playback.ffmpegAudioExtensionMode
+import dev.pathfin.android.playback.playbackAudioSink
 import dev.pathfin.android.playback.unsupportedAudioMessage
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -230,6 +233,38 @@ class ExoFfmpegAudioTest {
         }
     }
 
+    @Test fun pathfinSpeakerSinkOutputsStereoAndRaisesActualPcmAt150Percent() {
+        val speaker = checkNotNull(instrumentation.targetContext.getSystemService(AudioManager::class.java)
+            .getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }) {
+            "需要内置扬声器才能验证下混"
+        }
+        val fixture = multichannelFixtures().single { it.id == "flac-7_1-48k" }
+        val runs = JSONArray()
+        val baseline = checkNotNull(verifyAudioSinkRoute(fixture, speaker, runs, gainPercent = 100))
+        val boosted = checkNotNull(verifyAudioSinkRoute(fixture, speaker, runs, gainPercent = 150))
+        assertTrue("扬声器收到的立体声必须有有效信号", baseline > .01)
+        val ratio = boosted / baseline
+        assertEquals("实际写入扬声器 AudioTrack 的 PCM 应随 150% 增益放大", 1.5, ratio, .03)
+        Log.i("PathfinAudioVerification", "7.1 → stereo, speaker RMS at 100%=$baseline, at 150%=$boosted, ratio=$ratio")
+    }
+
+    @Test fun boostedExternalReceiverKeepsItsEncodedTracksWhileSpeakersDecodeTrueHd() {
+        val context = instrumentation.targetContext
+        val advertised = AudioOutputProvider.FormatSupport.Builder()
+            .setFormatSupportLevel(AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY).build()
+        val receiver = object : ForwardingAudioOutputProvider(AudioTrackAudioOutputProvider.Builder(context).build()) {
+            override fun getFormatSupport(formatConfig: AudioOutputProvider.FormatConfig) = advertised
+        }
+        for (speaker in listOf(false, true)) {
+            val sink = playbackAudioSink(context, PlaybackPcmProcessor(speaker, 150), false, receiver)
+            try {
+                val trueHd = Format.Builder().setSampleMimeType(MimeTypes.AUDIO_TRUEHD).setChannelCount(8).setSampleRate(48_000).build()
+                assertEquals(!speaker, sink.supportsFormat(trueHd))
+                if (!speaker) assertTrue(sink.supportsFormat(trueHd.buildUpon().setSampleMimeType(MimeTypes.AUDIO_AC4).build()))
+            } finally { sink.release() }
+        }
+    }
+
     @Test fun softwarePrefersFfmpegAndUnsupportedAudioDoesNotRemainSilentlyIgnored() {
         assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER, ffmpegAudioExtensionMode("SOFTWARE"))
         assertEquals(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON, ffmpegAudioExtensionMode("HARDWARE"))
@@ -363,7 +398,8 @@ class ExoFfmpegAudioTest {
         return PcmEvidence(pcm.frames, pcm.digest.digest())
     }
 
-    private fun verifyAudioSinkRoute(fixture: MultichannelFixture, preferred: AudioDeviceInfo?, runs: JSONArray) {
+    private fun verifyAudioSinkRoute(fixture: MultichannelFixture, preferred: AudioDeviceInfo?, runs: JSONArray,
+        gainPercent: Int? = null): Double? {
         val context = instrumentation.targetContext
         val result = JSONObject().put("fixture", fixture.id).put("inputChannels", fixture.channels)
             .put("inputSampleRate", fixture.rate).put("requestedDeviceType", preferred?.type ?: JSONObject.NULL)
@@ -377,6 +413,7 @@ class ExoFfmpegAudioTest {
         val audioTrack = AtomicReference<AudioTrack>()
         val failure = AtomicReference<PlaybackException>()
         val sinkErrors = CopyOnWriteArrayList<Exception>()
+        val meter = gainPercent?.let { PcmMeter() }
         val file = File.createTempFile("pathfin-${fixture.id}-", ".mka", context.cacheDir)
         var owner: ExoPlayer? = null
         var route: AudioDeviceInfo? = null
@@ -384,20 +421,34 @@ class ExoFfmpegAudioTest {
         try {
             file.writeBytes(fixture.asset("${fixture.id}.mka"))
             instrumentation.runOnMainSync {
-                // 只观察默认输出，保留设备原有能力、声道选择、AudioTrack 和混音行为。
+                // 复用平台输出提供者，观察真实 AudioTrack 和实际写入的样本。
                 val provider = object : ForwardingAudioOutputProvider(AudioTrackAudioOutputProvider.Builder(context).build()) {
-                    override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput =
-                        super.getAudioOutput(config).also { output ->
-                            check(output is AudioTrackAudioOutput)
-                            audioTrack.set(output.audioTrack)
+                    override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput {
+                        val output = super.getAudioOutput(config)
+                        check(output is AudioTrackAudioOutput)
+                        audioTrack.set(output.audioTrack)
+                        return if (meter == null) output else object : ForwardingAudioOutput(output) {
+                            override fun write(buffer: ByteBuffer, encodedAccessUnitCount: Int, presentationTimeUs: Long): Boolean {
+                                val submitted = buffer.duplicate().order(ByteOrder.nativeOrder())
+                                val consumed = super.write(buffer, encodedAccessUnitCount, presentationTimeUs)
+                                submitted.limit(buffer.position())
+                                meter.add(submitted, config.encoding)
+                                return consumed
+                            }
                         }
+                    }
                 }
                 val renderers = object : DefaultRenderersFactory(context) {
                     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
-                        enableAudioOutputPlaybackParams: Boolean): AudioSink = DefaultAudioSink.Builder(context)
-                        .setEnableFloatOutput(enableFloatOutput)
-                        .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                        .setAudioOutputProvider(provider).build()
+                        enableAudioOutputPlaybackParams: Boolean): AudioSink =
+                        if (gainPercent == null) {
+                            DefaultAudioSink.Builder(context).setEnableFloatOutput(enableFloatOutput)
+                                .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                                .setAudioOutputProvider(provider).build()
+                        } else {
+                            playbackAudioSink(context, PlaybackPcmProcessor(speakerOutput = true, initialGainPercent = gainPercent),
+                                enableAudioOutputPlaybackParams, provider)
+                        }
                 }.setMediaCodecSelector(MediaCodecSelector { mime, secure, tunneling ->
                     if (MimeTypes.isAudio(mime)) emptyList()
                     else MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling)
@@ -447,6 +498,10 @@ class ExoFfmpegAudioTest {
             if (preferred != null) assertEquals("${fixture.id} 扬声器请求未被采用，本路由未覆盖", preferred.type, route?.type)
             val actualTrack = checkNotNull(audioTrack.get()) { "${fixture.id} 未创建实际 AudioTrack" }
             assertTrue("${fixture.id} AudioTrack 必须实际播放至少一秒，frames=$headFrames", headFrames >= actualTrack.sampleRate)
+            if (meter != null) {
+                assertEquals("扬声器 AudioTrack 必须接收立体声", 2, actualTrack.channelCount)
+                assertEquals("下混应保留全部 PCM 帧", fixture.hostFrames * 2, meter.samples)
+            }
             instrumentation.runOnMainSync {
                 val player = checkNotNull(owner)
                 assertEquals(Player.STATE_ENDED, player.playbackState)
@@ -455,6 +510,7 @@ class ExoFfmpegAudioTest {
             result.put("status", "passed")
             Log.i("PathfinAudioVerification", "${fixture.id}: decoder=${decoderName.get()}, input=${fixture.channels}ch/${fixture.rate}Hz," +
                 " AudioTrack=${actualTrack.channelCount}ch/${actualTrack.sampleRate}Hz, deviceType=${route?.type}, headFrames=$headFrames, EOS=true")
+            return meter?.rms
         } catch (error: Throwable) {
             result.put("status", if (preferred != null && route?.type != preferred.type) "route_not_verified" else "failed")
                 .put("error", error.javaClass.simpleName).put("message", error.message ?: "")
@@ -474,24 +530,49 @@ class ExoFfmpegAudioTest {
         }
     }
 
-    private fun verifyMultichannelFixtures(checkFixture: (MultichannelFixture) -> Unit) {
+    private fun multichannelFixtures(): List<MultichannelFixture> {
         val manifest = JSONObject(instrumentation.context.assets.open("multichannel-audio/manifest.json").use { it.readBytes().toString(Charsets.UTF_8) })
         val fixtures = manifest.getJSONArray("fixtures")
         assertEquals("自有矩阵必须完整保留 5.1、多声道高采样率和 7.1 两档", 7, fixtures.length())
-        val failures = mutableListOf<Throwable>()
-        repeat(fixtures.length()) { index ->
+        return List(fixtures.length()) { index ->
             val item = fixtures.getJSONObject(index)
             val signals = item.getJSONArray("channelSignals")
-            val fixture = MultichannelFixture(item.getString("id"), item.getString("decoder"), item.getString("mime"),
+            MultichannelFixture(item.getString("id"), item.getString("decoder"), item.getString("mime"),
                 item.getInt("sampleRate"), item.getInt("channels"), item.getInt("packets"), item.getLong("hostDecodedFrames"),
                 if (item.isNull("initialization")) null else item.getString("initialization"), item.getJSONObject("files"),
                 List(signals.length()) { signals.getJSONObject(it).getString("label") },
                 DoubleArray(signals.length()) { signals.getJSONObject(it).getDouble("frequencyHz") })
+        }
+    }
+
+    private fun verifyMultichannelFixtures(checkFixture: (MultichannelFixture) -> Unit) {
+        val failures = mutableListOf<Throwable>()
+        for (fixture in multichannelFixtures()) {
             try { checkFixture(fixture) }
             catch (failure: Throwable) { failures += AssertionError("多声道组合 ${fixture.id} 验证失败", failure) }
         }
         if (failures.isNotEmpty()) throw AssertionError("${failures.size}/7 个多声道组合失败；不能把降声道、无声或设备错误算通过").apply {
             failures.forEach(::addSuppressed)
+        }
+    }
+
+    /** 测量实际写入 AudioTrack 的样本，避免把非阻塞写入的重试重复计数。 */
+    private class PcmMeter {
+        var samples = 0L
+            private set
+        private var squares = 0.0
+        val rms: Double get() = sqrt(squares / samples)
+
+        fun add(buffer: ByteBuffer, encoding: Int) {
+            while (buffer.hasRemaining()) {
+                val sample = when (encoding) {
+                    C.ENCODING_PCM_16BIT -> buffer.short.toDouble() / 32_768
+                    C.ENCODING_PCM_FLOAT -> buffer.float.toDouble()
+                    else -> error("扬声器应收到 PCM，实际编码=$encoding")
+                }
+                squares += sample * sample
+                samples++
+            }
         }
     }
 

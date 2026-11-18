@@ -163,7 +163,7 @@ internal fun PlayerControlsOverlay(
             }
             // 时间、电量、网速统一放在右上工具栏正下方，横竖屏同一位置。
             Box(Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 60.dp)) {
-                PlayerStatusLine(clock, battery, state)
+                PlayerStatusLine(clock, battery, state, audioGainPercent)
             }
             if (state.errorMessage == null && !state.ended) {
                 val sideSize = if (availableWidth < 360.dp || largeText) 48.dp else 56.dp
@@ -337,14 +337,15 @@ private fun PlayerHeaderTitle(title: String, logo: ImageRequest?) {
 }
 
 @Composable
-private fun PlayerStatusLine(clock: String?, battery: String?, state: PlaybackUiState) {
-    if (clock == null && battery == null && !state.showBufferSpeed && state.audioGainStatus == null && state.assStatus == null) return
+private fun PlayerStatusLine(clock: String?, battery: String?, state: PlaybackUiState, gainPercent: Int) {
+    val passthroughGain = state.audioPassthrough && gainPercent > 100
+    if (!passthroughGain && clock == null && battery == null && !state.showBufferSpeed && state.assStatus == null) return
     Row(Modifier.testTag("player-status-line"), horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (clock != null) Text(clock, color = PlayerSecondary, fontSize = 12.sp, maxLines = 1)
         if (battery != null) PlayerBattery(battery)
         if (state.showBufferSpeed) PlayerTransferRate(state.transferBytesPerSecond)
-        state.audioGainStatus?.let { PlayerStatusMessage(it, "player-audio-gain-status") }
+        if (passthroughGain) PlayerStatusMessage(tr("音频正在直通，请在输出设备上调节音量"), "player-audio-gain-status")
         state.assStatus?.let { PlayerStatusMessage(it, "player-ass-status") }
     }
 }

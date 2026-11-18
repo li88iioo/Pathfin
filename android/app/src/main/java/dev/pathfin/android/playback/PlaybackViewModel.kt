@@ -294,7 +294,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun restart(current: ActivePlayback, owner: Player?, prepared: PlaybackRequest = current.request,
         tuning: PlaybackTuning = current.tuning, restored: PlayerState? = owner?.let(::capturePlayerState),
         rollback: PlaybackRecovery? = null, recoveryPolicy: PlaybackRecoveryPolicy = current.recoveryPolicy) =
-        startPlayback(prepared, current.originalRequest, tuning.copy(audioGainPercent = current.runtimeAudioGainPercent),
+        startPlayback(prepared, current.originalRequest, tuning.copy(audioGainPercent = current.pcm.gainPercent),
             current.introHistory, current.manualTracks, current.localSubtitles.toList(), rollback, recoveryPolicy, restored)
 
     private fun startPlayback(prepared: PlaybackRequest, originalRequest: PlaybackRequest, tuning: PlaybackTuning,
@@ -319,7 +319,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         qualityRollback = rollback
         pendingSubtitleRefresh = pendingSubtitles
         generation += 1
-        val current = ActivePlayback(request, originalRequest, tuning, playerGeneration = generation,
+        val current = ActivePlayback(request, originalRequest, tuning, PlaybackPcmProcessor(mediaUsesSpeaker(getApplication()), tuning.audioGainPercent), playerGeneration = generation,
             introHistory = introHistory, manualTracks = manualTracks, recoveryPolicy = recoveryPolicy, tracker = tracker)
         current.decoderFallbackTypes = retainedEntry?.decoderFallbackTypes.orEmpty()
         current.mediaSegments = retainedSegments?.mediaSegments.orEmpty()
@@ -406,7 +406,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             val listener = listenerFor(current, exoPlayer)
             playerListener = listener
             exoPlayer.addListener(listener)
-            applyAudioGain(current, exoPlayer)
+            exoPlayer.volume = current.pcm.gainPercent.coerceIn(0, 100) / 100f
             val mediaItem = MediaItem.Builder().setUri(request.stream.uri).apply {
                 setMediaMetadata(MediaMetadata.Builder().setTitle(request.item.name)
                     .setDisplayTitle(request.item.seriesName?.takeIf(String::isNotBlank) ?: request.item.name)
@@ -488,8 +488,16 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             SubtitleSeekPrerollExtractorsFactory(extractors, ::supportsDolbyVision)
         }
         fun build(extension: ExoAssExtension?): ExoPlayer {
-            val delegate = PathfinRenderersFactory(application, tuning.preferHardwareVideoDecoder)
-                .setMediaCodecSelector(codecSelector)
+            val delegate = PathfinRenderersFactory(application, tuning.preferHardwareVideoDecoder, current.pcm, onRouteChanged = { speaker ->
+                if (active === current && current.pcm.speakerOutput != speaker) {
+                    current.pcm.speakerOutput = speaker
+                    val owner = player
+                    if (owner != null && (current.pcm.configuredChannels > 2 || current.pcm.encodedOutput))
+                        reconfigureAudioOutput(owner)
+                }
+            }, onPassthroughChanged = { encoded ->
+                mainHandler.post { if (active === current) mutableState.update { it.copy(audioPassthrough = encoded) } }
+            }).setMediaCodecSelector(codecSelector)
                 .setEnableDecoderFallback(true)
                 .setExtensionRendererMode(ffmpegAudioExtensionMode(tuning.exoAudioDecoder))
             extension?.setSubtitlePresentation(mutableSubtitlePresentation.value.scale,
@@ -900,9 +908,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun configureAudioGain(percent: Int) {
         val current = active ?: return
         val normalized = percent.coerceIn(0, 200)
-        if (current.runtimeAudioGainPercent == normalized) return
-        current.runtimeAudioGainPercent = normalized
-        player?.let { applyAudioGain(current, it) }
+        if (current.pcm.gainPercent == normalized) return
+        current.pcm.gainPercent = normalized
+        player?.volume = normalized.coerceAtMost(100) / 100f
     }
 
     fun setSubtitlePresentation(value: SubtitlePresentation) {
@@ -1083,10 +1091,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             mutableState.update { it.copy(decodeWarning = warning) }
         }
 
-        override fun onAudioSessionIdChanged(audioSessionId: Int) {
-            applyAudioGain(current, exoPlayer)
-        }
-
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (active !== current) return
             mutableState.update { it.copy(isPlaying = isPlaying) }
@@ -1144,12 +1148,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun applyAudioGain(current: ActivePlayback, exoPlayer: ExoPlayer) {
-        if (active !== current || player !== exoPlayer) return
-        val gain = current.audioGain ?: PlaybackAudioGain().also { current.audioGain = it }
-        val result = gain.apply(exoPlayer.audioSessionId, current.runtimeAudioGainPercent)
-        exoPlayer.volume = result.volume
-        mutableState.update { it.copy(audioGainStatus = result.status) }
+    private fun reconfigureAudioOutput(owner: ExoPlayer) {
+        // 同一个播放器保留条目、位置、选轨和暂停状态，让 renderer 重新协商实际的输出格式。
+        if (owner.playbackState == Player.STATE_READY || owner.playbackState == Player.STATE_BUFFERING) {
+            owner.stop()
+            owner.prepare()
+        }
     }
 
     private fun reportProgress(current: ActivePlayback, exoPlayer: Player) {
@@ -1198,9 +1202,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         progressJob = null
         playerListener?.let { exoPlayer?.removeListener(it) }
         playerListener = null
-        current?.audioGain?.close()
-        current?.audioGain = null
-        mutableState.update { it.copy(transferBytesPerSecond = null, audioGainStatus = null, introPrompt = null, mediaSegmentsError = null, assStatus = null) }
+        mutableState.update { it.copy(transferBytesPerSecond = null, introPrompt = null, mediaSegmentsError = null, assStatus = null) }
         player = null
         val mediaClient = current?.mediaClient
         current?.mediaClient = null
@@ -1226,12 +1228,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         val request: PlaybackRequest,
         val originalRequest: PlaybackRequest,
         val tuning: PlaybackTuning,
+        val pcm: PlaybackPcmProcessor,
         val playerGeneration: Long,
         val tracker: PlaybackSessionTracker = PlaybackSessionTracker(),
         var mediaClient: OkHttpClient? = null,
         val transferMetrics: PlaybackTransferMetrics? = if (tuning.showBufferSpeed) PlaybackTransferMetrics() else null,
-        var audioGain: PlaybackAudioGain? = null,
-        var runtimeAudioGainPercent: Int = tuning.audioGainPercent,
         val localSubtitles: CopyOnWriteArrayList<LocalSubtitle> = CopyOnWriteArrayList(),
         var pendingLocalSubtitle: LocalSubtitle? = null,
         @Volatile var subtitleDelayUs: Long = 0,

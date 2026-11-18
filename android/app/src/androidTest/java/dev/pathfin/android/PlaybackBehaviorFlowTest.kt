@@ -1,7 +1,6 @@
 package dev.pathfin.android
 
 import android.content.Context
-import android.os.Bundle
 import android.os.SystemClock
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.Player
@@ -69,7 +68,6 @@ class PlaybackBehaviorFlowTest {
                 player.pause()
                 assertEquals(.5f, player.volume, .001f)
                 assertEquals(SeekParameters.CLOSEST_SYNC, player.seekParameters)
-                assertNull(playback.state.value.audioGainStatus)
                 assertTrue(playback.state.value.showBufferSpeed)
             }
             compose.waitUntil(WAIT_MS) { samples.any { it > 0 } }
@@ -98,29 +96,17 @@ class PlaybackBehaviorFlowTest {
         val playback = compose.runOnIdle { ViewModelProvider(compose.activity)[PlaybackViewModel::class.java] }
         val endingSeeks = AtomicInteger()
         try {
-            openFixture(app, AppPreferences(audioGainPercent = 150, outroSkipSeconds = 3, exactSeek = true,
-                autoPlayNextEpisode = false))
+            openFixture(app, AppPreferences(outroSkipSeconds = 3, exactSeek = true, autoPlayNextEpisode = false))
             awaitFirstFrame(app, playback)
             val player = compose.runOnIdle {
                 checkNotNull(playback.player).also {
                     it.pause()
                     assertEquals(SeekParameters.EXACT, it.seekParameters)
                     assertTrue(it.duration >= 14_000)
-                    assertEquals(1f, it.volume, .001f)
+                    assertNull(playback.state.value.transferBytesPerSecond)
+                    it.seekTo(it.duration - 2_000)
                 }
             }
-            compose.waitUntil(WAIT_MS) {
-                compose.runOnIdle { player.audioSessionId > 0 && playback.state.value.audioGainStatus?.contains("等待") != true }
-            }
-            val gainApplied = compose.runOnIdle {
-                playback.state.value.audioGainStatus?.let { assertTrue("不支持音效时必须明确回退", it.contains("已恢复 100% 原音量")) }
-                assertNull(playback.state.value.transferBytesPerSecond)
-                player.seekTo(player.duration - 2_000)
-                playback.state.value.audioGainStatus == null
-            }
-            InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
-                putString("stream", "Pathfin Exo gain150: LoudnessEnhancerApplied=$gainApplied; fallbackToOriginal=${!gainApplied}\n")
-            })
             compose.waitUntil(WAIT_MS) {
                 compose.runOnIdle { player.playbackState == Player.STATE_READY && player.currentPosition >= player.duration - 2_250 }
             }
