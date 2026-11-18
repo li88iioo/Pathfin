@@ -4,6 +4,24 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.7] - 2026-11-18
+
+### 新增
+
+- 播放器「更多」中的音量增益已并入画面右侧的音量手势。系统音量达到 100% 后继续上滑进入琥珀色增益区，最高可调至 200%。增益随手势实时变化，松手保存，取消手势可恢复原值。音频直通时，手势只调系统媒体音量。[音量手势](https://github.com/li88iioo/Pathfin/commit/402e0f99dcdce6bdae1740f273b08532840fb9b9)
+- ARM64 设备新增 MPEG-4 Part 2（含 Xvid／DivX）、微软 MPEG-4 v2／v3、H.263 以及 MKV 中标记为 WVC1 的 VC-1 Advanced Profile 软件补解。能否直接播放取决于文件封装与轨道格式。[旧视频格式支持](https://github.com/li88iioo/Pathfin/commit/df5a2bf04a71720c161f4ab9145d1a8b376094e0)
+- Jellyfin 提供独立地址时可选用外挂 PGS（.sup）字幕，跳转时同步更新字幕。MKV 内嵌 VobSub 字幕可由手机直接渲染，减少对服务器烧录的依赖。[位图字幕](https://github.com/li88iioo/Pathfin/commit/2ee773c85d4e1fcaf16abd0e5c03b1382389ccf2)
+
+### 优化
+
+- 手机扬声器播放多声道片源时混合为立体声，改善对白偏轻的问题。软件增益按等分贝间隔调整并限制峰值，实际响度提升取决于片源。支持直通的外接设备可继续接收原始编码音频。[扬声器混音](https://github.com/li88iioo/Pathfin/commit/bd8fa87c421bedc8e16370357fd540cda206fedf) · [增益曲线](https://github.com/li88iioo/Pathfin/commit/1df9f5f8dc602264c4f9cf384e76b39db7eab266)
+- 确认识别结果后立即返回，服务器在后台应用元数据。成功后自动刷新详情，失败时提示原因。同一条目应用完成后可再次提交结果。[后台应用识别结果](https://github.com/li88iioo/Pathfin/commit/cc4234925477519ee74861c7336624ab95bd3795)
+
+### 修复
+
+- 扩大杜比视界原画兼容范围。兼容的渐进式 P7 片源可播放 HDR10 基础层，P7 FEL 的软解回退只使用基础层。P4／P8、P9 和基础层色彩兼容的 P10 可分别尝试 HEVC、H.264 和 AV1 基础层。[P8 起播修复](https://github.com/li88iioo/Pathfin/commit/8bfff89f24b716039630e57bbb8d2452a6e439b2) · [基础层兼容](https://github.com/li88iioo/Pathfin/commit/df5a2bf04a71720c161f4ab9145d1a8b376094e0)
+- 通过 Jellyfin 播放蓝光 M2TS 或 ASF／WMV 时请求兼容流。明确选择 STRM 原始地址时，遇到无法直读的封装会提示改用服务器播放。[封装兼容](https://github.com/li88iioo/Pathfin/commit/8de95feb4e2aef8fc71cf12eecec57ef79ce2f95)
+
 ## [0.1.6] - 2026-11-14
 
 ### 新增
@@ -150,6 +168,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.7]: https://github.com/li88iioo/Pathfin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/li88iioo/Pathfin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/li88iioo/Pathfin/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/li88iioo/Pathfin/compare/v0.1.3...v0.1.4
