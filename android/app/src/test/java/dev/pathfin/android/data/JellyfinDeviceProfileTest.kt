@@ -127,6 +127,99 @@ class JellyfinDeviceProfileTest {
         }
     }
 
+    @Test fun unsupportedOriginalContainersNegotiateServerStreamsWhileTsAndWvc1MkvKeepDirectPlay() {
+        val sources = listOf(
+            """{"Container":"m2ts","Path":"/library/opaque","Protocol":"File"}""" to true,
+            """{"Container":"ts","Path":"https://cdn.example/clip%2eM2TS?token=fixture","Protocol":"Http"}""" to true,
+            """{"Container":"ts","Path":"/library/clip.ts","Timestamp":"Zero","Protocol":"File"}""" to true,
+            """{"Container":"asf","Path":"/library/opaque","Protocol":"File"}""" to true,
+            """{"Container":"strm","Path":"https://cdn.example/clip.WMV","Protocol":"Http","MediaStreams":[{"Type":"Video","Codec":"wmv3"}]}""" to true,
+            """{"Container":"ts","Path":"https://cdn.example/clip.ts?name=old.m2ts","Timestamp":"None","Protocol":"Http"}""" to false,
+            """{"Container":"mkv","Path":"https://cdn.example/clip.mkv","Protocol":"Http","MediaStreams":[{"Type":"Video","Codec":"vc1","CodecTag":"WVC1"}]}""" to false,
+        )
+        for ((json, remux) in sources) {
+            val requests = AtomicInteger()
+            withServer({ exchange ->
+                val request = JSONObject(exchange.requestBody.bufferedReader().readText())
+                val count = requests.incrementAndGet()
+                assertTrue(count <= if (remux) 2 else 1)
+                assertEquals(count == 1, request.getBoolean("EnableDirectPlay"))
+                assertTrue(request.getBoolean("EnableDirectStream"))
+                assertTrue(request.getBoolean("AllowVideoStreamCopy"))
+                assertTrue(request.getBoolean("AllowAudioStreamCopy"))
+                assertEquals(15_000_000L, request.getLong("StartTimeTicks"))
+                assertEquals(1, request.getInt("AudioStreamIndex"))
+                assertEquals(3, request.getInt("SubtitleStreamIndex"))
+                if (count == 2) assertEquals("source", request.getString("MediaSourceId"))
+                val videoContainers = request.getJSONObject("DeviceProfile").getJSONArray("DirectPlayProfiles").objects()
+                    .filter { it.getString("Type") == "Video" }.flatMap { it.getString("Container").split(',') }
+                assertTrue("ts" in videoContainers)
+                assertTrue(videoContainers.none { it in setOf("m2ts", "mts", "asf", "wmv") })
+                val source = JSONObject(json).put("Id", "source").put("SupportsDirectPlay", count == 1)
+                if (count == 2) source.put("TranscodingUrl", "/Videos/video/master.m3u8")
+                exchange.json(JSONObject().put("MediaSources", JSONArray().put(source)).put("PlaySessionId", "play-$count").toString())
+            }) { session ->
+                val info = runBlocking { JellyfinApi().playbackInfo(session, "video", startTimeTicks = 15_000_000L,
+                    audioStreamIndex = 1, subtitleStreamIndex = 3) }
+                val stream = PlaybackResolver.resolve(session, MediaItem("video", "Video", "Movie"), info, "source",
+                    preferOriginal = !remux)
+                assertEquals(if (remux) 2 else 1, requests.get())
+                assertEquals(if (remux) PlaybackDelivery.SERVER_STREAM else PlaybackDelivery.AUTOMATIC, info.delivery)
+                assertEquals(remux, stream.trustedServer)
+                assertEquals(if (remux) PlayMethod.TRANSCODE else PlayMethod.DIRECT_PLAY, stream.method)
+                if (remux) assertEquals("application/x-mpegURL", stream.mimeType)
+            }
+        }
+    }
+
+    @Test fun legacyVideoDeclarationsKeepTheirExtractorAndFourCcRestrictions() {
+        val containers = mapOf("mpeg4" to setOf("avi", "mkv", "mp4", "m4v", "mov"),
+            "msmpeg4v2" to setOf("avi"), "msmpeg4v3" to setOf("avi"), "h263" to setOf("mkv", "mp4", "m4v", "mov", "3gp", "3g2"),
+            "vc1" to setOf("mkv"))
+        val limits = containers.keys.associateWith { PlaybackCapabilities.VideoLimit(1920, 1080, 8) }
+        val capabilities = PlaybackCapabilities(PlaybackCapabilities.Baseline.video + limits,
+            setOf("aac", "mp3", "ac3", "dts", "flac", "eac3", "truehd", "amr_nb", "amr_wb"))
+        val profile = JellyfinApi(capabilities = { capabilities }).deviceProfile()
+        val direct = profile.getJSONArray("DirectPlayProfiles").objects().filter { it.getString("Type") == "Video" }
+        for ((codec, expected) in containers) {
+            val matches = direct.filter { codec in it.getString("VideoCodec").split(',') }
+            assertEquals(codec, expected, matches.flatMap { it.getString("Container").split(',') }.toSet())
+        }
+        val avi = direct.filter { "avi" in it.getString("Container").split(',') }
+        assertTrue(avi.all { it.getString("AudioCodec").split(',').toSet() == setOf("aac", "mp3", "ac3", "dts") })
+        val mobile = direct.filter { "3gp" in it.getString("Container").split(',') && "h263" in it.getString("VideoCodec").split(',') }
+        assertTrue("3GP 的 H.263 应支持实际可提取的 AMR 视频音频组合",
+            mobile.flatMap { it.getString("AudioCodec").split(',') }.containsAll(listOf("aac", "amr_nb", "amr_wb")))
+        for ((codec, expected) in mapOf("vc1" to "WVC1", "msmpeg4v2" to "MP42", "msmpeg4v3" to "MP43")) {
+            val tag = profile.getJSONArray("CodecProfiles").objects().single { it.getString("Codec") == codec }
+                .getJSONArray("Conditions").objects().single { it.getString("Property") == "VideoCodecTag" }
+            assertEquals(expected, tag.getString("Value"))
+            assertTrue(tag.getBoolean("IsRequired"))
+        }
+    }
+
+    @Test fun relayKeepsTheExistingProgressiveM2tsPathAvailableForTheReceiver() {
+        val requests = AtomicInteger()
+        val checks = AtomicInteger()
+        withServer({ exchange ->
+            assertEquals(1, requests.incrementAndGet())
+            val request = JSONObject(exchange.requestBody.bufferedReader().readText())
+            assertTrue(request.getBoolean("EnableDirectPlay"))
+            val direct = request.getJSONObject("DeviceProfile").getJSONArray("DirectPlayProfiles").objects()
+            assertTrue(direct.any { it.getString("Type") == "Video" && "m2ts" in it.getString("Container").split(',') })
+            exchange.json("""{"MediaSources":[{"Id":"source","Protocol":"File","Path":"/library/movie.m2ts","Container":"m2ts",
+                "SupportsDirectPlay":true,"MediaStreams":[{"Type":"Video","Codec":"h264"}]}],"PlaySessionId":"play"}""")
+        }) { session ->
+            val api = JellyfinApi(videoSupport = { checks.incrementAndGet(); null })
+            val info = runBlocking { api.playbackInfo(session, "video", usesLocalPlayer = false) }
+            val stream = PlaybackResolver.resolve(session, MediaItem("video", "Video", "Movie"), info, "source", usesLocalPlayer = false)
+            assertEquals(1, requests.get())
+            assertEquals(1, checks.get())
+            assertEquals(PlayMethod.DIRECT_PLAY, stream.method)
+            assertTrue(stream.uri.contains("/Videos/video/stream?Static=true"))
+        }
+    }
+
     @Test fun speechDecodersAreAdvertisedOnlyForContainersMedia3CanExtract() {
         val speech = setOf("amr_nb", "amr_wb", "pcm_alaw", "pcm_mulaw")
         val capabilities = PlaybackCapabilities.Baseline.copy(audioCodecs = setOf("aac") + speech)

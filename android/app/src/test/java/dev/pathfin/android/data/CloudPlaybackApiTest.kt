@@ -159,6 +159,24 @@ class CloudPlaybackApiTest {
         }
     }
 
+    @Test fun incompatibleOriginalContainerLeavesSeparateCloudRenditionsAvailable() = runBlocking {
+        Fixture { exchange ->
+            exchange.reply(if (exchange.requestURI.rawQuery.contains("view=variants")) variantsJson() else resolveJson())
+        }.use { fixture ->
+            val source = source(fixture.baseUrl).copy(container = "m2ts")
+            val api = CloudPlaybackApi(videoSupport = { true })
+            val cloud = requireNotNull(api.discover(session, source))
+            assertFalse(cloud.variant(PlaybackQuality.ORIGINAL)!!.playable)
+            val quality = cloud.quality(null, PlaybackQuality.ORIGINAL)
+            assertEquals(PlaybackQuality.HIGH, quality)
+            val request = request(fixture.baseUrl).copy(source = source, cloudPlayback = cloud)
+            val selected = api.select(request, quality)
+            assertEquals("hd", selected.cloudPlayback!!.selectedId)
+            assertFalse(selected.stream.trustedServer)
+            assertEquals(listOf(null, "hd"), fixture.requests.map { it.url.queryParameter("quality") })
+        }
+    }
+
     @Test fun discoveryOnlyProbesSignedPlaygyAndPreservesRealMetadataWithoutSourceCredentials() = runBlocking {
         Fixture { it.reply(variantsJson()) }.use { fixture ->
             val api = CloudPlaybackApi(videoSupport = { if (it.codec == "hevc") false else null })

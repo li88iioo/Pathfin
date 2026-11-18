@@ -1996,6 +1996,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         mutableState.update { it.copy(preparingPlay = true, pendingPlayback = pending.copy(sourceId = sourceId)) }
         val source = selection.info.sources.single { it.id == sourceId }
         val preferences = state.value.preferences
+        val needsRemux = PlaybackResolver.originalContainerNeedingConversion(source) != null
         val cloudUrl = dev.pathfin.android.data.CloudPlaybackApi.candidateUrl(session, source)
         val cloudEligible = preferences.originalPathEnabled && selection.item.type in setOf("Movie", "Episode", "Video") &&
             cloudUrl != null
@@ -2014,14 +2015,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 preferences.prefersOriginalSource(selection.item), quality, selection.info.delivery)
             val video = source.mediaStreams.firstOrNull { it.type.equals("Video", true) }
             val localSupport = if (selection.info.delivery != PlaybackDelivery.TRANSCODE &&
-                !(selection.item.isLiveChannel && preferences.liveTvDirectPlay) && video != null)
+                !(originalHttp && needsRemux) && !(selection.item.isLiveChannel && preferences.liveTvDirectPlay) && video != null)
                 withContext(Dispatchers.Default) { DevicePlaybackCapabilities.supportsVideo(video) } else null
             require(!originalHttp || localSupport != false) { tr("本机不支持此原画，请更换片源或关闭原始路径后选择服务器画质。") }
+            val delivery = when {
+                localSupport == false || quality.maxBitrate != null -> PlaybackDelivery.TRANSCODE
+                needsRemux && !originalHttp -> maxOf(selection.info.delivery, PlaybackDelivery.SERVER_STREAM)
+                else -> selection.info.delivery
+            }
             val info = when {
-                localSupport == false || quality.maxBitrate != null -> api.playbackInfo(session, selection.item.id, sourceId,
-                    TimeUnits.msToTicks(selection.startMs), quality, PlaybackDelivery.TRANSCODE,
+                delivery != selection.info.delivery || quality.maxBitrate != null -> api.playbackInfo(session, selection.item.id, sourceId,
+                    TimeUnits.msToTicks(selection.startMs), quality, delivery,
                     selection.info.audioStreamIndex, selection.info.subtitleStreamIndex)
-                localSupport == true && !originalHttp && selection.needsSelectedVideoPreflight ->
+                localSupport == true && !originalHttp && !needsRemux && selection.needsSelectedVideoPreflight ->
                     api.negotiateSelectedSourceVideo(session, selection.item.id, selection.info, sourceId,
                         TimeUnits.msToTicks(selection.startMs), quality)
                 else -> selection.info

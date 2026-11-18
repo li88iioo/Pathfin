@@ -121,6 +121,30 @@ class PlaybackResolverTest {
         assertEquals("application/x-mpegURL", result.mimeType)
     }
 
+    @Test fun m2tsRequiresAnExplicitServerChoiceAndDoesNotReplayTheStaticFile() {
+        val source = MediaSource("source", path = "https://cdn.example/clip.mts", protocol = "Http",
+            container = "ts", supportsDirectPlay = true, supportsDirectStream = true,
+            directStreamUrl = "/videos/item/stream?Static=true")
+        val remuxed = source.copy(directStreamUrl = "/videos/item/master.m3u8")
+        val info = PlaybackInfo(listOf(remuxed), "play")
+        val originalError = assertThrows(IllegalArgumentException::class.java) {
+            PlaybackResolver.resolve(session, item, info, remuxed.id)
+        }
+        assertTrue(originalError.message.orEmpty().contains("关闭 STRM 原始地址"))
+        val result = PlaybackResolver.resolve(session, item, info, remuxed.id, preferOriginal = false)
+        assertEquals(PlayMethod.DIRECT_STREAM, result.method)
+        assertEquals("application/x-mpegURL", result.mimeType)
+        assertTrue(result.trustedServer)
+        for (url in listOf(null, "/videos/item/remux.m2ts", "/videos/item/stream?static=true",
+            "https://cdn.example/remux.ts")) {
+            val current = source.copy(transcodingUrl = url)
+            val error = assertThrows(IllegalArgumentException::class.java) {
+                PlaybackResolver.resolve(session, item, PlaybackInfo(listOf(current), "play"), current.id, preferOriginal = false)
+            }
+            assertTrue(error.message.orEmpty().startsWith("M2TS"))
+        }
+    }
+
     @Test fun extensionlessServerDashUsesDeclaredContainerWithoutLeakingQueryCredentials() {
         val source = MediaSource(
             "source", container = "mpd",

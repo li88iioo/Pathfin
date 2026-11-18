@@ -132,6 +132,7 @@ data class MediaSource(
     val defaultSubtitleStreamIndex: Int? = null,
     val defaultAudioStreamIndex: Int? = null,
     val cloudPlaybackUrl: String? = null,
+    val hasTransportStreamTimestamp: Boolean = false,
 )
 
 /** 仅保留服务器实际返回的轨道描述；未知编解码、分辨率和 HDR 信息保持 null。 */

@@ -243,6 +243,7 @@ object JsonMapping {
                 defaultSubtitleStreamIndex = source.decimal("DefaultSubtitleStreamIndex")
                     ?.takeIf { it in -1.0..Int.MAX_VALUE.toDouble() && it % 1.0 == 0.0 }?.toInt(),
                 defaultAudioStreamIndex = source.nonNegativeInt("DefaultAudioStreamIndex"),
+                hasTransportStreamTimestamp = source.text("Timestamp").let { it.equals("Zero", true) || it.equals("Valid", true) },
             )
         }
 

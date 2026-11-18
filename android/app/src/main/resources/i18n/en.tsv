@@ -1481,3 +1481,5 @@ GitHub 请求过于频繁，请稍后重试	Too many requests to GitHub. Please 
 跳到 %1$s	Jump to %1$s
 上一个识别结果仍在应用，完成后再试	The previous identification is still applying; try again when it finishes
 上一个识别结果仍在后台应用，完成后才能再次应用	The previous identification is still applying in the background; you can apply again when it finishes
+%1$s 需要服务器转封装或转码，请检查账号的播放权限	%1$s requires server remuxing or transcoding. Check your account's playback permissions.
+%1$s 原始封装无法直接读取，请关闭 STRM 原始地址后重新播放，或选择服务器画质	%1$s cannot be played directly. Turn off STRM original address and try again, or select a server quality.

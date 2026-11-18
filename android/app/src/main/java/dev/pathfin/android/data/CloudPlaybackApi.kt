@@ -71,9 +71,10 @@ class CloudPlaybackApi(
         val format = originalVideo?.copy(codec = originalVideo.codec ?: video,
             width = originalVideo.width ?: width, height = originalVideo.height ?: height)
             ?: MediaStream(type = "Video", codec = video, width = width, height = height)
+        val originalContainerSupported = !original || transport != "file" || PlaybackResolver.originalContainerNeedingConversion(source) == null
         return CloudVariant(id, original, json.optString("label"), width, height, video, codec("audio_codec"),
             json.optLong("bitrate").takeIf { it > 0 }, transport, mime,
-            playable = videoSupport(format) != false)
+            playable = originalContainerSupported && videoSupport(format) != false)
     }
 
     private suspend fun readJson(sourceUrl: String, view: String, quality: String? = null, discovery: Boolean = false): JSONObject? {

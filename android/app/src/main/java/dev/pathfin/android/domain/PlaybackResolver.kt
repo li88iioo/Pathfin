@@ -7,6 +7,31 @@ import java.net.URLEncoder
 import java.util.Locale
 
 object PlaybackResolver {
+    /** Jellyfin 也会将 192 字节的蓝光封装报告为 ts，STRM 则可能只有文件后缀。 */
+    internal fun originalContainerNeedingConversion(source: MediaSource): String? {
+        if (source.hasTransportStreamTimestamp) return "M2TS"
+        val containers = source.container.orEmpty().split(',').map(String::trim).filter(String::isNotEmpty)
+        containers.firstNotNullOfOrNull(::unsupportedContainer)?.let { return it }
+        val path = source.path ?: return null
+        val format = unsupportedPath(ServerUrls.httpUri(path)?.path ?: path)
+        return format?.takeIf {
+            containers.isEmpty() || containers.any { container ->
+                when (container.lowercase(Locale.ROOT)) {
+                    "strm" -> true
+                    "ts", "mpegts", "mpeg2ts" -> format == "M2TS"
+                    else -> false
+                }
+            }
+        }
+    }
+
+    private fun unsupportedContainer(container: String): String? = when (container.lowercase(Locale.ROOT)) {
+        "m2ts", "mts" -> "M2TS"
+        "asf", "wmv" -> "ASF/WMV"
+        else -> null
+    }
+    private fun unsupportedPath(path: String): String? = unsupportedContainer(path.substringAfterLast('.', ""))
+
     /** 明确选择的视频原画直连；与服务器本地文件和主动选择的码率档分开。 */
     fun prefersOriginalHttp(item: MediaItem, source: MediaSource, preferOriginal: Boolean,
         quality: PlaybackQuality, delivery: PlaybackDelivery): Boolean =
@@ -27,6 +52,7 @@ object PlaybackResolver {
         preferOriginal: Boolean = true,
         quality: PlaybackQuality = PlaybackQuality.ORIGINAL,
         delivery: PlaybackDelivery = PlaybackDelivery.AUTOMATIC,
+        usesLocalPlayer: Boolean = true,
     ): ResolvedPlayback {
         require(info.errorCode.isNullOrBlank()) { tr("服务器无法为该媒体提供播放信息") }
         val source = when {
@@ -36,19 +62,35 @@ object PlaybackResolver {
         } ?: throw IllegalArgumentException(tr("所选媒体版本不存在，请重新选择"))
 
         val effectiveDelivery = maxOf(delivery, info.delivery)
+        val needsConversion = if (usesLocalPlayer) originalContainerNeedingConversion(source) else null
+        val originalHttp = prefersOriginalHttp(item, source, preferOriginal, quality, effectiveDelivery)
+        require(!originalHttp || needsConversion == null) {
+            tr("%1\$s 原始封装无法直接读取，请关闭 STRM 原始地址后重新播放，或选择服务器画质", needsConversion)
+        }
+        val conversionUnavailable = needsConversion?.let { tr("%1\$s 需要服务器转封装或转码，请检查账号的播放权限", it) }
+        fun negotiatedUrl(raw: String?): String? {
+            val url = serverMediaUrl(session.server, raw) ?: return null
+            if (needsConversion == null) return url
+            val uri = URI(url)
+            return url.takeUnless {
+                url == source.path || unsupportedPath(uri.path.orEmpty()) != null ||
+                    uri.rawQuery?.split('&')?.any { part -> part.equals("Static=true", true) } == true
+            }
+        }
+        val transcode = negotiatedUrl(source.transcodingUrl)
         if (quality.maxBitrate != null || effectiveDelivery == PlaybackDelivery.TRANSCODE) {
-            val url = serverMediaUrl(session.server, source.transcodingUrl)
-                ?: throw IllegalArgumentException(tr("服务器或当前账号无法提供此播放质量，请使用原画"))
+            val url = requireNotNull(transcode) {
+                conversionUnavailable ?: tr("服务器或当前账号无法提供此播放质量，请使用原画")
+            }
             return serverResult(session, source, url, PlayMethod.TRANSCODE)
         }
 
-        val original = source.path?.takeIf { ServerUrls.httpUri(it) != null && liveSourceReachable(session, item, it) }
+        val original = source.path?.takeIf { needsConversion == null && ServerUrls.httpUri(it) != null && liveSourceReachable(session, item, it) }
         val compatibleProtocol = source.protocol.isNullOrBlank() || source.protocol.equals("Http", true)
-        val direct = serverMediaUrl(session.server, source.directStreamUrl)
-        val transcode = serverMediaUrl(session.server, source.transcodingUrl)
+        val direct = negotiatedUrl(source.directStreamUrl)
         // 用户已明确选择原始HTTP视频时，本机实际能力决定是否可播，不能被服务器替代流覆盖。
         // 其他媒体保留服务器协商；直播仍遵守独立的“直连直播源”选择。
-        val originalAllowed = prefersOriginalHttp(item, source, preferOriginal, quality, effectiveDelivery) ||
+        val originalAllowed = originalHttp ||
             source.supportsDirectPlay || (direct == null && transcode == null) || item.isLiveChannel
         if (effectiveDelivery == PlaybackDelivery.AUTOMATIC && preferOriginal && originalAllowed && original != null && compatibleProtocol) {
             // allowInsecureHttp 只确认 Jellyfin 自身的明文连接；外部初始 HTTP 是服务端明确提供的片源。
@@ -66,6 +108,7 @@ object PlaybackResolver {
 
         if (direct != null) return serverResult(session, source, direct, PlayMethod.DIRECT_STREAM)
         if (transcode != null) return serverResult(session, source, transcode, PlayMethod.TRANSCODE)
+        require(conversionUnavailable == null) { conversionUnavailable.orEmpty() }
         if (effectiveDelivery == PlaybackDelivery.AUTOMATIC && (source.supportsDirectPlay || source.supportsDirectStream)) {
             require(item.id.isNotBlank()) { tr("媒体信息缺少标识") }
             val endpoint = if (item.type == "Audio") "Audio" else "Videos"

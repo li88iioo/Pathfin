@@ -240,10 +240,10 @@ class DlnaCastService : Service() {
             val api = JellyfinApi(apiClient)
             val item = api.item(session, itemId)
             if (item.isFolder || item.type !in listOf("Movie", "Episode", "MusicVideo", "Video", "Audio")) throw CastException(tr("请先选择可播放的影片或剧集"))
-            val info = api.playbackInfo(session, itemId, sourceId, position)
+            val info = api.playbackInfo(session, itemId, sourceId, position, usesLocalPlayer = false)
             val selected = if (!sourceId.isNullOrBlank()) info.sources.firstOrNull { it.id == sourceId } else info.sources.firstOrNull()
             if (selected == null) throw CastException(tr("服务器未提供可投屏的媒体版本"))
-            val stream = PlaybackResolver.resolve(session, item, info, selected.id, preferOriginal = true)
+            val stream = PlaybackResolver.resolve(session, item, info, selected.id, preferOriginal = true, usesLocalPlayer = false)
             val request = PlaybackRequest(item, info, selected, stream, TimeUnits.ticksToMs(position), session)
             // CastRelay 先验证 progressive 再开放端口；上游客户端不与 API 共享连接池。
             relay = CastRelay(device.localAddress, device.address, request)

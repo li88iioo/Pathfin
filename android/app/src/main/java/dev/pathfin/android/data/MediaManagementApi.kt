@@ -277,7 +277,7 @@ class MediaManagementApi(private val api: JellyfinApi = JellyfinApi()) {
         val remote = ServerUrls.httpUri(rawPath) != null || (selected?.opt("Protocol") as? String).equals("Http", true) ||
             ServerUrls.httpUri((selected?.opt("Path") as? String).orEmpty()) != null
         if (shortcut || remote) {
-            val info = api.playbackInfo(session, downloadItemId, playbackSourceId)
+            val info = api.playbackInfo(session, downloadItemId, playbackSourceId, usesLocalPlayer = false)
             if (!info.errorCode.isNullOrBlank()) throw ApiException(null, tr("服务器无法提供该媒体的下载来源"))
             val source = if (playbackSourceId == null) info.sources.firstOrNull { it.id == downloadItemId } ?: info.sources.firstOrNull()
                 else info.sources.firstOrNull { it.id == playbackSourceId }

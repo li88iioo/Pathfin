@@ -110,7 +110,7 @@ fun CastSheet(item: MediaItem, profileId: String, session: Session, api: Jellyfi
         loadingSources = true; sourceError = null
         sourceJob = scope.launch {
             try {
-                val available = withContext(Dispatchers.IO) { api.playbackInfo(session, item.id).sources }
+                val available = withContext(Dispatchers.IO) { api.playbackInfo(session, item.id, usesLocalPlayer = false).sources }
                 if (available.isEmpty()) sourceError = tr("服务器未提供可播放的媒体版本")
                 else if (available.size == 1) start(device, available.single())
                 else { sources = available; selectedDevice = device }
