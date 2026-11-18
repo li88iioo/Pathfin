@@ -33,7 +33,7 @@
 
 原画能力判断保留 Jellyfin 的完整视频轨信息，包括 Dolby Vision Profile、位深和动态范围；云端压缩档按自身格式判断。默认原画已知无法解码时，优先选择最高兼容云档，不改写默认画质偏好；没有兼容云档时明确提示本机不支持，不发起 Jellyfin 转码。手动切换画质失败仍优先恢复原来可播放的资源，网络错误只对原 STRM 地址续签一次。
 
-视频默认优先使用系统 MediaCodec。ARM64 软件补解支持 H.264、HEVC 和 MPEG-2，并覆盖 Hi10P 和 Dolby Vision Profile 5：FFmpeg 解码视频，libplacebo 在 GPU 上按逐帧色彩及 RPU 元数据映射为 SDR；不会把 Profile 5 简单改写成普通 HEVC。明确的系统音频或视频解码错误，在确认本地扩展支持该格式后，可按音频、视频各同源回退一次；保留播放位置、倍速、暂停和轨道选择，不改变持久偏好。
+视频默认优先使用系统 MediaCodec。ARM64 软件补解支持 H.264、HEVC 和 MPEG-2，并覆盖 Hi10P 和 Dolby Vision Profile 5、8：FFmpeg 解码视频，libplacebo 在 GPU 上按逐帧色彩及 RPU 元数据映射为 SDR；不会把 Profile 5 简单改写成普通 HEVC。明确的系统音频或视频解码错误，在确认本地扩展支持该格式后，可按音频、视频各同源回退一次；保留播放位置、倍速、暂停和轨道选择，不改变持久偏好。
 
 原有硬解 HDR10/HLG 路径保留。渐进式 Profile 7 和 Media3 支持的 Profile 8 可使用 HEVC 基础层，不重建 Profile 7 FEL 增强层。软件路径当前限制单边 4096、总像素不超过 4096×2304，是否能实时播放仍取决于设备、编码复杂度与帧率；不承诺任意 4K 文件或设备都能流畅软解。网络、容器、音频、字幕与播放时钟继续由同一个 ExoPlayer 管理。
 

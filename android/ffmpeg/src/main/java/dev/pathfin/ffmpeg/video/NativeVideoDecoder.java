@@ -54,7 +54,8 @@ public final class NativeVideoDecoder
         color == null ? Format.NO_VALUE : color.colorSpace,
         color == null ? Format.NO_VALUE : color.colorRange,
         color == null ? Format.NO_VALUE : color.colorTransfer,
-        format.rotationDegrees, NativeVideoRenderer.isDolbyVision(format));
+        // Profile 5 的色彩依赖 RPU；Profile 8 允许按基础层显示没有 RPU 的帧。
+        format.rotationDegrees, NativeVideoRenderer.dolbyVisionProfile(format) == 5);
     if (context == 0) throw new NativeVideoException("本地视频解码器初始化失败");
     name = "pathfin.ffmpeg." + codec + ".gpu-sdr";
     for (int i = 0; i < 4; i++) {

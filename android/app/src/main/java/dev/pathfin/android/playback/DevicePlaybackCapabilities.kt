@@ -44,10 +44,10 @@ internal object DevicePlaybackCapabilities {
     fun supportsVideo(stream: MediaStream): Boolean? {
         val hardware = supportsPlatformVideo(stream)
         if (hardware == true || !stream.type.equals("Video", true)) return hardware
-        val dolbyVision = stream.dvProfile != null || stream.videoRangeType?.startsWith("DOVI", true) == true
-        val software = if (dolbyVision && stream.dvProfile != 5) {
-            // 与渐进式提取器一致：没有 DV7 解码器时只播放 HEVC 基础层，不声明增强层重建。
-            if (stream.dvProfile != 7 || current.supportsDolbyVisionProfile(7)) return hardware
+        if (stream.dvProfile == null && stream.videoRangeType?.startsWith("DOVI", true) == true) return hardware
+        val software = if (stream.dvProfile == 7) {
+            // 仅当提取器输出 HEVC 基础层时才申报 DV7 软件回退。
+            if (current.supportsDolbyVisionProfile(7)) return hardware
             dolbyVisionBaseLayerStream(stream)?.takeIf {
                 it.bitDepth == 10 && (it.width ?: 0) > 0 && (it.height ?: 0) > 0
             } ?: return hardware

@@ -75,6 +75,32 @@ class MediaFluxCloudPlaybackFlowTest {
 
     @Test fun liveCloudThroughReverseProxyUsesDefaultThenSwitchesAndKeepsPositionOnFailure() = verifyLiveCloudFlow(true)
 
+    @Test fun liveOriginalWithSourceMetadataReachesTheDeviceScreen() {
+        val endpoint = InstrumentationRegistry.getArguments().getString("originalEndpoint")
+        assumeTrue("需要指定带实际视频轨的原画验证桥", !endpoint.isNullOrBlank())
+        val sample = get(requireNotNull(endpoint) + "/bootstrap")
+        val video = sample.getJSONObject("video")
+        withApp(sample.getString("url"), sourceVideo = video) { _, app, playback ->
+            preferOriginal(app, hardwareVideo = InstrumentationRegistry.getArguments().getString("hardwareVideo") != "false")
+            start(app, playback)
+            await { playback.player!!.currentPosition >= 8_000 }
+            main {
+                val player = checkNotNull(playback.player)
+                val request = checkNotNull(playback.currentRequest)
+                assertEquals("original", request.cloudPlayback?.selectedId)
+                assertEquals(PlayMethod.DIRECT_PLAY, request.stream.method)
+                assertEquals(video.getInt("Width"), player.videoSize.width)
+                assertEquals(video.getInt("Height"), player.videoSize.height)
+                val counters = checkNotNull(player.videoDecoderCounters)
+                counters.ensureUpdated()
+                assertTrue("必须在真实 Surface 连续呈现视频帧", counters.renderedOutputBufferCount > 1)
+                println("Pathfin original: ${player.videoSize.width}x${player.videoSize.height} " +
+                    "positionMs=${player.currentPosition} rendered=${counters.renderedOutputBufferCount} " +
+                    "dropped=${counters.droppedBufferCount}")
+            }
+        }
+    }
+
     private fun verifyLiveCloudFlow(reverseProxyPayload: Boolean) {
         val endpoint = InstrumentationRegistry.getArguments().getString("cloudEndpoint")
         assumeTrue("需要显式授权的只读云盘桥", !endpoint.isNullOrBlank())
@@ -570,8 +596,9 @@ class MediaFluxCloudPlaybackFlowTest {
         main { assertNull("退出播放器后必须清理手选画质交接", playback.preferredQuality) }
     }
 
-    private fun preferOriginal(app: AppViewModel) {
-        main { app.setPreferences(app.state.value.preferences.copy(strmDefaultQuality = PlaybackQuality.ORIGINAL)) }
+    private fun preferOriginal(app: AppViewModel, hardwareVideo: Boolean = true) {
+        main { app.setPreferences(app.state.value.preferences.copy(strmDefaultQuality = PlaybackQuality.ORIGINAL,
+            preferHardwareVideoDecoder = hardwareVideo)) }
         await { AppPreferencesStore(context).load().strmDefaultQuality == PlaybackQuality.ORIGINAL }
     }
 
@@ -607,11 +634,11 @@ class MediaFluxCloudPlaybackFlowTest {
     }
 
     private fun withApp(sourceUrl: String? = null, cloudScenario: Fixture.CloudScenario? = null, multipleSources: Boolean = false,
-        reverseProxyPayload: Boolean = false,
+        reverseProxyPayload: Boolean = false, sourceVideo: JSONObject? = null,
         block: (Fixture, AppViewModel, PlaybackViewModel) -> Unit) {
         val bytes = instrumentation.context.assets.open("ass-extension/plain.mp4").use { it.readBytes() }
         Fixture(bytes, externalSource = sourceUrl, cloudScenario = cloudScenario, multipleSources = multipleSources,
-            reverseProxyPayload = reverseProxyPayload).use { fixture ->
+            reverseProxyPayload = reverseProxyPayload, negotiationVideo = sourceVideo).use { fixture ->
             val app = main { ViewModelProvider(compose.activity)[AppViewModel::class.java] }
             val playback = main { ViewModelProvider(compose.activity)[PlaybackViewModel::class.java] }
             try {

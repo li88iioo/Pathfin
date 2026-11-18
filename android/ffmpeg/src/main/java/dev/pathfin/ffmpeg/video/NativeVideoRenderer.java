@@ -48,7 +48,7 @@ public final class NativeVideoRenderer extends DecoderVideoRenderer {
   /** 与 Renderer 共用的能力边界；不为未知 DV Profile 或增强层重建虚报支持。 */
   public static boolean supportsSource(String codec, @Nullable Integer dvProfile, int width, int height, int bitDepth) {
     if (!supportsDimensions(width, height) || !supportsDepth(bitDepth, dvProfile != null)
-        || dvProfile != null && dvProfile != 5) return false;
+        || dvProfile != null && !supportsDolbyVisionProfile(dvProfile)) return false;
     if (dvProfile != null && !"hevc".equalsIgnoreCase(codec)) return false;
     return NativeVideoDecoder.isCodecAvailable(codec);
   }
@@ -65,11 +65,17 @@ public final class NativeVideoRenderer extends DecoderVideoRenderer {
     if (MimeTypes.VIDEO_H264.equals(format.sampleMimeType)) return "h264";
     if (MimeTypes.VIDEO_H265.equals(format.sampleMimeType)) return "hevc";
     if (MimeTypes.VIDEO_MPEG2.equals(format.sampleMimeType)) return "mpeg2video";
-    if (isDolbyVision(format) && format.codecs != null) {
-      Matcher matcher = DV_PROFILE.matcher(format.codecs);
-      if (matcher.matches() && Integer.parseInt(matcher.group(1)) == 5) return "hevc";
-    }
-    return null;
+    return supportsDolbyVisionProfile(dolbyVisionProfile(format)) ? "hevc" : null;
+  }
+
+  private static boolean supportsDolbyVisionProfile(int profile) {
+    return profile == 5 || profile == 8;
+  }
+
+  static int dolbyVisionProfile(Format format) {
+    if (!isDolbyVision(format) || format.codecs == null) return -1;
+    Matcher matcher = DV_PROFILE.matcher(format.codecs);
+    return matcher.matches() ? Integer.parseInt(matcher.group(1)) : -1;
   }
 
   static boolean isDolbyVision(Format format) { return MimeTypes.VIDEO_DOLBY_VISION.equals(format.sampleMimeType); }

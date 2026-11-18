@@ -111,6 +111,20 @@ class DevicePlaybackCapabilitiesTest {
             RendererCapabilities.getFormatSupport(renderer.supportsFormat(format)))
     }
 
+    @Test fun profile8OriginalCanUseTheSameHevcFallbackDuringPreflightAndRendering() {
+        val source = MediaStream(type = "Video", codec = "hevc", profile = "Main 10", level = 183.0,
+            width = 3840, height = 1632, bitDepth = 10, averageFrameRate = 23.976,
+            colorTransfer = "smpte2084", colorSpace = "bt2020nc", videoRangeType = "DOVIWithHDR10", dvProfile = 8)
+        assertTrue(NativeVideoRenderer.supportsSource("hevc", 8, 3840, 1632, 10))
+        assertEquals(true, DevicePlaybackCapabilities.supportsVideo(source))
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+            .setWidth(3840).setHeight(1632).setCodecs("dvhe.08.06").build()
+        val renderer = NativeVideoRenderer(0, Handler(Looper.getMainLooper()), object : VideoRendererEventListener {})
+        assertEquals(C.FORMAT_HANDLED, RendererCapabilities.getFormatSupport(renderer.supportsFormat(format)))
+        assertEquals(C.FORMAT_UNSUPPORTED_SUBTYPE, RendererCapabilities.getFormatSupport(
+            renderer.supportsFormat(format.buildUpon().setCodecs("dvhe.06.06").build())))
+    }
+
     @Test fun sourceBitrateUsesTheRealDecoderLimitAndIgnoresAbsentOrInvalidMetadata() {
         val stream = MediaStream(type = "Video", codec = "h264", profile = "High", width = 1920, height = 1080,
             bitDepth = 8, averageFrameRate = 30.0)

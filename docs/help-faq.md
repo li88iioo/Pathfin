@@ -39,7 +39,7 @@ A path on the server's disk isn't reachable from the phone. The STRM must contai
 ## Playback
 
 **The video won't play, or only audio plays.**
-Pathfin prefers the system decoder. On ARM64 devices it can fall back to FFmpeg software decoding for H.264/HEVC, including Hi10P and Dolby Vision Profile 5. Software decoding is limited to 4096×2304, and whether it's smooth depends on the device. Check **Settings → Play → Decoding & subtitle rendering**. On non-ARM64 devices the software fallback isn't available.
+Pathfin prefers the system decoder. On ARM64 devices it can fall back to FFmpeg software decoding for H.264/HEVC, including Hi10P and Dolby Vision profiles 5 and 8. Software decoding is limited to 4096×2304, and whether it's smooth depends on the device. Check **Settings → Play → Decoding & subtitle rendering**. On non-ARM64 devices the software fallback isn't available.
 
 **ASS subtitles look plain.**
 Styled ASS rendering uses libass, which is ARM64 only. Other architectures use basic subtitles. If the extension fails, the app falls back to basic subtitles and shows a notice.
