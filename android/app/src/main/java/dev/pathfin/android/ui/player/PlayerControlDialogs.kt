@@ -9,6 +9,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.Interaction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.pathfin.android.ui.PathfinAppearance
 import androidx.compose.ui.graphics.lerp
 import dev.pathfin.android.ui.PathfinIcons
@@ -78,6 +81,7 @@ internal fun PlayerControlPopup(
     onSetSleepTimer: (Int?) -> Unit,
     sleepTimerLabel: String?,
     audioGainPercent: Int,
+    onAudioGainPreview: (Int) -> Unit,
     onAudioGainChange: (Int) -> Unit,
     onAddSubtitle: (() -> Unit)?,
     onManageSubtitles: (() -> Unit)?,
@@ -130,8 +134,8 @@ internal fun PlayerControlPopup(
                             if (onManageSubtitles != null) item("subtitle-sources") { PlayerMenuPair(
                                 { PlayerMenuAction(PathfinIcons.Folder, tr("本机导入"), "player-add-subtitle", it, onAddSubtitle != null) {
                                     onDismiss(); onAddSubtitle?.invoke() } },
-                                { PlayerMenuAction(PathfinIcons.Search, tr("在线搜索"), "player-manage-subtitles", it, onManageSubtitles != null) {
-                                    onDismiss(); onManageSubtitles?.invoke() } }) }
+                                { PlayerMenuAction(PathfinIcons.Search, tr("在线搜索"), "player-manage-subtitles", it) {
+                                    onDismiss(); onManageSubtitles() } }) }
                             menuHeading(tr("字幕轨道"))
                         }
                         // 自动模式下只标“自动选择”并注明实际选中的轨道；手动指定后只标那一条，避免两行同时显示选中。
@@ -184,15 +188,18 @@ internal fun PlayerControlPopup(
                         }
                     }
                     PlayerControlPanel.GAIN -> {
-                        item { PlayerValueSlider("$audioGainPercent%", audioGainPercent.toFloat(), 0f..200f, 19, "player-gain-slider") { onAudioGainChange(it.roundToInt()) } }
-                        item { Text(tr("超过100%可能造成失真"), Modifier.padding(horizontal = 20.dp, vertical = 8.dp), color = PlayerSecondary, fontSize = 12.sp) }
+                        item {
+                            PlayerValueSlider({ "${it.roundToInt()}%" }, audioGainPercent.toFloat(), 0f..200f, 19, "player-gain-slider",
+                                onPreview = { onAudioGainPreview(it.roundToInt()) }) { onAudioGainChange(it.roundToInt()) }
+                        }
+                        item { Text(tr("100% 为原音量，之后每 10% 增强 1.8 dB，峰值受限"), Modifier.padding(horizontal = 20.dp, vertical = 8.dp), color = PlayerSecondary, fontSize = 12.sp) }
                         item { PlayerMenuAction(PathfinIcons.Audio, tr("恢复100%"), "player-gain-reset") { onAudioGainChange(100) } }
                     }
                     PlayerControlPanel.SUBTITLE_LAYOUT -> {
-                        item { PlayerValueSlider(tr("缩放 %1\$s%%", (subtitlePresentation.scale * 100).roundToInt()), subtitlePresentation.scale, .5f..2f, 14, "player-subtitle-scale-slider") {
+                        item { PlayerValueSlider({ tr("缩放 %1\$s%%", (subtitlePresentation.scale * 100).roundToInt()) }, subtitlePresentation.scale, .5f..2f, 14, "player-subtitle-scale-slider") {
                             onSubtitlePresentationChange(subtitlePresentation.copy(scale = it))
                         } }
-                        item { PlayerValueSlider(tr("垂直位置 %1\$s%%", subtitlePresentation.positionPercent), subtitlePresentation.positionPercent.toFloat(), 0f..100f, 19, "player-subtitle-position-slider") {
+                        item { PlayerValueSlider({ tr("垂直位置 %1\$s%%", subtitlePresentation.positionPercent) }, subtitlePresentation.positionPercent.toFloat(), 0f..100f, 19, "player-subtitle-position-slider") {
                             onSubtitlePresentationChange(subtitlePresentation.copy(positionPercent = it.roundToInt()))
                         } }
                         item { PlayerMenuAction(PathfinIcons.Subtitles, tr("恢复默认"), "player-subtitle-layout-reset") {
@@ -405,11 +412,41 @@ private fun PlayerMenuPair(start: @Composable (Modifier) -> Unit, end: @Composab
 }
 
 @Composable
-private fun PlayerValueSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, steps: Int, tag: String, onCommit: (Float) -> Unit) {
+private fun PlayerValueSlider(label: (Float) -> String, value: Float, range: ClosedFloatingPointRange<Float>, steps: Int,
+    tag: String, onPreview: ((Float) -> Unit)? = null, onCommit: (Float) -> Unit) {
     var draft by remember(value) { mutableFloatStateOf(value) }
+    var accepted by remember(value) { mutableFloatStateOf(value) }
+    val discardPreview by rememberUpdatedState {
+        if (onPreview != null && draft != accepted) {
+            draft = accepted
+            onPreview(accepted)
+        }
+    }
+    val interactions = remember(onPreview != null) {
+        val delegate = MutableInteractionSource()
+        if (onPreview == null) delegate else object : MutableInteractionSource by delegate {
+            // Material Slider 调用结束回调前会先发出取消事件，此时先恢复已提交值。
+            override suspend fun emit(interaction: Interaction) {
+                if (interaction is DragInteraction.Cancel) discardPreview()
+                delegate.emit(interaction)
+            }
+
+            override fun tryEmit(interaction: Interaction): Boolean {
+                if (interaction is DragInteraction.Cancel) discardPreview()
+                return delegate.tryEmit(interaction)
+            }
+        }
+    }
+    DisposableEffect(interactions) { onDispose { discardPreview() } }
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Text(label, color = PlayerText, fontSize = 14.sp, lineHeight = 20.sp)
-        PathfinSlider(draft, { draft = it }, Modifier.fillMaxWidth().height(48.dp).testTag(tag), onValueChangeFinished = { onCommit(draft) },
-            range = range, steps = steps, activeColor = playerAccent(), inactiveColor = Color.White.copy(alpha = .2f))
+        Text(label(draft), color = PlayerText, fontSize = 14.sp, lineHeight = 20.sp)
+        PathfinSlider(draft, { draft = it; onPreview?.invoke(it) }, Modifier.fillMaxWidth().height(48.dp).testTag(tag),
+            onValueChangeFinished = {
+                if (onPreview == null || draft != accepted) {
+                    accepted = draft
+                    onCommit(draft)
+                }
+            }, range = range, steps = steps, activeColor = playerAccent(), inactiveColor = Color.White.copy(alpha = .2f),
+            interactionSource = interactions)
     }
 }

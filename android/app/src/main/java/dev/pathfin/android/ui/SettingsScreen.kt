@@ -213,7 +213,7 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
             "tracks" -> {
                 item("audio-label") { SettingLabel(tr("音轨")) }
                 item("audio-language") { SettingsRow(tr("音轨语言"), languageName(p.preferredAudioLanguage), position = GroupPosition.TOP) { languageSearch = ""; languageDialog = "audio" } }
-                item("gain") { SettingsSlider(tr("音量增益"), p.audioGainPercent.toFloat(), 0f..200f, 39, { "${it.roundToInt()}%" }, subtitle = tr("100% 为原音量，增强后可能失真"), position = GroupPosition.BOTTOM) { onPreferences(p.copy(audioGainPercent = it.roundToInt())) } }
+                item("gain") { SettingsSlider(tr("音量增益"), p.audioGainPercent.toFloat(), 0f..200f, 39, { "${it.roundToInt()}%" }, subtitle = tr("100% 为原音量，之后每 10% 增强 1.8 dB，峰值受限"), position = GroupPosition.BOTTOM) { onPreferences(p.copy(audioGainPercent = it.roundToInt())) } }
                 item("subtitles-label") { SettingLabel(tr("字幕")) }
                 item("subtitles") { SettingsSwitch(tr("启用字幕"), p.subtitlesEnabled, tr("播放时默认开启字幕轨"), position = GroupPosition.TOP) { onPreferences(p.copy(subtitlesEnabled = it)) } }
                 item("subtitle-language") { SettingsRow(tr("字幕语言"), languageName(p.preferredSubtitleLanguage), position = GroupPosition.BOTTOM) { languageSearch = ""; languageDialog = "subtitle" } }

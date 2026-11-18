@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -149,6 +150,45 @@ class PlayerControlsLayoutTest {
         } finally {
             compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
         }
+    }
+
+    @Test fun audioGainPreviewsWhileDraggingCommitsOnReleaseAndRestoresOnCancel() {
+        lateinit var player: ClockPlayer
+        val saved = mutableIntStateOf(100)
+        val commits = mutableListOf<Int>()
+        var heard = saved.intValue
+        compose.runOnUiThread { player = ClockPlayer(40_000_000) }
+        try {
+            showControls(player, audioGainPercent = { saved.intValue }, onAudioGainPreview = { heard = it },
+                onAudioGainChange = { saved.intValue = it; commits.add(it) })
+            openPanel("player-more", "player-popup-more")
+            openPanel("player-audio-gain", "player-popup-gain")
+            val slider = compose.onNodeWithTag("player-gain-slider")
+            slider.performVerificationTouchInput(compose) {
+                down(center)
+                moveTo(Offset(width * .9f, center.y))
+            }
+            val increased = compose.runOnIdle {
+                assertTrue(heard > 100)
+                assertEquals(emptyList<Int>(), commits)
+                heard
+            }
+            compose.onNodeWithText("$increased%").assertExists()
+            slider.performVerificationTouchInput(compose) { up() }
+            compose.runOnIdle { assertEquals(listOf(increased), commits) }
+
+            slider.performVerificationTouchInput(compose) {
+                down(Offset(width * .9f, center.y))
+                moveTo(Offset(width * .25f, center.y))
+            }
+            compose.runOnIdle { assertTrue(heard < increased) }
+            slider.performVerificationTouchInput(compose) { cancel() }
+            compose.runOnIdle {
+                assertEquals(increased, heard)
+                assertEquals(listOf(increased), commits)
+            }
+            compose.onNodeWithText("$increased%").assertExists()
+        } finally { compose.runOnUiThread { player.release() } }
     }
 
     @Test fun landscapeMoreDoesNotRepeatTheVisibleCaptureShortcut() {
@@ -559,6 +599,7 @@ class PlayerControlsLayoutTest {
         onQuality: () -> Unit = {}, onScreenshot: (() -> Unit)? = null,
         ended: Boolean = false, onSpeed: (Float) -> Unit = {}, burnedIn: Boolean = false, live: Boolean = false,
         onAddSubtitle: (() -> Unit)? = null, onManageSubtitles: (() -> Unit)? = null,
+        audioGainPercent: () -> Int = { 100 }, onAudioGainPreview: (Int) -> Unit = {},
         onSetSleepTimer: (Int?) -> Unit = {}, onAudioGainChange: (Int) -> Unit = {},
         clock: String? = null, battery: String? = null, titleLogo: coil3.request.ImageRequest? = null) {
         val loader = coil3.ImageLoader.Builder(compose.activity).diskCache(null).build()
@@ -574,7 +615,8 @@ class PlayerControlsLayoutTest {
                             onSeekTo = {}, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
                             onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onTrackSelection = { _, _, _, _ -> },
                             onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
-                            onSetSleepTimer = onSetSleepTimer, onAudioGainChange = onAudioGainChange, titleLogo = titleLogo)
+                            onSetSleepTimer = onSetSleepTimer, audioGainPercent = audioGainPercent(), onAudioGainPreview = onAudioGainPreview,
+                            onAudioGainChange = onAudioGainChange, titleLogo = titleLogo)
                     }
                 }
             }

@@ -103,6 +103,7 @@ internal fun PlayerControlsOverlay(
     onSetSleepTimer: (Int?) -> Unit = {},
     sleepTimerLabel: String? = null,
     audioGainPercent: Int = 100,
+    onAudioGainPreview: (Int) -> Unit = {},
     onAudioGainChange: (Int) -> Unit = {},
     onAddSubtitle: (() -> Unit)? = null,
     onManageSubtitles: (() -> Unit)? = null,
@@ -313,7 +314,8 @@ internal fun PlayerControlsOverlay(
                 showScreenshot = !landscape || state.errorMessage != null || state.ended,
                 onScreenshot = onScreenshot, onTrackSelection = onTrackSelection,
                 onSetSleepTimer = onSetSleepTimer, sleepTimerLabel = sleepTimerLabel,
-                audioGainPercent = audioGainPercent, onAudioGainChange = onAudioGainChange, onAddSubtitle = onAddSubtitle,
+                audioGainPercent = audioGainPercent, onAudioGainPreview = onAudioGainPreview, onAudioGainChange = onAudioGainChange,
+                onAddSubtitle = onAddSubtitle,
                 onManageSubtitles = onManageSubtitles,
                 subtitlePresentation = subtitlePresentation, onSubtitlePresentationChange = onSubtitlePresentationChange)
         }

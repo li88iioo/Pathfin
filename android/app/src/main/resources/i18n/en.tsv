@@ -45,7 +45,7 @@ $1[已隐藏]	$1[hidden]
 %1$s：%2$s	%1$s: %2$s
 +%1$s 秒	+%1$s s
 音频正在直通，请在输出设备上调节音量	Audio passthrough is active. Adjust the volume on the output device.
-100% 为原音量，增强后可能失真	100% is the original volume; boosting may distort
+100% 为原音量，之后每 10% 增强 1.8 dB，峰值受限	100% is the original volume. Each 10% above it adds 1.8 dB, with peak limiting.
 16–65536 MB，每个账号独立计算	16–65536 MB, counted separately for each account
 18禁	Adult
 ARM64 使用 libass，其他架构使用基础字幕	libass on ARM64; basic subtitles on other architectures
@@ -1238,7 +1238,6 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 账号或媒体已经变化，请重新搜索识别结果	The account or media changed. Search for identification results again
 账号或密码错误，请重试	Incorrect username or password. Please retry
 起播跳过	Skip at start
-超过100%可能造成失真	Above 100% may distort
 跟随传感器	Sensor
 跟随系统	Follow system
 跟随系统 · Android 13 起可单独设置	Follow system · Set per app on Android 13+
