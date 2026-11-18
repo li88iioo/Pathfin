@@ -555,10 +555,9 @@ internal fun PathfinSlider(
     enabled: Boolean = true,
     activeColor: Color = if (enabled) PathfinAppearance.accent else PathfinAppearance.textMuted,
     inactiveColor: Color = PathfinAppearance.segmentTrack,
-    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
 ) {
     Slider(value, onValueChange, modifier, enabled = enabled, valueRange = range, steps = steps,
-        onValueChangeFinished = onValueChangeFinished, interactionSource = interactionSource,
+        onValueChangeFinished = onValueChangeFinished,
         thumb = {
             Box(Modifier.size(20.dp).shadow(2.dp, CircleShape).background(Color.White, CircleShape)
                 .border(0.5.dp, PathfinAppearance.divider, CircleShape))

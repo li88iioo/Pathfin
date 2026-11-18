@@ -9,9 +9,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.interaction.Interaction
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.pathfin.android.ui.PathfinAppearance
 import androidx.compose.ui.graphics.lerp
 import dev.pathfin.android.ui.PathfinIcons
@@ -44,7 +41,7 @@ import dev.pathfin.android.playback.SubtitlePresentation
 import java.util.Locale
 import kotlin.math.roundToInt
 
-internal enum class PlayerControlPanel { AUDIO, SUBTITLES, SPEED, ASPECT, INFO, MORE, SLEEP, GAIN, SUBTITLE_LAYOUT, SUBTITLE_DELAY }
+internal enum class PlayerControlPanel { AUDIO, SUBTITLES, SPEED, ASPECT, INFO, MORE, SLEEP, SUBTITLE_LAYOUT, SUBTITLE_DELAY }
 
 internal val PlayerOptionShape = RoundedCornerShape(6.dp)
 internal val PlayerOptionFill = Color.White.copy(alpha = .035f)
@@ -80,9 +77,6 @@ internal fun PlayerControlPopup(
     onTrackSelection: (Player, Int, TrackSelectionOverride?, Boolean) -> Unit,
     onSetSleepTimer: (Int?) -> Unit,
     sleepTimerLabel: String?,
-    audioGainPercent: Int,
-    onAudioGainPreview: (Int) -> Unit,
-    onAudioGainChange: (Int) -> Unit,
     onAddSubtitle: (() -> Unit)?,
     onManageSubtitles: (() -> Unit)?,
     subtitlePresentation: SubtitlePresentation,
@@ -96,7 +90,6 @@ internal fun PlayerControlPopup(
         PlayerControlPanel.SPEED -> tr("倍速")
         PlayerControlPanel.ASPECT -> tr("画面尺寸")
         PlayerControlPanel.SLEEP -> sleepTimerLabel?.let { tr("定时关闭 · 剩余 %1\$s", it) } ?: tr("定时关闭")
-        PlayerControlPanel.GAIN -> tr("音量增益")
         PlayerControlPanel.SUBTITLE_LAYOUT -> tr("字幕缩放与位置")
         PlayerControlPanel.SUBTITLE_DELAY -> tr("字幕时间偏移")
         PlayerControlPanel.INFO -> tr("播放信息")
@@ -109,7 +102,6 @@ internal fun PlayerControlPopup(
         else if (panel == PlayerControlPanel.MORE) PlayerSettingsPanel(buildList {
             if (showSpeed) add(MoreEntry(PathfinIcons.Speed, tr("播放速度"), "player-menu-speed") { onPanelChange(PlayerControlPanel.SPEED) })
             add(MoreEntry(PathfinIcons.Info, tr("媒体信息"), "player-menu-information") { onPanelChange(PlayerControlPanel.INFO) })
-            add(MoreEntry(PathfinIcons.Volume, tr("音量增益"), "player-audio-gain") { onPanelChange(PlayerControlPanel.GAIN) })
             if (showQuality) add(MoreEntry(PathfinIcons.Quality, tr("播放质量"), "player-tools") { onDismiss(); onShowQuality() })
             // 仅播放音频：关闭视频轨，解码与画面渲染一并停止；再次点按恢复画面。
             val audioOnly = C.TRACK_TYPE_VIDEO in snapshot.selection.disabledTrackTypes
@@ -187,19 +179,11 @@ internal fun PlayerControlPopup(
                             PlayerMenuAction(PathfinIcons.Clock, tr("%1\$s 分钟后", minutes), "player-sleep-$minutes") { onSetSleepTimer(minutes); onDismiss() }
                         }
                     }
-                    PlayerControlPanel.GAIN -> {
-                        item {
-                            PlayerValueSlider({ "${it.roundToInt()}%" }, audioGainPercent.toFloat(), 0f..200f, 19, "player-gain-slider",
-                                onPreview = { onAudioGainPreview(it.roundToInt()) }) { onAudioGainChange(it.roundToInt()) }
-                        }
-                        item { Text(tr("100% 为原音量，之后每 10% 增强 1.8 dB，峰值受限"), Modifier.padding(horizontal = 20.dp, vertical = 8.dp), color = PlayerSecondary, fontSize = 12.sp) }
-                        item { PlayerMenuAction(PathfinIcons.Audio, tr("恢复100%"), "player-gain-reset") { onAudioGainChange(100) } }
-                    }
                     PlayerControlPanel.SUBTITLE_LAYOUT -> {
-                        item { PlayerValueSlider({ tr("缩放 %1\$s%%", (subtitlePresentation.scale * 100).roundToInt()) }, subtitlePresentation.scale, .5f..2f, 14, "player-subtitle-scale-slider") {
+                        item { PlayerValueSlider(tr("缩放 %1\$s%%", (subtitlePresentation.scale * 100).roundToInt()), subtitlePresentation.scale, .5f..2f, 14, "player-subtitle-scale-slider") {
                             onSubtitlePresentationChange(subtitlePresentation.copy(scale = it))
                         } }
-                        item { PlayerValueSlider({ tr("垂直位置 %1\$s%%", subtitlePresentation.positionPercent) }, subtitlePresentation.positionPercent.toFloat(), 0f..100f, 19, "player-subtitle-position-slider") {
+                        item { PlayerValueSlider(tr("垂直位置 %1\$s%%", subtitlePresentation.positionPercent), subtitlePresentation.positionPercent.toFloat(), 0f..100f, 19, "player-subtitle-position-slider") {
                             onSubtitlePresentationChange(subtitlePresentation.copy(positionPercent = it.roundToInt()))
                         } }
                         item { PlayerMenuAction(PathfinIcons.Subtitles, tr("恢复默认"), "player-subtitle-layout-reset") {
@@ -412,41 +396,13 @@ private fun PlayerMenuPair(start: @Composable (Modifier) -> Unit, end: @Composab
 }
 
 @Composable
-private fun PlayerValueSlider(label: (Float) -> String, value: Float, range: ClosedFloatingPointRange<Float>, steps: Int,
-    tag: String, onPreview: ((Float) -> Unit)? = null, onCommit: (Float) -> Unit) {
+private fun PlayerValueSlider(label: String, value: Float, range: ClosedFloatingPointRange<Float>, steps: Int,
+    tag: String, onCommit: (Float) -> Unit) {
     var draft by remember(value) { mutableFloatStateOf(value) }
-    var accepted by remember(value) { mutableFloatStateOf(value) }
-    val discardPreview by rememberUpdatedState {
-        if (onPreview != null && draft != accepted) {
-            draft = accepted
-            onPreview(accepted)
-        }
-    }
-    val interactions = remember(onPreview != null) {
-        val delegate = MutableInteractionSource()
-        if (onPreview == null) delegate else object : MutableInteractionSource by delegate {
-            // Material Slider 调用结束回调前会先发出取消事件，此时先恢复已提交值。
-            override suspend fun emit(interaction: Interaction) {
-                if (interaction is DragInteraction.Cancel) discardPreview()
-                delegate.emit(interaction)
-            }
-
-            override fun tryEmit(interaction: Interaction): Boolean {
-                if (interaction is DragInteraction.Cancel) discardPreview()
-                return delegate.tryEmit(interaction)
-            }
-        }
-    }
-    DisposableEffect(interactions) { onDispose { discardPreview() } }
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-        Text(label(draft), color = PlayerText, fontSize = 14.sp, lineHeight = 20.sp)
-        PathfinSlider(draft, { draft = it; onPreview?.invoke(it) }, Modifier.fillMaxWidth().height(48.dp).testTag(tag),
-            onValueChangeFinished = {
-                if (onPreview == null || draft != accepted) {
-                    accepted = draft
-                    onCommit(draft)
-                }
-            }, range = range, steps = steps, activeColor = playerAccent(), inactiveColor = Color.White.copy(alpha = .2f),
-            interactionSource = interactions)
+        Text(label, color = PlayerText, fontSize = 14.sp, lineHeight = 20.sp)
+        PathfinSlider(draft, { draft = it }, Modifier.fillMaxWidth().height(48.dp).testTag(tag),
+            onValueChangeFinished = { onCommit(draft) }, range = range, steps = steps, activeColor = playerAccent(),
+            inactiveColor = Color.White.copy(alpha = .2f))
     }
 }

@@ -464,11 +464,12 @@ class PlayerControlsFlowTest {
             assertControlsFit()
             compose.onNodeWithTag("player-more").performVerificationClick(compose)
             VerificationDisplay.awaitWindowReady(compose, "large-font-settings", compose.onNodeWithTag("player-popup-more"))
-            listOf("player-menu-information", "player-audio-gain", "player-tools", "player-sleep-timer").forEach { tag ->
+            compose.onNodeWithTag("player-audio-gain").assertDoesNotExist()
+            listOf("player-menu-information", "player-tools", "player-sleep-timer").forEach { tag ->
                 compose.onNodeWithTag("player-popup-more").performScrollToNode(hasTestTag(tag))
                 compose.onNodeWithTag(tag).assertVerificationDisplayed(compose).assertIsEnabled()
             }
-            listOf("媒体信息", "音量增益", "播放质量", "定时关闭").forEach { label ->
+            listOf("媒体信息", "播放质量", "定时关闭").forEach { label ->
                 val layouts = mutableListOf<TextLayoutResult>()
                 compose.onNodeWithText(label, useUnmergedTree = true).performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
                 assertTrue("弹窗必须使用真实系统大字号：$label", layouts.isNotEmpty() && layouts.all { it.layoutInput.density.fontScale >= 1.5f })

@@ -165,7 +165,6 @@ fun PlayerScreen(
         viewModel.stop()
         latestBack()
     }
-    LaunchedEffect(preferences.audioGainPercent, state.playerGeneration) { viewModel.configureAudioGain(preferences.audioGainPercent) }
 
     DisposableEffect(lifecycleOwner, viewModel, activity) {
         val observer = LifecycleEventObserver { _, event ->
@@ -279,15 +278,25 @@ fun PlayerScreen(
     }
     // 亮度 / 音量电平：first 为是否亮度，second 为百分比；停手 0.9 秒后自动收起。
     var level by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
-    var levelSequence by remember { mutableIntStateOf(0) }
-    LaunchedEffect(levelSequence) { if (level != null) { delay(900); level = null } }
+    var adjustingLevel by remember { mutableStateOf(false) }
+    LaunchedEffect(adjustingLevel, level != null) {
+        if (!adjustingLevel && level != null) { delay(900); level = null }
+    }
     val latestPreferences by rememberUpdatedState(preferences)
-    // 关闭“记忆亮度”时进入播放器用系统亮度，手势调过的亮度也不写回设置。
-    val levels = remember(activity) { activity?.let { dev.pathfin.android.playback.PlayerLevelGestures(it,
-        if (preferences.rememberBrightness) preferences.playerBrightness else -1f,
-        onBrightnessCommitted = { level -> if (latestPreferences.rememberBrightness) onPreferencesChange(latestPreferences.copy(playerBrightness = level)) }) { brightness, percent ->
-        level = brightness to percent; levelSequence++
-    } } }
+    val changePreferences by rememberUpdatedState(onPreferencesChange)
+    val levels = remember(activity, viewModel) {
+        activity?.let {
+            dev.pathfin.android.playback.PlayerLevelGestures(
+                it, if (preferences.rememberBrightness) preferences.playerBrightness else -1f,
+                onBrightnessCommitted = { value ->
+                    if (latestPreferences.rememberBrightness) changePreferences(latestPreferences.copy(playerBrightness = value))
+                },
+                onGainPreview = viewModel::configureAudioGain,
+                onGainCommitted = { value -> changePreferences(latestPreferences.copy(audioGainPercent = value)) },
+                feedback = { brightness, percent -> level = brightness to percent },
+            )
+        }
+    }
     DisposableEffect(levels) { onDispose { levels?.close() } }
     val clock = playbackClock(preferences.showClock)
     val battery = playbackBattery(preferences.showBattery)
@@ -328,9 +337,16 @@ fun PlayerScreen(
                 view.onLongPressStart = viewModel::beginTemporarySpeed
                 view.onLongPressEnd = viewModel::endTemporarySpeed
                 view.onLongPressDrag = viewModel::updateTemporarySpeedBySlide
-                view.onVerticalGestureStart = { brightness -> levels?.begin(brightness) }
+                view.onVerticalGestureStart = { brightness ->
+                    adjustingLevel = true
+                    levels?.begin(brightness, viewModel.audioGainPercent ?: latestPreferences.audioGainPercent, !viewModel.state.value.audioPassthrough)
+                }
                 view.onVerticalGesture = { brightness, fraction -> levels?.update(brightness, fraction) }
-                view.onVerticalGestureEnd = { cancelled -> levels?.end(cancelled) }
+                view.onVerticalGestureEnd = { cancelled ->
+                    levels?.end(cancelled)
+                    adjustingLevel = false
+                    if (cancelled) level = null
+                }
                 view.horizontalSeekEnabled = preferences.horizontalSeekEnabled
                 view.onHorizontalSeekStart = {
                     val current = viewModel.player
@@ -415,9 +431,7 @@ fun PlayerScreen(
                     onTrackSelection = viewModel::selectTrack,
                     onSetSleepTimer = { minutes -> sleepDeadline = minutes?.let { SystemClock.elapsedRealtime() + it * 60_000L } ?: 0L },
                     sleepTimerLabel = sleepRemaining.takeIf { it > 0 }?.let { tr("%1\$s 分钟后关闭", (it + 59_999) / 60_000) },
-                    audioGainPercent = preferences.audioGainPercent,
-                    onAudioGainPreview = viewModel::configureAudioGain,
-                    onAudioGainChange = { onPreferencesChange(latestPreferences.copy(audioGainPercent = it)) },
+                    audioGainPercent = viewModel.audioGainPercent ?: preferences.audioGainPercent,
                     onAddSubtitle = if (state.live || subtitleBusy || player == null || !state.hasRenderedFrame) null else ({
                         subtitlePickerGeneration = state.playerGeneration
                         addSubtitle.launch(arrayOf("*/*"))
@@ -467,16 +481,21 @@ fun PlayerScreen(
             }
         }
         level?.let { (brightness, percent) ->
+            val boosted = !brightness && percent > 100
+            val tint = if (boosted) Color(0xFFFFB74D) else PlayerText
             Row(Modifier.align(Alignment.TopCenter).windowInsetsPadding(AppSafeDrawingInsets)
                 .padding(top = if (controlsVisible && !state.controlsLocked) 80.dp else 24.dp)
                 .background(PlayerSurface, RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 10.dp)
                 .testTag("player-level"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(when { brightness -> PathfinIcons.Sun; percent == 0 -> PathfinIcons.VolumeOff; else -> PathfinIcons.Volume },
-                    if (brightness) tr("亮度") else tr("音量"), Modifier.size(20.dp), tint = PlayerText)
+                    if (brightness) tr("亮度") else tr("音量"), Modifier.size(20.dp), tint = tint)
                 Box(Modifier.width(132.dp).height(4.dp).background(Color.White.copy(alpha = .2f), CircleShape)) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(percent.coerceIn(0, 100) / 100f).background(Color.White, CircleShape))
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(percent.coerceIn(0, 100) / 100f)
+                        .background(Color.White, CircleShape).testTag("player-level-base"))
+                    if (boosted) Box(Modifier.fillMaxHeight().fillMaxWidth((percent - 100) / 100f)
+                        .background(tint, CircleShape).testTag("player-level-boost"))
                 }
-                Text("$percent%", Modifier.widthIn(min = 40.dp), color = PlayerText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text("$percent%", Modifier.widthIn(min = 40.dp), color = tint, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         }
         // 长按倍速与双击快进快退同一位置提示，靠前置图标区分：仪表盘是倍速，双箭头是跳转。

@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -85,7 +84,6 @@ class PlayerControlsLayoutTest {
         var quality = 0
         var captures = 0
         var timer: Int? = null
-        var gain = -1
         compose.runOnUiThread {
             compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             player = ClockPlayer(40_000_000)
@@ -93,12 +91,12 @@ class PlayerControlsLayoutTest {
         try {
             awaitOrientation(android.content.res.Configuration.ORIENTATION_PORTRAIT)
             showControls(player, onEpisodes = { episodes++ }, onQuality = { quality++ }, onScreenshot = { captures++ },
-                onSetSleepTimer = { timer = it }, onAudioGainChange = { gain = it })
+                onSetSleepTimer = { timer = it })
             compose.onNodeWithTag("player-title").clickWhenStationary()
             compose.runOnIdle { assertEquals(1, episodes) }
             openPanel("player-more", "player-popup-more")
             assertNoDuplicateMenuActions()
-            assertSettingsLayout(listOf("player-menu-information", "player-audio-gain", "player-tools", "player-screenshot"))
+            assertSettingsLayout(listOf("player-menu-information", "player-tools", "player-screenshot"))
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("player-tools"))
             compose.onNodeWithTag("player-tools").clickWhenStationary()
             compose.runOnIdle { assertEquals(1, quality) }
@@ -107,11 +105,6 @@ class PlayerControlsLayoutTest {
             assertNoDuplicateMenuActions()
             compose.onNodeWithTag("player-screenshot").clickWhenStationary()
             compose.runOnIdle { assertEquals(1, captures) }
-            openPanel("player-more", "player-popup-more")
-            compose.onNodeWithTag("player-audio-gain").clickWhenStationary()
-            compose.onNodeWithTag("player-gain-reset").assertVerificationDisplayed(compose).clickWhenStationary()
-            compose.runOnIdle { assertEquals(100, gain) }
-            compose.onNodeWithTag("playback-panel-close").clickWhenStationary()
             openPanel("player-more", "player-popup-more")
             compose.onNodeWithTag("player-menu-information").clickWhenStationary()
             compose.onNodeWithTag("player-popup-info").assertVerificationDisplayed(compose)
@@ -152,45 +145,6 @@ class PlayerControlsLayoutTest {
         }
     }
 
-    @Test fun audioGainPreviewsWhileDraggingCommitsOnReleaseAndRestoresOnCancel() {
-        lateinit var player: ClockPlayer
-        val saved = mutableIntStateOf(100)
-        val commits = mutableListOf<Int>()
-        var heard = saved.intValue
-        compose.runOnUiThread { player = ClockPlayer(40_000_000) }
-        try {
-            showControls(player, audioGainPercent = { saved.intValue }, onAudioGainPreview = { heard = it },
-                onAudioGainChange = { saved.intValue = it; commits.add(it) })
-            openPanel("player-more", "player-popup-more")
-            openPanel("player-audio-gain", "player-popup-gain")
-            val slider = compose.onNodeWithTag("player-gain-slider")
-            slider.performVerificationTouchInput(compose) {
-                down(center)
-                moveTo(Offset(width * .9f, center.y))
-            }
-            val increased = compose.runOnIdle {
-                assertTrue(heard > 100)
-                assertEquals(emptyList<Int>(), commits)
-                heard
-            }
-            compose.onNodeWithText("$increased%").assertExists()
-            slider.performVerificationTouchInput(compose) { up() }
-            compose.runOnIdle { assertEquals(listOf(increased), commits) }
-
-            slider.performVerificationTouchInput(compose) {
-                down(Offset(width * .9f, center.y))
-                moveTo(Offset(width * .25f, center.y))
-            }
-            compose.runOnIdle { assertTrue(heard < increased) }
-            slider.performVerificationTouchInput(compose) { cancel() }
-            compose.runOnIdle {
-                assertEquals(increased, heard)
-                assertEquals(listOf(increased), commits)
-            }
-            compose.onNodeWithText("$increased%").assertExists()
-        } finally { compose.runOnUiThread { player.release() } }
-    }
-
     @Test fun landscapeMoreDoesNotRepeatTheVisibleCaptureShortcut() {
         lateinit var player: ClockPlayer
         var captures = 0
@@ -205,7 +159,7 @@ class PlayerControlsLayoutTest {
             compose.onNodeWithTag("player-capture").clickWhenStationary()
             compose.runOnIdle { assertEquals(1, captures) }
             openPanel("player-more", "player-popup-more")
-            assertSettingsLayout(listOf("player-menu-information", "player-audio-gain", "player-tools"))
+            assertSettingsLayout(listOf("player-menu-information", "player-tools"))
             compose.onNode(hasScrollToIndexAction()).performScrollToNode(hasTestTag("player-tools"))
             assertNoDuplicateMenuActions()
             compose.onNodeWithTag("player-screenshot").assertDoesNotExist()
@@ -318,7 +272,7 @@ class PlayerControlsLayoutTest {
     }
 
     private fun assertNoDuplicateMenuActions() {
-        listOf("player-menu-aspect", "player-menu-speed", "player-episodes").forEach {
+        listOf("player-menu-aspect", "player-menu-speed", "player-episodes", "player-audio-gain").forEach {
             compose.onNodeWithTag(it).assertDoesNotExist()
         }
     }
@@ -362,12 +316,12 @@ class PlayerControlsLayoutTest {
             compose.onNodeWithTag("player-subtitles").assertDoesNotExist()
             openPanel("player-more", "player-popup-more")
             compose.onNodeWithTag("player-menu-information").assertExists()
-            // 面板是惰性列表：逐项滚动查找，确认整个面板都没有这两项，而不只是不在可见区域。
+            // 逐项滚动搜索整个惰性列表。
             val menu = compose.onNode(hasScrollToIndexAction())
-            for (tag in listOf("player-menu-speed", "player-tools")) {
+            for (tag in listOf("player-menu-speed", "player-tools", "player-audio-gain")) {
                 assertThrows("直播面板不应有 $tag", AssertionError::class.java) { menu.performScrollToNode(hasTestTag(tag)) }
             }
-            menu.performScrollToNode(hasTestTag("player-audio-gain"))
+            menu.performScrollToNode(hasTestTag("player-sleep-timer"))
         } finally { compose.runOnUiThread { player.release() } }
     }
 
@@ -545,7 +499,7 @@ class PlayerControlsLayoutTest {
         rows.zipWithNext().forEach { (upper, lower) -> assertTrue("快捷入口的行不能重叠", lower.minOf { it.top } >= upper.maxOf { it.bottom } - 1f) }
         assertTrue("定时关闭必须位于快捷入口下方", timer.top >= shortcuts.maxOf { it.bottom } - 1f)
         assertTrue("定时关闭应使用整行触摸区域", timer.width > shortcuts.maxOf { it.width } * 2f)
-        assertLabelsFit("媒体信息", "音量增益", "播放质量", "仅播放音频", "定时关闭")
+        assertLabelsFit("媒体信息", "播放质量", "仅播放音频", "定时关闭")
         if ("player-screenshot" in shortcutTags) assertLabelsFit("保存截图")
     }
 
@@ -599,8 +553,7 @@ class PlayerControlsLayoutTest {
         onQuality: () -> Unit = {}, onScreenshot: (() -> Unit)? = null,
         ended: Boolean = false, onSpeed: (Float) -> Unit = {}, burnedIn: Boolean = false, live: Boolean = false,
         onAddSubtitle: (() -> Unit)? = null, onManageSubtitles: (() -> Unit)? = null,
-        audioGainPercent: () -> Int = { 100 }, onAudioGainPreview: (Int) -> Unit = {},
-        onSetSleepTimer: (Int?) -> Unit = {}, onAudioGainChange: (Int) -> Unit = {},
+        onSetSleepTimer: (Int?) -> Unit = {},
         clock: String? = null, battery: String? = null, titleLogo: coil3.request.ImageRequest? = null) {
         val loader = coil3.ImageLoader.Builder(compose.activity).diskCache(null).build()
         compose.setContent {
@@ -615,8 +568,7 @@ class PlayerControlsLayoutTest {
                             onSeekTo = {}, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
                             onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onTrackSelection = { _, _, _, _ -> },
                             onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
-                            onSetSleepTimer = onSetSleepTimer, audioGainPercent = audioGainPercent(), onAudioGainPreview = onAudioGainPreview,
-                            onAudioGainChange = onAudioGainChange, titleLogo = titleLogo)
+                            onSetSleepTimer = onSetSleepTimer, titleLogo = titleLogo)
                     }
                 }
             }

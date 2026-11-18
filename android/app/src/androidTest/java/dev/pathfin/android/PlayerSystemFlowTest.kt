@@ -28,8 +28,13 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.hasScrollToIndexAction
@@ -359,6 +364,7 @@ class PlayerSystemFlowTest {
             }
             assertTrue(audio.getStreamVolume(AudioManager.STREAM_MUSIC) < baseline)
             assertEquals("音量手势不能修改亮度", .4f, main { host().window.attributes.screenBrightness }, .01f)
+            assertContinuousVolumeGesture(active, audio, video, baseline, maximum)
 
             main { active.player.setPlaybackSpeed(1.25f) }
             SystemClock.sleep(ViewConfiguration.getDoubleTapTimeout().toLong() + 50)
@@ -383,6 +389,76 @@ class PlayerSystemFlowTest {
             main { currentActivity.get()?.let { it.window.attributes = it.window.attributes.apply { screenBrightness = previousBrightness } } }
         }
     }
+
+    private fun assertContinuousVolumeGesture(active: ActiveFixture, audio: AudioManager, video: Rect, baseline: Int, maximum: Int) {
+        val media = AudioManager.STREAM_MUSIC
+        val boost = compose.onNodeWithTag("player-level-boost")
+        // 音量设置与反馈也可在暂停时验证，避免合成音频以最大系统音量播放。
+        main { active.player.pause() }
+        awaitForeground("暂停后控制栏应展开") {
+            !active.playback.state.value.isPlaying && compose.onAllNodes(hasTestTag("player-back")).fetchSemanticsNodes().isNotEmpty()
+        }
+        hideControls()
+        try {
+            val startVolume = (maximum / 4).coerceAtLeast(1)
+            audio.setStreamVolume(media, startVolume, 0)
+            TouchSequence(video, .8f, .8f).use { touch ->
+                touch.move(.8f, .52f)
+                await("上滑应先升高实际系统媒体音量") { audio.getStreamVolume(media) in startVolume + 1 until maximum }
+                boost.assertDoesNotExist()
+                val normal = compose.onNodeWithTag("player-level-base").captureToImage().toPixelMap().let { it[it.width / 2, it.height / 2] }
+
+                touch.move(.8f, .16f)
+                await("同一手势到达系统最大音量后应继续进入增强") {
+                    audio.getStreamVolume(media) == maximum && (gestureLevel() ?: 0) in 101..199
+                }
+                val boosted = boost.captureToImage().toPixelMap().let { it[it.width / 2, it.height / 2] }
+                assertTrue("增强填充必须在实际画面中换色",
+                    abs(normal.red - boosted.red) + abs(normal.green - boosted.green) + abs(normal.blue - boosted.blue) > .25f)
+                assertEquals("释放前保留已保存的增益", 100, active.app.state.value.preferences.audioGainPercent)
+                val visibleGain = checkNotNull(gestureLevel())
+                assertEquals("拖动中的增强应立即传给播放引擎", visibleGain, main { active.playback.audioGainPercent })
+                touch.finish()
+                await("释放后保存最后的增强值") { active.app.state.value.preferences.audioGainPercent == visibleGain }
+            }
+            TouchSequence(video, .8f, .85f).use { touch ->
+                touch.move(.8f, .08f)
+                await("继续上滑应实际到达 200%") { gestureLevel() == 200 }
+                touch.finish()
+                await("释放后保存 200%") { active.app.state.value.preferences.audioGainPercent == 200 }
+            }
+            repeat(2) { attempt ->
+                TouchSequence(video, .72f, .16f).use { touch ->
+                    touch.move(.72f, .56f)
+                    val shown = gestureLevel()
+                    val step = audio.getStreamVolume(media)
+                    assertTrue("第 ${attempt + 1} 次下划应先降低增强值，显示 $shown%，系统 $step/$maximum",
+                        shown in 101..199 && step == maximum)
+                    touch.move(.72f, .94f)
+                    await("继续下划应穿过 100% 并降低系统音量") {
+                        (gestureLevel() ?: 100) < 100 && audio.getStreamVolume(media) < maximum
+                    }
+                    boost.assertDoesNotExist()
+                    assertEquals("回到系统音量区后应立即恢复单位增益", 100, main { active.playback.audioGainPercent })
+                    assertEquals("手势进行时保留已保存的 200%", 200, active.app.state.value.preferences.audioGainPercent)
+                    if (attempt == 0) {
+                        touch.cancel()
+                        assertEquals("取消应还原系统媒体音量", maximum, audio.getStreamVolume(media))
+                        assertEquals("取消应还原引擎中的增强值", 200, main { active.playback.audioGainPercent })
+                    } else touch.finish()
+                }
+            }
+            await("释放低于 100% 的手势后恢复单位增益") { active.app.state.value.preferences.audioGainPercent == 100 }
+        } finally {
+            audio.setStreamVolume(media, baseline, 0)
+            main { active.player.play() }
+        }
+    }
+
+    private fun gestureLevel(): Int? = compose.onAllNodes(
+        hasAnyAncestor(hasTestTag("player-level")) and hasText("%", substring = true), useUnmergedTree = true,
+    ).fetchSemanticsNodes().singleOrNull()?.config?.get(SemanticsProperties.Text)?.singleOrNull()?.text
+        ?.removeSuffix("%")?.toIntOrNull()
 
     @Test fun chapterSheetSeeksTheActualPlayerToTheSecondChapterWithoutReplacingTheSession() = withPlayback { active ->
         ensureControls()

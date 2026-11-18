@@ -905,6 +905,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             .setTrackTypeDisabled(type, disabled).apply { selection?.let(::setOverrideForType) }.build()
     }
 
+    internal val audioGainPercent: Int? get() = active?.pcm?.gainPercent
+
     fun configureAudioGain(percent: Int) {
         val current = active ?: return
         val normalized = percent.coerceIn(0, 200)
