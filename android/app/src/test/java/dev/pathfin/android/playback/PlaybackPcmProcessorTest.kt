@@ -64,19 +64,25 @@ class PlaybackPcmProcessorTest {
         processor.queueInput(androidx.media3.common.audio.AudioProcessor.EMPTY_BUFFER)
         assertFalse(processor.output.hasRemaining())
 
-        val quiet = shortArrayOf(4_000, -6_000)
-        assertArrayEquals(quiet, process(processor, quiet))
-        processor.gainPercent = 150
-        assertArrayEquals(shortArrayOf(6_000, -9_000), process(processor, quiet))
-        processor.gainPercent = 200
-        assertArrayEquals(shortArrayOf(8_000, -12_000), process(processor, quiet))
-
+        val tone = ShortArray(2 * 480) { if (it % 2 == 0) 1_000 else -1_000 }
+        assertArrayEquals(tone, process(processor, tone))
+        var previous = 1_000
+        for (percent in 110..200 step 10) {
+            processor.gainPercent = percent
+            val ramp = process(processor, tone)
+            val level = ramp[ramp.size - 2].toInt()
+            assertTrue("新档位应平滑进入", ramp[0].toInt() in previous until level)
+            assertEquals("每一档的安静信号应提升 1.8 dB", 1.8, 20 * kotlin.math.log10(level.toDouble() / previous), .015)
+            assertEquals(-level, ramp.last().toInt())
+            previous = level
+        }
         val peak = process(processor, shortArrayOf(26_000, -26_000))
         assertTrue("Positive peaks must not wrap around", peak[0].toInt() in 26_001..Short.MAX_VALUE.toInt())
         assertTrue("Negative peaks must not wrap around", peak[1].toInt() in Short.MIN_VALUE.toInt()..-26_001)
 
         processor.gainPercent = 100
-        assertArrayEquals(quiet, process(processor, quiet))
+        process(processor, tone)
+        assertArrayEquals(tone, process(processor, tone))
     }
 
     private fun unchangedOutput(speakerOutput: Boolean, channels: Int, samples: ShortArray): ShortArray {

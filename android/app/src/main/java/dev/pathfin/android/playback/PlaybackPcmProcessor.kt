@@ -10,6 +10,7 @@ import java.nio.ByteBuffer
 import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /** 在播放线程处理线性 PCM。仅内置扬声器折叠声道，增益按帧联动限峰以保留声像。 */
@@ -25,6 +26,14 @@ internal class PlaybackPcmProcessor(speakerOutput: Boolean, initialGainPercent: 
     private var weights = pendingWeights
     private var limiter = 1f
     private var release = 1f
+    private var targetPercent = 100
+    private var targetGain = 1f
+    private var currentGain = 1f
+    private var rampStep = 0f
+    private var rampFrames = 0
+
+    // 100% 是单位增益；增强区每 10 格增加 1.8 dB，留给限峰器处理没有余量的瞬态。
+    private fun amplitude(percent: Int): Float = 10.0.pow((percent - 100) * 0.18 / 20.0).toFloat()
 
     override fun onConfigure(input: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
         if (input.encoding != C.ENCODING_PCM_16BIT) throw AudioProcessor.UnhandledAudioFormatException(input)
@@ -60,16 +69,26 @@ internal class PlaybackPcmProcessor(speakerOutput: Boolean, initialGainPercent: 
 
     override fun onFlush(streamMetadata: AudioProcessor.StreamMetadata) {
         weights = pendingWeights
+        targetPercent = gainPercent.coerceIn(100, 200)
+        targetGain = amplitude(targetPercent)
+        currentGain = targetGain
+        rampFrames = 0
         limiter = 1f
         release = (1.0 - exp(-1.0 / (0.05 * inputAudioFormat.sampleRate))).toFloat()
     }
 
     override fun queueInput(input: ByteBuffer) {
         if (!input.hasRemaining()) return
-        val gain = gainPercent.coerceIn(100, 200) / 100f
+        val percent = gainPercent.coerceIn(100, 200)
+        if (percent != targetPercent) {
+            targetPercent = percent
+            targetGain = amplitude(percent)
+            rampFrames = (inputAudioFormat.sampleRate / 100).coerceAtLeast(1)
+            rampStep = (targetGain - currentGain) / rampFrames
+        }
         val channels = inputAudioFormat.channelCount
         val output = replaceOutputBuffer(input.remaining() / inputAudioFormat.bytesPerFrame * outputAudioFormat.bytesPerFrame)
-        if (weights.isEmpty() && gain == 1f) {
+        if (weights.isEmpty() && targetGain == 1f && rampFrames == 0) {
             output.put(input)
             limiter = 1f
         } else if (weights.isEmpty()) {
@@ -77,7 +96,7 @@ internal class PlaybackPcmProcessor(speakerOutput: Boolean, initialGainPercent: 
                 var peak = 0f
                 val start = input.position()
                 for (channel in 0 until channels) peak = max(peak, abs(input.getShort(start + channel * 2).toFloat()))
-                val scale = limitedScale(peak, gain)
+                val scale = limitedScale(peak)
                 repeat(channels) { output.putShort((input.short * scale).roundToInt().toShort()) }
             }
         } else {
@@ -89,7 +108,7 @@ internal class PlaybackPcmProcessor(speakerOutput: Boolean, initialGainPercent: 
                     left += sample * weights[channel * 2]
                     right += sample * weights[channel * 2 + 1]
                 }
-                val scale = limitedScale(max(abs(left), abs(right)), gain)
+                val scale = limitedScale(max(abs(left), abs(right)))
                 output.putShort((left * scale).roundToInt().toShort())
                 output.putShort((right * scale).roundToInt().toShort())
             }
@@ -97,11 +116,15 @@ internal class PlaybackPcmProcessor(speakerOutput: Boolean, initialGainPercent: 
         output.flip()
     }
 
-    private fun limitedScale(peak: Float, gain: Float): Float {
-        val magnitude = peak * gain
+    private fun limitedScale(peak: Float): Float {
+        if (rampFrames > 0) {
+            rampFrames--
+            currentGain = if (rampFrames == 0) targetGain else currentGain + rampStep
+        }
+        val magnitude = peak * currentGain
         val target = if (magnitude > Short.MAX_VALUE) Short.MAX_VALUE / magnitude else 1f
         limiter = minOf(target, limiter + (1f - limiter) * release)
-        return gain * limiter
+        return currentGain * limiter
     }
 
     private companion object { const val SURROUND = 0.70710677f }

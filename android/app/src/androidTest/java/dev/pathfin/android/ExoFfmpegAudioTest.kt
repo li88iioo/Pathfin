@@ -233,19 +233,19 @@ class ExoFfmpegAudioTest {
         }
     }
 
-    @Test fun pathfinSpeakerSinkOutputsStereoAndRaisesActualPcmAt150Percent() {
+    @Test fun pathfinSpeakerSinkChangesGainInStepsDuringOneStereoPlayback() {
         val speaker = checkNotNull(instrumentation.targetContext.getSystemService(AudioManager::class.java)
             .getDevices(AudioManager.GET_DEVICES_OUTPUTS).firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }) {
             "需要内置扬声器才能验证下混"
         }
         val fixture = multichannelFixtures().single { it.id == "flac-7_1-48k" }
-        val runs = JSONArray()
-        val baseline = checkNotNull(verifyAudioSinkRoute(fixture, speaker, runs, gainPercent = 100))
-        val boosted = checkNotNull(verifyAudioSinkRoute(fixture, speaker, runs, gainPercent = 150))
+        val (baseline, first, middle, maximum, restored) = checkNotNull(verifyAudioSinkRoute(fixture, speaker, JSONArray(), verifyRuntimeGain = true))
         assertTrue("扬声器收到的立体声必须有有效信号", baseline > .01)
-        val ratio = boosted / baseline
-        assertEquals("实际写入扬声器 AudioTrack 的 PCM 应随 150% 增益放大", 1.5, ratio, .03)
-        Log.i("PathfinAudioVerification", "7.1 → stereo, speaker RMS at 100%=$baseline, at 150%=$boosted, ratio=$ratio")
+        assertEquals("110% 第一档应提升约 1.8 dB", 1.8, 20 * kotlin.math.log10(first / baseline), .15)
+        assertEquals("150% 应提升约 9 dB", 9.0, 20 * kotlin.math.log10(middle / baseline), .2)
+        assertTrue("近满幅波峰应受限，但 200% 仍应比 150% 响", maximum > middle * 1.1 && maximum < baseline * 7.94)
+        assertEquals("播放中恢复 100% 应回到原幅度", 1.0, restored / baseline, .05)
+        Log.i("PathfinAudioVerification", "7.1 → stereo, one AudioTrack, RMS 100/110/150/200/100: $baseline $first $middle $maximum $restored")
     }
 
     @Test fun boostedExternalReceiverKeepsItsEncodedTracksWhileSpeakersDecodeTrueHd() {
@@ -399,7 +399,7 @@ class ExoFfmpegAudioTest {
     }
 
     private fun verifyAudioSinkRoute(fixture: MultichannelFixture, preferred: AudioDeviceInfo?, runs: JSONArray,
-        gainPercent: Int? = null): Double? {
+        verifyRuntimeGain: Boolean = false): List<Double>? {
         val context = instrumentation.targetContext
         val result = JSONObject().put("fixture", fixture.id).put("inputChannels", fixture.channels)
             .put("inputSampleRate", fixture.rate).put("requestedDeviceType", preferred?.type ?: JSONObject.NULL)
@@ -413,7 +413,10 @@ class ExoFfmpegAudioTest {
         val audioTrack = AtomicReference<AudioTrack>()
         val failure = AtomicReference<PlaybackException>()
         val sinkErrors = CopyOnWriteArrayList<Exception>()
-        val meter = gainPercent?.let { PcmMeter() }
+        val processor = if (verifyRuntimeGain) PlaybackPcmProcessor(speakerOutput = true) else null
+        val meter = processor?.let { pcm ->
+            PcmMeter(fixture.rate) { gain -> instrumentation.runOnMainSync { pcm.gainPercent = gain } }
+        }
         val file = File.createTempFile("pathfin-${fixture.id}-", ".mka", context.cacheDir)
         var owner: ExoPlayer? = null
         var route: AudioDeviceInfo? = null
@@ -426,7 +429,8 @@ class ExoFfmpegAudioTest {
                     override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput {
                         val output = super.getAudioOutput(config)
                         check(output is AudioTrackAudioOutput)
-                        audioTrack.set(output.audioTrack)
+                        val previousTrack = audioTrack.getAndSet(output.audioTrack)
+                        if (meter != null) assertNull("切换增益应复用同一个 AudioTrack", previousTrack)
                         return if (meter == null) output else object : ForwardingAudioOutput(output) {
                             override fun write(buffer: ByteBuffer, encodedAccessUnitCount: Int, presentationTimeUs: Long): Boolean {
                                 val submitted = buffer.duplicate().order(ByteOrder.nativeOrder())
@@ -441,13 +445,12 @@ class ExoFfmpegAudioTest {
                 val renderers = object : DefaultRenderersFactory(context) {
                     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
                         enableAudioOutputPlaybackParams: Boolean): AudioSink =
-                        if (gainPercent == null) {
+                        if (processor == null) {
                             DefaultAudioSink.Builder(context).setEnableFloatOutput(enableFloatOutput)
                                 .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
                                 .setAudioOutputProvider(provider).build()
                         } else {
-                            playbackAudioSink(context, PlaybackPcmProcessor(speakerOutput = true, initialGainPercent = gainPercent),
-                                enableAudioOutputPlaybackParams, provider)
+                            playbackAudioSink(context, processor, enableAudioOutputPlaybackParams, provider)
                         }
                 }.setMediaCodecSelector(MediaCodecSelector { mime, secure, tunneling ->
                     if (MimeTypes.isAudio(mime)) emptyList()
@@ -510,7 +513,7 @@ class ExoFfmpegAudioTest {
             result.put("status", "passed")
             Log.i("PathfinAudioVerification", "${fixture.id}: decoder=${decoderName.get()}, input=${fixture.channels}ch/${fixture.rate}Hz," +
                 " AudioTrack=${actualTrack.channelCount}ch/${actualTrack.sampleRate}Hz, deviceType=${route?.type}, headFrames=$headFrames, EOS=true")
-            return meter?.rms
+            return meter?.windowRms()
         } catch (error: Throwable) {
             result.put("status", if (preferred != null && route?.type != preferred.type) "route_not_verified" else "failed")
                 .put("error", error.javaClass.simpleName).put("message", error.message ?: "")
@@ -557,21 +560,37 @@ class ExoFfmpegAudioTest {
     }
 
     /** 测量实际写入 AudioTrack 的样本，避免把非阻塞写入的重试重复计数。 */
-    private class PcmMeter {
+    private class PcmMeter(sampleRate: Int, private val setGain: (Int) -> Unit) {
+        // 200ms 包含各测试频率的完整周期。变更增益后留出窗口让已排队的 PCM 写完。
+        private val windowSize = sampleRate * 2 / 5
+        private val squares = DoubleArray(5)
         var samples = 0L
             private set
-        private var squares = 0.0
-        val rms: Double get() = sqrt(squares / samples)
+
+        fun windowRms(): List<Double> = squares.map { sqrt(it / windowSize) }
 
         fun add(buffer: ByteBuffer, encoding: Int) {
+            val start = samples
             while (buffer.hasRemaining()) {
                 val sample = when (encoding) {
                     C.ENCODING_PCM_16BIT -> buffer.short.toDouble() / 32_768
                     C.ENCODING_PCM_FLOAT -> buffer.float.toDouble()
                     else -> error("扬声器应收到 PCM，实际编码=$encoding")
                 }
-                squares += sample * sample
+                when (samples / windowSize) {
+                    1L -> squares[0] += sample * sample
+                    3L -> squares[1] += sample * sample
+                    5L -> squares[2] += sample * sample
+                    7L -> squares[3] += sample * sample
+                    9L -> squares[4] += sample * sample
+                }
                 samples++
+            }
+            if (start / windowSize != samples / windowSize) when (samples / windowSize) {
+                2L -> setGain(110)
+                4L -> setGain(150)
+                6L -> setGain(200)
+                8L -> setGain(100)
             }
         }
     }
