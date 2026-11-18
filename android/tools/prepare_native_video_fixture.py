@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""生成自有 10bit H.264/B 帧与色格；CPU sRGB 参考来自真正解码，不下载媒体。"""
+"""生成自有 H.264 色格/B 帧与旧编码片源；CPU 参考来自实际解码。"""
 
 from array import array
 from decimal import Decimal
@@ -17,6 +17,12 @@ import tempfile
 
 WIDTH, HEIGHT, RATE, FRAMES = 192, 128, 12, 24
 NAMES = ("hi10p-bframes", "hi10p-color-grid")
+LEGACY_CODECS = (
+    ("legacy-xvid.avi", "mpeg4", "mpeg4", "XVID"),
+    ("legacy-mp42.avi", "msmpeg4v2", "msmpeg4v2", "MP42"),
+    ("legacy-mp43.avi", "msmpeg4", "msmpeg4v3", "MP43"),
+    ("legacy-h263.3gp", "h263", "h263", "s263"),
+)
 COLORS = ((220, 48, 48), (48, 220, 48), (48, 48, 220), (220, 220, 48),
           (0, 0, 0), (255, 255, 255), (112, 112, 112), (32, 32, 32))
 POINTS = [(column * 48 + 24, row * 64 + 32) for row in range(2) for column in range(4)]
@@ -208,10 +214,28 @@ def generate(directory: Path, name: str, ffmpeg: str, ffprobe: str) -> dict:
             "files": {path.name: describe(path) for path in (movie, framed, init, reference)}}
 
 
+def generate_legacy(directory: Path, ffmpeg: str, ffprobe: str) -> dict:
+    files = {}
+    for name, encoder, codec, tag in LEGACY_CODECS:
+        output = directory / name
+        run([ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=128x96:rate=8",
+             "-frames:v", "6", "-an", "-c:v", encoder, "-pix_fmt", "yuv420p", "-threads:v", "1",
+             "-tag:v", tag, "-q:v", "7", "-fflags", "+bitexact", "-flags:v", "+bitexact", str(output)])
+        streams = json.loads(run([ffprobe, "-v", "error", "-select_streams", "v:0", "-count_frames",
+                                  "-show_entries", "stream=codec_name,codec_tag_string,nb_read_frames", "-of", "json",
+                                  str(output)]))["streams"]
+        assert streams == [{"codec_name": codec, "codec_tag_string": tag, "nb_read_frames": "6"}], streams
+        files[name] = describe(output)
+    return files
+
+
 def verify(directory: Path) -> dict:
     manifest = json.loads((directory / "manifest.json").read_text())
     assert manifest["schemaVersion"] == 1
     assert [fixture["id"] for fixture in manifest["fixtures"]] == list(NAMES)
+    assert set(manifest["legacyFiles"]) == {row[0] for row in LEGACY_CODECS}
+    for name, expected in manifest["legacyFiles"].items():
+        assert describe(directory / name) == expected, f"夹具损坏或 manifest 过期：{name}"
     for fixture in manifest["fixtures"]:
         assert fixture["hostDecodedFrames"] == fixture["packetCount"] == FRAMES
         assert fixture["bitDepth"] == 10 and fixture["bFrames"] > 0
@@ -252,13 +276,17 @@ def main() -> None:
         with tempfile.TemporaryDirectory(prefix="pathfin-native-video-") as temporary:
             staging = Path(temporary)
             fixtures = [generate(staging, name, ffmpeg, ffprobe) for name in NAMES]
+            legacy_files = generate_legacy(staging, ffmpeg, ffprobe)
             manifest = {"schemaVersion": 1, "generator": "android/tools/prepare_native_video_fixture.py",
                         "ffmpeg": run([ffmpeg, "-version"]).decode().splitlines()[0], "fixtures": fixtures,
+                        "legacyFiles": legacy_files,
                         "notCovered": ["4K 播放性能", "Dolby Vision Profile 5 色彩正确性", "HDR tone mapping"]}
             directory.mkdir(parents=True, exist_ok=True)
             for fixture in fixtures:
                 for name in fixture["files"]:
                     shutil.copyfile(staging / name, directory / name)
+            for name in legacy_files:
+                shutil.copyfile(staging / name, directory / name)
             (directory / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
         verify(directory)
     print(json.dumps({"fixtures": [{"id": item["id"], "frames": item["hostDecodedFrames"],

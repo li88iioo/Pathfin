@@ -2,6 +2,7 @@ package dev.pathfin.android.playback
 
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaFormat
+import androidx.media3.common.MimeTypes
 import dev.pathfin.android.domain.MediaStream
 import dev.pathfin.android.domain.PlaybackCapabilities
 import org.junit.Assert.*
@@ -77,7 +78,7 @@ class DevicePlaybackCapabilitiesUnitTest {
     }
 
     @Test fun profile7EnhancementLayerSourceKeepsItsActualHevcBaseLayerLimits() {
-        val source = MediaStream(type = "Video", codec = "hevc", dvProfile = 7, videoRangeType = "DOVIWithEL",
+        val source = MediaStream(type = "Video", codec = "hevc", dvProfile = 7, dvBlSignalCompatibilityId = 6, videoRangeType = "DOVIWithEL",
             profile = "Main 10", bitDepth = 10, width = 3840, height = 2160, level = 153.0,
             averageFrameRate = 23.976, bitRate = 77_617_509, colorTransfer = "smpte2084", colorPrimaries = "bt2020")
         val base = checkNotNull(DevicePlaybackCapabilities.dolbyVisionBaseLayerStream(source))
@@ -85,6 +86,52 @@ class DevicePlaybackCapabilitiesUnitTest {
         assertEquals("基础层检查必须保留原片码率，不能伪造更低码率以绕过硬解限制", 77_617_509, base.bitRate)
         assertEquals(MediaFormat.COLOR_TRANSFER_ST2084, DevicePlaybackCapabilities.colorFormatValues(base)[MediaFormat.KEY_COLOR_TRANSFER])
         assertEquals("基础层候选不能把原片改成无增强层的 DV", 7, source.dvProfile)
+    }
+
+    @Test fun profile7WithIncompleteServerMetadataCanStillTryTheSoftwareBaseLayer() {
+        val source = MediaStream(type = "Video", codec = "hevc", dvProfile = 7, videoRangeType = "DOVIWithEL",
+            width = 3840, height = 2160, bitDepth = 10)
+        fun preflight(stream: MediaStream) = DevicePlaybackCapabilities.supportsVideo(stream,
+            platformSupports = { _, _, _ -> false },
+            softwareSupports = { candidate -> candidate.dvProfile == null && (candidate.width ?: 0) <= 4096 })
+
+        assertEquals(true, preflight(source))
+        assertNull("只有缺失信息时应由提取器继续确认", preflight(source.copy(bitDepth = null)))
+        assertNull(preflight(source.copy(width = null, height = null)))
+        assertEquals(false, preflight(source.copy(width = 8192)))
+        assertEquals(false, preflight(source.copy(bitDepth = 12)))
+        assertEquals(false, preflight(source.copy(dvBlSignalCompatibilityId = 0)))
+        assertEquals("即使设备宣告 P7，也不能播放不含基础层的独立增强轨", false,
+            DevicePlaybackCapabilities.supportsVideo(source.copy(dvBaseLayerPresent = false),
+                platformSupports = { _, _, _ -> true }, softwareSupports = { true }))
+        assertEquals(false, preflight(source.copy(colorRange = "pc", colorTransfer = "smpte2084")))
+    }
+
+    @Test fun media3DolbyFallbackChecksTheRealBaseCodecAndAv1Color() {
+        fun preflight(stream: MediaStream, expectedMime: String, expectedProfile: String): Boolean? =
+            DevicePlaybackCapabilities.supportsVideo(stream, platformSupports = { candidate, mime, profile ->
+                if (mime == MimeTypes.VIDEO_DOLBY_VISION) false else {
+                    assertNull(profile)
+                    assertNull(candidate.dvProfile)
+                    assertEquals(expectedProfile, candidate.profile)
+                    assertEquals(stream.width, candidate.width)
+                    assertEquals(stream.level, candidate.level)
+                    if (mime == MimeTypes.VIDEO_AV1) assertEquals(10, candidate.bitDepth)
+                    mime == expectedMime
+                }
+            }, softwareSupports = { false })
+
+        val source = MediaStream(type = "Video", codec = "hevc", dvProfile = 4, width = 1920, height = 1080, level = 120.0)
+        assertEquals(true, preflight(source, MimeTypes.VIDEO_H265, "Main 10"))
+        assertEquals(true, preflight(source.copy(codec = "h264", dvProfile = 9), MimeTypes.VIDEO_H264, "High"))
+        val av1 = source.copy(codec = "av1", dvProfile = 10, colorTransfer = "smpte2084")
+        assertEquals(true, preflight(av1.copy(colorRange = "tv"), MimeTypes.VIDEO_AV1, "Main"))
+        assertEquals(false, preflight(av1.copy(colorRange = "pc"), MimeTypes.VIDEO_AV1, "Main"))
+        assertEquals(false, preflight(av1.copy(colorRange = "pc", colorTransfer = null), MimeTypes.VIDEO_AV1, "Main"))
+        assertNull(preflight(av1, MimeTypes.VIDEO_AV1, "Main"))
+        assertEquals(true, preflight(av1.copy(dvBlSignalCompatibilityId = 1), MimeTypes.VIDEO_AV1, "Main"))
+        assertEquals(false, preflight(av1.copy(dvBlSignalCompatibilityId = 0), MimeTypes.VIDEO_AV1, "Main"))
+        assertEquals(false, preflight(av1.copy(colorRange = "tv"), MimeTypes.VIDEO_H265, "Main"))
     }
 
     @Test fun pureOrUnknownDolbyVisionDoesNotInventAHevcCompatibleBaseLayer() {

@@ -33,9 +33,11 @@
 
 原画能力判断保留 Jellyfin 的完整视频轨信息，包括 Dolby Vision Profile、位深和动态范围；云端压缩档按自身格式判断。默认原画已知无法解码时，优先选择最高兼容云档，不改写默认画质偏好；没有兼容云档时明确提示本机不支持，不发起 Jellyfin 转码。手动切换画质失败仍优先恢复原来可播放的资源，网络错误只对原 STRM 地址续签一次。
 
-视频默认优先使用系统 MediaCodec。ARM64 软件补解支持 H.264、HEVC 和 MPEG-2，并覆盖 Hi10P 和 Dolby Vision Profile 5、8：FFmpeg 解码视频，libplacebo 在 GPU 上按逐帧色彩及 RPU 元数据映射为 SDR；不会把 Profile 5 简单改写成普通 HEVC。明确的系统音频或视频解码错误，在确认本地扩展支持该格式后，可按音频、视频各同源回退一次；保留播放位置、倍速、暂停和轨道选择，不改变持久偏好。
+视频优先使用系统 MediaCodec。ARM64 软件补解支持 H.264（含 Hi10P）、HEVC、MPEG-2、MPEG-4 Part 2（含 Xvid／DivX）、微软 MPEG-4 v2／v3、H.263，以及 WVC1 格式 MKV 中的 VC-1 Advanced Profile。能否直放还取决于封装。通过服务器播放蓝光 M2TS 或 ASF／WMV 时，Pathfin 会向 Jellyfin 请求兼容流。系统解码失败时，音频和视频可各自在同一片源上回退一次，保留进度、倍速、暂停状态和轨道选择。
 
-原有硬解 HDR10/HLG 路径保留。渐进式 Profile 7 和 Media3 支持的 Profile 8 可使用 HEVC 基础层，不重建 Profile 7 FEL 增强层。软件路径当前限制单边 4096、总像素不超过 4096×2304，是否能实时播放仍取决于设备、编码复杂度与帧率；不承诺任意 4K 文件或设备都能流畅软解。网络、容器、音频、字幕与播放时钟继续由同一个 ExoPlayer 管理。
+对于渐进式杜比视界 P7，设备无法处理杜比视频轨时，可播放兼容的 HDR10 HEVC 基础层。软解兼容的 P7 FEL 时，画面来自 HDR10 基础层。P4 和 P8 可尝试 HEVC，P9 可尝试 H.264，基础层色彩兼容的 P10 可尝试 AV1。P5 软解使用杜比元数据处理色彩。软解通过 GPU 映射为 SDR，支持单边最多 4096 像素、总像素最多 4096×2304，实时播放能力取决于设备、编码复杂度和帧率。
+
+支持 MKV 内嵌的 PGS 和 VobSub 字幕。Jellyfin 提供独立的 PGS／SUP 字幕地址时，播放器在选中后加载，并在跳转时同步显示或清除字幕。外挂 IDX／SUB 双文件可先将字幕封入 MKV，再由手机直接渲染。
 
 “STRM 默认画质”取代手写“首选版本”，默认原画，仅影响支持该协议的 STRM 下次起播。本地文件和直播不使用云盘画质；多个文件版本仍可手选，旧版本名称偏好不会被猜测成画质。
 
@@ -56,7 +58,7 @@ python3 android/tools/package_source.py --native ffmpeg --output .superpowers/tm
 python3 android/tools/package_source.py --native ass --output .superpowers/tmp/ass-native/release/pathfin-ass-corresponding-source.tar
 ```
 
-原生构建前置条件、锁定输入与对应源码说明见 [ASS 模块](android/ass/README.md)和 [FFmpeg 音视频模块](android/ffmpeg/README.md)。FFmpeg 构建音频解码、重采样及 H.264/HEVC/MPEG-2 软件解码，视频色彩映射由 libplacebo GLES 输出承担；网络、容器和播放时钟由 Media3 管理。libass、字体解析和整形依赖静态链接入 ASS JNI。两个模块无相互运行时依赖，只有 ASS 模块打包 NDK 的共享 C++ 运行时。
+原生构建前置条件、锁定输入与对应源码说明见 [ASS 模块](android/ass/README.md)和 [FFmpeg 音视频模块](android/ffmpeg/README.md)。FFmpeg 构建音频解码、重采样及 视频软件解码，视频色彩映射由 libplacebo GLES 输出承担；网络、容器和播放时钟由 Media3 管理。libass、字体解析和整形依赖静态链接入 ASS JNI。两个模块无相互运行时依赖，只有 ASS 模块打包 NDK 的共享 C++ 运行时。
 
 ```bash
 cd android

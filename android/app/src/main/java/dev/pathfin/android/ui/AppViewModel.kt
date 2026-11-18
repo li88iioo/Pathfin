@@ -2013,7 +2013,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             // 原始HTTP直连不依赖云盘画质发现协议，不能因旧服务返回302而改走服务器。
             val originalHttp = PlaybackResolver.prefersOriginalHttp(selection.item, source,
                 preferences.prefersOriginalSource(selection.item), quality, selection.info.delivery)
-            val video = source.mediaStreams.firstOrNull { it.type.equals("Video", true) }
+            val video = source.playbackVideoStream()
             val localSupport = if (selection.info.delivery != PlaybackDelivery.TRANSCODE &&
                 !(originalHttp && needsRemux) && !(selection.item.isLiveChannel && preferences.liveTvDirectPlay) && video != null)
                 withContext(Dispatchers.Default) { DevicePlaybackCapabilities.supportsVideo(video) } else null

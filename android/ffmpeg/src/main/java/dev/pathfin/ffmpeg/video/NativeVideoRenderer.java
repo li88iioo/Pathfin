@@ -50,7 +50,8 @@ public final class NativeVideoRenderer extends DecoderVideoRenderer {
     if (!supportsDimensions(width, height) || !supportsDepth(bitDepth, dvProfile != null)
         || dvProfile != null && !supportsDolbyVisionProfile(dvProfile)) return false;
     if (dvProfile != null && !"hevc".equalsIgnoreCase(codec)) return false;
-    return NativeVideoDecoder.isCodecAvailable(codec);
+    // Jellyfin uses the FFmpeg codec ID name; libavcodec's v3 decoder is named "msmpeg4".
+    return NativeVideoDecoder.isCodecAvailable("msmpeg4v3".equals(codec) ? "msmpeg4" : codec);
   }
 
   private static boolean supportsDimensions(int width, int height) {
@@ -65,6 +66,12 @@ public final class NativeVideoRenderer extends DecoderVideoRenderer {
     if (MimeTypes.VIDEO_H264.equals(format.sampleMimeType)) return "h264";
     if (MimeTypes.VIDEO_H265.equals(format.sampleMimeType)) return "hevc";
     if (MimeTypes.VIDEO_MPEG2.equals(format.sampleMimeType)) return "mpeg2video";
+    if (MimeTypes.VIDEO_MP4V.equals(format.sampleMimeType) || MimeTypes.VIDEO_DIVX.equals(format.sampleMimeType)) return "mpeg4";
+    if (MimeTypes.VIDEO_MP42.equals(format.sampleMimeType)) return "msmpeg4v2";
+    if (MimeTypes.VIDEO_MP43.equals(format.sampleMimeType)) return "msmpeg4";
+    if (MimeTypes.VIDEO_H263.equals(format.sampleMimeType)) return "h263";
+    // Matroska WVC1 exposes an Advanced Profile sequence and entry-point header here.
+    if (MimeTypes.VIDEO_VC1.equals(format.sampleMimeType) && !format.initializationData.isEmpty()) return "vc1";
     return supportsDolbyVisionProfile(dolbyVisionProfile(format)) ? "hevc" : null;
   }
 

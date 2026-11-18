@@ -464,7 +464,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             ?: return info
         if (!allowDirectPlay || !info.errorCode.isNullOrBlank() || videoPreflight != VideoPreflightPolicy.NEGOTIATE_UNSUPPORTED) return info
         val needsRemux = usesLocalPlayer && PlaybackResolver.originalContainerNeedingConversion(selected) != null
-        val video = selected.mediaStreams.firstOrNull { it.type.equals("Video", true) }
+        val video = selected.playbackVideoStream()
         if (video != null) {
             when (withContext(Dispatchers.Default) { videoSupport(video) }) {
                 false -> return request(PlaybackDelivery.TRANSCODE, selected.id)
@@ -493,7 +493,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             !info.errorCode.isNullOrBlank()) return info
         val source = info.sources.singleOrNull { it.id == sourceId } ?: return info
         if (source.id.isBlank() || source.supportsDirectPlay) return info
-        val video = source.mediaStreams.firstOrNull { it.type.equals("Video", true) } ?: return info
+        val video = source.playbackVideoStream() ?: return info
         val exact = withContext(Dispatchers.Default) {
             sourceSpecificVideoProfile(deviceProfile(), video)?.takeIf { videoSupport(video) == true }
         } ?: return info

@@ -10,29 +10,165 @@ import android.view.Surface
 import androidx.media3.common.C
 import androidx.media3.common.ColorInfo
 import androidx.media3.common.Format
+import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.VideoDecoderOutputBuffer
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.pathfin.android.data.JsonMapping
+import dev.pathfin.android.domain.PlayMethod
+import dev.pathfin.android.domain.PlaybackInfo
+import dev.pathfin.android.domain.PlaybackRequest
+import dev.pathfin.android.domain.ResolvedPlayback
+import dev.pathfin.android.domain.ServerConfig
+import dev.pathfin.android.domain.Session
+import dev.pathfin.android.playback.PathfinRenderersFactory
+import dev.pathfin.android.playback.PathfinTrackSelector
+import dev.pathfin.android.playback.SubtitleSeekPrerollExtractorsFactory
+import dev.pathfin.android.playback.allowsDolbyVisionProfile7BaseLayer
+import dev.pathfin.android.playback.hasOnlySeparateProfile7EnhancementTracks
 import dev.pathfin.ffmpeg.video.NativeVideoDecoder
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** 真 FFmpeg 队列与 GLES Surface 像素；小型 SDR 夹具不证明 4K 性能或 DV5/HDR 色彩。 */
+/** 验证真实 FFmpeg 队列、GLES Surface 输出和基础层首帧。 */
 @RunWith(AndroidJUnit4::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 class NativeVideoDecodeTest {
     private val assets get() = InstrumentationRegistry.getInstrumentation().context.assets
+
+    @Test(timeout = 45_000)
+    fun legacyContainersReachTheSurfaceThroughFfmpegWithoutSystemDecoders() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        for ((asset, codec) in mapOf("legacy-xvid.avi" to "mpeg4", "legacy-mp42.avi" to "msmpeg4v2",
+            "legacy-mp43.avi" to "msmpeg4", "legacy-h263.3gp" to "h263")) {
+            val file = File.createTempFile("pathfin-legacy-", ".${asset.substringAfterLast('.')}", context.cacheDir)
+            try {
+                assets.open("native-video/$asset").use { input -> file.outputStream().use(input::copyTo) }
+                assertNativeFrames(file, codec)
+            } finally { file.delete() }
+        }
+        // 单独提供的 WVC1/MKV 兼容样本不随测试包分发。
+        InstrumentationRegistry.getArguments().getString("pathfinLegacyVc1File")?.let {
+            assertNativeFrames(File(it), "vc1")
+        }
+    }
+
+    @Test(timeout = 15_000)
+    fun profile7FelMatroskaRendersTheHdr10BaseLayer() {
+        // 不在仓库分发外部片源。这个 FATE 样本含一帧原始 UHD HDR10 BL、FEL 和 RPU。
+        val fixture = InstrumentationRegistry.getArguments().getString("pathfinDolbyVisionP7File")
+        assumeTrue("需提供经核实的 P7 FEL Matroska 样本", fixture != null)
+        assertNativeFrames(File(checkNotNull(fixture)), "hevc", frames = 1, expectedDolbyProfile = "07")
+    }
+
+    @Test(timeout = 15_000)
+    fun separateProfile7EnhancementTrackKeepsTheIndependentMp4BaseLayer() {
+        val fixture = InstrumentationRegistry.getArguments().getString("pathfinDolbyVisionP7SeparateFile")
+        assumeTrue("需提供独立 HEVC 基础轨和 EL-only P7 轨的 MP4 样本", fixture != null)
+        val file = File(checkNotNull(fixture))
+        val source = JsonMapping.mediaSources(JSONArray("""[{"Id":"p7","Container":"mp4","MediaStreams":[
+            {"Type":"Video","Codec":"hevc","Index":0},
+            {"Type":"Video","Codec":"hevc","Index":1,"DvProfile":7,"DvBlSignalCompatibilityId":6,"BlPresentFlag":0}
+        ]}]""")).single()
+        val playback = PlaybackRequest(dev.pathfin.android.domain.MediaItem("p7", "P7 fixture", "Movie"),
+            PlaybackInfo(listOf(source), "test"), source, ResolvedPlayback(file.toURI().toString(), emptyMap(),
+                PlayMethod.DIRECT_PLAY, source.id, false), 0, Session(ServerConfig("https://fixture.invalid"),
+                "test", "user", "Fixture", "device"))
+        assertNativeFrames(file, "hevc", frames = 1, expectedDolbyProfile = "07", separateP7 = playback)
+    }
+
+    private fun assertNativeFrames(file: File, codec: String, frames: Int = 3, expectedDolbyProfile: String? = null,
+        separateP7: PlaybackRequest? = null) {
+        assertTrue("测试样本必须可读：${file.name}", file.isFile && file.canRead())
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val decoder = AtomicReference<String>()
+        val dolbyProfile = AtomicReference<String>()
+        val error = AtomicReference<PlaybackException>()
+        val firstFrame = CountDownLatch(1)
+        ImageReader.newInstance(176, 144, PixelFormat.RGBA_8888, 3).use { reader ->
+            var player: ExoPlayer? = null
+            try {
+                instrumentation.runOnMainSync {
+                    val renderers = PathfinRenderersFactory(context, hardwareVideo = true)
+                        .setMediaCodecSelector { _, _, _ -> emptyList() }
+                    val extractors = SubtitleSeekPrerollExtractorsFactory(supportsDolbyVision = { format ->
+                        dolbyProfile.set(format.codecs?.split('.')?.getOrNull(1))
+                        separateP7?.allowsDolbyVisionProfile7BaseLayer() == false
+                    })
+                    val builder = ExoPlayer.Builder(context, renderers)
+                        .setMediaSourceFactory(DefaultMediaSourceFactory(context, extractors))
+                    separateP7?.let { playback -> builder.setTrackSelector(PathfinTrackSelector(context, playback.source,
+                        separateProfile7EnhancementOnly = playback.hasOnlySeparateProfile7EnhancementTracks())) }
+                    player = builder.build().apply {
+                        addAnalyticsListener(object : AnalyticsListener {
+                            override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, name: String,
+                                initializedTimestampMs: Long, initializationDurationMs: Long) { decoder.set(name) }
+                        })
+                        addListener(object : Player.Listener {
+                            override fun onRenderedFirstFrame() { firstFrame.countDown() }
+                            override fun onPlayerError(failure: PlaybackException) {
+                                error.set(failure)
+                                firstFrame.countDown()
+                            }
+                        })
+                        setVideoSurface(reader.surface)
+                        setMediaItem(MediaItem.fromUri(file.toURI().toString()))
+                        prepare()
+                        play()
+                    }
+                }
+                assertTrue("$codec 未输出首帧", firstFrame.await(8, TimeUnit.SECONDS))
+                error.get()?.let { throw AssertionError("$codec 播放失败", it) }
+                assertEquals("必须实际使用编入 APK 的软件视频解码器", "pathfin.ffmpeg.$codec.gpu-sdr", decoder.get())
+                if (expectedDolbyProfile != null) assertEquals("提取的轨确实是所声明的杜比档位", expectedDolbyProfile, dolbyProfile.get())
+                if (separateP7 != null) instrumentation.runOnMainSync {
+                    assertEquals("选择独立的 HEVC 基础轨（track ID 1），不选 EL-only 轨（ID 2）", "1", player?.videoFormat?.id)
+                }
+                repeat(frames) {
+                    awaitImage(reader).use { image ->
+                        if (separateP7 != null) return@use // 外部双轨样本是黑帧，收到真实 Surface 缓冲即可。
+                        val plane = image.planes.single()
+                        val pixels = plane.buffer
+                        var min = 255
+                        var max = 0
+                        for (y in 4 until image.height step 8) for (x in 4 until image.width step 8) {
+                            val offset = pixels.position() + y * plane.rowStride + x * plane.pixelStride
+                            for (channel in 0..2) {
+                                val value = pixels.get(offset + channel).toInt() and 255
+                                min = minOf(min, value)
+                                max = maxOf(max, value)
+                            }
+                        }
+                        assertTrue("$codec 输出必须包含真实图案", max - min > 40)
+                    }
+                }
+                error.get()?.let { throw AssertionError("$codec 播放失败", it) }
+                Log.i(TAG, "$codec decoded and presented $frames RGBA frames")
+            } finally { instrumentation.runOnMainSync { player?.release() } }
+        }
+    }
 
     @Test(timeout = 20_000)
     fun hi10pReordersAllBFramesAndDrainsTheDelayedTailBeforeEos() {

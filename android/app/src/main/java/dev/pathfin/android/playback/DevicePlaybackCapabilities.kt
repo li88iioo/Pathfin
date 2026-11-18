@@ -41,52 +41,71 @@ internal object DevicePlaybackCapabilities {
     )
 
     /** null 表示系统或片源信息不足，不能因此误拒绝本可直放的文件。 */
-    fun supportsVideo(stream: MediaStream): Boolean? {
-        val hardware = supportsPlatformVideo(stream)
-        if (hardware == true || !stream.type.equals("Video", true)) return hardware
-        if (stream.dvProfile == null && stream.videoRangeType?.startsWith("DOVI", true) == true) return hardware
-        val software = if (stream.dvProfile == 7) {
-            // 仅当提取器输出 HEVC 基础层时才申报 DV7 软件回退。
-            if (current.supportsDolbyVisionProfile(7)) return hardware
-            dolbyVisionBaseLayerStream(stream)?.takeIf {
-                it.bitDepth == 10 && (it.width ?: 0) > 0 && (it.height ?: 0) > 0
-            } ?: return hardware
-        } else stream
-        val codec = software.codec?.lowercase(Locale.ROOT) ?: return hardware
-        return if (NativeVideoRenderer.supportsSource(codec, software.dvProfile, software.width ?: -1,
-                software.height ?: -1, software.bitDepth ?: -1)) true else hardware
+    fun supportsVideo(stream: MediaStream): Boolean? = supportsVideo(stream, ::supports) { candidate ->
+        NativeVideoRenderer.supportsSource(checkNotNull(candidate.codec).lowercase(Locale.ROOT), candidate.dvProfile,
+            candidate.width ?: -1, candidate.height ?: -1, candidate.bitDepth ?: -1)
     }
 
-    private fun supportsPlatformVideo(stream: MediaStream): Boolean? {
+    internal fun supportsVideo(
+        stream: MediaStream,
+        platformSupports: (MediaStream, String, Int?) -> Boolean?,
+        softwareSupports: (MediaStream) -> Boolean,
+    ): Boolean? {
         if (!stream.type.equals("Video", true)) return null
+        if (stream.isDolbyVisionEnhancementOnly) return false
         val codec = stream.codec?.lowercase(Locale.ROOT) ?: return null
-        val mime = videoTypes.entries.firstOrNull { it.value == codec }?.key ?: return null
-        val isDolbyVision = stream.dvProfile != null || stream.videoRangeType?.startsWith("DOVI", true) == true
-        if (!isDolbyVision) return supports(stream, mime)
-
+        val mime = videoTypes.entries.firstOrNull { it.value == codec }?.key
         val profile = stream.dvProfile
-        val native = if (profile == null) null else supports(stream, MimeTypes.VIDEO_DOLBY_VISION, profile)
-        if (native == true) return true
-        val baseLayer = dolbyVisionBaseLayerStream(stream) ?: return native
-        val base = supports(baseLayer, mime)
-        return when {
-            base == true -> true
-            base == null || native == null -> null
-            else -> false
+        if (profile == null) {
+            if (stream.videoRangeType?.startsWith("DOVI", true) == true) return null
+            val platform = mime?.let { platformSupports(stream, it, null) }
+            return if (platform == true || softwareSupports(stream)) true else platform
+        }
+        if (mime == null) return null
+        val dolby = platformSupports(stream, MimeTypes.VIDEO_DOLBY_VISION, profile)
+        if (dolby == true || (profile == 5 || profile == 8) && softwareSupports(stream)) return true
+        val baseLayer = dolbyVisionBaseLayerStream(stream) ?: return dolby
+        val base = platformSupports(baseLayer, mime, null)
+        if (base == true) {
+            if (profile == 10 && stream.dvBlSignalCompatibilityId == null) {
+                val colors = colorFormatValues(stream)
+                val transfer = colors[MediaFormat.KEY_COLOR_TRANSFER]
+                if (colors[MediaFormat.KEY_COLOR_RANGE] == null &&
+                    (transfer == null || transfer == MediaFormat.COLOR_TRANSFER_ST2084)) return null
+            }
+            return true
+        }
+        if (profile == 7 && softwareSupports(baseLayer)) {
+            // 未探测到尺寸或位深时交给提取器确认，不能把不完整元数据当成明确不支持或已确认支持。
+            return if ((baseLayer.width ?: 0) > 0 && (baseLayer.height ?: 0) > 0 && baseLayer.bitDepth == 10) true else null
+        }
+        return if (base == null || dolby == null) null else false
+    }
+
+    /** 与 Media3 1.11.1 的基础层匹配一致。P7 则由渐进式提取器输出兼容的 HEVC 轨。 */
+    internal fun dolbyVisionBaseLayerStream(stream: MediaStream): MediaStream? {
+        if (!stream.type.equals("Video", true) || stream.isDolbyVisionEnhancementOnly) return null
+        val profile = stream.dvProfile
+        val compatibility = stream.dvBlSignalCompatibilityId
+        if ((profile == 7 && compatibility == 0) ||
+            (profile == 10 && compatibility != null && compatibility !in setOf(1, 2, 4))) return null
+        if (profile == 7 || profile == 10) {
+            val colors = colorFormatValues(stream)
+            if (hasIncompatibleDolbyVisionBaseColor(colors[MediaFormat.KEY_COLOR_RANGE], colors[MediaFormat.KEY_COLOR_TRANSFER]))
+                return null
+        }
+        return when (profile) {
+            4, 7, 8 -> stream.takeIf {
+                it.codec.equals("hevc", true) && (profile != 7 || it.bitDepth == null || it.bitDepth == 10)
+            }?.copy(dvProfile = null, profile = "Main 10")
+            9 -> stream.takeIf { it.codec.equals("h264", true) }?.copy(dvProfile = null, profile = "High")
+            10 -> stream.takeIf { it.codec.equals("av1", true) }
+                ?.copy(dvProfile = null, profile = "Main", bitDepth = maxOf(stream.bitDepth ?: 0, 10))
+            else -> null
         }
     }
 
-    /** 只映射播放器已有基础层路径；保留尺寸、级别、码率与色彩信息，继续按真实 HEVC 能力校验。 */
-    internal fun dolbyVisionBaseLayerStream(stream: MediaStream): MediaStream? {
-        if (!stream.type.equals("Video", true) || !stream.codec.equals("hevc", true)) return null
-        val profile = stream.dvProfile
-        // Media3 1.11.1 为 Profile 8 提供 HEVC 基础层；笼统的 DOVI 标签不能把它误当成 Profile 5。
-        // Profile 7 保持现有渐进式提取器路径，不在这里扩大基础层格式的支持范围。
-        if (profile != 7 && profile != 8) return null
-        return stream.copy(dvProfile = null, profile = "Main 10")
-    }
-
-    private fun supports(stream: MediaStream, mime: String, dolbyVisionProfile: Int? = null): Boolean? {
+    private fun supports(stream: MediaStream, mime: String, dolbyVisionProfile: Int?): Boolean? {
         val results = detected.decoders[mime].orEmpty().map { caps ->
             runCatching { supports(caps, stream, mime, dolbyVisionProfile) }.getOrNull()
         }
@@ -158,6 +177,12 @@ internal object DevicePlaybackCapabilities {
         }.toMap().toMutableMap()
         // Android 的必需 H.264/AAC 基线用于服务端转码，不因坏掉的厂商查询而丢失。
         video.putIfAbsent("h264", PlaybackCapabilities.Baseline.video.getValue("h264"))
+        // 旧格式的本地补解保守申报 1080p/8-bit。具体容器仍须匹配 Media3 的提取器。
+        val legacyLimit = PlaybackCapabilities.VideoLimit(1920, 1080, 8)
+        for (codec in listOf("mpeg4", "msmpeg4v2", "msmpeg4v3", "h263", "vc1")) {
+            if (NativeVideoRenderer.supportsSource(codec, null, legacyLimit.maxWidth, legacyLimit.maxHeight, legacyLimit.maxBitDepth))
+                video[codec] = legacyLimit
+        }
         val ffmpeg = runCatching { FfmpegLibrary.isAvailable() }.getOrDefault(false)
         val audio = audioTypes.filter { (mime, _) ->
             byType[mime].orEmpty().isNotEmpty() || ffmpeg && runCatching { FfmpegLibrary.supportsFormat(mime) }.getOrDefault(false)

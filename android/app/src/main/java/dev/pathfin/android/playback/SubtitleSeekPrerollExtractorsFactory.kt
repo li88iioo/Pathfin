@@ -25,6 +25,7 @@ import androidx.media3.extractor.TrackOutput
 @androidx.annotation.OptIn(androidx.media3.common.util.ExperimentalApi::class)
 internal class SubtitleSeekPrerollExtractorsFactory(
     private val delegate: ExtractorsFactory = DefaultExtractorsFactory(),
+    private val supportsDolbyVision: (Format) -> Boolean = { true },
 ) : ExtractorsFactory {
 
     override fun createExtractors(): Array<Extractor> = wrap(delegate.createExtractors())
@@ -47,12 +48,15 @@ internal class SubtitleSeekPrerollExtractorsFactory(
     private fun wrap(extractors: Array<Extractor>): Array<Extractor> = extractors.map { extractor ->
         // ASS 的 Matroska 提取器已有原始包/字体包装，不能用具体类判断丢掉其索引。
         // 实际 seekMap 仍须实现 TrackAwareSeekMap；其他容器仅透传且不会回读。
-        if (extractor is SubtitleSeekPrerollExtractor) extractor else SubtitleSeekPrerollExtractor(extractor)
+        if (extractor is SubtitleSeekPrerollExtractor) extractor else SubtitleSeekPrerollExtractor(extractor, supportsDolbyVision)
     }.toTypedArray()
 }
 
 @UnstableApi
-private class SubtitleSeekPrerollExtractor(private val delegate: Extractor) : Extractor by delegate {
+private class SubtitleSeekPrerollExtractor(
+    private val delegate: Extractor,
+    private val supportsDolbyVision: (Format) -> Boolean,
+) : Extractor by delegate {
     // format 在提取线程更新，SeekMap 在播放线程读取；一次发布不可变快照，避免跨线程迭代。
     @Volatile private var subtitleTrackIds: Set<Int> = emptySet()
 
@@ -61,7 +65,7 @@ private class SubtitleSeekPrerollExtractor(private val delegate: Extractor) : Ex
             override fun track(id: Int, type: Int): TrackOutput {
                 val track = output.track(id, type)
                 if (type == C.TRACK_TYPE_VIDEO) return object : TrackOutput by track {
-                    override fun format(format: Format) = track.format(dolbyVisionBaseLayerFormat(format))
+                    override fun format(format: Format) = track.format(dolbyVisionBaseLayerFormat(format, supportsDolbyVision))
                 }
                 if (type != C.TRACK_TYPE_TEXT) return track
                 return object : TrackOutput by track {

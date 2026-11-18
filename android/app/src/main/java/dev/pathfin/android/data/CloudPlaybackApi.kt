@@ -67,7 +67,7 @@ class CloudPlaybackApi(
         val video = codec("video_codec")
         // 原画与该 MediaSource 是同一文件；云列表的简略 HEVC 标签不能覆盖 DV/位深等已知限制。
         // 压缩云档是独立资源，不能继承原画的 DV 属性。
-        val originalVideo = if (original) source.mediaStreams.firstOrNull { it.type.equals("Video", true) } else null
+        val originalVideo = if (original) source.playbackVideoStream() else null
         val format = originalVideo?.copy(codec = originalVideo.codec ?: video,
             width = originalVideo.width ?: width, height = originalVideo.height ?: height)
             ?: MediaStream(type = "Video", codec = video, width = width, height = height)

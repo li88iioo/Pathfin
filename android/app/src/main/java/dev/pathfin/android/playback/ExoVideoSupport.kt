@@ -6,21 +6,43 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.container.NalUnitUtil
+import dev.pathfin.android.domain.MediaStream
+import dev.pathfin.android.domain.PlaybackRequest
 import dev.pathfin.android.i18n.tr
 
+/** 转码地址也可能只复制视频。仍抽出 P7 时保留服务器探测到的基础层兼容限制。 */
+internal fun PlaybackRequest.allowsDolbyVisionProfile7BaseLayer(): Boolean =
+    sourceProfile7Tracks().none { it.isDolbyVisionEnhancementOnly || it.dvBlSignalCompatibilityId == 0 }
+
+internal fun PlaybackRequest.hasOnlySeparateProfile7EnhancementTracks(): Boolean =
+    sourceProfile7Tracks().let { tracks -> tracks.isNotEmpty() && tracks.all { it.isDolbyVisionEnhancementOnly } }
+
+private fun PlaybackRequest.sourceProfile7Tracks(): List<MediaStream> =
+    if (cloudPlayback?.selectedId?.let { it != "original" } == true) emptyList()
+    else source.mediaStreams.filter { it.type.equals("Video", true) && it.dvProfile == 7 }
+
+@UnstableApi
+internal fun Format.isDolbyVisionProfile7(): Boolean = sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION &&
+    (codecs?.startsWith("dvhe.07.") == true || codecs?.startsWith("dvh1.07.") == true)
+
 /**
- * UHD 原盘的 Dolby Vision Profile 7 基础层就是 HDR10 HEVC，Media3 却不为它回退到 HEVC 解码器。
- * 设备没有 DV 解码器时改按 HEVC 解基础层（增强层 NAL 由解码器忽略）；Profile 5 无兼容基础层，保持原样。
+ * Media3 1.11.1 未为 P7 回退 HEVC。只有设备无法处理当前 DV 轨时才输出兼容的基础层。
  */
 @UnstableApi
-internal fun dolbyVisionBaseLayerFormat(format: Format, hasDolbyVisionDecoder: Boolean = DevicePlaybackCapabilities.current.supportsDolbyVisionProfile(7)): Format {
-    if (hasDolbyVisionDecoder || format.sampleMimeType != MimeTypes.VIDEO_DOLBY_VISION) return format
-    val parts = format.codecs?.split('.').orEmpty()
-    if (parts.getOrNull(0) !in setOf("dvhe", "dvh1") || parts.getOrNull(1) != "07") return format
+internal fun dolbyVisionBaseLayerFormat(format: Format, supportsDolbyVision: (Format) -> Boolean): Format {
+    if (!format.isDolbyVisionProfile7() || format.drmInitData != null ||
+        format.cryptoType != C.CRYPTO_TYPE_NONE) return format
+    val color = format.colorInfo
+    if (hasIncompatibleDolbyVisionBaseColor(color?.colorRange, color?.colorTransfer) || supportsDolbyVision(format)) return format
     // DV 与 HEVC 的 profile/level 不同，使用基础层 SPS 的真实参数保留解码器能力校验。
     val codecs = runCatching { NalUnitUtil.getH265BaseLayerCodecsString(format.initializationData) }.getOrNull()
     return format.buildUpon().setSampleMimeType(MimeTypes.VIDEO_H265).setCodecs(codecs).build()
 }
+
+/** P7/P10 的 full-range PQ 或未标记传递函数的全范围基础层可能是 IPTPQc2。 */
+@UnstableApi
+internal fun hasIncompatibleDolbyVisionBaseColor(range: Int?, transfer: Int?): Boolean =
+    range == C.COLOR_RANGE_FULL && (transfer == null || transfer == Format.NO_VALUE || transfer == C.COLOR_TRANSFER_ST2084)
 
 /**
  * 有视频轨却没有一条可解码时提示，不能继续表现成只有声音的正常播放。

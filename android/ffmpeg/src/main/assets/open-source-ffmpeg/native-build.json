@@ -14,7 +14,12 @@
   "videoDecoders": [
     "h264",
     "hevc",
-    "mpeg2video"
+    "mpeg2video",
+    "mpeg4",
+    "msmpeg4v2",
+    "msmpeg4v3",
+    "h263",
+    "vc1"
   ],
   "cxxRuntime": "c++_static",
   "renderer": {
@@ -34,13 +39,13 @@
     "MarkupSafe": "3.0.4"
   },
   "staticArchives": {
-    "libplacebo.a": "1b79cd0cbc8be252fd7d71f9c6764f45b0186ebf963c5124047275c81e132d6b"
+    "libplacebo.a": "06c1bb14d29440d4216013aae46472cc545973b73bbd8da995bc257224db03a4"
   },
   "sourceInputs": {
     "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
     "build.gradle.kts": "f268bd7095c1c5d4bc8dad087623de5ece9ccaea79737d9888d3edb9d043b43e",
     "src/main/cpp/ffmpeg_jni.cc": "7bd4a3d09cf1828543848a1abf271f984f665d25092c81c61a4fe4735879d3f0",
-    "src/main/cpp/pathfin_video_jni.cc": "3a4a559877b4943464b101a1dd964ea20c7a14e46882a9acf6ac0e29ea5297a3",
+    "src/main/cpp/pathfin_video_jni.cc": "d96c6a7b84c7eac1338c5de464f730f11db8eeb8031a4cfc1e472df12c16980f",
     "src/main/cpp/pathfin_video_render.c": "0e0e7ec8a290d1fe1808d2ae5ea48e13c6ea7c3e5a46dc4def38be4c0f895632",
     "src/main/cpp/pathfin_video_render.h": "d1bfe7e3107e01a70cd87fcd5f5db3456b235d01b19e21dc8c33effbbcd99dc5",
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegAudioDecoder.java": "64b5ff45fd9f60b6775d542bda141698e5d32cacdd04ddd96141e86f2c0a51f8",
@@ -48,9 +53,9 @@
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegDecoderException.java": "9e73968d0802b2d7f8add911ec4dc5a6e621777e997eca74332e173c5463ad7a",
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegLibrary.java": "a0843232be53210aefe97d8bc0a0268ac781cc7ce72e2d47bf42cd07f8048880",
     "src/main/java/androidx/media3/decoder/ffmpeg/package-info.java": "1d75d02151fcec7a1c0036ee4a216e885ae91e1f85e8c9ddfbd72b4def6709be",
-    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "06cca96da9c57a0d98d2e164bbe24565d0ecf88cc704186ef48befcea140e381",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "0bd5fb86046911d52905a00459a14ee2cd5dc7f3c991bfddad4fe87d9ef302eb",
     "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java": "e9663135c8d8fb3c647cb5df67c78a3e97be8eb6de488299eb9e9e2660c87045",
-    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "9b3ebcf728f24cce455017eb551b39df4e4ee1f01931d2840c499e4bc22eae83",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "611b90ff929b77dd5af405350633a1eeb36a481a19a1937adcb44d6496637fbb",
     "video-consumer-rules.pro": "d3726d0b9c258ecf14c2b234a2569dcee3718685aeb953d2664b23ad678d5774"
   },
   "copiedAvformatHeaders": {
@@ -80,13 +85,18 @@
     "mp3",
     "h264",
     "hevc",
-    "mpeg2video"
+    "mpeg2video",
+    "mpeg4",
+    "msmpeg4v2",
+    "msmpeg4v3",
+    "h263",
+    "vc1"
   ],
   "libraries": [
     {
       "file": "libavcodec.so",
-      "bytes": 3282352,
-      "sha256": "bfd1d1c7f14ebaee5193625de28053a41ca6d0b2b2a1035f86bf27eb5ebd76e3",
+      "bytes": 3865488,
+      "sha256": "bb42730e34fbc2c13f253f2f628a68180e089610ef60815e0c7d0361141a4d0c",
       "loadAlignments": [
         16384,
         16384,
@@ -101,8 +111,8 @@
     },
     {
       "file": "libavutil.so",
-      "bytes": 729992,
-      "sha256": "8e2816de7a56b17fe13b510ec857f7088fe97608bdbf7bd47505d4363a49b211",
+      "bytes": 730040,
+      "sha256": "0a1c7fa3097b7a1db1ba5b9eb357024020637fc21496c9821423a94e97c2e81e",
       "loadAlignments": [
         16384,
         16384,
@@ -115,8 +125,8 @@
     },
     {
       "file": "libswresample.so",
-      "bytes": 96392,
-      "sha256": "389474823d38919d7623010988fa069717aac39269da8569d088d1c35c6bd541",
+      "bytes": 96424,
+      "sha256": "6856f87dc657625baed559ef6bf08784c7d3915e5567e8b585d5890e644bd283",
       "loadAlignments": [
         16384,
         16384
@@ -129,8 +139,8 @@
     },
     {
       "file": "libffmpegJNI.so",
-      "bytes": 763224,
-      "sha256": "ba86be14b78d0f1a2698372dc994c78f942e342fd91b77efd1788bce9e7cf312",
+      "bytes": 763872,
+      "sha256": "16e3aa339d286f529b2952015405f252fddc92621680f13454bfeb227b5bbb6e",
       "loadAlignments": [
         16384,
         16384,
@@ -150,8 +160,8 @@
       ]
     }
   ],
-  "configSha256": "71523b870e57ccb09142a55ff40dd8400caf040e1bd048b3ced6c9d14ed2a397",
-  "componentConfigSha256": "4054a9e9425a67f369c0dab792a92cc80dbda9aef92827c2f0f3a52e20c9c37c",
+  "configSha256": "a96ebbb9d4395091ded063dee7b7b0f4b286eea01631a090c5eac0af55b75021",
+  "componentConfigSha256": "261f4df56f42c2453c67495a3193394d0f5833fc7f460a1cf6344b836189aa38",
   "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
-  "sourceLockSha256": "25b8a438b631d0b1f0fe555f2957f252b5a2136254cadf54e0f2c9a3d2e468a9"
+  "sourceLockSha256": "bfccabc1e781093ce5c48508baa0c92a164f3cc54bcae9611dc7fe99a831c7c3"
 }

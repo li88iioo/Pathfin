@@ -17,6 +17,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.domain.MediaStream
 import dev.pathfin.android.playback.DevicePlaybackCapabilities
+import dev.pathfin.android.playback.dolbyVisionBaseLayerFormat
 import dev.pathfin.ffmpeg.video.NativeVideoDecoder
 import dev.pathfin.ffmpeg.video.NativeVideoRenderer
 import org.junit.Assert.assertTrue
@@ -53,13 +54,16 @@ class DevicePlaybackCapabilitiesTest {
             "av1" to "video/av01", "vp8" to "video/x-vnd.on2.vp8", "mpeg2video" to "video/mpeg2")
         val decoders = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filterNot { it.isEncoder }
         for ((codec, limit) in DevicePlaybackCapabilities.current.video) {
-            val mime = mimes.getValue(codec)
-            assertTrue("$codec 声明的 ${limit.maxWidth}×${limit.maxHeight} 必须来自同一真实解码器", decoders.any { decoder ->
+            val mime = mimes[codec]
+            val supported = if (mime == null) {
+                NativeVideoRenderer.supportsSource(codec, null, limit.maxWidth, limit.maxHeight, limit.maxBitDepth)
+            } else decoders.any { decoder ->
                 runCatching {
                     val type = decoder.supportedTypes.firstOrNull { it.equals(mime, true) } ?: return@runCatching false
                     decoder.getCapabilitiesForType(type).videoCapabilities?.isSizeSupported(limit.maxWidth, limit.maxHeight) == true
                 }.getOrDefault(false)
-            })
+            }
+            assertTrue("$codec 声明的 ${limit.maxWidth}×${limit.maxHeight} 必须来自同一真实解码器", supported)
         }
     }
 
@@ -144,6 +148,13 @@ class DevicePlaybackCapabilitiesTest {
     }
 
     @Test fun profile7BaseLayerSoftwareDecodeSurvivesThePlatformBitrateLimit() {
+        val format = Format.Builder().setSampleMimeType(MimeTypes.VIDEO_DOLBY_VISION)
+            .setCodecs("dvhe.07.06").setWidth(3840).setHeight(2160)
+            .setColorInfo(ColorInfo.Builder().setColorTransfer(C.COLOR_TRANSFER_ST2084).setColorRange(C.COLOR_RANGE_LIMITED)
+                .setLumaBitdepth(10).setChromaBitdepth(10).build()).build()
+        val renderer = NativeVideoRenderer(0, Handler(Looper.getMainLooper()), object : VideoRendererEventListener {})
+        assertEquals(C.FORMAT_HANDLED, RendererCapabilities.getFormatSupport(
+            renderer.supportsFormat(dolbyVisionBaseLayerFormat(format) { false })))
         val upper = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filterNot { it.isEncoder }.flatMap { decoder ->
             decoder.supportedTypes.filter { it.equals(MimeTypes.VIDEO_H265, true) || it.equals(MimeTypes.VIDEO_DOLBY_VISION, true) }
                 .mapNotNull { type -> runCatching { decoder.getCapabilitiesForType(type).videoCapabilities?.bitrateRange?.upper }.getOrNull() }
@@ -152,16 +163,8 @@ class DevicePlaybackCapabilitiesTest {
             val source = MediaStream(type = "Video", codec = "hevc", profile = "Main 10", dvProfile = 7,
                 videoRangeType = "DOVIWithEL", width = 3840, height = 2160, bitDepth = 10,
                 level = 153.0, averageFrameRate = 23.976, bitRate = upper + 1)
-            val demotesToHevc = !DevicePlaybackCapabilities.current.supportsDolbyVisionProfile(7)
-            assertEquals("只申报提取器确实会输出的 HEVC 基础层软件路径，不能因平台码率不足误转码",
-                demotesToHevc && NativeVideoRenderer.supportsSource("hevc", null, 3840, 2160, 10),
-                DevicePlaybackCapabilities.supportsVideo(source))
-            for (invalid in listOf(source.copy(bitDepth = null), source.copy(bitDepth = 12),
-                source.copy(width = null), source.copy(height = 0), source.copy(width = 8192),
-                source.copy(dvProfile = null), source.copy(dvProfile = 6))) {
-                assertFalse("缺失或不支持的 DV 信息不能冒充已确认可用的基础层：$invalid",
-                    DevicePlaybackCapabilities.supportsVideo(invalid) == true)
-            }
+            assertEquals("即使 DV 解码器声明过 P7，超过声明能力时仍可尝试 HEVC 基础层",
+                true, DevicePlaybackCapabilities.supportsVideo(source))
         }
     }
 }

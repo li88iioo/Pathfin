@@ -276,6 +276,8 @@ object JsonMapping {
             videoRangeType = stream.nonBlankText("VideoRangeType"),
             videoDoViTitle = stream.nonBlankText("VideoDoViTitle"),
             dvProfile = stream.nonNegativeInt("DvProfile"),
+            dvBlSignalCompatibilityId = stream.nonNegativeInt("DvBlSignalCompatibilityId"),
+            dvBaseLayerPresent = stream.nonNegativeInt("BlPresentFlag")?.takeIf { it in 0..1 }?.let { it == 1 },
             colorRange = stream.nonBlankText("ColorRange"),
             colorSpace = stream.nonBlankText("ColorSpace"),
             colorTransfer = stream.nonBlankText("ColorTransfer"),

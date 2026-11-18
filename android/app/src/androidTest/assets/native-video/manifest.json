@@ -210,6 +210,24 @@
       }
     }
   ],
+  "legacyFiles": {
+    "legacy-xvid.avi": {
+      "bytes": 15050,
+      "sha256": "93b25be05590ab57a37c7c212c13bcb8ce608888d2612dc1a7d986e2f9f0ea3f"
+    },
+    "legacy-mp42.avi": {
+      "bytes": 15002,
+      "sha256": "f22be1ff6ff6ab0bcc4d10e5924d482932590dd2d29fadd3b1fb827e434c7613"
+    },
+    "legacy-mp43.avi": {
+      "bytes": 15118,
+      "sha256": "3e77effe3fc45f579e78baac347247948896da0af888374c7c285b75ff436830"
+    },
+    "legacy-h263.3gp": {
+      "bytes": 10597,
+      "sha256": "38ef458e1249538f2344f7b2593d923a4181509cc1b48424d2b56ab385897471"
+    }
+  },
   "notCovered": [
     "4K 播放性能",
     "Dolby Vision Profile 5 色彩正确性",

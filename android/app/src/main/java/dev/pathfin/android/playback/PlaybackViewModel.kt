@@ -30,6 +30,9 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.RendererCapabilities
 import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ExtractorsFactory
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.data.VideoPreflightPolicy
 import dev.pathfin.android.data.mediaSegments
@@ -138,7 +141,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         // 未设置 position 的消息在错误后的 IDLE 状态也立即处理，不依赖继续播放。
         owner.createMessage { _, _ ->
             val support = try {
-                Result.success(RendererCapabilities.getFormatSupport(extension.capabilities.supportsFormat(format)))
+                val candidate = if (type == C.TRACK_TYPE_VIDEO && current.request.allowsDolbyVisionProfile7BaseLayer())
+                    dolbyVisionBaseLayerFormat(format) { false } else format
+                Result.success(RendererCapabilities.getFormatSupport(extension.capabilities.supportsFormat(candidate)))
             } catch (exception: Exception) {
                 Result.failure(exception)
             }
@@ -473,9 +478,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun createExoPlayer(current: ActivePlayback, dataSource: DataSource.Factory, assSubtitleUris: Set<String>): ExoPlayer {
         val tuning = current.tuning
         val application = getApplication<Application>()
+        val codecSelector = PreferredMediaCodecSelector(tuning.exoAudioDecoder, tuning.preferHardwareVideoDecoder)
+        val recoveringVideo = C.TRACK_TYPE_VIDEO in current.decoderFallbackTypes
+        val allowBaseLayer = current.request.allowsDolbyVisionProfile7BaseLayer()
+        fun supportsDolbyVision(format: Format): Boolean = !allowBaseLayer || !recoveringVideo && runCatching {
+            RendererCapabilities.getFormatSupport(MediaCodecVideoRenderer.supportsFormat(application, codecSelector, format)) == C.FORMAT_HANDLED
+        }.getOrElse { DevicePlaybackCapabilities.current.supportsDolbyVisionProfile(7) }
+        val wrapExtractors = { extractors: ExtractorsFactory ->
+            SubtitleSeekPrerollExtractorsFactory(extractors, ::supportsDolbyVision)
+        }
         fun build(extension: ExoAssExtension?): ExoPlayer {
             val delegate = PathfinRenderersFactory(application, tuning.preferHardwareVideoDecoder)
-                .setMediaCodecSelector(PreferredMediaCodecSelector(tuning.exoAudioDecoder, tuning.preferHardwareVideoDecoder))
+                .setMediaCodecSelector(codecSelector)
                 .setEnableDecoderFallback(true)
                 .setExtensionRendererMode(ffmpegAudioExtensionMode(tuning.exoAudioDecoder))
             extension?.setSubtitlePresentation(mutableSubtitlePresentation.value.scale,
@@ -483,10 +497,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             val builder = ExoPlayer.Builder(application, subtitleTimingRenderers(extension?.renderersFactory(delegate) ?: delegate) {
                 current.subtitleDelayUs
             })
-            return builder.setTrackSelector(PathfinTrackSelector(application, current.request.source))
-                .setMediaSourceFactory(extension?.mediaSourceFactory(dataSource, assSubtitleUris,
-                ::SubtitleSeekPrerollExtractorsFactory)
-                ?: SubtitleMediaSourceFactory(dataSource, SubtitleSeekPrerollExtractorsFactory()))
+            return builder.setTrackSelector(PathfinTrackSelector(application, current.request.source,
+                separateProfile7EnhancementOnly = current.request.hasOnlySeparateProfile7EnhancementTracks()))
+                .setMediaSourceFactory(extension?.mediaSourceFactory(dataSource, assSubtitleUris, wrapExtractors)
+                    ?: SubtitleMediaSourceFactory(dataSource, wrapExtractors(DefaultExtractorsFactory())))
                 .setLoadControl(DefaultLoadControl.Builder()
                     .setBufferDurationsMs(tuning.minBufferMs, tuning.maxBufferMs, 2_500, 5_000)
                     .setTargetBufferBytes(tuning.targetBufferBytes)

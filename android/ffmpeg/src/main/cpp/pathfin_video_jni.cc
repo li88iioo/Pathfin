@@ -130,7 +130,7 @@ bool in_bounds(size_t offset, size_t bytes, size_t total)
     return offset <= total && bytes <= total - offset;
 }
 
-bool validate_dolby(JNIEnv *env, const VideoContext *ctx, const AVFrame *frame)
+bool prepare_dolby(JNIEnv *env, const VideoContext *ctx, AVFrame *frame)
 {
     const AVFrameSideData *sd = av_frame_get_side_data(frame, AV_FRAME_DATA_DOVI_METADATA);
     const bool has_rpu = av_frame_get_side_data(frame, AV_FRAME_DATA_DOVI_RPU_BUFFER) != nullptr;
@@ -163,10 +163,24 @@ bool validate_dolby(JNIEnv *env, const VideoContext *ctx, const AVFrame *frame)
         (header->vdr_rpu_profile == 0 && header->bl_video_full_range_flag) ||
         header->vdr_rpu_profile == 1;
     const AVPixFmtDescriptor *pixels = av_pix_fmt_desc_get(static_cast<AVPixelFormat>(frame->format));
-    if (!known_profile || !header->disable_residual_flag || header->bl_bit_depth != 10 ||
+    if (!known_profile || header->bl_bit_depth != 10 ||
         !pixels || pixels->nb_components != 3 || pixels->comp[0].depth != 10) {
         throw_video(env, "Unsupported Dolby Vision profile or enhancement-layer residual");
         return false;
+    }
+    if (!header->disable_residual_flag) {
+        // FFmpeg identifies a profile 7 FEL by this RPU combination. Its decoded
+        // base layer can be presented alone only with HDR10 pixel/color metadata.
+        if (ctx->dolby_vision || ctx->decoder->codec_id != AV_CODEC_ID_HEVC ||
+            header->vdr_rpu_profile != 1 || !header->el_spatial_resampling_filter_flag ||
+            header->vdr_bit_depth != 12 || header->bl_video_full_range_flag ||
+            frame->colorspace != AVCOL_SPC_BT2020_NCL || frame->color_primaries != AVCOL_PRI_BT2020 ||
+            frame->color_trc != AVCOL_TRC_SMPTE2084 || frame->color_range != AVCOL_RANGE_MPEG) {
+            throw_video(env, "Unsupported Dolby Vision enhancement-layer residual");
+            return false;
+        }
+        av_frame_remove_side_data(frame, AV_FRAME_DATA_DOVI_METADATA);
+        av_frame_remove_side_data(frame, AV_FRAME_DATA_DOVI_RPU_BUFFER);
     }
     return true;
 }
@@ -339,7 +353,6 @@ Java_dev_pathfin_ffmpeg_video_NativeVideoDecoder_receive(
         throw_ffmpeg(env, "CPU video decode failed", result);
         return 0;
     }
-    if (!validate_dolby(env, ctx, frame)) { av_frame_free(&frame); return 0; }
     int64_t pts = frame->best_effort_timestamp;
     if (pts == AV_NOPTS_VALUE) pts = frame->pts;
     if (pts == AV_NOPTS_VALUE || frame->width <= 0 || frame->height <= 0 ||
@@ -353,6 +366,7 @@ Java_dev_pathfin_ffmpeg_video_NativeVideoDecoder_receive(
     if (frame->color_primaries == AVCOL_PRI_UNSPECIFIED) frame->color_primaries = ctx->source_primaries;
     if (frame->color_trc == AVCOL_TRC_UNSPECIFIED) frame->color_trc = ctx->source_transfer;
     if (frame->color_range == AVCOL_RANGE_UNSPECIFIED) frame->color_range = ctx->source_range;
+    if (!prepare_dolby(env, ctx, frame)) { av_frame_free(&frame); return 0; }
     // DecoderVideoRenderer publishes width/height with square pixels and no
     // unapplied rotation. Report display geometry while leaving AVFrame pixels
     // untouched: libplacebo applies this same SAR and rotation exactly once.

@@ -133,7 +133,12 @@ data class MediaSource(
     val defaultAudioStreamIndex: Int? = null,
     val cloudPlaybackUrl: String? = null,
     val hasTransportStreamTimestamp: Boolean = false,
-)
+) {
+    /** 为起播选主视频，存在独立基础层时不拿无基础层的 Dolby Vision 增强轨预检。 */
+    fun playbackVideoStream(): MediaStream? =
+        mediaStreams.firstOrNull { it.type.equals("Video", true) && !it.isDolbyVisionEnhancementOnly }
+            ?: mediaStreams.firstOrNull { it.type.equals("Video", true) }
+}
 
 /** 仅保留服务器实际返回的轨道描述；未知编解码、分辨率和 HDR 信息保持 null。 */
 data class MediaStream(
@@ -164,12 +169,17 @@ data class MediaStream(
     val videoRangeType: String? = null,
     val videoDoViTitle: String? = null,
     val dvProfile: Int? = null,
+    val dvBlSignalCompatibilityId: Int? = null,
+    val dvBaseLayerPresent: Boolean? = null,
     val colorRange: String? = null,
     val colorSpace: String? = null,
     val colorTransfer: String? = null,
     val colorPrimaries: String? = null,
     val pixelFormat: String? = null,
-)
+) {
+    internal val isDolbyVisionEnhancementOnly: Boolean
+        get() = dvProfile != null && dvBaseLayerPresent == false
+}
 
 data class PlaybackInfo(
     val sources: List<MediaSource>,

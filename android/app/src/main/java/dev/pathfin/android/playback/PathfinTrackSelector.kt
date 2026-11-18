@@ -17,7 +17,31 @@ import dev.pathfin.android.domain.MediaSource
 internal class PathfinTrackSelector(
     context: Context,
     private val source: MediaSource,
+    private val separateProfile7EnhancementOnly: Boolean = false,
 ) : DefaultTrackSelector(context) {
+    override fun selectVideoTrack(
+        mappedTrackInfo: MappedTrackInfo,
+        rendererFormatSupports: Array<Array<IntArray>>,
+        rendererMixedMimeTypeAdaptationSupports: IntArray,
+        params: Parameters,
+        selectedAudioLanguage: String?,
+    ): Pair<ExoTrackSelection.Definition, Int>? {
+        // 容器的独立增强轨不能单独显示。仅过滤明确缺少基础层的 P7 候选，沿用 Media3 的选轨偏好。
+        val supports = if (separateProfile7EnhancementOnly) Array(mappedTrackInfo.rendererCount) { renderer ->
+            if (mappedTrackInfo.getRendererType(renderer) != C.TRACK_TYPE_VIDEO) rendererFormatSupports[renderer]
+            else {
+                val groups = mappedTrackInfo.getTrackGroups(renderer)
+                Array(groups.length) { group ->
+                    IntArray(groups[group].length) { track ->
+                        if (groups[group].getFormat(track).isDolbyVisionProfile7()) C.FORMAT_UNSUPPORTED_SUBTYPE
+                        else rendererFormatSupports[renderer][group][track]
+                    }
+                }
+            }
+        } else rendererFormatSupports
+        return super.selectVideoTrack(mappedTrackInfo, supports, rendererMixedMimeTypeAdaptationSupports, params, selectedAudioLanguage)
+    }
+
     override fun selectAudioTrack(
         mappedTrackInfo: MappedTrackInfo,
         rendererFormatSupports: Array<Array<IntArray>>,
