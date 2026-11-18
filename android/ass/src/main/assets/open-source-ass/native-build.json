@@ -40,7 +40,7 @@
   ],
   "sourceInputs": {
     "CMakeLists.txt": "b4b24b4ec45e50955d2938e8032a85b19aecc08bece46deb6b80df790ab2d15b",
-    "sources.lock.json": "dd84e3284546515e73431913ff0b4fd63eab02c74178f703cfb61eaea4916453",
+    "sources.lock.json": "1ae792195b17b299f4d9d22e36da774599ad362047be15142c3b9bbd06dccadc",
     "build_native.py": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24",
     "build.gradle.kts": "1fe8ef2834566629ba00098d027a03948a3f9f344223b6414af4de65950b443f",
     "requirements-build.txt": "746ea600cc5e102de3f0bce7ab846e08e0963557ae451e9589db03b956f9adfa",
@@ -48,9 +48,10 @@
     "vendor/libass/ass.h": "04582aa925d4ed2d1206f21915d382584e8b49c50a6b88419d4112f4f88d24da",
     "src/main/cpp/ass_jni.cpp": "e761cb282048305b1649aa765efcd15e34d91c5116e093a86210d1d6b668654b",
     "src/main/java/dev/pathfin/ass/AssOverlayView.kt": "013bea46f3844dce511fefc095fd7978237107de9cfc9eb94e6b2fc7184cb7aa",
-    "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt": "f8b14ec7a616d5aa56108b748ca4e2e6d6013bc19851807dabe98ada49f615db",
+    "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt": "3e84fb4dee58389d3220e8eaa0cb818548980ccfd018062b136d241d26258f23",
     "src/main/java/dev/pathfin/ass/AssSubtitleDataSource.kt": "b803c18c69b4ff30fe84d024ce8dce67815211493695ff49f65ffacf9caf32d5",
     "src/main/java/dev/pathfin/ass/AssController.kt": "a71bbbd0dc8a86426dd3be01946579655b4ca05cda26e1ee76e165c84ece7a9d",
+    "src/main/java/dev/pathfin/ass/SupExtractor.kt": "853ceaf6761512c424115bd96149ec8beb1073cec799ddbb974a141278467b43",
     "src/main/java/dev/pathfin/ass/AssNative.kt": "d9b1892f49ca748ae1770a895c80b53966ae7cad98d1911493823c09a1cb2029",
     "src/main/java/dev/pathfin/ass/AssMediaSource.kt": "1408a1cf0740b1697e79d0b30bef4f7f614eefc24a49e298a3f0bc0f2452b088",
     "src/main/java/dev/pathfin/ass/AssPacket.kt": "c14f33d2dd9750ef1cf5c7bc382a3eba8df58fb93212fba4b5d29349a5eb73f8",
@@ -66,5 +67,5 @@
     "libunibreak.a": "8cc2b923e31801f336178de5dbff26e50711d0d95bde5cfa9fc8e95e2a75a86f"
   },
   "recipeSha256": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24",
-  "sourceLockSha256": "dd84e3284546515e73431913ff0b4fd63eab02c74178f703cfb61eaea4916453"
+  "sourceLockSha256": "1ae792195b17b299f4d9d22e36da774599ad362047be15142c3b9bbd06dccadc"
 }

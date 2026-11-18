@@ -91,7 +91,11 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt",
-      "sha256": "f8b14ec7a616d5aa56108b748ca4e2e6d6013bc19851807dabe98ada49f615db"
+      "sha256": "3e84fb4dee58389d3220e8eaa0cb818548980ccfd018062b136d241d26258f23"
+    },
+    {
+      "path": "src/main/java/dev/pathfin/ass/SupExtractor.kt",
+      "sha256": "853ceaf6761512c424115bd96149ec8beb1073cec799ddbb974a141278467b43"
     },
     {
       "path": "requirements-build.txt",

@@ -52,7 +52,7 @@ class ExternalSubtitleSourceFlowTest {
         awaitVideo(player)
         main {
             player.pause()
-            selectLongSubtitle(player)
+            selectSubtitle(player)
             player.seekTo(15_000)
         }
         awaitCue(player, 15_000)
@@ -67,7 +67,7 @@ class ExternalSubtitleSourceFlowTest {
         }
         compose.waitUntil(WAIT) { main { player.currentCues.cues.isEmpty() &&
             player.currentTracks.groups.none { it.type == C.TRACK_TYPE_TEXT && it.isSelected } } }
-        main { selectLongSubtitle(player); player.seekTo(20_000) }
+        main { selectSubtitle(player); player.seekTo(20_000) }
         awaitCue(player, 20_000)
         main { player.seekTo(3_000) }
         awaitCue(player, 3_000)
@@ -75,16 +75,43 @@ class ExternalSubtitleSourceFlowTest {
 
     @Test fun clippingUsesOneSharedClockWithoutReplacingTheExternalTrackIdentity() = withPlayer(clip = true) { player, server ->
         awaitVideo(player)
-        main { player.pause(); selectLongSubtitle(player); player.seekTo(15_000) }
+        main { player.pause(); selectSubtitle(player); player.seekTo(15_000) }
         awaitCue(player, 15_000)
         assertTrue("All media sources must share the requested 1..21 second clip", main { player.duration in 19_900..20_100 })
         assertEquals(0, server.missingOpens.get())
         assertEquals(0, server.slowOpens.get())
     }
 
-    private fun selectLongSubtitle(player: ExoPlayer) {
+    @Test fun externalSupShowsBitmapOnLateSelectionAndClearsAtItsOwnTimestamp() = withPlayer { player, server ->
+        awaitVideo(player)
+        assertEquals(0, server.bitmapOpens.get())
+        main { player.pause(); selectSubtitle(player, "Fixture PGS"); player.seekTo(15_000) }
+        fun expectBitmap(visible: Boolean) = compose.waitUntil(WAIT) { main {
+            player.playerError?.let { throw AssertionError("SUP playback failed", it) }
+            player.playbackState == Player.STATE_READY && player.currentCues.cues.any {
+                it.bitmap?.let { image -> image.width == 2 && image.height == 2 } == true
+            } == visible
+        } }
+        expectBitmap(true)
+        assertTrue(server.bitmapOpens.get() > 0)
+        main { player.seekTo(20_000) }
+        expectBitmap(false)
+        main { player.seekTo(4_000) }
+        expectBitmap(true)
+    }
+
+    @Test fun matroskaVobSubActuallyProducesABitmap() = withPlayer(videoAsset = "playback-video/vobsub.mkv") { player, _ ->
+        awaitVideo(player)
+        main { player.pause(); selectSubtitle(player, "VobSub"); player.seekTo(0) }
+        compose.waitUntil(WAIT) { main {
+            player.playerError?.let { throw AssertionError("VobSub playback failed", it) }
+            player.currentCues.cues.any { it.bitmap != null }
+        } }
+    }
+
+    private fun selectSubtitle(player: ExoPlayer, label: String = "Fixture long SRT") {
         val group = player.currentTracks.groups.single {
-            it.type == C.TRACK_TYPE_TEXT && it.getTrackFormat(0).label == "Fixture long SRT"
+            it.type == C.TRACK_TYPE_TEXT && it.getTrackFormat(0).label == label
         }
         assertTrue("The advertised known text format must really be supported", group.isTrackSupported(0))
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
@@ -124,11 +151,12 @@ class ExternalSubtitleSourceFlowTest {
         }
     }
 
-    private fun withPlayer(clip: Boolean = false, block: (ExoPlayer, HttpFixture) -> Unit) {
+    private fun withPlayer(clip: Boolean = false, videoAsset: String = "ass-extension/plain.mp4", block: (ExoPlayer, HttpFixture) -> Unit) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         check(context.packageName == "dev.pathfin.android.verification")
-        val bytes = InstrumentationRegistry.getInstrumentation().context.assets.open("ass-extension/plain.mp4").use { it.readBytes() }
-        HttpFixture(bytes).use { fixture ->
+        val bytes = InstrumentationRegistry.getInstrumentation().context.assets.open(videoAsset).use { it.readBytes() }
+        val bitmap = InstrumentationRegistry.getInstrumentation().context.assets.open("playback-video/bitmap.sup").use { it.readBytes() }
+        HttpFixture(bytes, bitmap).use { fixture ->
             val rendered = AtomicBoolean()
             val player = main {
                 val data = DefaultDataSource.Factory(context, DefaultHttpDataSource.Factory()
@@ -151,6 +179,7 @@ class ExternalSubtitleSourceFlowTest {
                             subtitle(fixture, "long.srt", "long", "Fixture long SRT"),
                             subtitle(fixture, "missing.srt", "missing", "Fixture missing SRT"),
                             subtitle(fixture, "slow.srt", "slow", "Fixture slow SRT"),
+                            subtitle(fixture, "bitmap.sup", "bitmap", "Fixture PGS", MimeTypes.APPLICATION_PGS),
                         )).apply { if (clip) setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
                             .setStartPositionMs(1_000).setEndPositionMs(21_000).build()) }.build()
                     player.setMediaItem(item); player.prepare(); player.play()
@@ -164,8 +193,8 @@ class ExternalSubtitleSourceFlowTest {
         }
     }
 
-    private fun subtitle(fixture: HttpFixture, path: String, id: String, label: String) =
-        MediaItem.SubtitleConfiguration.Builder(fixture.uri(path)).setMimeType(MimeTypes.APPLICATION_SUBRIP)
+    private fun subtitle(fixture: HttpFixture, path: String, id: String, label: String, mime: String = MimeTypes.APPLICATION_SUBRIP) =
+        MediaItem.SubtitleConfiguration.Builder(fixture.uri(path)).setMimeType(mime)
             .setId(id).setLabel(label).setLanguage("en").setRoleFlags(C.ROLE_FLAG_SUBTITLE).build()
 
     private fun <T> main(block: () -> T): T {
@@ -174,12 +203,13 @@ class ExternalSubtitleSourceFlowTest {
         return checkNotNull(result).getOrThrow()
     }
 
-    private class HttpFixture(private val video: ByteArray) : AutoCloseable {
+    private class HttpFixture(private val video: ByteArray, private val bitmap: ByteArray) : AutoCloseable {
         private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
         private val active = AtomicBoolean(true)
         private val sockets = Collections.synchronizedSet(mutableSetOf<Socket>())
         private val workers = Executors.newCachedThreadPool { task -> Thread(task, "pathfin-owned-subtitle-http").apply { isDaemon = true } }
         val subtitleOpens = AtomicInteger()
+        val bitmapOpens = AtomicInteger()
         val missingOpens = AtomicInteger()
         val slowOpens = AtomicInteger()
         init { workers.execute { while (active.get()) {
@@ -206,6 +236,7 @@ class ExternalSubtitleSourceFlowTest {
                     respond(socket, if (range == null) "200 OK" else "206 Partial Content", "video/mp4", video,
                         start, end + 1, if (range != null) "Content-Range: bytes $start-$end/${video.size}\r\n" else "")
                 }
+                "/bitmap.sup" -> { bitmapOpens.incrementAndGet(); respond(socket, "200 OK", "application/pgs", bitmap) }
                 "/long.srt" -> {
                     subtitleOpens.incrementAndGet()
                     respond(socket, "200 OK", "application/x-subrip", "1\n00:00:00,000 --> 00:00:22,000\nPATHFIN REAL LONG CUE\n\n".toByteArray())

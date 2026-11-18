@@ -9,7 +9,7 @@ import org.junit.Test
 class ExternalSubtitleResolverTest {
     private val session = Session(ServerConfig("https://jellyfin.example/jellyfin"), "jf-private-token", "user", "User", "device")
 
-    @Test fun onlyExplicitExternalTextStreamsWithValidIndicesAreAttached() {
+    @Test fun onlyExplicitPlayableSubtitleStreamsWithValidIndicesAreAttached() {
         val streams = listOf(
             subtitle(4, "srt", "/Videos/item/source/Subtitles/4/Stream.srt"),
             subtitle(5, "vtt", "/Videos/item/source/Subtitles/5/Stream.vtt").copy(isExternal = false),
@@ -17,10 +17,19 @@ class ExternalSubtitleResolverTest {
             subtitle(7, "srt", null), subtitle(-1, "srt", "/invalid.srt"),
             subtitle(8, "srt", "/missing-index.srt").copy(index = null),
             subtitle(9, "pgssub", "/image.sup"), subtitle(10, "srt", "/unknown.txt"),
+            subtitle(11, "dvdsub", "/image.idx"), subtitle(12, "dvdsub", "/image.sub"),
         )
         val actual = ExternalSubtitleResolver.resolve(request(streams))
-        assertEquals(listOf(4), actual.map { it.index })
-        assertEquals("application/x-subrip", actual.single().mimeType)
+        assertEquals(listOf(4, 9), actual.map { it.index })
+        assertEquals(listOf("application/x-subrip", "application/pgs"), actual.map { it.mimeType })
+    }
+
+    @Test fun serverExtractedPgsIsAttachedOnlyToTheServerStream() {
+        val stream = subtitle(7, "pgssub", "/Videos/Stream.pgssub").copy(isExternal = false, deliveryMethod = "External")
+        val direct = request(listOf(stream))
+        assertTrue(ExternalSubtitleResolver.resolve(direct).isEmpty())
+        val server = direct.copy(stream = direct.stream.copy(method = PlayMethod.TRANSCODE, trustedServer = true))
+        assertEquals("application/pgs", ExternalSubtitleResolver.resolve(server).single().mimeType)
     }
 
     @Test fun relativePathsRespectServerPrefixWithoutDuplicatingIt() {

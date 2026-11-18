@@ -18,9 +18,14 @@ class DeviceProfileSubtitleTest {
         }
     }
 
-    @Test fun imageSubtitlesStayEmbeddedAndNothingForcesBurnIn() {
+    @Test fun imageSubtitlesDeclareOnlyTheSupportedDeliveryMethods() {
         val methods = methods()
-        assertEquals(setOf("Embed"), methods["pgssub"])
+        assertEquals(setOf("Embed", "External"), methods["pgssub"])
+        assertEquals(setOf("Embed"), methods["dvdsub"])
+        val vobsub = JellyfinApi().deviceProfile().getJSONArray("SubtitleProfiles").let { profiles ->
+            (0 until profiles.length()).map { profiles.getJSONObject(it) }.single { it.getString("Format") == "dvdsub" }
+        }
+        assertEquals(setOf("mkv", "matroska"), vobsub.getString("Container").split(',').toSet())
         assertTrue("不声明烧录方式，是否烧录交给服务器在无法显示时决定", methods.values.none { "Encode" in it })
     }
 }

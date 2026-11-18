@@ -375,7 +375,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     if (!isPlaybackDataUriAllowed(spec.uri.toString(), owned))
                         throw java.io.IOException(tr("不允许读取此媒体地址"))
                     spec
-                }, subtitleUris,
+                }, subtitles.filter { it.mimeType != MimeTypes.APPLICATION_PGS }.map { it.uri }.toSet(),
             ) {
                 mainHandler.post {
                     if (active === current) mutableState.update {

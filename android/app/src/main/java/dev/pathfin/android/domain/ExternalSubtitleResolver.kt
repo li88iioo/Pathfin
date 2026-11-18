@@ -16,17 +16,19 @@ data class ExternalSubtitle(
     val isHearingImpaired: Boolean,
 )
 
-/** 只接入 Jellyfin 明确返回的外挂文本字幕，不猜测文件路径或构造字幕接口。 */
+/** 只接入 Jellyfin 明确返回的外挂字幕，不猜测文件路径或构造字幕接口。 */
 object ExternalSubtitleResolver {
     fun resolve(request: PlaybackRequest): List<ExternalSubtitle> {
         val server = runCatching { ServerUrls.normalize(request.session.server) }.getOrNull() ?: return emptyList()
         return request.source.mediaStreams.asSequence().filter {
-            it.type.equals("Subtitle", true) && it.isExternal && it.index != null
+            it.type.equals("Subtitle", true) && it.index != null
         }.mapNotNull { stream ->
             val index = stream.index?.takeIf { it >= 0 } ?: return@mapNotNull null
             val uri = resolveUrl(server, stream.deliveryUrl) ?: return@mapNotNull null
             if (PlaybackHeaders.containsExternalServerCredential(request.session, uri)) return@mapNotNull null
             val mime = mimeType(uri, stream.codec) ?: return@mapNotNull null
+            if (!stream.isExternal && !(mime == "application/pgs" && request.stream.trustedServer &&
+                    request.stream.method != PlayMethod.DIRECT_PLAY && stream.deliveryMethod.equals("External", true))) return@mapNotNull null
             ExternalSubtitle(
                 index = index,
                 uri = uri,
@@ -87,6 +89,7 @@ object ExternalSubtitleResolver {
             "srt", "subrip" -> "application/x-subrip"
             "vtt", "webvtt" -> "text/vtt"
             "ass", "ssa" -> "text/x-ssa"
+            "sup", "pgssub", "pgs", "hdmv_pgs_subtitle" -> "application/pgs"
             else -> null
         }
     }

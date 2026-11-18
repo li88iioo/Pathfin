@@ -19,7 +19,8 @@ internal fun serverTrackIndex(source: MediaSource, type: Int, format: Format?): 
     if (id.startsWith("external-subtitle-")) {
         if (type != C.TRACK_TYPE_TEXT) return null
         val index = id.removePrefix("external-subtitle-").toIntOrNull() ?: return null
-        return candidates.singleOrNull { it.isExternal && it.index == index }?.index
+        return candidates.singleOrNull { it.index == index &&
+            (it.isExternal || it.deliveryMethod.equals("External", true) && !it.deliveryUrl.isNullOrBlank()) }?.index
     }
 
     val selected = StableTrackIdentity.create(format.language, format.label, 0, false) ?: return null

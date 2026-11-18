@@ -821,7 +821,10 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
             put(JSONObject().put("Format", format).put("Method", "External"))
             put(JSONObject().put("Format", format).put("Method", "Embed"))
         }
-        listOf("pgssub", "pgs").forEach { format -> put(JSONObject().put("Format", format).put("Method", "Embed")) }
+        listOf("pgssub", "pgs", "dvdsub").forEach { format ->
+            put(JSONObject().put("Format", format).put("Method", "Embed").put("Container", "mkv,matroska"))
+        }
+        put(JSONObject().put("Format", "pgssub").put("Method", "External"))
     }
 
     /** 按本机实际解码能力声明直放条件；只有超出能力的文件才交给服务器转码。 */
@@ -862,7 +865,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
                     put(JSONObject().put("Type", "Video").put("Codec", codec).put("Conditions", conditions))
                 }
             })
-            // 声明字幕能力：文本字幕可由服务器作为外挂文件下发、也可直接用片源内嵌轨；图形字幕仅内嵌。
+            // 文本字幕支持外挂和内嵌，图片字幕按解析器支持的容器和交付方式声明。
             // 不声明时服务器会把默认字幕烧进画面并强制转码（例如下载字幕后被设为默认）。
             .put("SubtitleProfiles", subtitleProfiles())
     }

@@ -61,6 +61,9 @@ class ServerTrackSelectionTest {
         assertNull(serverTrackIndex(source, C.TRACK_TYPE_TEXT, selected.buildUpon().setId("external-subtitle-99").build()))
         assertNull(serverTrackIndex(source, C.TRACK_TYPE_TEXT, selected.buildUpon().setId("external-subtitle-bad").build()))
         assertNull(serverTrackIndex(source, C.TRACK_TYPE_AUDIO, selected))
+        val extracted = source(subtitle(9, "eng").copy(codec = "pgssub",
+            deliveryMethod = "External", deliveryUrl = "/Videos/Stream.pgssub"))
+        assertEquals(9, serverTrackIndex(extracted, C.TRACK_TYPE_TEXT, selected))
     }
 
     @Test fun localSubtitlesCannotBecomeASelectionOfAServerSubtitleWithTheSameDescription() {

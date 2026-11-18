@@ -60,7 +60,8 @@ class SubtitleMediaSourceFactory(
                 .setCodecs(format.sampleMimeType)
                 .setCueReplacementBehavior(parsers.getCueReplacementBehavior(format)).build()
             val child = ProgressiveMediaSource.Factory(dataSource, ExtractorsFactory {
-                arrayOf(SubtitleExtractor(parsers.create(format), format))
+                arrayOf(if (format.sampleMimeType == MimeTypes.APPLICATION_PGS) SupExtractor(format, parsers)
+                    else SubtitleExtractor(parsers.create(format), format))
             }).createMediaSource(MediaItem.fromUri(subtitle.uri))
             LazySubtitleSource(child, cuesFormat)
         }
