@@ -4,6 +4,20 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.8] - 2026-11-23
+
+### 新增
+
+- ARM64 设备可在手机上软解 MP4、M4V 和 MOV 中的 VVC（H.266）原画。MKV 和 MPEG-TS 中的 VVC 仍可通过 Jellyfin 转码播放。[VVC 播放支持](https://github.com/li88iioo/Pathfin/commit/295deb9f279cd66447abb252b616c56746188385)
+- 播放器的「更多 → 媒体信息」显示当前使用硬解、系统软解或 FFmpeg 软解。VVC 软解在高于 1× 的倍速下出现持续掉帧时，播放器会短暂提示调回 1×。[解码信息与倍速提示](https://github.com/li88iioo/Pathfin/commit/6fa43f1c1ee4557b9a281ab04cd5cc10f7446d64)
+
+### 优化与修复
+
+- 快进和快退箭头内显示设置的跳转秒数（5–60 秒）。控制按钮和双击画面共用这一设置，双击提示也显示相同秒数。[跳转图标](https://github.com/li88iioo/Pathfin/commit/38e59f89625bd013f854fa5514173ce112296acc)
+- 修正播放器进度圆点与轨道的垂直对齐，拖动放大时圆点也保持居中。[进度条](https://github.com/li88iioo/Pathfin/commit/69e8ad27508c19695fa8dca261ea2ee87f64002f)
+- 播放设置补充了默认、硬件优先、软件优先三种音频解码模式的尝试顺序，并注明下次播放生效。[音频解码设置](https://github.com/li88iioo/Pathfin/commit/bffe72c7de93d57d275f0c9216853980fc255f9c)
+- 项目主页新增 8 张可点开查看原图的实机截图，涵盖首页、剧集详情、横屏选集、直播、搜索、收藏和设置。[界面预览](https://github.com/li88iioo/Pathfin/blob/e99ebd7d73938d914692948912489d7cac3e4895/README.zh-CN.md#界面预览)
+
 ## [0.1.7] - 2026-11-18
 
 ### 新增
@@ -168,6 +182,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.8]: https://github.com/li88iioo/Pathfin/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/li88iioo/Pathfin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/li88iioo/Pathfin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/li88iioo/Pathfin/compare/v0.1.4...v0.1.5
