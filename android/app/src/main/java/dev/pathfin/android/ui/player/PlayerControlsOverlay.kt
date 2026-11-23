@@ -249,6 +249,7 @@ internal fun PlayerControlsOverlay(
                         maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.width(8.dp))
                     val sliderEnabled = transportEnabled && snapshot.canSeek
+                    val trackHeight = 32.dp
                     val progressColor = PathfinAppearance.accent
                     val colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = progressColor,
                         inactiveTrackColor = Color.White.copy(alpha = .2f))
@@ -268,14 +269,15 @@ internal fun PlayerControlsOverlay(
                             onInteraction()
                         }, valueRange = 0f..snapshot.durationMs.coerceAtLeast(1).toFloat(), enabled = sliderEnabled,
                         colors = colors, interactionSource = sliderInteraction,
-                        // 细轨道 + 小圆点：拖动时圆点放大，静止时几乎不打扰画面。
                         thumb = {
                             val dragging by sliderInteraction.collectIsDraggedAsState()
-                            Box(Modifier.size(if (dragging || scrubbing) 16.dp else 12.dp).clip(CircleShape)
-                                .background(if (sliderEnabled) Color.White else PlayerDisabled))
+                            // 圆点在滑块槽的垂直中心绘制，两种直径共用轨道中心线。
+                            Canvas(Modifier.size(width = if (dragging || scrubbing) 16.dp else 12.dp, height = trackHeight)) {
+                                drawCircle(if (sliderEnabled) Color.White else PlayerDisabled, radius = size.width / 2)
+                            }
                         },
                         track = { slider ->
-                            Canvas(Modifier.fillMaxWidth().height(32.dp).testTag("player-progress-track")) {
+                            Canvas(Modifier.fillMaxWidth().height(trackHeight).testTag("player-progress-track")) {
                                 val maximum = snapshot.durationMs.coerceAtLeast(1).toFloat()
                                 val thickness = 3.dp.toPx()
                                 val top = (size.height - thickness) / 2

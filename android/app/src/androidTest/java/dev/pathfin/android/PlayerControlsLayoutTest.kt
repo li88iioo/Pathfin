@@ -31,6 +31,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import android.graphics.Bitmap
+import android.util.Log
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.test.assertTextEquals
@@ -76,6 +77,70 @@ class PlayerControlsLayoutTest {
             assertTimeFits()
             assertEquals(before, compose.onNodeWithTag("player-seek-slider").readVerificationNode(compose) { it.boundsInRoot })
         } finally { compose.runOnUiThread { player.release() } }
+    }
+
+    @Test fun portraitSeekSliderCentersTheThumbAtRestAndWhileDragging() =
+        verifySeekSliderAlignment(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT, android.content.res.Configuration.ORIENTATION_PORTRAIT)
+
+    @Test fun landscapeSeekSliderCentersTheThumbAtRestAndWhileDragging() =
+        verifySeekSliderAlignment(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+
+    private fun verifySeekSliderAlignment(requestedOrientation: Int, configurationOrientation: Int) {
+        lateinit var player: ClockPlayer
+        val seeks = mutableListOf<Long>()
+        compose.runOnUiThread {
+            compose.activity.requestedOrientation = requestedOrientation
+            player = ClockPlayer(100_000).apply { setPosition(25_000) }
+        }
+        try {
+            awaitOrientation(configurationOrientation)
+            showControls(player, onSeekTo = { seeks += it; player.setPosition(it) })
+            val slider = compose.onNodeWithTag("player-seek-slider").assertIsEnabled()
+            val bounds = slider.readVerificationNode(compose) { it.boundsInRoot }
+            val density = compose.activity.resources.displayMetrics.density
+            val (restCenter, restDiameter) = slider.assertThumbCentered("静止")
+            assertEquals("保留滑条在控制行内的布局高度", 32f * density, bounds.height, 1f)
+            // 靠近滑条上沿点按，验证轨道细线以外仍可定位。
+            slider.performVerificationTouchInput(compose) { click(Offset(width * .35f, height * .1f)) }
+            compose.runOnIdle { assertTrue("点按应提交对应位置：$seeks", seeks.single() in 31_000L..39_000L); seeks.clear() }
+            slider.performVerificationTouchInput(compose) {
+                down(Offset(width * .35f, centerY))
+                moveTo(Offset(width * .55f, centerY))
+                moveTo(Offset(width * .70f, centerY))
+            }
+            val (dragCenter, dragDiameter) = slider.assertThumbCentered("拖动")
+            assertEquals("拖动时中心线固定", restCenter, dragCenter, 1f)
+            assertEquals("圆点拖动时应从 12dp 放大到 16dp", 4f * density, (dragDiameter - restDiameter).toFloat(), 2f)
+            assertEquals(bounds, slider.readVerificationNode(compose) { it.boundsInRoot })
+            compose.runOnIdle { assertTrue("松手前应保持暂停位置", seeks.isEmpty() && player.currentPosition in 31_000L..39_000L) }
+            slider.performVerificationTouchInput(compose) { up() }
+            compose.runOnIdle { assertTrue("松手应只提交一次拖动位置：$seeks", seeks.single() in 66_000L..74_000L) }
+            slider.assertThumbCentered("松手")
+        } finally {
+            compose.runOnUiThread { player.release(); compose.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+        }
+    }
+
+    private fun SemanticsNodeInteraction.assertThumbCentered(stage: String): Pair<Float, Int> {
+        val image = captureToImage().asAndroidBitmap()
+        try {
+            val width = image.width
+            val pixels = IntArray(width * image.height)
+            image.getPixels(pixels, 0, width, 0, 0, width, image.height)
+            val trackX = width * 9 / 10
+            val rows = 0 until image.height
+            val thumb = rows.filter { y ->
+                (0 until width).any { x -> (pixels[y * width + x] and 0x00ffffff) == 0x00ffffff }
+            }
+            val track = rows.filter { y -> android.graphics.Color.green(pixels[y * width + trackX]) > 16 }
+            assertTrue("$stage 应能从实机截图识别圆点与轨道", thumb.isNotEmpty() && track.isNotEmpty())
+            val trackCenter = (track.first() + track.last()) / 2f
+            val thumbCenter = (thumb.first() + thumb.last()) / 2f
+            val diameter = thumb.last() - thumb.first() + 1
+            Log.i("PathfinSliderAlignment", "$stage thumbCenter=$thumbCenter trackCenter=$trackCenter diameter=$diameter px")
+            assertEquals("$stage 圆点中心与轨道中心应重合", trackCenter, thumbCenter, 1f)
+            return trackCenter to diameter
+        } finally { image.recycle() }
     }
 
     @Test fun portraitMoreKeepsUniqueQualityAndScreenshotAndUsesTheEpisodeTitleShortcut() {
@@ -554,7 +619,8 @@ class PlayerControlsLayoutTest {
         ended: Boolean = false, onSpeed: (Float) -> Unit = {}, burnedIn: Boolean = false, live: Boolean = false,
         onAddSubtitle: (() -> Unit)? = null, onManageSubtitles: (() -> Unit)? = null,
         onSetSleepTimer: (Int?) -> Unit = {},
-        clock: String? = null, battery: String? = null, titleLogo: coil3.request.ImageRequest? = null) {
+        clock: String? = null, battery: String? = null, titleLogo: coil3.request.ImageRequest? = null,
+        onSeekTo: (Long) -> Unit = {}) {
         val loader = coil3.ImageLoader.Builder(compose.activity).diskCache(null).build()
         compose.setContent {
             val density = LocalDensity.current
@@ -565,7 +631,7 @@ class PlayerControlsLayoutTest {
                         PlayerControlsOverlay(player, PlaybackUiState(title = "Synthetic fixture", ended = ended, subtitlesBurnedIn = burnedIn, live = live), false, PlayerResizeMode.FIT,
                             seekSeconds = 10, clock = clock, battery = battery, onBack = {}, onInteraction = {},
                             onKeepVisibleChange = {}, onTogglePlay = {}, onSeekBack = {}, onSeekForward = {},
-                            onSeekTo = {}, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
+                            onSeekTo = onSeekTo, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
                             onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onTrackSelection = { _, _, _, _ -> },
                             onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
                             onSetSleepTimer = onSetSleepTimer, titleLogo = titleLogo)
@@ -586,8 +652,9 @@ class PlayerControlsLayoutTest {
     private class ClockPlayer(private val durationMs: Long) : SimpleBasePlayer(Looper.getMainLooper()) {
         private var position = 2_000L
         override fun getState(): State = State.Builder()
-            .setAvailableCommands(Player.Commands.Builder().addAll(Player.COMMAND_GET_TIMELINE, Player.COMMAND_GET_CURRENT_MEDIA_ITEM, Player.COMMAND_GET_TRACKS).build())
-            .setPlaylist(listOf(MediaItemData.Builder("synthetic-fixture").setDurationUs(durationMs * 1_000).build()))
+            .setAvailableCommands(Player.Commands.Builder().addAll(Player.COMMAND_GET_TIMELINE, Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
+                Player.COMMAND_GET_TRACKS, Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM).build())
+            .setPlaylist(listOf(MediaItemData.Builder("synthetic-fixture").setDurationUs(durationMs * 1_000).setIsSeekable(true).build()))
             .setCurrentMediaItemIndex(0).setPlaybackState(Player.STATE_READY)
             .setPlayWhenReady(false, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
             .setContentPositionMs(position).build()
