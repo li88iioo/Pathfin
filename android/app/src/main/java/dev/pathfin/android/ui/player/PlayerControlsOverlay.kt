@@ -304,7 +304,7 @@ internal fun PlayerControlsOverlay(
             }
         }
         panel?.let { selected ->
-            PlayerControlPopup(selected, player, snapshot, resizeMode, state.sourceLabel,
+            PlayerControlPopup(selected, player, snapshot, resizeMode, state.sourceLabel, state.videoDecoder,
                 onDismiss = { panel = null; onInteraction() },
                 onSpeedChange = onSpeedChange, onResizeModeChange = onResizeModeChange,
                 onPanelChange = { panel = it }, onShowQuality = onShowQuality,

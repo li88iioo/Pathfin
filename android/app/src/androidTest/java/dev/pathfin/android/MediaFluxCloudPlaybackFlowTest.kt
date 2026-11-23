@@ -1,8 +1,10 @@
 package dev.pathfin.android
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.common.C
@@ -12,13 +14,18 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.PendingPlaybackCancellationTest.Fixture
 import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.*
+import dev.pathfin.android.i18n.tr
 import dev.pathfin.android.playback.PlaybackViewModel
+import dev.pathfin.android.playback.VideoDecoderKind
 import dev.pathfin.android.ui.AppViewModel
 import java.io.IOException
 import java.net.InetAddress
@@ -106,6 +113,145 @@ class MediaFluxCloudPlaybackFlowTest {
                     "dropped=${counters.droppedBufferCount}")
             }
         }
+    }
+
+    @Test fun restoringTheVideoTrackReportsItsActualDecoderAndKeepsTheJellyfinSource() {
+        withApp { _, app, playback ->
+            start(app, playback)
+            val owner = main { checkNotNull(playback.player).also { it.pause() } }
+            await { playback.state.value.videoDecoder != null }
+            val source = main {
+                assertTrue(checkNotNull(playback.currentRequest).stream.trustedServer)
+                playback.selectTrack(owner, C.TRACK_TYPE_VIDEO, null, disabled = true)
+                playback.state.value.sourceLabel
+            }
+            await { playback.state.value.videoDecoder == null }
+            var decoderName: String? = null
+            main {
+                owner.addAnalyticsListener(object : AnalyticsListener {
+                    override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, name: String,
+                        initializedTimestampMs: Long, initializationDurationMs: Long) { decoderName = name }
+                })
+                playback.selectTrack(owner, C.TRACK_TYPE_VIDEO, null)
+            }
+            await { decoderName != null && playback.state.value.videoDecoder != null }
+            main {
+                val codec = MediaCodecUtil.getDecoderInfos(MimeTypes.VIDEO_H264, false, false).find { it.name == decoderName }
+                val expected = when {
+                    decoderName == "pathfin.ffmpeg.h264.gpu-sdr" -> VideoDecoderKind.FFMPEG
+                    codec == null || codec.hardwareAccelerated == codec.softwareOnly -> VideoDecoderKind.UNKNOWN
+                    codec.hardwareAccelerated -> VideoDecoderKind.HARDWARE
+                    else -> VideoDecoderKind.SYSTEM_SOFTWARE
+                }
+                assertEquals(expected, playback.state.value.videoDecoder)
+                assertEquals(source, playback.state.value.sourceLabel)
+                println("Pathfin video restored: $decoderName ($expected), source=$source")
+            }
+        }
+    }
+
+    @Test fun smoothVvcOriginalShowsTheActualSoftwareDecoderAlongsideTheCloudSource() {
+        withVvcOriginal(height = 1080) { fixture, playback, player ->
+            val (startMs, droppedBefore) = main {
+                playback.setPlaybackSpeed(1.75f)
+                player.currentPosition to droppedFrames(player)
+            }
+            await {
+                assertFalse("流畅的原画倍速播放不应弹出提示", playback.state.value.showSpeedHint)
+                player.currentPosition >= startMs + 6_000
+            }
+            val dropped = main {
+                player.pause()
+                droppedFrames(player) - droppedBefore
+            }
+            assertTrue("1080p 合成样片应在少量掉帧内完成流畅播放验证，实测 $dropped", dropped <= 2)
+            assertNoJellyfinFallback(fixture)
+
+            if (compose.onAllNodes(hasTestTag("player-more")).fetchSemanticsNodes().isEmpty()) {
+                compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { click(Offset(width * .5f, height * .3f)) }
+            }
+            compose.onNodeWithTag("player-more").performVerificationClick(compose)
+            compose.onNodeWithTag("player-menu-information").performVerificationClick(compose)
+            compose.onNodeWithTag("player-popup-info").assertVerificationDisplayed(compose)
+            compose.onNodeWithText(tr("云盘直连")).assertVerificationDisplayed(compose)
+            compose.onNodeWithText("H.266 / VVC").assertVerificationDisplayed(compose)
+            compose.onNodeWithText(tr("解码方式")).assertVerificationDisplayed(compose)
+            compose.onNodeWithText(tr("FFmpeg 软解")).assertVerificationDisplayed(compose)
+        }
+    }
+
+    @Test fun overloadedVvcShowsAOneTimeSpeedHintOnlyAfterTemporarySpeedEnds() {
+        withVvcOriginal(height = 2160) { fixture, playback, player ->
+            val (temporaryStart, temporaryDroppedBefore) = main {
+                assertTrue("过载和提示消失验证需要较长的 4K 样片", player.duration >= 85_000)
+                playback.beginTemporarySpeed()
+                assertEquals(4f, checkNotNull(playback.state.value.temporarySpeed), 0f)
+                player.currentPosition to droppedFrames(player)
+            }
+            await {
+                assertFalse("长按临时加速遇到掉帧也不应弹出提示", playback.state.value.showSpeedHint)
+                player.currentPosition >= temporaryStart + 18_000
+            }
+            val temporaryDropped = main {
+                playback.endTemporarySpeed()
+                assertEquals(1f, player.playbackParameters.speed, 0f)
+                droppedFrames(player) - temporaryDroppedBefore
+            }
+            assertTrue("临时加速阶段必须确实发生掉帧，实测 $temporaryDropped", temporaryDropped >= 10)
+
+            val normalDroppedBefore = main {
+                playback.setPlaybackSpeed(4f)
+                droppedFrames(player)
+            }
+            await { playback.state.value.showSpeedHint }
+            val visibleSince = SystemClock.elapsedRealtime()
+            compose.onNodeWithTag("player-speed-hint").assertVerificationDisplayed(compose)
+            main { assertEquals("提示不应自动调整倍速", 4f, player.playbackParameters.speed, 0f) }
+            compose.waitUntil(8_000) { main { !playback.state.value.showSpeedHint } }
+            assertTrue("提示应留出阅读时间", SystemClock.elapsedRealtime() - visibleSince >= 2_000)
+            compose.onNodeWithTag("player-speed-hint").assertDoesNotExist()
+
+            val (dismissedAt, droppedAtDismissal) = main { player.currentPosition to droppedFrames(player) }
+            await {
+                assertFalse("同一次播放不应重复提示", playback.state.value.showSpeedHint)
+                player.currentPosition >= dismissedAt + 14_000
+            }
+            main {
+                assertEquals(4f, player.playbackParameters.speed, 0f)
+                val totalDropped = droppedFrames(player)
+                assertTrue("提示消失后应保持过载条件", totalDropped - droppedAtDismissal >= 10)
+                Log.i("PathfinVvcHintTest", "temporaryDropped=$temporaryDropped sustainedDropped=${totalDropped - normalDroppedBefore}")
+            }
+            assertNoJellyfinFallback(fixture)
+        }
+    }
+
+    private fun withVvcOriginal(height: Int, block: (Fixture, PlaybackViewModel, ExoPlayer) -> Unit) {
+        val endpoint = InstrumentationRegistry.getArguments().getString("vvc${height}Endpoint")
+        assumeTrue("需要指定合成 VVC 原画验证桥", !endpoint.isNullOrBlank())
+        val sample = get(requireNotNull(endpoint) + "/bootstrap")
+        val video = sample.getJSONObject("video")
+        assertEquals("vvc", video.getString("Codec"))
+        assertEquals(height, video.getInt("Height"))
+        withApp(sample.getString("url"), sourceVideo = video) { fixture, app, playback ->
+            main { app.setPreferences(app.state.value.preferences.copy(strmDefaultQuality = PlaybackQuality.ORIGINAL,
+                preferHardwareVideoDecoder = false, playbackSpeed = 1f, longPressSpeedEnabled = true, longPressSpeed = 4f)) }
+            start(app, playback)
+            val player = main {
+                val current = checkNotNull(playback.currentRequest)
+                assertEquals("original", current.cloudPlayback?.selectedId)
+                assertEquals(PlayMethod.DIRECT_PLAY, current.stream.method)
+                assertFalse(current.stream.trustedServer)
+                checkNotNull(playback.player).also { assertEquals(MimeTypes.VIDEO_H266, it.videoFormat?.sampleMimeType) }
+            }
+            await { playback.state.value.videoDecoder == VideoDecoderKind.FFMPEG }
+            block(fixture, playback, player)
+        }
+    }
+
+    private fun droppedFrames(player: ExoPlayer): Int = checkNotNull(player.videoDecoderCounters).run {
+        ensureUpdated()
+        droppedBufferCount
     }
 
     private fun verifyLiveCloudFlow(reverseProxyPayload: Boolean) {

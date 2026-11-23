@@ -388,7 +388,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
             }
-            val exoPlayer = createExoPlayer(current, dataSource, assSubtitleUris).apply {
+            val selector = PreferredMediaCodecSelector(tuning.exoAudioDecoder, tuning.preferHardwareVideoDecoder)
+            val exoPlayer = createExoPlayer(current, dataSource, assSubtitleUris, selector).apply {
                 setHandleAudioBecomingNoisy(true)
             }
             player = exoPlayer
@@ -406,6 +407,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             val listener = listenerFor(current, exoPlayer)
             playerListener = listener
             exoPlayer.addListener(listener)
+            current.videoMonitor = VideoDecoderMonitor(exoPlayer, selector, mutableState, viewModelScope,
+                alreadyHinted = retainedEntry?.videoMonitor?.hinted == true).also(exoPlayer::addAnalyticsListener)
             exoPlayer.volume = current.pcm.gainPercent.coerceIn(0, 100) / 100f
             val mediaItem = MediaItem.Builder().setUri(request.stream.uri).apply {
                 setMediaMetadata(MediaMetadata.Builder().setTitle(request.item.name)
@@ -475,10 +478,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun createExoPlayer(current: ActivePlayback, dataSource: DataSource.Factory, assSubtitleUris: Set<String>): ExoPlayer {
+    private fun createExoPlayer(current: ActivePlayback, dataSource: DataSource.Factory, assSubtitleUris: Set<String>,
+        codecSelector: PreferredMediaCodecSelector): ExoPlayer {
         val tuning = current.tuning
         val application = getApplication<Application>()
-        val codecSelector = PreferredMediaCodecSelector(tuning.exoAudioDecoder, tuning.preferHardwareVideoDecoder)
         val recoveringVideo = C.TRACK_TYPE_VIDEO in current.decoderFallbackTypes
         val allowBaseLayer = current.request.allowsDolbyVisionProfile7BaseLayer()
         fun supportsDolbyVision(format: Format): Boolean = !allowBaseLayer || !recoveringVideo && runCatching {
@@ -1042,8 +1045,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         val speed = temporaryPlaybackSpeed(checkNotNull(speedBeforeLongPress), current.tuning.longPressSpeed) ?: run {
             speedBeforeLongPress = null; temporarySpeedPlayer = null; return
         }
-        exoPlayer.setPlaybackSpeed(speed)
         mutableState.update { it.copy(temporarySpeed = speed) }
+        current.videoMonitor?.resetSampling()
+        exoPlayer.setPlaybackSpeed(speed)
     }
 
     fun updateTemporarySpeedBySlide(fraction: Float) {
@@ -1063,8 +1067,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         val owner = temporarySpeedPlayer
         speedBeforeLongPress = null
         temporarySpeedPlayer = null
-        if (speed != null && owner != null && owner === player) owner.setPlaybackSpeed(speed)
-        if (mutableState.value.temporarySpeed != null) mutableState.update { it.copy(temporarySpeed = null) }
+        if (speed != null && owner != null && owner === player) {
+            owner.setPlaybackSpeed(speed)
+            mutableState.update { it.copy(temporarySpeed = null) }
+            active?.videoMonitor?.resetSampling()
+        }
     }
 
     fun stop() {
@@ -1181,6 +1188,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     reports.offer(ReportMessage.ReleaseTranscode(current.request))
             }
         }
+        current?.videoMonitor?.close()
         active = null
         LocalSubtitleImporter.delete(current?.localSubtitles.orEmpty().map { it.file }.filterNot { it in retainedSubtitleFiles })
         current?.let { owner ->
@@ -1247,6 +1255,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         var assExtension: ExoAssExtension? = null,
         var assGeneration: Long = 0,
         var assFallbackScheduled: Boolean = false,
+        var videoMonitor: VideoDecoderMonitor? = null,
         var decoderFallbackScheduled: Boolean = false,
         var decoderFallbackTypes: Set<Int> = emptySet(),
         var manualTracks: ManualTrackSelections = ManualTrackSelections(),

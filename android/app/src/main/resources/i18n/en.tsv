@@ -44,6 +44,11 @@ $1[已隐藏]	$1[hidden]
 %1$s，但重新读取失败；可重试加载，请勿重复提交。	%1$s, but reloading failed. You can retry loading; do not submit again.
 %1$s：%2$s	%1$s: %2$s
 +%1$s 秒	+%1$s s
+FFmpeg 软解	FFmpeg software decoding
+当前倍速下画面掉帧，建议调至 1×	Video is dropping frames at this speed. Try 1×.
+硬解	Hardware decoding
+系统软解	System software decoding
+解码方式	Decoding method
 音频正在直通，请在输出设备上调节音量	Audio passthrough is active. Adjust the volume on the output device.
 100% 为原音量，之后每 10% 增强 1.8 dB，峰值受限	100% is the original volume. Each 10% above it adds 1.8 dB, with peak limiting.
 16–65536 MB，每个账号独立计算	16–65536 MB, counted separately for each account

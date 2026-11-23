@@ -22,6 +22,8 @@ data class PlaybackUiState(
     val temporarySpeed: Float? = null,
     val controlsLocked: Boolean = false,
     val sourceLabel: String = "",
+    val videoDecoder: VideoDecoderKind? = null,
+    val showSpeedHint: Boolean = false,
     val showBufferSpeed: Boolean = false,
     val transferBytesPerSecond: Long? = null,
     val audioPassthrough: Boolean = false,

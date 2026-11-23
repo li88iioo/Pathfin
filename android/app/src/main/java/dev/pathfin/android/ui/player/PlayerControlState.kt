@@ -152,6 +152,7 @@ internal fun codecLabel(mime: String): String = when (mime) {
     "audio/raw" -> "PCM"
     "video/avc" -> "H.264"
     "video/hevc" -> "HEVC"
+    "video/vvc" -> "H.266 / VVC"
     "video/av01" -> "AV1"
     else -> mime.substringAfter('/').uppercase(Locale.ROOT)
 }

@@ -38,6 +38,7 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import dev.pathfin.android.playback.SubtitlePresentation
+import dev.pathfin.android.playback.VideoDecoderKind
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -65,6 +66,7 @@ internal fun PlayerControlPopup(
     snapshot: PlayerControlSnapshot,
     resizeMode: PlayerResizeMode,
     sourceLabel: String,
+    videoDecoder: VideoDecoderKind?,
     onDismiss: () -> Unit,
     onSpeedChange: (Float) -> Unit,
     onResizeModeChange: (PlayerResizeMode) -> Unit,
@@ -97,7 +99,7 @@ internal fun PlayerControlPopup(
     val info = panel == PlayerControlPanel.INFO
     PlayerSidePanel(title, onDismiss, closeLabel = if (info) tr("关闭媒体信息") else tr("关闭%1\$s", title),
         closeTag = if (info) "player-info-close" else "playback-panel-close") {
-        if (info) PlayerTechnicalInformation(snapshot, sourceLabel)
+        if (info) PlayerTechnicalInformation(snapshot, sourceLabel, videoDecoder)
         else if (panel == PlayerControlPanel.SPEED) PlayerSpeedGrid(snapshot.speed) { onSpeedChange(it); onDismiss() }
         else if (panel == PlayerControlPanel.MORE) PlayerSettingsPanel(buildList {
             if (showSpeed) add(MoreEntry(PathfinIcons.Speed, tr("播放速度"), "player-menu-speed") { onPanelChange(PlayerControlPanel.SPEED) })
@@ -274,7 +276,7 @@ private fun PlayerSpeedGrid(current: Float, onChoose: (Float) -> Unit) {
 /** Runtime fields only; unavailable codec/container metadata is omitted rather than invented. */
 @UnstableApi
 @Composable
-private fun PlayerTechnicalInformation(snapshot: PlayerControlSnapshot, source: String) {
+private fun PlayerTechnicalInformation(snapshot: PlayerControlSnapshot, source: String, decoder: VideoDecoderKind?) {
     Box(Modifier.fillMaxWidth().testTag("player-popup-info")) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 12.dp, bottom = 16.dp)) {
             Text(source.ifBlank { tr("正在准备") }, fontSize = 12.5.sp, lineHeight = 18.sp, color = PlayerSecondary)
@@ -297,6 +299,13 @@ private fun PlayerTechnicalInformation(snapshot: PlayerControlSnapshot, source: 
                     snapshot.videoFormat?.let { video ->
                         TechnicalHeading(tr("视频"), top = 6.dp)
                         video.sampleMimeType?.let { TechnicalValue(tr("编解码器"), codecLabel(it)) }
+                        TechnicalValue(tr("解码方式"), when (decoder) {
+                            VideoDecoderKind.HARDWARE -> tr("硬解")
+                            VideoDecoderKind.SYSTEM_SOFTWARE -> tr("系统软解")
+                            VideoDecoderKind.FFMPEG -> tr("FFmpeg 软解")
+                            VideoDecoderKind.UNKNOWN -> tr("未知")
+                            null -> "—"
+                        })
                         val range = when {
                             video.sampleMimeType == "video/dolby-vision" -> "Dolby Vision"
                             video.colorInfo?.colorTransfer == C.COLOR_TRANSFER_ST2084 -> "PQ"

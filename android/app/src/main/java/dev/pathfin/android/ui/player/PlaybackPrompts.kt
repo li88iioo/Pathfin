@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.shape.CircleShape
@@ -83,7 +85,7 @@ internal fun PlaybackPrompts(
     }
     val error = state.mediaSegmentsError?.takeIf { showStatus && state.introPrompt == null }
     val decodeWarning = state.decodeWarning?.takeUnless { decodeWarningDismissed }
-    if (state.introPrompt == null && nextSeconds == null && error == null && decodeWarning == null) return
+    if (state.introPrompt == null && nextSeconds == null && error == null && decodeWarning == null && !state.showSpeedHint) return
     BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets)) {
         // 固定预留底部传输控制区；加载/进度变化不会推动按钮。
         val landscape = maxWidth >= 600.dp && maxHeight < 500.dp
@@ -114,12 +116,12 @@ internal fun PlaybackPrompts(
             }
             decodeWarning?.let { message ->
                 PromptPill("player-decode-warning", "player-decode-warning-dismiss", tr("关闭解码提示"), { decodeWarningDismissed = true }) {
-                    Row(Modifier.clip(RoundedCornerShape(20.dp)).background(PlayerSurface)
-                        .border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(20.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
-                        Text(message, Modifier.widthIn(max = 280.dp), color = PlayerText, fontSize = 13.sp, maxLines = 2,
-                            overflow = TextOverflow.Ellipsis)
-                    }
+                    PromptMessage(message)
                 }
+            }
+            if (state.showSpeedHint && decodeWarning == null) {
+                PromptMessage(tr("当前倍速下画面掉帧，建议调至 1×"), Modifier.testTag("player-speed-hint")
+                    .semantics { liveRegion = LiveRegionMode.Polite })
             }
             error?.let { message ->
                 PromptPill("player-segments-error", "player-segments-dismiss", tr("关闭片头错误提示"), onDismissSegmentsError) {
@@ -131,6 +133,16 @@ internal fun PlaybackPrompts(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PromptMessage(message: String, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(20.dp)
+    Box(modifier.clip(shape).background(PlayerSurface).border(1.dp, Color.White.copy(alpha = .14f), shape)
+        .padding(horizontal = 18.dp, vertical = 10.dp)) {
+        Text(message, Modifier.widthIn(max = 280.dp), color = PlayerText, fontSize = 13.sp, maxLines = 2,
+            overflow = TextOverflow.Ellipsis)
     }
 }
 
