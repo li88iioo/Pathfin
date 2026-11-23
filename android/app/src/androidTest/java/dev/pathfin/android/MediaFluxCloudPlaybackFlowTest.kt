@@ -83,7 +83,13 @@ class MediaFluxCloudPlaybackFlowTest {
         withApp(sample.getString("url"), sourceVideo = video) { _, app, playback ->
             preferOriginal(app, hardwareVideo = InstrumentationRegistry.getArguments().getString("hardwareVideo") != "false")
             start(app, playback)
-            await { playback.player!!.currentPosition >= 8_000 }
+            val speed = InstrumentationRegistry.getArguments().getString("originalSpeed")?.toFloat() ?: 1f
+            val startPosition = main {
+                val player = checkNotNull(playback.player)
+                player.setPlaybackSpeed(speed)
+                player.currentPosition
+            }
+            await { playback.player!!.currentPosition >= startPosition + 7_500 }
             main {
                 val player = checkNotNull(playback.player)
                 val request = checkNotNull(playback.currentRequest)
@@ -94,7 +100,8 @@ class MediaFluxCloudPlaybackFlowTest {
                 val counters = checkNotNull(player.videoDecoderCounters)
                 counters.ensureUpdated()
                 assertTrue("必须在真实 Surface 连续呈现视频帧", counters.renderedOutputBufferCount > 1)
-                println("Pathfin original: ${player.videoSize.width}x${player.videoSize.height} " +
+                assertEquals(speed, player.playbackParameters.speed, 0f)
+                println("Pathfin original ${speed}x: ${player.videoSize.width}x${player.videoSize.height} " +
                     "positionMs=${player.currentPosition} rendered=${counters.renderedOutputBufferCount} " +
                     "dropped=${counters.droppedBufferCount}")
             }

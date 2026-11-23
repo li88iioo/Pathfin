@@ -198,6 +198,45 @@ class JellyfinDeviceProfileTest {
         }
     }
 
+    @Test fun vvcDirectPlayIsLimitedToMp4FamilyOnTheLocalPlayer() {
+        val vvcLimit = PlaybackCapabilities.VideoLimit(1920, 1080, 10, maxFrameRate = 30.0)
+        val api = JellyfinApi(capabilities = {
+            PlaybackCapabilities.Baseline.copy(video = PlaybackCapabilities.Baseline.video + ("vvc" to vvcLimit))
+        })
+        val local = api.deviceProfile()
+        fun vvcRows(profile: JSONObject) = profile.getJSONArray("DirectPlayProfiles").objects().filter {
+            it.getString("Type") == "Video" && "vvc" in it.getString("VideoCodec").split(',')
+        }
+        val vvc = vvcRows(local).single()
+        assertEquals(setOf("mp4", "m4v", "mov"), vvc.getString("Container").split(',').toSet())
+        assertTrue(vvcRows(api.deviceProfile(usesLocalPlayer = false)).isEmpty())
+        val limits = local.getJSONArray("CodecProfiles").objects().single { it.getString("Codec") == "vvc" }
+            .getJSONArray("Conditions").objects().associate { it.getString("Property") to it.getString("Value") }
+        assertEquals(mapOf("Width" to "1920", "Height" to "1080", "VideoBitDepth" to "10", "VideoFramerate" to "30.0"), limits)
+        val transcode = local.getJSONArray("TranscodingProfiles").objects().single { it.getString("Type") == "Video" }
+        assertEquals("h264", transcode.getString("VideoCodec"))
+    }
+
+    @Test fun vvcMatroskaNegotiatesVideoTranscodingWithoutDisablingAnExplicitOriginalProbe() {
+        val requests = mutableListOf<JSONObject>()
+        withServer({ exchange ->
+            requests += JSONObject(exchange.requestBody.bufferedReader().readText())
+            exchange.json("""{"MediaSources":[{"Id":"source","Protocol":"Http","Path":"https://cdn.example/video.mkv",
+                "Container":"mkv","MediaStreams":[{"Type":"Video","Codec":"vvc"}],
+                "TranscodingUrl":"/Videos/video/master.m3u8"}],"PlaySessionId":"play"}""")
+        }) { session ->
+            val api = JellyfinApi(videoSupport = { true })
+            val original = runBlocking { api.playbackInfo(session, "video", videoPreflight = VideoPreflightPolicy.TRY_ORIGINAL_SOURCE) }
+            assertEquals(PlaybackDelivery.AUTOMATIC, original.delivery)
+            assertEquals(1, requests.size)
+            val server = runBlocking { api.playbackInfo(session, "video") }
+            assertEquals(PlaybackDelivery.TRANSCODE, server.delivery)
+            assertEquals(3, requests.size)
+            assertFalse(requests.last().getBoolean("AllowVideoStreamCopy"))
+            assertFalse(requests.last().getBoolean("EnableDirectPlay"))
+        }
+    }
+
     @Test fun relayKeepsTheExistingProgressiveM2tsPathAvailableForTheReceiver() {
         val requests = AtomicInteger()
         val checks = AtomicInteger()

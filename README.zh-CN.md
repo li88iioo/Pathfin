@@ -33,7 +33,7 @@
 
 原画能力判断保留 Jellyfin 的完整视频轨信息，包括 Dolby Vision Profile、位深和动态范围；云端压缩档按自身格式判断。默认原画已知无法解码时，优先选择最高兼容云档，不改写默认画质偏好；没有兼容云档时明确提示本机不支持，不发起 Jellyfin 转码。手动切换画质失败仍优先恢复原来可播放的资源，网络错误只对原 STRM 地址续签一次。
 
-视频优先使用系统 MediaCodec。ARM64 软件补解支持 H.264（含 Hi10P）、HEVC、MPEG-2、MPEG-4 Part 2（含 Xvid／DivX）、微软 MPEG-4 v2／v3、H.263，以及 WVC1 格式 MKV 中的 VC-1 Advanced Profile。能否直放还取决于封装。通过服务器播放蓝光 M2TS 或 ASF／WMV 时，Pathfin 会向 Jellyfin 请求兼容流。系统解码失败时，音频和视频可各自在同一片源上回退一次，保留进度、倍速、暂停状态和轨道选择。
+视频优先使用系统 MediaCodec。ARM64 软件补解支持 H.264（含 Hi10P）、HEVC、MPEG-2、MPEG-4 Part 2（含 Xvid／DivX）、微软 MPEG-4 v2／v3、H.263，以及 WVC1 格式 MKV 中的 VC-1 Advanced Profile。ARM64 也可软解 MP4、M4V 或 MOV 中的 VVC（H.266）视频；MKV 或 MPEG-TS 中的 VVC 可通过 Jellyfin 转码播放。通过服务器播放蓝光 M2TS 或 ASF／WMV 时，Pathfin 会向 Jellyfin 请求兼容流。系统解码失败时，音频和视频可各自在同一片源上回退一次，保留进度、倍速、暂停状态和轨道选择。
 
 对于渐进式杜比视界 P7，设备无法处理杜比视频轨时，可播放兼容的 HDR10 HEVC 基础层。软解兼容的 P7 FEL 时，画面来自 HDR10 基础层。P4 和 P8 可尝试 HEVC，P9 可尝试 H.264，基础层色彩兼容的 P10 可尝试 AV1。P5 软解使用杜比元数据处理色彩。软解通过 GPU 映射为 SDR，支持单边最多 4096 像素、总像素最多 4096×2304，实时播放能力取决于设备、编码复杂度和帧率。
 

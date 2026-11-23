@@ -71,6 +71,7 @@
       "mp3",
       "h264",
       "hevc",
+      "vvc",
       "mpeg2video",
       "mpeg4",
       "msmpeg4v2",
@@ -125,6 +126,7 @@
     "videoDecoders": [
       "h264",
       "hevc",
+      "vvc",
       "mpeg2video",
       "mpeg4",
       "msmpeg4v2",
@@ -173,7 +175,7 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java",
-      "sha256": "0bd5fb86046911d52905a00459a14ee2cd5dc7f3c991bfddad4fe87d9ef302eb"
+      "sha256": "f8e7bbf73a525335764d5e70ceaf83c12a4bdcb49753d94092b4f6ccc6bf76e4"
     },
     {
       "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java",
@@ -181,7 +183,7 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java",
-      "sha256": "611b90ff929b77dd5af405350633a1eeb36a481a19a1937adcb44d6496637fbb"
+      "sha256": "ac4e7fb4a896be47403f0637623133d1290657d89e7a7a0c9ab0e9f1d6f5d620"
     },
     {
       "path": "video-consumer-rules.pro",

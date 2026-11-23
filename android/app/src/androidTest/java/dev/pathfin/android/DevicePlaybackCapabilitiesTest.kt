@@ -51,19 +51,20 @@ class DevicePlaybackCapabilitiesTest {
 
     @Test fun eachDeclaredRectangleIsActuallySupportedByOneRealDecoder() {
         val mimes = mapOf("h264" to "video/avc", "hevc" to "video/hevc", "vp9" to "video/x-vnd.on2.vp9",
-            "av1" to "video/av01", "vp8" to "video/x-vnd.on2.vp8", "mpeg2video" to "video/mpeg2")
+            "av1" to "video/av01", "vp8" to "video/x-vnd.on2.vp8", "mpeg2video" to "video/mpeg2", "vvc" to MimeTypes.VIDEO_H266)
         val decoders = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filterNot { it.isEncoder }
         for ((codec, limit) in DevicePlaybackCapabilities.current.video) {
             val mime = mimes[codec]
-            val supported = if (mime == null) {
+            val softwareSupported = if (mime == null || codec == "vvc") {
                 NativeVideoRenderer.supportsSource(codec, null, limit.maxWidth, limit.maxHeight, limit.maxBitDepth)
-            } else decoders.any { decoder ->
+            } else false
+            val hardwareSupported = mime != null && decoders.any { decoder ->
                 runCatching {
                     val type = decoder.supportedTypes.firstOrNull { it.equals(mime, true) } ?: return@runCatching false
                     decoder.getCapabilitiesForType(type).videoCapabilities?.isSizeSupported(limit.maxWidth, limit.maxHeight) == true
                 }.getOrDefault(false)
             }
-            assertTrue("$codec 声明的 ${limit.maxWidth}×${limit.maxHeight} 必须来自同一真实解码器", supported)
+            assertTrue("$codec 声明的 ${limit.maxWidth}×${limit.maxHeight} 必须来自同一真实解码器", softwareSupported || hardwareSupported)
         }
     }
 
@@ -77,6 +78,9 @@ class DevicePlaybackCapabilitiesTest {
         assertEquals("Hi10P 使用已经接入的本地补解", true,
             DevicePlaybackCapabilities.supportsVideo(MediaStream(type = "Video", codec = "h264",
                 profile = "High 10", width = 1920, height = 1080, bitDepth = 10)))
+        assertEquals("显式 VVC 原画按实际解码器能力预检", true,
+            DevicePlaybackCapabilities.supportsVideo(MediaStream(type = "Video", codec = "vvc",
+                profile = "Main 10", width = 3840, height = 2160, bitDepth = 10)))
         assertEquals("DV5 能力包含本地解码及 GPU 色彩处理", true,
             DevicePlaybackCapabilities.supportsVideo(MediaStream(type = "Video", codec = "hevc",
                 profile = "Main 10", width = 1920, height = 1080, bitDepth = 10, dvProfile = 5, videoRangeType = "DOVI")))

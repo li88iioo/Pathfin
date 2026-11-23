@@ -30,6 +30,7 @@ internal object DevicePlaybackCapabilities {
     private val videoTypes = mapOf(
         MimeTypes.VIDEO_H264 to "h264", MimeTypes.VIDEO_H265 to "hevc", MimeTypes.VIDEO_VP9 to "vp9",
         MimeTypes.VIDEO_AV1 to "av1", MimeTypes.VIDEO_VP8 to "vp8", MimeTypes.VIDEO_MPEG2 to "mpeg2video",
+        MimeTypes.VIDEO_H266 to "vvc",
     )
     private val audioTypes = mapOf(
         MimeTypes.AUDIO_AAC to "aac", MimeTypes.AUDIO_MPEG to "mp3", MimeTypes.AUDIO_MPEG_L2 to "mp2",
@@ -183,6 +184,9 @@ internal object DevicePlaybackCapabilities {
             if (NativeVideoRenderer.supportsSource(codec, null, legacyLimit.maxWidth, legacyLimit.maxHeight, legacyLimit.maxBitDepth))
                 video[codec] = legacyLimit
         }
+        // 服务器自动协商采用保守实时性能范围。显式原画仍由本机按源参数和帧格式决定。
+        if (NativeVideoRenderer.supportsSource("vvc", null, 1920, 1080, 10))
+            video.putIfAbsent("vvc", PlaybackCapabilities.VideoLimit(1920, 1080, 10, maxFrameRate = 30.0))
         val ffmpeg = runCatching { FfmpegLibrary.isAvailable() }.getOrDefault(false)
         val audio = audioTypes.filter { (mime, _) ->
             byType[mime].orEmpty().isNotEmpty() || ffmpeg && runCatching { FfmpegLibrary.supportsFormat(mime) }.getOrDefault(false)
@@ -253,11 +257,14 @@ internal object DevicePlaybackCapabilities {
             wanted.any { it.equals(value, true) } && (stream.bitDepth == null || profileBitDepth(codec, profile) >= stream.bitDepth)
         }.keys
         if (!hdrProfiles || !isHdr(stream)) return matches
-        // 与 Media3 CodecSpecificDataUtil 一致：HEVC PQ 使用 HDR10，HLG 使用 Main10；AV1/VP9 使用 HDR profile。
+        // 与 Media3 CodecSpecificDataUtil 一致：HEVC/VVC 的 PQ 使用 HDR10，HLG 使用 Main10。
         val hdr = when (codec) {
             "hevc" -> if (colorFormatValues(stream)[MediaFormat.KEY_COLOR_TRANSFER] == MediaFormat.COLOR_TRANSFER_ST2084)
                 setOf(CodecProfileLevel.HEVCProfileMain10HDR10, CodecProfileLevel.HEVCProfileMain10HDR10Plus)
                 else setOf(CodecProfileLevel.HEVCProfileMain10)
+            "vvc" -> if (colorFormatValues(stream)[MediaFormat.KEY_COLOR_TRANSFER] == MediaFormat.COLOR_TRANSFER_ST2084)
+                setOf(CodecProfileLevel.VVCProfileMain10HDR10, CodecProfileLevel.VVCProfileMain10HDR10Plus)
+                else setOf(CodecProfileLevel.VVCProfileMain10)
             "av1" -> setOf(CodecProfileLevel.AV1ProfileMain10HDR10, CodecProfileLevel.AV1ProfileMain10HDR10Plus)
             "vp9" -> setOf(CodecProfileLevel.VP9Profile2HDR, CodecProfileLevel.VP9Profile2HDR10Plus,
                 CodecProfileLevel.VP9Profile3HDR, CodecProfileLevel.VP9Profile3HDR10Plus)
@@ -318,6 +325,7 @@ internal object DevicePlaybackCapabilities {
         codec == "hevc" && profile in setOf(CodecProfileLevel.HEVCProfileMain10, CodecProfileLevel.HEVCProfileMain10HDR10, CodecProfileLevel.HEVCProfileMain10HDR10Plus) -> 10
         codec == "vp9" && videoProfile(codec, profile) in setOf("Profile 2", "Profile 3") -> 10
         codec == "av1" && profile in setOf(CodecProfileLevel.AV1ProfileMain10, CodecProfileLevel.AV1ProfileMain10HDR10, CodecProfileLevel.AV1ProfileMain10HDR10Plus) -> 10
+        codec == "vvc" && videoProfile(codec, profile) != null && profile != CodecProfileLevel.VVCProfileMain8 -> 10
         else -> 8
     }
 
@@ -335,6 +343,8 @@ internal object DevicePlaybackCapabilities {
         "av1" to mapOf(CodecProfileLevel.AV1ProfileMain8 to "Main", CodecProfileLevel.AV1ProfileMain10 to "Main",
             CodecProfileLevel.AV1ProfileMain10HDR10 to "Main", CodecProfileLevel.AV1ProfileMain10HDR10Plus to "Main"),
         "vp8" to mapOf(CodecProfileLevel.VP8ProfileMain to "Main"),
+        "vvc" to mapOf(CodecProfileLevel.VVCProfileMain8 to "Main 10", CodecProfileLevel.VVCProfileMain10 to "Main 10",
+            CodecProfileLevel.VVCProfileMain10HDR10 to "Main 10", CodecProfileLevel.VVCProfileMain10HDR10Plus to "Main 10"),
         "mpeg2video" to mapOf(CodecProfileLevel.MPEG2ProfileSimple to "Simple", CodecProfileLevel.MPEG2ProfileMain to "Main",
             CodecProfileLevel.MPEG2Profile422 to "4:2:2", CodecProfileLevel.MPEG2ProfileSNR to "SNR Scalable",
             CodecProfileLevel.MPEG2ProfileSpatial to "Spatially Scalable", CodecProfileLevel.MPEG2ProfileHigh to "High"),

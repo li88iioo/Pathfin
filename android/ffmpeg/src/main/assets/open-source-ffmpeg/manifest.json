@@ -132,8 +132,8 @@
         },
         {
           "kind": "notice",
-          "path": "texts/d1948f37edd850ffcf43a7cc5754ccb03e18963ebd1aeb600f768351d64fff59.txt",
-          "sha256": "d1948f37edd850ffcf43a7cc5754ccb03e18963ebd1aeb600f768351d64fff59",
+          "path": "texts/d510f4293c637d46c1307472af81c504864d88a14efa17156d0eb885379ae0e3.txt",
+          "sha256": "d510f4293c637d46c1307472af81c504864d88a14efa17156d0eb885379ae0e3",
           "source": "https://github.com/FFmpeg/FFmpeg/tree/946fcce07b6dcd0331c8cc609192aeff5e1924f8",
           "title": "实编译输入原始版权声明"
         }

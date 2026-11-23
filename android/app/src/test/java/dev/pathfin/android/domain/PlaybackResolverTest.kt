@@ -401,4 +401,25 @@ class PlaybackResolverTest {
             PlaybackResolver.resolve(session, item, PlaybackInfo(emptyList(), "play"), "source")
         }
     }
+
+    @Test fun vvcOriginalUsesMp4AndLetsUnknownStrmContainersReachTheExtractor() {
+        val source = MediaSource("source", path = "https://cdn.example/video.mkv", protocol = "Http",
+            mediaStreams = listOf(MediaStream(type = "Video", codec = "vvc")),
+            directStreamUrl = "/Videos/item/copy.ts", transcodingUrl = "/Videos/item/master.m3u8")
+        for (container in listOf(null, "strm", "mp4")) {
+            val info = PlaybackInfo(listOf(source.copy(container = container)), "play")
+            val stream = PlaybackResolver.resolve(session, item, info, source.id)
+            assertEquals(source.path, stream.uri)
+            assertFalse(stream.trustedServer)
+        }
+        for (container in listOf("mkv", "mpegts")) {
+            val info = PlaybackInfo(listOf(source.copy(container = container)), "play")
+            assertThrows(IllegalArgumentException::class.java) {
+                PlaybackResolver.resolve(session, item, info, source.id)
+            }
+            val stream = PlaybackResolver.resolve(session, item, info, source.id, preferOriginal = false)
+            assertEquals(PlayMethod.TRANSCODE, stream.method)
+            assertTrue(stream.trustedServer)
+        }
+    }
 }

@@ -9,6 +9,22 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DevicePlaybackCapabilitiesUnitTest {
+    @Test fun vvcSourcePreflightUsesTheLocalDecoderWhenThePlatformCannotDecodeIt() {
+        val source = MediaStream(type = "Video", codec = "VVC", profile = "Main 10", width = 3840, height = 2160, bitDepth = 10)
+        fun supports(platform: Boolean?, software: Boolean) = DevicePlaybackCapabilities.supportsVideo(source,
+            platformSupports = { candidate, mime, dolbyVisionProfile ->
+                assertEquals(source, candidate)
+                assertEquals(MimeTypes.VIDEO_H266, mime)
+                assertNull(dolbyVisionProfile)
+                platform
+            }, softwareSupports = { software })
+
+        assertEquals(true, supports(false, true))
+        assertEquals(true, supports(true, false))
+        assertEquals(false, supports(false, false))
+        assertNull(supports(null, false))
+    }
+
     @Test fun selectedEnvelopeBelongsToOneDecoderInsteadOfCombiningIndependentMaxima() {
         val portrait = PlaybackCapabilities.VideoLimit(2048, 4096, 8, setOf("Baseline"), 40.0, 120.0)
         val landscape = PlaybackCapabilities.VideoLimit(4096, 2048, 8, setOf("High"), 51.0, 60.0)

@@ -74,6 +74,78 @@ class NativeVideoDecodeTest {
         }
     }
 
+    @Test(timeout = 35_000)
+    fun vvcMp4RendersBeforeAndAfterSeekAtOneAndOnePointSevenFiveTimes() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val external = InstrumentationRegistry.getArguments().getString("pathfinVvcFile")
+        val file = external?.let(::File) ?: File.createTempFile("pathfin-vvc-", ".mp4", instrumentation.targetContext.cacheDir)
+        try {
+            if (external == null) {
+                val fixture = JSONObject(asset("manifest.json").toString(Charsets.UTF_8)).getJSONObject("vvc")
+                val bytes = asset(fixture.getString("file"))
+                assertEquals(fixture.getInt("bytes"), bytes.size)
+                assertEquals(fixture.getString("sha256"), MessageDigest.getInstance("SHA-256")
+                    .digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) })
+                file.writeBytes(bytes)
+            }
+            assertNativeFrames(file, "vvc", verifyPlayback = { player, reader ->
+                var seekMs = 0L
+                instrumentation.runOnMainSync {
+                    val format = checkNotNull(player.videoFormat)
+                    assertEquals("MP4 中的视频轨须由 Media3 识别为 VVC", MimeTypes.VIDEO_H266, format.sampleMimeType)
+                    assertEquals(10, format.colorInfo?.lumaBitdepth)
+                    assertTrue("VVC 测试片必须可跳转", player.isCurrentMediaItemSeekable)
+                    seekMs = player.duration / 2
+                    assertTrue(seekMs >= 2_000)
+                    Log.i(TAG, "VVC input ${format.width}x${format.height}, durationMs=${player.duration}")
+                }
+                assertVvcPlaybackWindow(player, reader, speed = 1f)
+                assertVvcPlaybackWindow(player, reader, speed = 1.75f, seekMs = seekMs)
+            })
+        } finally {
+            if (external == null) file.delete()
+        }
+    }
+
+    private fun assertVvcPlaybackWindow(player: ExoPlayer, reader: ImageReader, speed: Float, seekMs: Long? = null) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        var startPosition = 0L
+        var startRendered = 0
+        var startDropped = 0
+        instrumentation.runOnMainSync {
+            val counters = checkNotNull(player.videoDecoderCounters)
+            counters.ensureUpdated()
+            startRendered = counters.renderedOutputBufferCount
+            startDropped = counters.droppedBufferCount
+            if (seekMs != null) player.seekTo(seekMs)
+            startPosition = seekMs ?: player.currentPosition
+            player.setPlaybackSpeed(speed)
+            assertEquals(speed, player.playbackParameters.speed, 0f)
+        }
+        val started = SystemClock.elapsedRealtime()
+        val targetPosition = startPosition + 1_200
+        var position = startPosition
+        var rendered = 0
+        var dropped = 0
+        var images = 0
+        while (SystemClock.elapsedRealtime() - started < 8_000) {
+            awaitImage(reader).use { image -> assertPattern(image, "vvc") }
+            images++
+            instrumentation.runOnMainSync {
+                player.playerError?.let { throw AssertionError("VVC ${speed}x 播放失败", it) }
+                position = player.currentPosition
+                val counters = checkNotNull(player.videoDecoderCounters)
+                counters.ensureUpdated()
+                rendered = counters.renderedOutputBufferCount - startRendered
+                dropped = counters.droppedBufferCount - startDropped
+            }
+            if (position >= targetPosition && rendered >= 3 && images >= 3) break
+        }
+        Log.i(TAG, "VVC ${speed}x: positionMs=$startPosition->$position, elapsedMs=${SystemClock.elapsedRealtime() - started}, " +
+            "rendered=$rendered, dropped=$dropped, sampledImages=$images")
+        assertTrue("VVC ${speed}x 必须继续前进并输出真实画面", position >= targetPosition && rendered >= 3 && images >= 3)
+    }
+
     @Test(timeout = 15_000)
     fun profile7FelMatroskaRendersTheHdr10BaseLayer() {
         // 不在仓库分发外部片源。这个 FATE 样本含一帧原始 UHD HDR10 BL、FEL 和 RPU。
@@ -99,7 +171,7 @@ class NativeVideoDecodeTest {
     }
 
     private fun assertNativeFrames(file: File, codec: String, frames: Int = 3, expectedDolbyProfile: String? = null,
-        separateP7: PlaybackRequest? = null) {
+        separateP7: PlaybackRequest? = null, verifyPlayback: ((ExoPlayer, ImageReader) -> Unit)? = null) {
         assertTrue("测试样本必须可读：${file.name}", file.isFile && file.canRead())
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
@@ -149,25 +221,30 @@ class NativeVideoDecodeTest {
                 repeat(frames) {
                     awaitImage(reader).use { image ->
                         if (separateP7 != null) return@use // 外部双轨样本是黑帧，收到真实 Surface 缓冲即可。
-                        val plane = image.planes.single()
-                        val pixels = plane.buffer
-                        var min = 255
-                        var max = 0
-                        for (y in 4 until image.height step 8) for (x in 4 until image.width step 8) {
-                            val offset = pixels.position() + y * plane.rowStride + x * plane.pixelStride
-                            for (channel in 0..2) {
-                                val value = pixels.get(offset + channel).toInt() and 255
-                                min = minOf(min, value)
-                                max = maxOf(max, value)
-                            }
-                        }
-                        assertTrue("$codec 输出必须包含真实图案", max - min > 40)
+                        assertPattern(image, codec)
                     }
                 }
                 error.get()?.let { throw AssertionError("$codec 播放失败", it) }
                 Log.i(TAG, "$codec decoded and presented $frames RGBA frames")
+                verifyPlayback?.invoke(checkNotNull(player), reader)
             } finally { instrumentation.runOnMainSync { player?.release() } }
         }
+    }
+
+    private fun assertPattern(image: Image, codec: String) {
+        val plane = image.planes.single()
+        val pixels = plane.buffer
+        var min = 255
+        var max = 0
+        for (y in 4 until image.height step 8) for (x in 4 until image.width step 8) {
+            val offset = pixels.position() + y * plane.rowStride + x * plane.pixelStride
+            for (channel in 0..2) {
+                val value = pixels.get(offset + channel).toInt() and 255
+                min = minOf(min, value)
+                max = maxOf(max, value)
+            }
+        }
+        assertTrue("$codec 输出必须包含真实图案", max - min > 40)
     }
 
     @Test(timeout = 20_000)

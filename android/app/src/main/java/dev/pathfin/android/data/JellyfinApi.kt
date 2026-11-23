@@ -463,12 +463,13 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         val selected = (if (!sourceId.isNullOrBlank()) info.sources.firstOrNull { it.id == sourceId } else info.sources.singleOrNull())
             ?: return info
         if (!allowDirectPlay || !info.errorCode.isNullOrBlank() || videoPreflight != VideoPreflightPolicy.NEGOTIATE_UNSUPPORTED) return info
-        val needsRemux = usesLocalPlayer && PlaybackResolver.originalContainerNeedingConversion(selected) != null
-        val video = selected.playbackVideoStream()
+        val conversion = if (usesLocalPlayer) PlaybackResolver.originalContainerNeedingConversion(selected) else null
+        if (conversion?.delivery == PlaybackDelivery.TRANSCODE) return request(conversion.delivery, selected.id)
+        val video = selected.playbackVideoStream()?.takeUnless { !usesLocalPlayer && it.codec.equals("vvc", true) }
         if (video != null) {
             when (withContext(Dispatchers.Default) { videoSupport(video) }) {
                 false -> return request(PlaybackDelivery.TRANSCODE, selected.id)
-                true -> if (!needsRemux && !selected.supportsDirectPlay && selected.id.isNotBlank()) {
+                true -> if (conversion == null && !selected.supportsDirectPlay && selected.id.isNotBlank()) {
                     sourceSpecificVideoProfile(profile, video)?.let { exact ->
                         // 两条预检分支均直接返回，整次起播最多一次额外协商；服务器仍决定能否直放。
                         return request(effectiveDelivery, selected.id, exact)
@@ -477,7 +478,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
                 null -> Unit
             }
         }
-        return if (needsRemux) request(PlaybackDelivery.SERVER_STREAM, selected.id) else info
+        return if (conversion != null) request(conversion.delivery, selected.id) else info
     }
 
     /** 直连探测或多版本选择后，复用已选来源，仅补做一次限定视频协商。 */
@@ -538,8 +539,8 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
     /** 静态声明确实排除、且本机已确认可播时，仅为当前来源声明精确视频条件。 */
     private fun sourceSpecificVideoProfile(profile: JSONObject, stream: MediaStream): JSONObject? {
         val codec = stream.codec?.lowercase(Locale.ROOT)?.takeIf { it.isNotBlank() } ?: return null
-        // 旧格式的容器和 FourCC 条件描述提取器限制，确认 decoder 可用不能扩大这些条件。
-        if (codec in LEGACY_VIDEO_CONTAINERS) return null
+        // 这些格式的容器和 FourCC 条件描述提取器限制，确认 decoder 可用不能扩大这些条件。
+        if (codec in VIDEO_CODEC_CONTAINERS) return null
         val width = stream.width?.takeIf { it > 0 } ?: return null
         val height = stream.height?.takeIf { it > 0 } ?: return null
         val depth = stream.bitDepth?.takeIf { it > 0 } ?: return null
@@ -569,7 +570,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         if (!excluded) return null
         val result = JSONObject(profile.toString())
         result.getJSONArray("DirectPlayProfiles").objects().filter { row ->
-            row.optString("Type") == "Video" && row.getString("VideoCodec").split(',').any { it !in LEGACY_VIDEO_CONTAINERS }
+            row.optString("Type") == "Video" && row.getString("VideoCodec").split(',').any { it !in VIDEO_CODEC_CONTAINERS }
         }.forEach { row ->
             row.put("VideoCodec", (row.getString("VideoCodec").split(',') + codec).distinct().sorted().joinToString(","))
         }
@@ -842,7 +843,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
     /** 按本机实际解码能力声明直放条件；只有超出能力的文件才交给服务器转码。 */
     internal fun deviceProfile(usesLocalPlayer: Boolean = true): JSONObject {
         val detected = capabilities()
-        val capabilities = if (usesLocalPlayer) detected else detected.copy(video = detected.video - LEGACY_VIDEO_CONTAINERS.keys)
+        val capabilities = if (usesLocalPlayer) detected else detected.copy(video = detected.video - VIDEO_CODEC_CONTAINERS.keys)
         return JSONObject()
             .put("Name", "Pathfin Android")
             // 原画不设人为码率上限；画质选项另行在请求中限制。
@@ -894,7 +895,7 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         val amr = capabilities.audioCodecs.intersect(setOf("amr_nb", "amr_wb"))
         val g711 = capabilities.audioCodecs.intersect(setOf("pcm_alaw", "pcm_mulaw"))
         val generalAudio = capabilities.audioCodecs - amr - g711
-        val video = capabilities.video.keys - LEGACY_VIDEO_CONTAINERS.keys
+        val video = capabilities.video.keys - VIDEO_CODEC_CONTAINERS.keys
         fun addVideo(containers: String, codecs: Collection<String>, audio: Set<String>) {
             if (codecs.isNotEmpty() && audio.isNotEmpty()) put(JSONObject().put("Container", containers).put("Type", "Video")
                 .put("VideoCodec", codecs.sorted().joinToString(",")).put("AudioCodec", audio.sorted().joinToString(",")))
@@ -911,9 +912,9 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
         if (g711.isNotEmpty()) put(JSONObject().put("Container", "wav,3gp,3g2,mp4,m4a,m4v,mov").put("Type", "Audio")
             .put("AudioCodec", g711.sorted().joinToString(",")))
         addVideo("3gp,3g2,mp4,m4v,mov", video, amr + g711)
-        // 旧编码的 FFmpeg 解码器只处理样本，容器和 FourCC 必须仍由 Media3 提取器支持。
+        // FFmpeg 扩展只解码视频样本，容器和 FourCC 必须由 Media3 提取器支持。
         val aviAudio = generalAudio.intersect(setOf("pcm_s16le", "pcm_s24le", "mp3", "aac", "ac3", "dts"))
-        LEGACY_VIDEO_CONTAINERS.entries.filter { it.key in capabilities.video }.groupBy({ it.value }, { it.key })
+        VIDEO_CODEC_CONTAINERS.entries.filter { it.key in capabilities.video }.groupBy({ it.value }, { it.key })
             .forEach { (containers, codecs) ->
                 if ("avi" in containers) addVideo("avi", codecs, aviAudio)
                 val remaining = containers - "avi"
@@ -934,12 +935,13 @@ class JellyfinApi(client: OkHttpClient = OkHttpClient(),
     private companion object {
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         const val MAX_RESPONSE_BYTES = 8L * 1024L * 1024L
-        val LEGACY_VIDEO_CONTAINERS = mapOf(
+        val VIDEO_CODEC_CONTAINERS = mapOf(
             "mpeg4" to setOf("avi", "mkv", "mp4", "m4v", "mov"),
             "msmpeg4v2" to setOf("avi"),
             "msmpeg4v3" to setOf("avi"),
             "h263" to setOf("mkv", "mp4", "m4v", "mov", "3gp", "3g2"),
             "vc1" to setOf("mkv"),
+            "vvc" to setOf("mp4", "m4v", "mov"),
         )
         const val HOME_FIELDS = "PrimaryImageAspectRatio"
         const val POSTER_FIELDS = "MediaSourceCount,PrimaryImageAspectRatio"

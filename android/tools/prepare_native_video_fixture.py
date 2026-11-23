@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""生成自有 H.264 色格/B 帧与旧编码片源；CPU 参考来自实际解码。"""
+"""生成自有 H.264 色格/B 帧、VVC 和旧编码片源，CPU 参考来自实际解码。"""
 
 from array import array
 from decimal import Decimal
@@ -17,6 +17,7 @@ import tempfile
 
 WIDTH, HEIGHT, RATE, FRAMES = 192, 128, 12, 24
 NAMES = ("hi10p-bframes", "hi10p-color-grid")
+VVC_FILE = "vvc-main10.mp4"
 LEGACY_CODECS = (
     ("legacy-xvid.avi", "mpeg4", "mpeg4", "XVID"),
     ("legacy-mp42.avi", "msmpeg4v2", "msmpeg4v2", "MP42"),
@@ -229,6 +230,47 @@ def generate_legacy(directory: Path, ffmpeg: str, ffprobe: str) -> dict:
     return files
 
 
+def generate_vvc(directory: Path, ffmpeg: str, ffprobe: str, vvenc: str) -> dict:
+    width, height, rate, frames_per_segment = 320, 192, 24, 60
+    frames = 2 * frames_per_segment
+    raw = directory / "vvc-input.yuv"
+    run([ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i",
+         f"testsrc2=size={width}x{height}:rate={rate},format=yuv420p10le",
+         "-frames:v", str(frames), "-f", "rawvideo", str(raw)])
+    elementary_stream = directory / "vvc-input.266"
+    with elementary_stream.open("wb") as output:
+        # 两段都从 IDR 开始，让 MP4 seek 读到非零位置的同步样本。
+        for start in (0, frames_per_segment):
+            segment = directory / f"vvc-{start}.266"
+            run([vvenc, "-i", str(raw), "-o", str(segment), "--size", f"{width}x{height}",
+                 "--format", "yuv420_10", "--framerate", str(rate), "--frames", str(frames_per_segment),
+                 "--frameskip", str(start), "--preset", "faster", "--qp", "35", "--threads", "2",
+                 "--intraperiod", "-1", "--refreshtype", "none", "--sdr", "sdr_709",
+                 "--additional", "PicReordering=0:GOPSize=8:POC0IDR=1"])
+            output.write(segment.read_bytes())
+    movie = directory / VVC_FILE
+    # 原始流无时间戳，低延迟编码的传输顺序与显示顺序相同。
+    ticks = f"1/(TB*{rate})"
+    run([ffmpeg, "-v", "error", "-y", "-framerate", str(rate), "-f", "vvc", "-i", str(elementary_stream),
+         "-c:v", "copy", "-bsf:v", f"setts=pts=N*{ticks}:dts=N*{ticks}:duration={ticks}",
+         "-fflags", "+bitexact", "-video_track_timescale", "24000", "-movflags", "+faststart",
+         "-tag:v", "vvc1", str(movie)])
+    probe = json.loads(run([ffprobe, "-v", "error", "-select_streams", "v:0", "-show_streams", "-show_frames",
+                            "-show_entries", "stream=codec_name,codec_tag_string,width,height,pix_fmt,extradata_size:"
+                            "frame=key_frame,best_effort_timestamp_time", "-of", "json", str(movie)]))
+    stream = probe["streams"][0]
+    assert (stream["codec_name"], stream["codec_tag_string"], stream["pix_fmt"]) == ("vvc", "vvc1", "yuv420p10le")
+    assert (stream["width"], stream["height"]) == (width, height) and stream["extradata_size"] > 0
+    decoded = probe["frames"]
+    times = [us(frame["best_effort_timestamp_time"]) for frame in decoded]
+    assert len(times) == frames and times == sorted(set(times)) and times[0] == 0
+    sync = [time for frame, time in zip(decoded, times) if frame["key_frame"]]
+    assert sync == [0, frames_per_segment * 1_000_000 // rate], sync
+    return {"file": VVC_FILE, "source": "FFmpeg testsrc2", "encoder": run([vvenc, "--version"]).decode().strip(),
+            "width": width, "height": height, "frameRate": rate, "bitDepth": 10, "hostDecodedFrames": len(decoded),
+            "syncTimesUs": sync, **describe(movie)}
+
+
 def verify(directory: Path) -> dict:
     manifest = json.loads((directory / "manifest.json").read_text())
     assert manifest["schemaVersion"] == 1
@@ -236,6 +278,7 @@ def verify(directory: Path) -> dict:
     assert set(manifest["legacyFiles"]) == {row[0] for row in LEGACY_CODECS}
     for name, expected in manifest["legacyFiles"].items():
         assert describe(directory / name) == expected, f"夹具损坏或 manifest 过期：{name}"
+    assert describe(directory / VVC_FILE) == {key: manifest["vvc"][key] for key in ("bytes", "sha256")}
     for fixture in manifest["fixtures"]:
         assert fixture["hostDecodedFrames"] == fixture["packetCount"] == FRAMES
         assert fixture["bitDepth"] == 10 and fixture["bFrames"] > 0
@@ -265,34 +308,38 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[1] /
                         "app/src/androidTest/assets/native-video")
     parser.add_argument("--verify", action="store_true", help="只检查夹具哈希、包帧数、时戳和参考矩阵")
+    parser.add_argument("--vvenc", default="vvencapp", help="使用本机 VVenC 命令生成合成 VVC 10bit 夹具")
     arguments = parser.parse_args()
     directory = arguments.output.resolve()
     if arguments.verify:
         manifest = verify(directory)
     else:
         ffmpeg, ffprobe = shutil.which("ffmpeg"), shutil.which("ffprobe")
-        if not ffmpeg or not ffprobe:
-            raise SystemExit("需要本机 ffmpeg（libx264 10bit）与 ffprobe；不下载工具或媒体")
+        vvenc = shutil.which(arguments.vvenc)
+        if not ffmpeg or not ffprobe or not vvenc:
+            raise SystemExit("需要本机 FFmpeg（libx264 10bit、VVC 解封装和解码）、ffprobe 与 vvencapp")
         with tempfile.TemporaryDirectory(prefix="pathfin-native-video-") as temporary:
             staging = Path(temporary)
             fixtures = [generate(staging, name, ffmpeg, ffprobe) for name in NAMES]
             legacy_files = generate_legacy(staging, ffmpeg, ffprobe)
+            vvc = generate_vvc(staging, ffmpeg, ffprobe, vvenc)
             manifest = {"schemaVersion": 1, "generator": "android/tools/prepare_native_video_fixture.py",
                         "ffmpeg": run([ffmpeg, "-version"]).decode().splitlines()[0], "fixtures": fixtures,
                         "legacyFiles": legacy_files,
+                        "vvc": vvc,
                         "notCovered": ["4K 播放性能", "Dolby Vision Profile 5 色彩正确性", "HDR tone mapping"]}
             directory.mkdir(parents=True, exist_ok=True)
             for fixture in fixtures:
                 for name in fixture["files"]:
                     shutil.copyfile(staging / name, directory / name)
-            for name in legacy_files:
+            for name in (*legacy_files, VVC_FILE):
                 shutil.copyfile(staging / name, directory / name)
             (directory / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
         verify(directory)
     print(json.dumps({"fixtures": [{"id": item["id"], "frames": item["hostDecodedFrames"],
                                     "bFrames": item["bFrames"], "bitDepth": item["bitDepth"],
                                     "bytes": sum(file["bytes"] for file in item["files"].values())}
-                                   for item in manifest["fixtures"]], "notCovered": manifest["notCovered"]},
+                                   for item in manifest["fixtures"]], "vvc": manifest["vvc"], "notCovered": manifest["notCovered"]},
                      indent=2, ensure_ascii=False))
 
 

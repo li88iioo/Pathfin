@@ -7,30 +7,44 @@ import java.net.URLEncoder
 import java.util.Locale
 
 object PlaybackResolver {
-    /** Jellyfin 也会将 192 字节的蓝光封装报告为 ts，STRM 则可能只有文件后缀。 */
-    internal fun originalContainerNeedingConversion(source: MediaSource): String? {
-        if (source.hasTransportStreamTimestamp) return "M2TS"
-        val containers = source.container.orEmpty().split(',').map(String::trim).filter(String::isNotEmpty)
+    internal enum class ContainerConversion(val label: String, val delivery: PlaybackDelivery) {
+        M2TS("M2TS", PlaybackDelivery.SERVER_STREAM),
+        ASF("ASF/WMV", PlaybackDelivery.SERVER_STREAM),
+        VVC_MATROSKA("MKV/VVC", PlaybackDelivery.TRANSCODE),
+        VVC_TS("TS/VVC", PlaybackDelivery.TRANSCODE),
+    }
+
+    /** MP4 可提取 VVC；Matroska 和 TS 中的 VVC 不能直接复制到服务器的 TS 输出。 */
+    internal fun originalContainerNeedingConversion(source: MediaSource): ContainerConversion? {
+        val containers = source.container.orEmpty().lowercase(Locale.ROOT).split(',').map(String::trim).filter(String::isNotEmpty)
+        if (source.playbackVideoStream()?.codec.equals("vvc", true)) {
+            if (source.hasTransportStreamTimestamp || containers.any { it in vvcTsContainers }) return ContainerConversion.VVC_TS
+            if (containers.any { it in vvcMatroskaContainers }) return ContainerConversion.VVC_MATROSKA
+        }
+        if (source.hasTransportStreamTimestamp) return ContainerConversion.M2TS
         containers.firstNotNullOfOrNull(::unsupportedContainer)?.let { return it }
         val path = source.path ?: return null
         val format = unsupportedPath(ServerUrls.httpUri(path)?.path ?: path)
         return format?.takeIf {
             containers.isEmpty() || containers.any { container ->
-                when (container.lowercase(Locale.ROOT)) {
+                when (container) {
                     "strm" -> true
-                    "ts", "mpegts", "mpeg2ts" -> format == "M2TS"
+                    "ts", "mpegts", "mpeg2ts" -> format == ContainerConversion.M2TS
                     else -> false
                 }
             }
         }
     }
 
-    private fun unsupportedContainer(container: String): String? = when (container.lowercase(Locale.ROOT)) {
-        "m2ts", "mts" -> "M2TS"
-        "asf", "wmv" -> "ASF/WMV"
+    private val vvcTsContainers = setOf("ts", "mpegts", "mpeg2ts", "m2ts", "mts")
+    private val vvcMatroskaContainers = setOf("mkv", "matroska", "webm")
+
+    private fun unsupportedContainer(container: String): ContainerConversion? = when (container.lowercase(Locale.ROOT)) {
+        "m2ts", "mts" -> ContainerConversion.M2TS
+        "asf", "wmv" -> ContainerConversion.ASF
         else -> null
     }
-    private fun unsupportedPath(path: String): String? = unsupportedContainer(path.substringAfterLast('.', ""))
+    private fun unsupportedPath(path: String) = unsupportedContainer(path.substringAfterLast('.', ""))
 
     /** 明确选择的视频原画直连；与服务器本地文件和主动选择的码率档分开。 */
     fun prefersOriginalHttp(item: MediaItem, source: MediaSource, preferOriginal: Boolean,
@@ -65,9 +79,9 @@ object PlaybackResolver {
         val needsConversion = if (usesLocalPlayer) originalContainerNeedingConversion(source) else null
         val originalHttp = prefersOriginalHttp(item, source, preferOriginal, quality, effectiveDelivery)
         require(!originalHttp || needsConversion == null) {
-            tr("%1\$s 原始封装无法直接读取，请关闭 STRM 原始地址后重新播放，或选择服务器画质", needsConversion)
+            tr("%1\$s 原始封装无法直接读取，请关闭 STRM 原始地址后重新播放，或选择服务器画质", needsConversion?.label)
         }
-        val conversionUnavailable = needsConversion?.let { tr("%1\$s 需要服务器转封装或转码，请检查账号的播放权限", it) }
+        val conversionUnavailable = needsConversion?.let { tr("%1\$s 需要服务器转封装或转码，请检查账号的播放权限", it.label) }
         fun negotiatedUrl(raw: String?): String? {
             val url = serverMediaUrl(session.server, raw) ?: return null
             if (needsConversion == null) return url
@@ -87,7 +101,7 @@ object PlaybackResolver {
 
         val original = source.path?.takeIf { needsConversion == null && ServerUrls.httpUri(it) != null && liveSourceReachable(session, item, it) }
         val compatibleProtocol = source.protocol.isNullOrBlank() || source.protocol.equals("Http", true)
-        val direct = negotiatedUrl(source.directStreamUrl)
+        val direct = if (needsConversion?.delivery == PlaybackDelivery.TRANSCODE) null else negotiatedUrl(source.directStreamUrl)
         // 用户已明确选择原始HTTP视频时，本机实际能力决定是否可播，不能被服务器替代流覆盖。
         // 其他媒体保留服务器协商；直播仍遵守独立的“直连直播源”选择。
         val originalAllowed = originalHttp ||

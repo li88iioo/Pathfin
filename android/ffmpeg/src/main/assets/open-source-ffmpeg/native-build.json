@@ -14,6 +14,7 @@
   "videoDecoders": [
     "h264",
     "hevc",
+    "vvc",
     "mpeg2video",
     "mpeg4",
     "msmpeg4v2",
@@ -39,7 +40,7 @@
     "MarkupSafe": "3.0.4"
   },
   "staticArchives": {
-    "libplacebo.a": "06c1bb14d29440d4216013aae46472cc545973b73bbd8da995bc257224db03a4"
+    "libplacebo.a": "7ee32a88d80a9a5713a6177c296b34c16b70348c1c958282134094d94cb0ffbe"
   },
   "sourceInputs": {
     "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
@@ -53,9 +54,9 @@
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegDecoderException.java": "9e73968d0802b2d7f8add911ec4dc5a6e621777e997eca74332e173c5463ad7a",
     "src/main/java/androidx/media3/decoder/ffmpeg/FfmpegLibrary.java": "a0843232be53210aefe97d8bc0a0268ac781cc7ce72e2d47bf42cd07f8048880",
     "src/main/java/androidx/media3/decoder/ffmpeg/package-info.java": "1d75d02151fcec7a1c0036ee4a216e885ae91e1f85e8c9ddfbd72b4def6709be",
-    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "0bd5fb86046911d52905a00459a14ee2cd5dc7f3c991bfddad4fe87d9ef302eb",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoDecoder.java": "f8e7bbf73a525335764d5e70ceaf83c12a4bdcb49753d94092b4f6ccc6bf76e4",
     "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoException.java": "e9663135c8d8fb3c647cb5df67c78a3e97be8eb6de488299eb9e9e2660c87045",
-    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "611b90ff929b77dd5af405350633a1eeb36a481a19a1937adcb44d6496637fbb",
+    "src/main/java/dev/pathfin/ffmpeg/video/NativeVideoRenderer.java": "ac4e7fb4a896be47403f0637623133d1290657d89e7a7a0c9ab0e9f1d6f5d620",
     "video-consumer-rules.pro": "d3726d0b9c258ecf14c2b234a2569dcee3718685aeb953d2664b23ad678d5774"
   },
   "copiedAvformatHeaders": {
@@ -85,6 +86,7 @@
     "mp3",
     "h264",
     "hevc",
+    "vvc",
     "mpeg2video",
     "mpeg4",
     "msmpeg4v2",
@@ -95,8 +97,8 @@
   "libraries": [
     {
       "file": "libavcodec.so",
-      "bytes": 3865488,
-      "sha256": "bb42730e34fbc2c13f253f2f628a68180e089610ef60815e0c7d0361141a4d0c",
+      "bytes": 4719448,
+      "sha256": "d083bbbb5869fd78806bd703f23e2d6c133d04b23df5553904a187737501b58c",
       "loadAlignments": [
         16384,
         16384,
@@ -111,8 +113,8 @@
     },
     {
       "file": "libavutil.so",
-      "bytes": 730040,
-      "sha256": "0a1c7fa3097b7a1db1ba5b9eb357024020637fc21496c9821423a94e97c2e81e",
+      "bytes": 730008,
+      "sha256": "bb17a83a5df75129241f24b42aea8d5fd6f2c7c4b428c04c03a8063878b96724",
       "loadAlignments": [
         16384,
         16384,
@@ -126,7 +128,7 @@
     {
       "file": "libswresample.so",
       "bytes": 96424,
-      "sha256": "6856f87dc657625baed559ef6bf08784c7d3915e5567e8b585d5890e644bd283",
+      "sha256": "b17835cebcedacc50b88a1e5ecc5f7093de403ba1f89a7604c1e3d067f4fdd4b",
       "loadAlignments": [
         16384,
         16384
@@ -139,8 +141,8 @@
     },
     {
       "file": "libffmpegJNI.so",
-      "bytes": 763872,
-      "sha256": "16e3aa339d286f529b2952015405f252fddc92621680f13454bfeb227b5bbb6e",
+      "bytes": 763856,
+      "sha256": "2815a30f3b2ffc090a28abc43d74d880a3639000e89edc392f9dd3fafb2a15ae",
       "loadAlignments": [
         16384,
         16384,
@@ -160,8 +162,8 @@
       ]
     }
   ],
-  "configSha256": "a96ebbb9d4395091ded063dee7b7b0f4b286eea01631a090c5eac0af55b75021",
-  "componentConfigSha256": "261f4df56f42c2453c67495a3193394d0f5833fc7f460a1cf6344b836189aa38",
+  "configSha256": "b34cf9695bc9f695f17243c73a9b42b8f318d600da2055f5b0d1443ae8e91268",
+  "componentConfigSha256": "c552ffa72b0e59b2e804695cb4bc608cec6f6c20a1de45f436cee7427dc3f384",
   "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
-  "sourceLockSha256": "bfccabc1e781093ce5c48508baa0c92a164f3cc54bcae9611dc7fe99a831c7c3"
+  "sourceLockSha256": "4d2eaa235c416cd35604bb89e568602680363afe16fa4698bc5121fd4105042c"
 }

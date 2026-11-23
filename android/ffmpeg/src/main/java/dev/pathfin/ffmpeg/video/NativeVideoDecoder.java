@@ -49,8 +49,10 @@ public final class NativeVideoDecoder
     ByteArrayOutputStream extra = new ByteArrayOutputStream();
     for (byte[] bytes : format.initializationData) extra.write(bytes, 0, bytes.length);
     ColorInfo color = format.colorInfo;
+    // 超过 1080p 的 VVC 软解允许使用更多核心，减少倍速播放的掉帧。
+    int maxThreads = "vvc".equals(codec) && (long) format.width * format.height > 1920L * 1080 ? 8 : 4;
     context = create(codec, extra.toByteArray(), Math.max(0, format.width), Math.max(0, format.height),
-        Math.min(4, Math.max(1, Runtime.getRuntime().availableProcessors())),
+        Math.min(maxThreads, Runtime.getRuntime().availableProcessors()),
         color == null ? Format.NO_VALUE : color.colorSpace,
         color == null ? Format.NO_VALUE : color.colorRange,
         color == null ? Format.NO_VALUE : color.colorTransfer,

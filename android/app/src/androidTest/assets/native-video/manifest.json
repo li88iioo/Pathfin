@@ -228,6 +228,22 @@
       "sha256": "38ef458e1249538f2344f7b2593d923a4181509cc1b48424d2b56ab385897471"
     }
   },
+  "vvc": {
+    "file": "vvc-main10.mp4",
+    "source": "FFmpeg testsrc2",
+    "encoder": "vvencapp version 1.14.0",
+    "width": 320,
+    "height": 192,
+    "frameRate": 24,
+    "bitDepth": 10,
+    "hostDecodedFrames": 120,
+    "syncTimesUs": [
+      0,
+      2500000
+    ],
+    "bytes": 78069,
+    "sha256": "15cb3c5cf3d75a77a7ff6bee708c8753625f3f9e441ae24b4f8100dfa332bb20"
+  },
   "notCovered": [
     "4K 播放性能",
     "Dolby Vision Profile 5 色彩正确性",
