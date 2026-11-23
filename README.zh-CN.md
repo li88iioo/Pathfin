@@ -8,6 +8,30 @@
 
 面向 Android 手机和平板的原生 Jellyfin 客户端，使用 Kotlin 和 Jetpack Compose，支持播放服务器媒体源提供的 STRM 原始 HTTP(S) 地址。
 
+## 界面预览
+
+<p align="center">
+  <a href="assets/screenshots/home.webp"><img src="assets/screenshots/thumbs/home.webp" width="170" alt="首页的继续观看与媒体库"></a>
+  <a href="assets/screenshots/series-details.webp"><img src="assets/screenshots/thumbs/series-details.webp" width="170" alt="剧集详情、选集与演职人员"></a>
+  <a href="assets/screenshots/live-tv.webp"><img src="assets/screenshots/thumbs/live-tv.webp" width="170" alt="直播电视的当前节目与频道分组"></a>
+</p>
+
+<p align="center">
+  <a href="assets/screenshots/episode-picker-landscape.webp"><img src="assets/screenshots/thumbs/episode-picker-landscape.webp" width="600" alt="横屏播放时展开的选集面板"></a>
+</p>
+
+<details>
+<summary>搜索、收藏与设置（4 张截图）</summary>
+
+<p align="center">
+  <a href="assets/screenshots/search.webp"><img src="assets/screenshots/thumbs/search.webp" width="160" alt="搜索页的媒体类型筛选与推荐搜索"></a>
+  <a href="assets/screenshots/favorites.webp"><img src="assets/screenshots/thumbs/favorites.webp" width="160" alt="按剧集、演员和季分组的收藏"></a>
+  <a href="assets/screenshots/settings.webp"><img src="assets/screenshots/thumbs/settings.webp" width="160" alt="设置总览"></a>
+  <a href="assets/screenshots/playback-settings.webp"><img src="assets/screenshots/thumbs/playback-settings.webp" width="160" alt="STRM、直播与自动连播设置"></a>
+</p>
+
+</details>
+
 ## 功能
 
 - 多服务器、多账号与备用地址管理。

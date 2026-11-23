@@ -8,6 +8,30 @@ English | [简体中文](README.zh-CN.md)
 
 A native Jellyfin client for Android phones and tablets, built with Kotlin and Jetpack Compose. It can play the original HTTP(S) STRM addresses provided by server media sources.
 
+## Screenshots
+
+<p align="center">
+  <a href="assets/screenshots/home.webp"><img src="assets/screenshots/thumbs/home.webp" width="170" alt="Home with the Continue Watching row"></a>
+  <a href="assets/screenshots/series-details.webp"><img src="assets/screenshots/thumbs/series-details.webp" width="170" alt="Series details with episodes and cast"></a>
+  <a href="assets/screenshots/live-tv.webp"><img src="assets/screenshots/thumbs/live-tv.webp" width="170" alt="Live TV with the current program and channel groups"></a>
+</p>
+
+<p align="center">
+  <a href="assets/screenshots/episode-picker-landscape.webp"><img src="assets/screenshots/thumbs/episode-picker-landscape.webp" width="600" alt="Episode picker open during landscape playback"></a>
+</p>
+
+<details>
+<summary>Search, favorites and settings (4 screenshots)</summary>
+
+<p align="center">
+  <a href="assets/screenshots/search.webp"><img src="assets/screenshots/thumbs/search.webp" width="160" alt="Search with media filters and suggestions"></a>
+  <a href="assets/screenshots/favorites.webp"><img src="assets/screenshots/thumbs/favorites.webp" width="160" alt="Favorite series, actors and seasons"></a>
+  <a href="assets/screenshots/settings.webp"><img src="assets/screenshots/thumbs/settings.webp" width="160" alt="Settings overview"></a>
+  <a href="assets/screenshots/playback-settings.webp"><img src="assets/screenshots/thumbs/playback-settings.webp" width="160" alt="Playback settings for STRM, Live TV and autoplay"></a>
+</p>
+
+</details>
+
 ## Features
 
 - Multiple servers, multiple accounts and fallback addresses.
