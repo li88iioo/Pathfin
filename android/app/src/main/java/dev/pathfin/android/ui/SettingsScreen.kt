@@ -177,7 +177,8 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
                 } }
                 item("hold-slide") { SettingsSwitch(tr("滑动调整倍速"), p.longPressSlideSpeedEnabled, tr("长按期间横向滑动动态调节倍速"), enabled = p.longPressSpeedEnabled, position = GroupPosition.BOTTOM) { onPreferences(p.copy(longPressSlideSpeedEnabled = it)) } }
                 item("seek-label") { SettingLabel(tr("跳转")) }
-                item("double-tap") { SettingsSlider(tr("双击快进 / 快退"), p.seekSeconds.toFloat(), 5f..60f, 10, { tr("%1\$s 秒", it.roundToInt()) }, position = GroupPosition.TOP) { onPreferences(p.copy(seekSeconds = it.roundToInt())) } }
+                item("seek-interval") { SettingsSlider(tr("快进 / 快退时长"), p.seekSeconds.toFloat(), 5f..60f, 10, { tr("%1\$s 秒", it.roundToInt()) },
+                    subtitle = tr("适用于双击画面和播放控制按钮"), position = GroupPosition.TOP) { onPreferences(p.copy(seekSeconds = it.roundToInt())) } }
                 item("horizontal-seek") { SettingsSwitch(tr("横向滑动调整进度"), p.horizontalSeekEnabled, tr("在画面中部左右滑动，松手后跳转"), tag = "horizontal-seek-switch", position = GroupPosition.MIDDLE) { onPreferences(p.copy(horizontalSeekEnabled = it)) } }
                 item("exact-seek") { SettingsSwitch(tr("准确跳转"), p.exactSeek, tr("关闭后定位到邻近关键帧"), position = GroupPosition.MIDDLE) { onPreferences(p.copy(exactSeek = it)) } }
                 item("rapid-seek") { SettingsSwitch(tr("拖动时即时跳转"), p.rapidSeekWhileDragging, tr("关闭后松手跳转"), position = GroupPosition.BOTTOM) { onPreferences(p.copy(rapidSeekWhileDragging = it)) } }

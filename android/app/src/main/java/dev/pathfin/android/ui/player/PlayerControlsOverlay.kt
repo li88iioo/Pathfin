@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import dev.pathfin.android.ui.AppSafeDrawingInsets
 import android.os.SystemClock
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,10 +31,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -170,7 +175,7 @@ internal fun PlayerControlsOverlay(
                 Row(Modifier.align(Alignment.Center).offset(x = if (largeText) (-12).dp else 0.dp)
                     .width(transportWidth).testTag("player-transport"), horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
-                    PlayerRoundButton(PathfinIcons.SeekBack, tr("快退 %1\$s 秒", seekSeconds), "player-seek-back", size = sideSize,
+                    PlayerRoundButton(PathfinIcons.SeekBack, tr("快退 %1\$s 秒", seekSeconds), "player-seek-back", size = sideSize, seekSeconds = seekSeconds,
                         enabled = transportEnabled && snapshot.canSeekBack, onClick = { interaction(onSeekBack) })
                     // 唯一带底的按钮：淡磨砂圆托住实心三角，是整层的视觉重心。
                     Box(Modifier.size(76.dp).clip(CircleShape).background(Color.White.copy(alpha = .16f))
@@ -181,7 +186,7 @@ internal fun PlayerControlsOverlay(
                         else Icon(if (snapshot.playWhenReady) PathfinIcons.PauseGlyph else PathfinIcons.PlayGlyph, null,
                             Modifier.size(34.dp), tint = if (transportEnabled) PlayerText else PlayerDisabled)
                     }
-                    PlayerRoundButton(PathfinIcons.SeekForward, tr("快进 %1\$s 秒", seekSeconds), "player-seek-forward", size = sideSize,
+                    PlayerRoundButton(PathfinIcons.SeekForward, tr("快进 %1\$s 秒", seekSeconds), "player-seek-forward", size = sideSize, seekSeconds = seekSeconds,
                         enabled = transportEnabled && snapshot.canSeekForward, onClick = { interaction(onSeekForward) })
                 }
                 if (landscape) Column(Modifier.align(Alignment.CenterStart).padding(start = 8.dp),
@@ -406,9 +411,29 @@ internal val PlayerSurface = Color(0xFF1C1D20).copy(alpha = .94f)
 /** 裸白色细线图标按钮：48dp 起的触控区，不带底色，依靠顶部/底部暗角保证可读。 */
 @Composable
 internal fun PlayerRoundButton(icon: ImageVector, label: String, tag: String, modifier: Modifier = Modifier,
-    size: Dp = 48.dp, enabled: Boolean = true, onClick: () -> Unit) {
+    size: Dp = 48.dp, enabled: Boolean = true, seekSeconds: Int? = null, onClick: () -> Unit) {
     Box(modifier.size(size).clip(CircleShape).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
         .semantics { contentDescription = label }.testTag(tag), contentAlignment = Alignment.Center) {
-        Icon(icon, null, Modifier.size(if (size >= 56.dp) 30.dp else 24.dp), tint = if (enabled) PlayerText else PlayerDisabled)
+        val tint = if (enabled) PlayerText else PlayerDisabled
+        Icon(icon, null, Modifier.size(if (size >= 56.dp) 30.dp else 24.dp).seekIntervalLabel(seekSeconds, tint), tint = tint)
+    }
+}
+
+/** 秒数是回转图标的一部分，随图标等比缩放；按钮与手势提示共用同一字形。 */
+internal fun Modifier.seekIntervalLabel(seconds: Int?, tint: Color): Modifier {
+    if (seconds == null) return this
+    return drawWithCache {
+        val label = seconds.toString()
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = tint.toArgb()
+            typeface = Typeface.DEFAULT_BOLD
+            textSize = size.minDimension * .39f
+            textAlign = Paint.Align.CENTER
+        }
+        val baseline = size.height * .54f - (paint.ascent() + paint.descent()) / 2f
+        onDrawWithContent {
+            drawContent()
+            drawContext.canvas.nativeCanvas.drawText(label, center.x, baseline, paint)
+        }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,11 +30,13 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.test.platform.app.InstrumentationRegistry
 import android.graphics.Bitmap
 import android.util.Log
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -50,6 +53,7 @@ import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.util.UnstableApi
 import dev.pathfin.android.playback.PlaybackUiState
 import dev.pathfin.android.domain.MediaItem
+import dev.pathfin.android.i18n.tr
 import dev.pathfin.android.ui.ContentState
 import dev.pathfin.android.ui.PlaybackEpisodesSheet
 import dev.pathfin.android.ui.episodeTitle
@@ -84,6 +88,35 @@ class PlayerControlsLayoutTest {
 
     @Test fun landscapeSeekSliderCentersTheThumbAtRestAndWhileDragging() =
         verifySeekSliderAlignment(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, android.content.res.Configuration.ORIENTATION_LANDSCAPE)
+
+    @Test fun seekButtonsUpdateTheirNumbersAndKeepTheirTouchTargets() {
+        lateinit var player: ClockPlayer
+        compose.runOnUiThread { player = ClockPlayer(120_000) }
+        try {
+            val seekSeconds = mutableIntStateOf(5)
+            showControls(player, seekSeconds = { seekSeconds.intValue })
+            val buttons = listOf(
+                compose.onNodeWithTag("player-seek-back") to "快退 %1\$s 秒",
+                compose.onNodeWithTag("player-seek-forward") to "快进 %1\$s 秒",
+            )
+            buttons.forEach { (button, description) ->
+                val bounds = button.readVerificationNode(compose) { it.boundsInRoot }
+                val numbers = mutableSetOf<List<Boolean>>()
+                for (seconds in listOf(5, 20, 60)) {
+                    compose.runOnIdle { seekSeconds.intValue = seconds }
+                    button.assertIsEnabled().assertContentDescriptionEquals(tr(description, seconds))
+                    assertEquals(bounds, button.readVerificationNode(compose) { it.boundsInRoot })
+                    val pixels = button.captureToImage().toPixelMap()
+                    // 中心四分之一宽高覆盖数字，避开箭头和按钮边缘。使用同一设备的截图比较字形。
+                    val number = (pixels.height * 3 / 8 until pixels.height * 5 / 8).flatMap { y ->
+                        (pixels.width * 3 / 8 until pixels.width * 5 / 8).map { x -> pixels[x, y].green > .5f }
+                    }
+                    assertTrue("${tr(description, seconds)} 必须显示数字", number.any { it })
+                    assertTrue("${tr(description, seconds)} 的数字应与其他档位不同", numbers.add(number))
+                }
+            }
+        } finally { compose.runOnUiThread { player.release() } }
+    }
 
     private fun verifySeekSliderAlignment(requestedOrientation: Int, configurationOrientation: Int) {
         lateinit var player: ClockPlayer
@@ -620,6 +653,7 @@ class PlayerControlsLayoutTest {
         onAddSubtitle: (() -> Unit)? = null, onManageSubtitles: (() -> Unit)? = null,
         onSetSleepTimer: (Int?) -> Unit = {},
         clock: String? = null, battery: String? = null, titleLogo: coil3.request.ImageRequest? = null,
+        seekSeconds: () -> Int = { 10 },
         onSeekTo: (Long) -> Unit = {}) {
         val loader = coil3.ImageLoader.Builder(compose.activity).diskCache(null).build()
         compose.setContent {
@@ -629,7 +663,7 @@ class PlayerControlsLayoutTest {
                 PathfinTheme(ThemePreference.DARK) {
                     Box(Modifier.fillMaxSize().background(Color.Black)) {
                         PlayerControlsOverlay(player, PlaybackUiState(title = "Synthetic fixture", ended = ended, subtitlesBurnedIn = burnedIn, live = live), false, PlayerResizeMode.FIT,
-                            seekSeconds = 10, clock = clock, battery = battery, onBack = {}, onInteraction = {},
+                            seekSeconds = seekSeconds(), clock = clock, battery = battery, onBack = {}, onInteraction = {},
                             onKeepVisibleChange = {}, onTogglePlay = {}, onSeekBack = {}, onSeekForward = {},
                             onSeekTo = onSeekTo, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
                             onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onTrackSelection = { _, _, _, _ -> },
@@ -653,7 +687,8 @@ class PlayerControlsLayoutTest {
         private var position = 2_000L
         override fun getState(): State = State.Builder()
             .setAvailableCommands(Player.Commands.Builder().addAll(Player.COMMAND_GET_TIMELINE, Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
-                Player.COMMAND_GET_TRACKS, Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM).build())
+                Player.COMMAND_GET_TRACKS, Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                Player.COMMAND_SEEK_BACK, Player.COMMAND_SEEK_FORWARD).build())
             .setPlaylist(listOf(MediaItemData.Builder("synthetic-fixture").setDurationUs(durationMs * 1_000).setIsSeekable(true).build()))
             .setCurrentMediaItemIndex(0).setPlaybackState(Player.STATE_READY)
             .setPlayWhenReady(false, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)

@@ -278,15 +278,13 @@ internal object PathfinIcons {
     // 播放器控制层使用的图标。
     /** 逆时针回转箭头，表示后退若干秒。 */
     val SeekBack by lazy { strokeIcon("SeekBack") {
-        moveTo(4.5f, 12f); arcToRelative(7.5f, 7.5f, 0f, true, false, 2.2f, -5.3f); lineTo(4.5f, 9f)
-        moveTo(4.5f, 4.5f); lineTo(4.5f, 9f); lineTo(9f, 9f)
-        moveTo(10f, 10f); lineTo(10f, 15f); moveTo(13f, 10f); lineTo(15.5f, 10f); lineTo(15.5f, 15f); lineTo(13f, 15f); close()
+        moveTo(3.5f, 12f); arcToRelative(8.5f, 8.5f, 0f, true, false, 2.5f, -6f); lineTo(3.5f, 8f)
+        moveTo(3.5f, 3.5f); lineTo(3.5f, 8f); lineTo(8f, 8f)
     } }
     /** 顺时针回转箭头，表示前进若干秒。 */
     val SeekForward by lazy { strokeIcon("SeekForward") {
-        moveTo(19.5f, 12f); arcToRelative(7.5f, 7.5f, 0f, true, true, -2.2f, -5.3f); lineTo(19.5f, 9f)
-        moveTo(19.5f, 4.5f); lineTo(19.5f, 9f); lineTo(15f, 9f)
-        moveTo(8.5f, 10f); lineTo(8.5f, 15f); moveTo(11.5f, 10f); lineTo(14f, 10f); lineTo(14f, 15f); lineTo(11.5f, 15f); close()
+        moveTo(20.5f, 12f); arcToRelative(8.5f, 8.5f, 0f, true, true, -2.5f, -6f); lineTo(20.5f, 8f)
+        moveTo(20.5f, 3.5f); lineTo(20.5f, 8f); lineTo(16f, 8f)
     } }
     val SkipPrevious by lazy { strokeIcon("SkipPrevious") {
         moveTo(6.5f, 5.5f); lineTo(6.5f, 18.5f); moveTo(18f, 6f); lineTo(9.5f, 12f); lineTo(18f, 18f); close()

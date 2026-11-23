@@ -302,7 +302,8 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 原画	Original
 去世日期	Date of death
 去世日期（YYYY-MM-DD）	Date of death (YYYY-MM-DD)
-双击快进 / 快退	Double-tap to seek forward / back
+快进 / 快退时长	Skip interval
+适用于双击画面和播放控制按钮	Applies to double-taps and the skip buttons
 发行年份	Release year
 取消	Cancel
 取消%1$s	Cancel %1$s

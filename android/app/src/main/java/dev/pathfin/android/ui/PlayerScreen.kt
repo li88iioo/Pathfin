@@ -102,6 +102,7 @@ import dev.pathfin.android.ui.player.PlayerControlsOverlay
 import dev.pathfin.android.ui.player.PlaybackPrompts
 import dev.pathfin.android.ui.player.PlayerResizeMode
 import dev.pathfin.android.ui.player.PlayerRoundButton
+import dev.pathfin.android.ui.player.seekIntervalLabel
 import dev.pathfin.ass.ExoAssExtension
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -133,6 +134,7 @@ fun PlayerScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val subtitlePresentation by viewModel.subtitlePresentation.collectAsStateWithLifecycle()
     val player = viewModel.player
+    val seekSeconds = preferences.seekSeconds.coerceIn(5, 60)
     val assExtension = viewModel.assExtensionFor(player)
     var showTools by rememberSaveable(state.playerGeneration) { mutableStateOf(false) }
     var showSubtitleManager by rememberSaveable(state.playerGeneration) { mutableStateOf(false) }
@@ -376,11 +378,11 @@ fun PlayerScreen(
                     when {
                         fraction < 0.35f -> {
                             viewModel.seekByGesture(false)
-                            gestureMessage = PlayerFeedback(tr("快退 %1\$s 秒", preferences.seekSeconds.coerceIn(5, 60)), PathfinIcons.SeekBack)
+                            gestureMessage = PlayerFeedback(tr("快退 %1\$s 秒", seekSeconds), PathfinIcons.SeekBack, seekSeconds)
                         }
                         fraction > 0.65f -> {
                             viewModel.seekByGesture(true)
-                            gestureMessage = PlayerFeedback(tr("快进 %1\$s 秒", preferences.seekSeconds.coerceIn(5, 60)), PathfinIcons.SeekForward)
+                            gestureMessage = PlayerFeedback(tr("快进 %1\$s 秒", seekSeconds), PathfinIcons.SeekForward, seekSeconds)
                         }
                         else -> {
                             val wasPlaying = viewModel.player?.playWhenReady == true
@@ -409,7 +411,7 @@ fun PlayerScreen(
                 if (!externalPanelVisible) PlayerControlsOverlay(
                     player = player, state = state, showLoading = showLoading && loading,
                     resizeMode = resizeMode, titleLogo = titleLogo,
-                    seekSeconds = preferences.seekSeconds.coerceIn(5, 60),
+                    seekSeconds = seekSeconds,
                     clock = clock.takeIf { preferences.showClock },
                     battery = if (preferences.showBattery) battery?.let { "$it%" } ?: "—" else null,
                     onBack = leave, onInteraction = interact, onKeepVisibleChange = { keepControlsVisible = it },
@@ -507,7 +509,8 @@ fun PlayerScreen(
                 .testTag("player-feedback"),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            feedback.icon?.let { Icon(it, null, Modifier.size(18.dp).testTag("player-feedback-icon"), tint = PlayerText) }
+            feedback.icon?.let { Icon(it, null, Modifier.size(18.dp).testTag("player-feedback-icon")
+                .seekIntervalLabel(feedback.seekSeconds, PlayerText), tint = PlayerText) }
             Text(feedback.text, color = PlayerText, fontSize = 14.sp)
         }
         // 与控制层同一安全区与尺寸，控制栏显隐时加载圈停在播放键的同一位置。
@@ -874,4 +877,4 @@ private fun PlayerPillButton(label: String, primary: Boolean, onClick: () -> Uni
 }
 
 /** 播放画面上方的短暂提示：文字与可选的前置图标作为一个整体，避免切换时残留上一条的图标。 */
-private data class PlayerFeedback(val text: String, val icon: ImageVector? = null)
+private data class PlayerFeedback(val text: String, val icon: ImageVector? = null, val seekSeconds: Int? = null)

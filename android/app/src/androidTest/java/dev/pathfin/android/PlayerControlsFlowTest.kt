@@ -56,6 +56,7 @@ import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.domain.PlaybackRequest
+import dev.pathfin.android.i18n.tr
 import dev.pathfin.android.playback.PlaybackViewModel
 import dev.pathfin.android.playback.PlayerFrameCapture
 import dev.pathfin.android.ui.AppViewModel
@@ -155,11 +156,15 @@ class PlayerControlsFlowTest {
         assertContinuous(active)
     }
 
-    @Test fun doubleTapSeekAndLongPressSpeedFeedbackCarryTheirOwnIcons() = withPlayback { active ->
+    @Test fun doubleTapSeekAndLongPressSpeedFeedbackCarryTheirOwnIcons() = withPlayback(
+        preferences = testPreferences().copy(seekSeconds = 20),
+    ) { active ->
         pauseWithControls(active)
+        val pausedAt = main { active.player.currentPosition }
         compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) { doubleClick(Offset(width * .85f, centerY)) }
-        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText("快进", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithText(tr("快进 %1\$s 秒", 20)).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("player-feedback-icon", useUnmergedTree = true).assertExists()
+        compose.waitUntil(WAIT_MS) { main { active.player.currentPosition - pausedAt in 19_000L..21_000L } }
         // 临时倍速只在播放中生效；按住期间显示，松手后随倍速一起结束。
         main { active.player.play() }
         compose.waitUntil(WAIT_MS) { main { active.player.isPlaying } }
