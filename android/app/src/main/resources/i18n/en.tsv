@@ -179,7 +179,7 @@ yyyy年M月d日 EEEE	EEEE, MMM d, yyyy
 位深度	Bit depth
 使用云盘已有画质，不经过 Jellyfin 转码	Uses the cloud drive's existing quality without Jellyfin transcoding
 使用同分辨率最高刷新率，可能增加耗电	Uses the highest refresh rate at the same resolution; may use more battery
-使用系统解码器，下次播放生效。	Uses the system decoder; takes effect next playback.
+默认按系统顺序选择解码器。选「硬件优先」会先尝试硬件解码器，选「软件优先」会先尝试 FFmpeg，再尝试系统软件解码器。下次播放生效。	System default follows the device’s decoder order. Prefer hardware tries hardware decoders first. Prefer software tries FFmpeg first, then system software decoders. Changes apply the next time you start playback.
 使用自定义提示时长	Use custom prompt timing
 俄语	Russian
 保存	Save
