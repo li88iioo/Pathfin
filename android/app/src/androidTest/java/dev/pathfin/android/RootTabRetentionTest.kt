@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -294,8 +295,8 @@ class RootTabRetentionTest {
                                 savedState.SaveableStateProvider(snapshot.savedPageKey()) {
                                     RefreshablePage(false, { refreshes[id] = (refreshes[id] ?: 0) + 1 }, Modifier.fillMaxSize()) {
                                         if (route == Route.Search) {
-                                            var input by rememberSaveable { mutableStateOf(snapshot.search.query) }
-                                            BasicTextField(input, { input = it }, Modifier.fillMaxSize().testTag(SEARCH_INPUT))
+                                            val input = rememberTextFieldState(snapshot.search.query)
+                                            BasicTextField(input, Modifier.fillMaxSize().testTag(SEARCH_INPUT))
                                         } else {
                                             var selected by rememberSaveable { mutableIntStateOf(0) }
                                             Text("$id:$selected:${snapshot.notice ?: "initial"}", Modifier.fillMaxSize()

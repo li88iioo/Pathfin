@@ -37,6 +37,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
@@ -396,13 +399,13 @@ internal fun MenuDivider() {
  */
 @Composable
 internal fun PathfinSearchField(
-    query: String,
-    onChange: (String) -> Unit,
+    state: TextFieldState,
     onSubmit: () -> Unit,
     onClear: () -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
     frosted: Boolean = false,
+    inputTransformation: InputTransformation? = null,
 ) {
     val interactions = remember { MutableInteractionSource() }
     val focused by interactions.collectIsFocusedAsState()
@@ -417,15 +420,15 @@ internal fun PathfinSearchField(
         else -> Modifier.background(PathfinAppearance.card).border(PathfinAppearance.cardBorder, shape)
     }
     BasicTextField(
-        query, onChange,
-        modifier,
-        singleLine = true,
+        state, modifier,
+        lineLimits = TextFieldLineLimits.SingleLine,
+        inputTransformation = inputTransformation,
         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.5.sp, lineHeight = 22.sp, color = text),
         cursorBrush = SolidColor(PathfinAppearance.accent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSubmit() }),
+        onKeyboardAction = { onSubmit() },
         interactionSource = interactions,
-        decorationBox = { inner ->
+        decorator = { inner ->
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 54.dp).clip(shape).then(surface)
                     .padding(start = 16.dp, end = 6.dp),
@@ -433,13 +436,13 @@ internal fun PathfinSearchField(
             ) {
                 Icon(PathfinIcons.Search, null, Modifier.size(19.dp), tint = if (focused && !onDark) PathfinAppearance.accent else muted)
                 Box(Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 14.dp)) {
-                    if (query.isEmpty()) Text(placeholder, fontSize = 15.5.sp, lineHeight = 22.sp,
+                    if (state.text.isEmpty()) Text(placeholder, fontSize = 15.5.sp, lineHeight = 22.sp,
                         color = muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     inner()
                 }
                 // 清空位始终保留，首字输入不会缩短文本区或挤动占位文字。
                 Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                    if (query.isNotEmpty()) PathfinIconButton(PathfinIcons.Close, tr("清空搜索"), onClear,
+                    if (state.text.isNotEmpty()) PathfinIconButton(PathfinIcons.Close, tr("清空搜索"), onClear,
                         Modifier.testTag("search-clear"), tint = muted)
                 }
             }

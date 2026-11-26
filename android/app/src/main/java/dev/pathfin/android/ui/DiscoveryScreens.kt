@@ -6,8 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,18 +19,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
@@ -43,7 +38,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -59,6 +53,7 @@ import dev.pathfin.android.domain.forLiveTv
 import dev.pathfin.android.domain.searchDiscoveryCategories
 import dev.pathfin.android.i18n.tr
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 
 internal const val DISCOVERY_PREVIEW_LIMIT = 6
 
@@ -88,28 +83,36 @@ internal fun SearchContent(
     onOpen: (MediaItem) -> Unit,
     categories: List<DiscoveryCategory> = searchDiscoveryCategories,
 ) {
-    var query by rememberSaveable(session.server.baseUrl, session.userId) { mutableStateOf(state.query) }
+    val input = key(session.server.baseUrl, session.userId) { rememberTextFieldState(state.query) }
     val committedQuery by rememberUpdatedState(state.query)
     val search by rememberUpdatedState(onSearch)
     val focus = LocalFocusManager.current
     val pageActive = LocalPageActive.current
-    LaunchedEffect(query, pageActive) {
-        if (pageActive && query.trim() != committedQuery) {
-            delay(350)
-            if (pageActive && query.trim() != committedQuery) search(query)
+    LaunchedEffect(input, pageActive) {
+        if (!pageActive) return@LaunchedEffect
+        snapshotFlow { input.text.toString() }.collectLatest { query ->
+            val term = query.trim()
+            if (term != committedQuery) {
+                delay(350)
+                if (term != committedQuery && input.text.toString() == query) search(query)
+            }
         }
     }
-    fun submit(value: String = query) {
-        query = value
+    fun submit() {
         focus.clearFocus()
-        onSearch(value)
+        onSearch(input.text.toString())
+    }
+    fun selectCategory(category: DiscoveryCategory?) {
+        val query = input.text.toString()
+        if (query.trim() != committedQuery) onSearch(query)
+        onToggleCategory(category)
     }
     val topInset = LocalPageTopInset.current
     // 同次测量先确定输入框与类型栏的真实高度，大字号也不需要首帧猜测或回调修正占位。
     SubcomposeLayout(Modifier.fillMaxSize().background(PathfinAppearance.canvas).imePadding()) { constraints ->
         val header = subcompose("search-header") {
             Column(Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset)) {
-                PathfinSearchField(query, { query = it }, { submit() }, { submit("") }, tr("搜索媒体或人物"),
+                PathfinSearchField(input, ::submit, { input.clearText(); submit() }, tr("搜索媒体或人物"),
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("search-query"))
                 LazyRow(
                     Modifier.fillMaxWidth().testTag("search-filters"),
@@ -117,16 +120,12 @@ internal fun SearchContent(
                     horizontalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
                     item(key = "all") {
-                        PathfinPill(tr("全部"), state.categories.isEmpty(), modifier = Modifier.testTag("search-filter/all"), toggle = true, onClick = {
-                            if (query.trim() != state.query) onSearch(query)
-                            onToggleCategory(null)
-                        })
+                        PathfinPill(tr("全部"), state.categories.isEmpty(), modifier = Modifier.testTag("search-filter/all"), toggle = true,
+                            onClick = { selectCategory(null) })
                     }
                     items(categories, key = { it.name }) { category ->
-                        PathfinPill(category.label, category in state.categories, modifier = Modifier.testTag("search-filter/${category.name}"), toggle = true, onClick = {
-                            if (query.trim() != state.query) onSearch(query)
-                            onToggleCategory(category)
-                        })
+                        PathfinPill(category.label, category in state.categories, modifier = Modifier.testTag("search-filter/${category.name}"), toggle = true,
+                            onClick = { selectCategory(category) })
                     }
                 }
             }

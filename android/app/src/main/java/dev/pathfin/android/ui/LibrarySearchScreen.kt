@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -47,30 +49,48 @@ internal fun LibrarySearchScreen(
     onBack: () -> Unit,
     suggest: suspend (String) -> List<MediaItem>,
 ) {
-    var query by rememberSaveable(library.id) { mutableStateOf(state.query.searchTerm) }
-    var lastSearch by rememberSaveable(library.id) { mutableStateOf(state.query.searchTerm) }
+    val committedQuery = state.query.searchTerm
+    val input = key(library.id) { rememberTextFieldState(committedQuery) }
+    val query = input.text.toString()
+    val term = query.trim()
+    var lastSearch by rememberSaveable(library.id) { mutableStateOf(committedQuery) }
     // 还没提交过搜索时处于输入态并显示建议；提交后显示结果，重新聚焦输入框再回到建议。
-    var editing by rememberSaveable(library.id) { mutableStateOf(state.query.searchTerm.isBlank()) }
+    var showingSuggestions by rememberSaveable(library.id) { mutableStateOf(committedQuery.isBlank()) }
+    val editing = showingSuggestions || term != committedQuery
+    val pageActive = LocalPageActive.current
     // 提交首个搜索词会启用刷新手势，但不是重新进入页面；该次请求已由提交入口发起。
-    val refreshOnEntry = remember(library.id) { state.query.searchTerm.isNotBlank() }
+    val refreshOnEntry = remember(library.id) { committedQuery.isNotBlank() }
     val grid = rememberLazyGridState()
     AutomaticGridPagination(grid, state.content.pagination, state.query, onMore,
-        enabled = !editing && state.query.searchTerm.isNotBlank() && lastSearch == state.query.searchTerm,
+        enabled = !editing && committedQuery.isNotBlank() && lastSearch == committedQuery,
         minimumAheadItems = 100, screensAhead = 2)
     val focus = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
-    fun submit() { focus.clearFocus(); editing = false; onSubmit(query) }
-    LaunchedEffect(state.query.searchTerm) {
-        if (lastSearch != state.query.searchTerm) {
+    fun submit() {
+        val value = input.text.toString()
+        if (value.isBlank()) return
+        focus.clearFocus()
+        showingSuggestions = false
+        onSubmit(value)
+    }
+    LaunchedEffect(committedQuery) {
+        if (lastSearch != committedQuery) {
             grid.scrollToItem(0)
-            lastSearch = state.query.searchTerm
+            lastSearch = committedQuery
+        }
+    }
+    // 键盘删除和清空按钮都走这里。只有当前输入仍为空才取消正式查询。
+    LaunchedEffect(input, term.isEmpty(), committedQuery, pageActive) {
+        if (pageActive && input.text.isBlank()) {
+            showingSuggestions = true
+            if (committedQuery.isNotEmpty()) onSubmit("")
         }
     }
     LaunchedEffect(library.id) { if (editing) focusRequester.requestFocus() }
-    val suggestions by produceState(emptyList<MediaItem>(), library.id, query.trim(), editing) {
-        if (!editing) return@produceState
-        if (query.isNotBlank()) delay(SuggestionDebounceMs)
-        value = suggest(query)
+    val suggestions by produceState(emptyList<MediaItem>(), input, term, editing, pageActive) {
+        if (!editing || !pageActive) return@produceState
+        if (term.isNotEmpty()) delay(SuggestionDebounceMs)
+        value = suggest(term)
     }
     val topBarHeight = 64.dp
     val topInset = LocalPageTopInset.current
@@ -114,7 +134,7 @@ internal fun LibrarySearchScreen(
                 .padding(start = 16.dp, end = 16.dp, top = headerHeight + 20.dp, bottom = 24.dp)
                 .testTag("library-search-suggestions"),
         ) {
-            if (suggestions.isNotEmpty()) SearchSuggestionChips(if (query.isBlank()) tr("推荐搜索") else tr("相关条目"), suggestions) {
+            if (suggestions.isNotEmpty()) SearchSuggestionChips(if (term.isEmpty()) tr("推荐搜索") else tr("相关条目"), suggestions) {
                 focus.clearFocus(); onOpen(it)
             }
         }
@@ -125,12 +145,8 @@ internal fun LibrarySearchScreen(
                     .padding(start = 16.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                PathfinSearchField(query, {
-                    query = it
-                    editing = true
-                    if (it.isBlank()) onSubmit("")
-                }, { if (query.isNotBlank()) submit() }, { query = ""; editing = true; onSubmit("") }, tr("在%1\$s中搜索", library.name),
-                    Modifier.weight(1f).focusRequester(focusRequester).onFocusChanged { if (it.isFocused) editing = true }
+                PathfinSearchField(input, ::submit, input::clearText, tr("在%1\$s中搜索", library.name),
+                    Modifier.weight(1f).focusRequester(focusRequester).onFocusChanged { if (it.isFocused) showingSuggestions = true }
                         .testTag("library-search-input"))
                 QuietButton(tr("取消"), onBack, Modifier.testTag("library-search-cancel"), color = PathfinAppearance.textMain)
             }

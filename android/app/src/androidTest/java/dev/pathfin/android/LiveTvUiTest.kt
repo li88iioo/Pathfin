@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -114,10 +115,12 @@ class LiveTvUiTest {
     @Test fun searchFindsRealChannelAndGuideOnlyOffersCurrentLiveProgramme() {
         val fixture = Fixture()
         val played = AtomicReference<MediaItem?>()
-        show(fixture) { played.set(it) }
+        val host = show(fixture) { played.set(it) }
         waitFor("live-tv-channel-seagull")
         openSearch()
-        compose.onNodeWithTag("live-tv-search").performTextInput("海鸥")
+        val term = "海鸥" + " ".repeat(198)
+        compose.onNodeWithTag("live-tv-search").performTextInput(term + "超出上限")
+        compose.runOnIdle { assertEquals(term, host.state.searchInput.text.toString()) }
         compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
         // 整行点按即播放。
         compose.onNodeWithTag("live-tv-channel-seagull").performVerificationClick(compose)
@@ -902,7 +905,7 @@ class LiveTvUiTest {
             val state = remember(current) {
                 LiveTvState(current.session, current.api, scope, { host.authExpired.incrementAndGet() }, clock = host.clock::get,
                     groupSource = if (groups) current.groupSource(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir.resolve("live-tv-groups-test").apply { deleteRecursively() }) else null)
-                    .also { it.query = initialQuery; host.state = it }
+                    .also { it.searchInput.setTextAndPlaceCursorAtEnd(initialQuery); host.state = it }
             }
             DisposableEffect(state) { onDispose { state.cancel() } }
             PathfinTheme(ThemePreference.LIGHT) { Surface {

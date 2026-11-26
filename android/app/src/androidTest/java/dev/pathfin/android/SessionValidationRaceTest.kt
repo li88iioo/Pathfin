@@ -1,5 +1,7 @@
 package dev.pathfin.android
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+
 import android.app.Application
 import android.content.Context
 import androidx.lifecycle.ViewModelProvider
@@ -80,12 +82,12 @@ class SessionValidationRaceTest {
         val validated = checkNotNull(app.state.value.liveTv)
         assertNotSame("验证后的会话必须成为频道请求所有者", restored, validated)
         assertEquals(app.state.value.session, validated.session)
-        main { validated.query = "四川"; app.back() }
+        main { validated.searchInput.setTextAndPlaceCursorAtEnd("四川"); app.back() }
         assertEquals(Route.Home, app.state.value.route)
         main { app.selectTab(Route.LiveTv) }
         val returned = await(app, fixture) { it.route == Route.LiveTv }
         assertSame("真实路由退出重进应复用同一份频道状态", validated, returned.liveTv)
-        assertEquals("四川", returned.liveTv?.query)
+        assertEquals("四川", returned.liveTv?.searchInput?.text.toString())
 
         main { app.authenticationExpired(validated.session) }
         await(app, fixture) { it.reauthenticationProfile != null }
@@ -96,7 +98,7 @@ class SessionValidationRaceTest {
         main { app.selectTab(Route.LiveTv) }
         val fresh = checkNotNull(await(app, fixture) { it.route == Route.LiveTv }.liveTv)
         assertNotSame(validated, fresh)
-        assertEquals("", fresh.query)
+        assertEquals("", fresh.searchInput.text.toString())
     }
 
     @Test fun detailRequestedBeforeUserValidationStillCompletesAfterAvatarChanges() = withRestoredApp { app, fixture ->

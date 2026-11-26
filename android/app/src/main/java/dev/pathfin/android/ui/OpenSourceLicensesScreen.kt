@@ -43,6 +43,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,7 +63,7 @@ import org.json.JSONObject
 fun OpenSourceLicensesScreen(onBack: () -> Unit, showTopBar: Boolean = true) {
     val context = LocalContext.current.applicationContext
     var retry by remember { mutableIntStateOf(0) }
-    var query by rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    val input = rememberTextFieldState()
     var selectedId by rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val catalog by produceState<NoticeCatalog?>(null, context, retry) {
@@ -70,8 +72,8 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit, showTopBar: Boolean = true) {
     val selected = catalog?.components?.firstOrNull { it.id == selectedId }
     BackHandler(enabled = selectedId != null) { selectedId = null }
     val goBack = { if (selectedId != null) selectedId = null else onBack() }
-    val filtered = remember(catalog, query) {
-        val needle = query.trim()
+    val needle = input.text.trim().toString()
+    val filtered = remember(catalog, needle) {
         catalog?.components.orEmpty().filter {
             needle.isEmpty() || it.searchText.contains(needle, ignoreCase = true)
         }
@@ -101,7 +103,7 @@ fun OpenSourceLicensesScreen(onBack: () -> Unit, showTopBar: Boolean = true) {
             catalog?.failed == true -> OfflineNoticeState(tr("无法读取离线许可"), onRetry = { retry++ })
             selected != null -> NoticeDetail(selected)
             else -> {
-                PathfinSearchField(query, { query = it }, {}, { query = "" }, tr("搜索组件、版本或许可"),
+                PathfinSearchField(input, {}, input::clearText, tr("搜索组件、版本或许可"),
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("license-search"))
                 LazyColumn(
                     state = listState,

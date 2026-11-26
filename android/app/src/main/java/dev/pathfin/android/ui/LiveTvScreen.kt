@@ -59,6 +59,10 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.byValue
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -148,7 +152,7 @@ class LiveTvState(val session: Session, val api: JellyfinApi, private val scope:
     /** 磁盘快照已读完（有无都算）；读完前不画列表，避免先空后满的闪烁。 */
     var restored by mutableStateOf(snapshots == null && groupSource == null)
         private set
-    var query by mutableStateOf("")
+    internal val searchInput = TextFieldState()
     /** 选中的分组标签；null 为“全部”，未分组的频道用 OTHER_GROUP。 */
     var group by mutableStateOf<String?>(null)
     /** 本次进入后点播的频道；服务器的上次观看时间要等播放上报后才更新。 */
@@ -259,7 +263,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     RefreshFailureNotice(error?.takeIf { channels.isNotEmpty() }, settled = !refreshing, retry = { load() })
     // 搜索默认收起成按钮；有搜索词时（包括重新进入）保持展开。
     var searchOpen by remember(state) { mutableStateOf(false) }
-    val searchExpanded = searchOpen || query.isNotEmpty()
+    val searchExpanded = searchOpen || searchInput.text.isNotEmpty()
     val focus = LocalFocusManager.current
     var searchFocused by remember(state) { mutableStateOf(false) }
     LaunchedEffect(state, pageActive) {
@@ -268,14 +272,15 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
             if (searchFocused) focus.clearFocus()
         }
     }
-    fun closeSearch() { query = ""; searchOpen = false; focus.clearFocus() }
+    fun closeSearch() { searchInput.clearText(); searchOpen = false; focus.clearFocus() }
     BackHandler(enabled = pageActive) { when { selected != null -> selected = null; searchExpanded -> closeSearch(); else -> onBack() } }
 
-    val search = query.trim()
+    val search = searchInput.text.trim().toString()
     // 搜索与总览互换时整页直接替换：结果从头显示，取消后回到搜索前的位置。位置在换内容的同一次重组里请求，
     // 与新内容同帧生效，不会先按旧首项的键跟随、下一帧再跳；首次组合（含重新进入）不动，保留上次位置。
     val searchMark = remember(state) { arrayOf(search) }
-    if (search != searchMark[0]) {
+    if (search != searchMark[0]) SideEffect {
+        if (searchMark[0].isEmpty()) overviewPosition = list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset
         val (index, offset) = if (search.isEmpty()) overviewPosition else 0 to 0
         list.requestScrollToItem(index, offset)
         searchMark[0] = search
@@ -482,15 +487,11 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
                         }, label = "live-tv-search") { expanded ->
                             if (expanded) Row(verticalAlignment = Alignment.CenterVertically) {
                                 val requester = remember { FocusRequester() }
-                                LaunchedEffect(pageActive) { if (pageActive && query.isEmpty()) requester.requestFocus() }
-                                PathfinSearchField(query, {
-                                    val next = it.take(200)
-                                    // 用已组合的内容判定：同帧清空再输入时仍保留原总览锚点。
-                                    if (searchMark[0].isEmpty() && next.isNotBlank()) overviewPosition = list.firstVisibleItemIndex to list.firstVisibleItemScrollOffset
-                                    query = next
-                                }, { focus.clearFocus() }, { query = "" }, tr("搜索频道、节目或台号"),
+                                LaunchedEffect(pageActive) { if (pageActive && searchInput.text.isEmpty()) requester.requestFocus() }
+                                PathfinSearchField(searchInput, { focus.clearFocus() }, searchInput::clearText, tr("搜索频道、节目或台号"),
                                     Modifier.weight(1f).padding(start = 4.dp).focusRequester(requester)
-                                        .onFocusChanged { searchFocused = it.isFocused }.testTag("live-tv-search"), frosted = true)
+                                        .onFocusChanged { searchFocused = it.isFocused }.testTag("live-tv-search"), frosted = true,
+                                    inputTransformation = LiveTvSearchLimit)
                                 QuietButton(tr("取消"), ::closeSearch, Modifier.testTag("live-tv-search-close"), color = LocalContentColor.current)
                             } else Row(verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(Modifier.weight(1f))
@@ -640,6 +641,7 @@ private fun Modifier.liveTvActions(channel: LiveTvChannel, canPlay: Boolean, pre
 private val TileMinWidth = 96.dp
 private val GridSpacing = 10.dp
 private val GridHorizontalPadding = 16.dp
+private val LiveTvSearchLimit = InputTransformation.byValue { _, input -> input.take(200) }
 private val TabsHeight = 52.dp
 /** 上次观看底部淡出段：比首页短，分组标签紧跟在封面下方。 */
 private val LiveAmbientFade = 56.dp

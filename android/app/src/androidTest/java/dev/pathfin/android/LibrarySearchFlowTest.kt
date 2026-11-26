@@ -298,13 +298,14 @@ class LibrarySearchFlowTest {
             old.release()
             await(env, "取消的旧响应已实际结束") { old.finished }
             compose.runOnIdle { assertEquals("迟到旧词不能覆盖新词的真实结果", latest, env.vm.state.value.browsers[key]) }
+            compose.onNodeWithTag("library-search-suggestions").assertDoesNotExist()
             compose.onNodeWithText("Search fast-new 0").assertVerificationDisplayed(compose)
             compose.onNodeWithText("Search slow-old 0").assertDoesNotExist()
         }
         env.fixture.blockSearch("slow-clear").use { old ->
             submit("slow-clear")
             await(env, "待清空查询已发到服务端") { old.requestArrived }
-            compose.onNodeWithTag("search-clear", true).assertVerificationDisplayed(compose).performVerificationClick(compose)
+            compose.onNodeWithTag("library-search-input").performTextClearance()
             val empty = await(env, "清空应立即取消并恢复输入态") {
                 it.browsers[key]?.let { browser -> browser.query.searchTerm.isEmpty() &&
                     browser.content.items.isEmpty() && !browser.content.loading } == true
