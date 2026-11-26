@@ -78,16 +78,16 @@ internal fun LibrarySearchScreen(
     Box(Modifier.fillMaxSize().imePadding()) {
         // 保留网格与刷新生命周期，建议遮盖结果时移除旧结果采样。
         val resultsSource = if (editing) Modifier else Modifier.topBarBlurSource()
-        BoxWithConstraints(Modifier.fillMaxSize().then(resultsSource).background(PathfinAppearance.canvas)) {
-            val density = LocalDensity.current
-            val columns = BrowserColumns.resolve(state.style, maxWidth.value, density.fontScale)
-            val gridCells = GridCells.Fixed(columns)
-            val imageWidths = BrowserColumns.imageWidths(gridCells, constraints.maxWidth, density)
-            RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },
-                settled = !state.content.loading, retry = onRefresh)
-            RefreshablePage(state.content.loading || state.content.loadingMore, onRefresh, Modifier.fillMaxSize(),
-                enabled = state.query.searchTerm.isNotBlank(), refreshOnEntry = refreshOnEntry,
-                indicatorTopInset = headerHeight) {
+        RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },
+            settled = !state.content.loading, retry = onRefresh)
+        RefreshablePage(state.content.loading || state.content.loadingMore, onRefresh,
+            Modifier.fillMaxSize().then(resultsSource).background(PathfinAppearance.canvas),
+            enabled = state.query.searchTerm.isNotBlank(), refreshOnEntry = refreshOnEntry, indicatorTopInset = headerHeight) {
+            BoxWithConstraints(Modifier.fillMaxSize().pageHorizontalInsets()) {
+                val density = LocalDensity.current
+                val columns = BrowserColumns.resolve(state.style, maxWidth.value, density.fontScale)
+                val gridCells = GridCells.Fixed(columns)
+                val imageWidths = BrowserColumns.imageWidths(gridCells, constraints.maxWidth, density)
                 LazyVerticalGrid(gridCells, state = grid, modifier = Modifier.fillMaxSize().testTag("library-search-results"),
                     contentPadding = PaddingValues(start = BrowserColumns.horizontalPaddingDp.dp, end = BrowserColumns.horizontalPaddingDp.dp,
                         top = headerHeight + 8.dp, bottom = LocalNavigationBottomInset.current),
@@ -110,7 +110,7 @@ internal fun LibrarySearchScreen(
         // 与全局搜索同一套词条胶囊：空词为库内推荐，有词为片名匹配。
         if (editing) Column(
             Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas)
-                .verticalScroll(rememberScrollState())
+                .pageHorizontalInsets().verticalScroll(rememberScrollState())
                 .padding(start = 16.dp, end = 16.dp, top = headerHeight + 20.dp, bottom = 24.dp)
                 .testTag("library-search-suggestions"),
         ) {
@@ -118,9 +118,11 @@ internal fun LibrarySearchScreen(
                 focus.clearFocus(); onOpen(it)
             }
         }
-        TopBarBlurSurface(Modifier.fillMaxWidth().height(headerHeight).pointerInput(Unit) { detectTapGestures { } }, height = headerHeight) {
+        TopBarBlurSurface(Modifier.fillMaxWidth().height(headerHeight).testTag("library-search-header")
+            .pointerInput(Unit) { detectTapGestures { } }, height = headerHeight) {
             Row(
-                Modifier.fillMaxWidth().padding(top = topInset).height(topBarHeight).padding(start = 16.dp, end = 4.dp),
+                Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset).height(topBarHeight)
+                    .padding(start = 16.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PathfinSearchField(query, {

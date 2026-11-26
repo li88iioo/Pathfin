@@ -30,6 +30,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -120,9 +121,15 @@ internal fun BrowserScreen(
     }
     BoxWithConstraints(Modifier.fillMaxSize().background(PathfinAppearance.canvas)) {
         val density = LocalDensity.current
+        val direction = LocalLayoutDirection.current
         val fontScale = density.fontScale
-        val columns = BrowserColumns.resolve(state.style, maxWidth.value, fontScale)
-        val expandedToolbar = fontScale >= 1.5f && maxWidth < 500.dp || maxWidth < 320.dp
+        val horizontalInsets = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
+        val contentWidthPx = (constraints.maxWidth -
+            horizontalInsets.getLeft(density, direction) - horizontalInsets.getRight(density, direction)).coerceAtLeast(0)
+        val contentWidth = with(density) { contentWidthPx.toDp() }
+        val contentInsets = Modifier.windowInsetsPadding(horizontalInsets)
+        val columns = BrowserColumns.resolve(state.style, contentWidth.value, fontScale)
+        val expandedToolbar = fontScale >= 1.5f && contentWidth < 500.dp || contentWidth < 320.dp
         val toolbarRowHeight = with(density) {
             (maxOf(scaledLineHeightPx(14.sp, 20.sp), scaledLineHeightPx(13.sp, 19.sp)) + 2).toDp()
         }.coerceAtLeast(48.dp)
@@ -131,7 +138,7 @@ internal fun BrowserScreen(
         val gridCells = GridCells.Fixed(columns)
         val startPadding = BrowserColumns.horizontalPaddingDp.dp
         val endPadding = startPadding
-        val imageWidths = BrowserColumns.imageWidths(gridCells, constraints.maxWidth, density)
+        val imageWidths = BrowserColumns.imageWidths(gridCells, contentWidthPx, density)
         Box(Modifier.fillMaxSize().background(PathfinAppearance.canvas)) {
             Box(Modifier.fillMaxSize()) {
                 RefreshFailureNotice(state.content.error?.takeIf { !state.content.retryAppend && state.content.items.isNotEmpty() },
@@ -140,7 +147,7 @@ internal fun BrowserScreen(
                     Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas), enabled = sheet == null,
                     indicatorTopInset = topInset + toolbarHeight) {
                     LazyVerticalGrid(
-                        columns = gridCells, state = grid, modifier = Modifier.fillMaxSize().testTag("browser-grid"),
+                        columns = gridCells, state = grid, modifier = Modifier.fillMaxSize().then(contentInsets).testTag("browser-grid"),
                         contentPadding = PaddingValues(start = startPadding, end = endPadding,
                             top = topInset + toolbarHeight + 4.dp, bottom = LocalNavigationBottomInset.current),
                         verticalArrangement = Arrangement.spacedBy(20.dp), horizontalArrangement = Arrangement.spacedBy(BrowserColumns.spacingDp.dp),
@@ -180,12 +187,13 @@ internal fun BrowserScreen(
                             // 正常 UP 或完整无障碍激活后立即提交；浮层不改变网格的左右边距。
                             changeQuery(latestQuery.copy(nameInitial = letter))
                         }
-                    }, Modifier.align(Alignment.CenterEnd).padding(
+                    }, Modifier.align(Alignment.CenterEnd).then(contentInsets).padding(
                         top = topInset + toolbarHeight, end = 2.dp, bottom = LocalNavigationBottomInset.current,
                     ), enabled = canBrowse && sheet == null)
                 }
                 TopBarBlurSurface(
                     Modifier.align(Alignment.TopStart).padding(top = topInset).fillMaxWidth().height(toolbarHeight)
+                        .testTag("browser-toolbar-surface")
                         .pointerInput(Unit) { detectTapGestures { } },
                     topOffset = topInset, height = toolbarHeight, secondaryRow = true,
                 ) {
@@ -194,7 +202,7 @@ internal fun BrowserScreen(
                         onSort = { sheet = BrowserSheet.SORT }, onCategory = { sheet = BrowserSheet.CATEGORY },
                         onStyle = { onStyleChange(if (state.style == PosterStyle.POSTER) PosterStyle.BACKDROP else PosterStyle.POSTER) }, onFilter = { sheet = BrowserSheet.FILTER },
                         onReset = { changeQuery((if (supportsQueryFilters) latestQuery.clearUiFilters() else latestQuery).copy(nameInitial = null)) },
-                        modifier = Modifier.fillMaxSize())
+                        modifier = Modifier.fillMaxSize().then(contentInsets))
                 }
             }
         }

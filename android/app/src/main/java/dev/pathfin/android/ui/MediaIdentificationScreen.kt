@@ -123,10 +123,10 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
             RefreshablePage(searching, ::search, Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas), refreshOnEntry = false,
                 enabled = enabled && searched && validYear && (name.isNotBlank() || filledIds.isNotEmpty()), indicatorTopInset = contentTop) {
                 if (!enabled) {
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
+                    Column(Modifier.fillMaxSize().pageHorizontalInsets().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
                         EmptyPanel(tr("无法识别此媒体"), if (!session.isAdministrator) tr("需要服务器管理员权限。") else tr("此类型没有可用的远程识别接口。"))
                     }
-                } else if (resultsPage) LazyColumn(Modifier.fillMaxSize().testTag("identification-results"),
+                } else if (resultsPage) LazyColumn(Modifier.fillMaxSize().pageHorizontalInsets().testTag("identification-results"),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 8.dp, bottom = LocalNavigationBottomInset.current),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     error?.let { message -> item { InlineError(message, modifier = Modifier.testTag("identification-error")) } }
@@ -140,7 +140,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                     if (results.isEmpty() && !searching && error == null) item {
                         EmptyPanel(tr("没有找到匹配结果"), tr("返回修改%1\$s或外部编号，并检查服务器是否配置了可用的元数据提供程序。", if (person) tr("姓名") else tr("名称、年份")))
                     }
-                } else LazyColumn(Modifier.fillMaxSize().testTag("identification-list"),
+                } else LazyColumn(Modifier.fillMaxSize().pageHorizontalInsets().testTag("identification-list"),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 16.dp, bottom = 8.dp)) {
                     item(key = "identification-name") {
                         SettingsGroupItem(if (fieldRows.isEmpty()) GroupPosition.SINGLE else GroupPosition.TOP, dividerStartPadding = GroupTextInset) {
@@ -178,7 +178,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                 }
             }
             PageTitleBar(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }, height = contentTop) {
-                Row(Modifier.fillMaxWidth().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
+                Row(Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
                     .heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     PathfinIconButton(PathfinIcons.Back, if (resultsPage) tr("返回搜索条件") else tr("返回"), { if (resultsPage) resultsPage = false else onBack() },
                         Modifier.testTag("identification-back"), tint = PathfinAppearance.textMain, size = 44.dp)
@@ -194,7 +194,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
         // 编号清单异步到达只增补可滚动的字段，搜索动作始终固定，避免按钮随表单高度跳动。
         if (enabled && !resultsPage) {
             val canSearch = !searching && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
-            Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Box(Modifier.fillMaxWidth().pageHorizontalInsets().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 InkButton(::search, Modifier.fillMaxWidth().testTag("identification-search"), enabled = canSearch, muted = !canSearch) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (searching) PathfinSpinner(LocalContentColor.current, Modifier.size(18.dp)) else Icon(PathfinIcons.Search, null, Modifier.size(18.dp))

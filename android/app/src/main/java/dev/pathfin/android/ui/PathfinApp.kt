@@ -284,7 +284,7 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
     val scrollToTopRequests = remember { mutableIntStateOf(0) }
     val topBarBlur = rememberTopBarBlurState()
     // 带固定工具栏的页面自己提供采样源，工具栏作为标题栏第二行一起模糊。
-    val pageOwnsBlurSource = homePage || route == Route.Search || libraryPage || toolOwnsTopBar
+    val pageOwnsBlurSource = insideServer && (homePage || route == Route.Search || libraryPage || toolOwnsTopBar)
     CompositionLocalProvider(LocalNavigationBottomInset provides navigationBottomInset,
         LocalScrollToTopRequests provides scrollToTopRequests,
         LocalTopBarBlurState provides topBarBlur) {
@@ -370,24 +370,20 @@ private fun PathfinPage(vm: AppViewModel, state: AppState, savedState: SaveableS
             Scaffold(
                 containerColor = if (showManager) Color.Transparent else MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                snackbarHost = { if (pageActive) PathfinSnackbarHost(snackbar, Modifier.padding(
+                snackbarHost = { if (pageActive) PathfinSnackbarHost(snackbar, Modifier.pageHorizontalInsets().padding(
                     bottom = if (hasBottomNavigation) navigationBottomInset else (if (insideServer) 80.dp else 0.dp) + navigationBarHeight)) },
                 contentWindowInsets = when {
-                    isDetail -> WindowInsets(0, 0, 0, 0)
-                    showManager && !connecting -> AppSafeDrawingInsets.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-                    // 连接页底图铺到手势条下，底部安全区由连接页的表单与按钮自己让出。
-                    connecting -> AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
-                    // 首页自行区分正文与页头的横向安全区，页头背景仍铺满窗口。
-                    homePage -> WindowInsets(0, 0, 0, 0)
-                    hasBottomNavigation -> AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)
-                    // 底部只为键盘让位；手势条高度并入 LocalNavigationBottomInset，由页面列表留白。
-                    else -> AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal).union(WindowInsets.ime)
+                    showManager && !connecting -> AppSafeDrawingInsets.only(WindowInsetsSides.Top)
+                    isDetail || connecting || hasBottomNavigation -> WindowInsets(0, 0, 0, 0)
+                    else -> WindowInsets.ime.only(WindowInsetsSides.Bottom)
                 },
             ) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)
                     .then(if (pageOwnsBlurSource) Modifier else Modifier.topBarBlurSource())) {
                     CompositionLocalProvider(LocalPageTopInset provides if (insetInContent) headerInset else 0.dp) {
-                    Box(Modifier.fillMaxSize().then(if (hasHeader && !insetInContent) Modifier.padding(top = headerInset) else Modifier)) {
+                    // 自绘背景与工具栏的页面在前景内部避让；普通页面在全宽模糊采样源内统一留白。
+                    val body = if (pageOwnsBlurSource || isDetail || connecting) Modifier else Modifier.pageHorizontalInsets()
+                    Box(Modifier.fillMaxSize().then(body).then(if (hasHeader && !insetInContent) Modifier.padding(top = headerInset) else Modifier)) {
                     if (showManager) {
                         ServerManagementScreen(state.profiles, state.currentProfileId, state.loginBusy, state.loginError,
                             switching = state.switchingProfileId != null,

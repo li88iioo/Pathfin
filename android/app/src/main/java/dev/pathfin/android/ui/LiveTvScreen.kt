@@ -87,6 +87,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
@@ -329,6 +330,12 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
 
     val topInset = LocalPageTopInset.current
     val density = LocalDensity.current
+    val direction = LocalLayoutDirection.current
+    val safePadding = AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal).asPaddingValues()
+    val safeStart = safePadding.calculateStartPadding(direction)
+    val safeEnd = safePadding.calculateEndPadding(direction)
+    val gridStart = safeStart + GridHorizontalPadding
+    val gridEnd = safeEnd + GridHorizontalPadding
     // 页头悬浮成毛玻璃；列表按实测高度让位，滚动时从页头下方透出。
     var headerHeight by remember { mutableStateOf(60.dp) }
     val headerTop = topInset + headerHeight
@@ -375,15 +382,16 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     val swipe = remember(state) { Animatable(0f) }
     val currentTab by rememberUpdatedState(activeTab)
     val currentSelectTab by rememberUpdatedState { index: Int -> selectTab(index) }
-    val swipeGesture = if (search.isNotEmpty() || groupKeys.size < 2) Modifier else Modifier.pointerInput(groupKeys) {
-        val threshold = size.width * .2f
+    val swipeGesture = if (search.isNotEmpty() || groupKeys.size < 2) Modifier else Modifier.pointerInput(groupKeys, safeStart, safeEnd) {
+        val width = size.width - safeStart.roundToPx() - safeEnd.roundToPx()
+        val threshold = width * .2f
         detectHorizontalDragGestures(
             onDragEnd = { scope.launch {
                 val offset = swipe.value
                 val next = currentTab + if (offset < 0) 1 else -1
                 if (abs(offset) > threshold && next in groupKeys.indices) {
                     currentSelectTab(next)
-                    swipe.snapTo(-sign(offset) * size.width * .25f)
+                    swipe.snapTo(-sign(offset) * width * .25f)
                 }
                 swipe.animateTo(0f, spring(dampingRatio = .9f, stiffness = Spring.StiffnessMediumLow))
             } },
@@ -399,6 +407,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
         alpha = 1f - (abs(swipe.value) / size.width.coerceAtLeast(1f)).coerceAtMost(.5f)
     }
     val bottomInset = LocalNavigationBottomInset.current
+    val gridPadding = PaddingValues(start = gridStart, end = gridEnd, top = topPadding, bottom = bottomInset + 8.dp)
     val canvas = PathfinAppearance.canvas
     var pulled by remember(state) { mutableStateOf(false) }
     // 首行里的放大镜；页头出现时由页头的放大镜接替，同一时刻只有一个。
@@ -418,8 +427,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
             refreshOnEntry = false, indicatorTopInset = contentTop) {
             // 台标宫格：手机三列、宽屏自动加列；上次观看、标签、分组标题与状态整行跨列。
             LazyVerticalGrid(GridCells.Adaptive(TileMinWidth), Modifier.fillMaxSize().then(swipeGesture).testTag("live-tv-channel-list"), list,
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topPadding,
-                    bottom = bottomInset + 8.dp),
+                contentPadding = gridPadding,
                 verticalArrangement = Arrangement.spacedBy(GridSpacing), horizontalArrangement = Arrangement.spacedBy(GridSpacing)) {
                 gridItems(rows, key = { it.key }, contentType = { it::class },
                     span = { if (it is LiveTvChannelRow || it is LiveTvSkeletonRow) GridItemSpan(1) else GridItemSpan(maxLineSpan) }) { row ->
@@ -429,14 +437,19 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
                     val moving = if (row is LiveTvResumeRow || row is LiveTvTabsRow) item else item.then(shifted)
                     when (row) {
                         LiveTvResumeRow -> resume?.let { channel ->
-                            LiveTvAmbient(channel, session, api, now, canPlay, preparingId, contentTop, onPlay = { play(channel) }, onGuide = { guide(channel) })
+                            LiveTvAmbient(channel, session, api, now, canPlay, preparingId, contentTop, gridPadding,
+                                onPlay = { play(channel) }, onGuide = { guide(channel) })
                         }
                         LiveTvTabsRow -> LiveTvTabs(tabLabels, activeTab, tabScroll, ::selectTab, item,
                             trailing = rowSearch.takeIf { searchInRows })
                         LiveTvFillerRow -> {
                             // 让标签能停在页头下沿：补足“页头 + 标签 + 本组各排卡片 + 底部留白”之外的高度。
-                            val (width, height) = with(density) { viewport.width.toDp() to viewport.height.toDp() }
-                            val columns = maxOf(1, ((width - 32.dp + GridSpacing) / (TileMinWidth + GridSpacing)).toInt())
+                            val height = with(density) { viewport.height.toDp() }
+                            val columns = with(density) {
+                                val width = viewport.width - gridStart.roundToPx() - gridEnd.roundToPx()
+                                val spacing = GridSpacing.roundToPx()
+                                maxOf(1, (width + spacing) / (TileMinWidth.roundToPx() + spacing))
+                            }
                             val lines = ((chosen?.channels?.size ?: 0) + columns - 1) / columns
                             val used = contentTop + TabsHeight + GridSpacing + (tileHeight + GridSpacing) * lines + bottomInset + 16.dp
                             Spacer(moving.height((height - used).coerceAtLeast(0.dp)))
@@ -457,7 +470,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
         val headerBottom by animateDpAsState(if (headerRow) headerTop else topInset, tween(200), label = "live-tv-header")
         PageTitleBar(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures(onDoubleTap = { scope.launch { list.animateScrollToItem(0) } }) },
             height = headerBottom, dark = covered) {
-            Column(Modifier.fillMaxWidth().padding(top = topInset)) {
+            Column(Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset)) {
                 AnimatedVisibility(headerRow, enter = fadeIn(tween(200)) + expandVertically(tween(200)),
                     exit = fadeOut(tween(160)) + shrinkVertically(tween(200))) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(start = 12.dp, end = 8.dp)
@@ -531,10 +544,10 @@ private fun LiveTvTabs(labels: List<String>, active: Int, scroll: ScrollState, o
     Row(modifier.fillMaxWidth().height(TabsHeight), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f).fillMaxHeight().layout { measurable, constraints ->
             // 标签行贯穿到屏幕两边，首尾仍与列表对齐；带尾部按钮时右侧止于按钮前。
-            val bleed = 16.dp.roundToPx()
+            val bleed = GridHorizontalPadding.roundToPx()
             val full = constraints.maxWidth + bleed + if (trailing == null) bleed else 0
             val placeable = measurable.measure(constraints.copy(minWidth = full, maxWidth = full))
-            layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+            layout(constraints.maxWidth, placeable.height) { placeable.placeRelative(-bleed, 0) }
         }.horizontalScroll(scroll).testTag("live-tv-tabs"), contentAlignment = Alignment.CenterStart) {
             Box(Modifier.offset { IntOffset(left.value.roundToInt(), 0) }.width(with(density) { width.value.toDp() }).height(36.dp)
                 .clip(CircleShape).background(fill))
@@ -626,6 +639,7 @@ private fun Modifier.liveTvActions(channel: LiveTvChannel, canPlay: Boolean, pre
 
 private val TileMinWidth = 96.dp
 private val GridSpacing = 10.dp
+private val GridHorizontalPadding = 16.dp
 private val TabsHeight = 52.dp
 /** 上次观看底部淡出段：比首页短，分组标签紧跟在封面下方。 */
 private val LiveAmbientFade = 56.dp
@@ -679,18 +693,19 @@ private fun LiveTvChannelMark(channel: LiveTvChannel, session: Session, api: Jel
  */
 @Composable
 private fun LiveTvAmbient(channel: LiveTvChannel, session: Session, api: JellyfinApi, now: Instant, canPlay: Boolean, preparingId: String?,
-    contentTop: Dp, onPlay: () -> Unit, onGuide: () -> Unit) {
+    contentTop: Dp, gridPadding: PaddingValues, onPlay: () -> Unit, onGuide: () -> Unit) {
     val current = channel.nowShowing(now)
     val canvas = MaterialTheme.colorScheme.surface
     val accent = PathfinAppearance.accent
     val logo = rememberServerImage(session, api.imageUrl(session, channel.item, width = 160), api)
     val preparing = preparingId == channel.item.id
-    // 网格两侧留了页边距，氛围区向两侧各伸出同样宽度，铺满整屏。
+    // 让氛围背景跨出网格留白，前景单独避开横向安全区。
     Box(Modifier.fillMaxWidth().layout { measurable, constraints ->
-        val bleed = 16.dp.roundToPx()
-        val width = constraints.maxWidth + bleed * 2
+        val start = gridPadding.calculateStartPadding(layoutDirection).roundToPx()
+        val end = gridPadding.calculateEndPadding(layoutDirection).roundToPx()
+        val width = constraints.maxWidth + start + end
         val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-        layout(constraints.maxWidth, placeable.height) { placeable.place(-bleed, 0) }
+        layout(constraints.maxWidth, placeable.height) { placeable.placeRelative(-start, 0) }
     }.testTag("live-tv-resume")) {
         // 放大的模糊台标会溢出图层边界，必须裁在氛围区内，否则会盖到下面的频道列表。
         Box(Modifier.matchParentSize().clipToBounds().background(Color(0xFF15161A))) {
@@ -705,7 +720,7 @@ private fun LiveTvAmbient(channel: LiveTvChannel, session: Session, api: Jellyfi
             })
         }
         CompositionLocalProvider(LocalContentColor provides Color.White) {
-            Column(Modifier.fillMaxWidth()
+            Column(Modifier.fillMaxWidth().pageHorizontalInsets()
                 .clickable(enabled = canPlay && preparingId == null, role = Role.Button, onClickLabel = tr("继续观看 %1\$s", channel.name), onClick = onPlay)
                 .padding(start = 20.dp, end = 20.dp, top = contentTop + 28.dp, bottom = LiveAmbientFade).widthIn(max = 560.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {

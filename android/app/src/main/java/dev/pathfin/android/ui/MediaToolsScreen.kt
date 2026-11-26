@@ -247,12 +247,15 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                                 metadataNeedsReload = true
                                 draftDirty = false
                             }
-                        }) } else Column(Modifier.fillMaxSize().padding(top = topInset + titleBarHeight).verticalScroll(rememberScrollState())) {
+                        }) } else Column(Modifier.fillMaxSize().pageHorizontalInsets().padding(top = topInset + titleBarHeight)
+                            .verticalScroll(rememberScrollState())) {
                             if (!loading) EmptyPanel(tr("无法读取元数据"), tr("请检查连接或当前账号权限。"))
                         }
                     }
                     initialPage == "images" && capabilities.canEditImages -> LazyColumn(
-                        Modifier.fillMaxSize().testTag("media-images"), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalNavigationBottomInset.current), verticalArrangement = Arrangement.spacedBy(12.dp),
+                        Modifier.fillMaxSize().pageHorizontalInsets().testTag("media-images"),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = LocalNavigationBottomInset.current),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         val types = ((if (item.type == "Person") listOf(MediaImageType.PRIMARY) else editableImageTypes) + images.map { it.type }.filterNot {
                             it == MediaImageType.BACKDROP || it == MediaImageType.PROFILE || it == MediaImageType.CHAPTER
@@ -294,7 +297,7 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                         item("upload-limit") { Text(tr("JPG、PNG、WebP · 单张不超过 10 MB"), fontSize = 12.sp, lineHeight = 17.sp,
                             color = PathfinAppearance.textMuted) }
                     }
-                    !loading -> Box(Modifier.padding(top = if (initialPage == "metadata") topInset + titleBarHeight else 0.dp)) {
+                    !loading -> Box(Modifier.pageHorizontalInsets().padding(top = if (initialPage == "metadata") topInset + titleBarHeight else 0.dp)) {
                         EmptyPanel(tr("当前账号没有编辑权限"), tr("请在 Jellyfin 中为账号授予所需权限。"))
                     }
                 }
@@ -303,7 +306,8 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
         if (initialPage == "metadata" && (document == null || !capabilities.canEditMetadata)) {
             MetadataTitleBar(topInset, titleBarHeight)
         }
-        PathfinSnackbarHost(feedback, Modifier.align(Alignment.BottomCenter).padding(bottom = LocalNavigationBottomInset.current), tag = "media-tools-feedback")
+        PathfinSnackbarHost(feedback, Modifier.align(Alignment.BottomCenter).pageHorizontalInsets()
+            .padding(bottom = LocalNavigationBottomInset.current), tag = "media-tools-feedback")
     }
     remoteSearchType?.takeIf { capabilities.canEditImages }?.let { type ->
         RemoteImageSearchSheet(management, session, item.id, type, onDismiss = { remoteSearchType = null },
@@ -618,7 +622,8 @@ private fun MetadataEditor(document: EditableMediaMetadata, person: Boolean, ext
     LaunchedEffect(changed) { onDirty(changed) }
     val topInset = LocalPageTopInset.current
     Box(Modifier.fillMaxSize()) {
-    LazyColumn(Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas).testTag("metadata-form"),
+    LazyColumn(Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas)
+        .pageHorizontalInsets().testTag("metadata-form"),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topInset + titleBarHeight + 12.dp, bottom = LocalNavigationBottomInset.current + 8.dp)) {
         // 与设置页同一语言：每个字段一个条目，按首/中/末拼成一张白卡片，行间细线；条目粒度不变，滚动恢复与原先一致。
         item(key = "metadata-path") {
@@ -693,9 +698,9 @@ private fun MetadataEditor(document: EditableMediaMetadata, person: Boolean, ext
 @Composable
 private fun MetadataTitleBar(topInset: Dp, height: Dp, saving: Boolean = false, canSave: Boolean = false, onSave: () -> Unit = {}) {
     val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    PageTitleBar(Modifier.fillMaxWidth().height(topInset + height).pointerInput(Unit) { detectTapGestures { } },
+    PageTitleBar(Modifier.fillMaxWidth().height(topInset + height).testTag("metadata-title-bar").pointerInput(Unit) { detectTapGestures { } },
         height = topInset + height) {
-        Row(Modifier.fillMaxWidth().padding(top = topInset).height(height).padding(horizontal = 8.dp)
+        Row(Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset).height(height).padding(horizontal = 8.dp)
             .testTag("metadata-editor-header"), verticalAlignment = Alignment.CenterVertically) {
             PathfinIconButton(PathfinIcons.Back, tr("返回"), { backDispatcher?.onBackPressed() },
                 Modifier.testTag("metadata-back"), tint = PathfinAppearance.textMain, size = 44.dp)

@@ -108,7 +108,7 @@ internal fun SearchContent(
     // 同次测量先确定输入框与类型栏的真实高度，大字号也不需要首帧猜测或回调修正占位。
     SubcomposeLayout(Modifier.fillMaxSize().background(PathfinAppearance.canvas).imePadding()) { constraints ->
         val header = subcompose("search-header") {
-            Column(Modifier.fillMaxWidth().padding(top = topInset)) {
+            Column(Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset)) {
                 PathfinSearchField(query, { query = it }, { submit() }, { submit("") }, tr("搜索媒体或人物"),
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("search-query"))
                 LazyRow(
@@ -149,7 +149,8 @@ internal fun SearchContent(
         }.single().measure(constraints)
         val material = subcompose("search-header-material") {
             TopBarBlurSurface(
-                Modifier.fillMaxWidth().height(headerHeight).pointerInput(Unit) { detectTapGestures { } },
+                Modifier.fillMaxWidth().height(headerHeight).testTag("search-header")
+                    .pointerInput(Unit) { detectTapGestures { } },
                 height = headerHeight, secondaryRow = true,
             ) { }
         }.single().measure(constraints.copy(minHeight = 0))
@@ -169,7 +170,7 @@ private fun SearchSuggestions(state: SearchState, onRefresh: () -> Unit, topInse
     RefreshablePage(suggestions.loading, onRefresh, Modifier.fillMaxSize(),
         refreshOnEntry = state.suggestionsLoaded || suggestions.error != null, indicatorTopInset = topInset) {
         LazyColumn(
-            Modifier.fillMaxSize().testTag("search-suggestions"),
+            Modifier.fillMaxSize().pageHorizontalInsets().testTag("search-suggestions"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = topInset + 20.dp, bottom = LocalNavigationBottomInset.current),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -214,7 +215,7 @@ private fun DiscoveryResults(
     RefreshablePage(loading, onRefresh, Modifier.fillMaxSize().background(PathfinAppearance.canvas),
         refreshOnEntry = state.requested, indicatorTopInset = topInset) {
         LazyColumn(
-            Modifier.fillMaxSize().testTag(tag),
+            Modifier.fillMaxSize().pageHorizontalInsets().testTag(tag),
             contentPadding = PaddingValues(top = topInset + 12.dp, bottom = LocalNavigationBottomInset.current),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {

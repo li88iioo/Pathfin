@@ -19,6 +19,10 @@ import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.atomic.AtomicBoolean
@@ -90,6 +94,30 @@ internal object VerificationDisplay {
         }
     }
 
+    /** 优先检查真实横屏缺口；没有横向缺口的设备依次模拟左右缺口。 */
+    fun withSideCutouts(compose: AndroidComposeTestRule<*, *>, root: SemanticsNodeInteraction, verify: (Insets) -> Unit) {
+        val view = root.readVerificationNode(compose) { (it.root as ViewRootForTest).view }
+        val original = compose.runOnIdle { checkNotNull(ViewCompat.getRootWindowInsets(view)) }
+        val type = WindowInsetsCompat.Type.displayCutout()
+        val actual = original.getInsets(type)
+        if (actual.left > 0 || actual.right > 0) {
+            verify(actual)
+            return
+        }
+        val width = with(compose.density) { 56.dp.roundToPx() }
+        try {
+            for (cutout in listOf(Insets.of(width, actual.top, 0, actual.bottom), Insets.of(0, actual.top, width, actual.bottom))) {
+                compose.runOnIdle {
+                    val injected = WindowInsetsCompat.Builder(original).setInsets(type, cutout)
+                        .setInsetsIgnoringVisibility(type, cutout).setVisible(type, true).build()
+                    ViewCompat.dispatchApplyWindowInsets(view, injected)
+                }
+                verify(cutout)
+            }
+        } finally {
+            compose.runOnIdle { ViewCompat.dispatchApplyWindowInsets(view, original) }
+        }
+    }
 }
 
 /** 在 UI 线程计算坐标并构建手势；返回测试线程后由原测试框架统一交付事件。 */

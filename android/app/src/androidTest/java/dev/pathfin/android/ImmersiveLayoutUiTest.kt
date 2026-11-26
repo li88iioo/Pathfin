@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -31,24 +32,29 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import coil3.ImageLoader
 import dev.pathfin.android.domain.AppPreferences
+import dev.pathfin.android.domain.LibraryQuery
 import dev.pathfin.android.domain.MediaItem
+import dev.pathfin.android.domain.PublicServerInfo
 import dev.pathfin.android.domain.ServerConfig
 import dev.pathfin.android.domain.ServerProfile
 import dev.pathfin.android.domain.Session
 import dev.pathfin.android.ui.AppState
 import dev.pathfin.android.ui.AppSystemBars
 import dev.pathfin.android.ui.AppViewModel
+import dev.pathfin.android.ui.BrowserUiState
 import dev.pathfin.android.ui.HomeState
 import dev.pathfin.android.ui.LocalAppPreferences
 import dev.pathfin.android.ui.PathfinApp
 import dev.pathfin.android.ui.Route
+import dev.pathfin.android.ui.ServerAdministrationState
+import dev.pathfin.android.ui.ServerProbe
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import org.junit.After
@@ -133,45 +139,72 @@ class ImmersiveLayoutUiTest {
         val play = compose.onNodeWithTag("home-ambient-play")
         val list = compose.onNodeWithTag("home-list")
         VerificationDisplay.awaitWindowReady(compose, "home-side-cutout", root, avatar, more, play)
-        val view = root.readVerificationNode(compose) { checkNotNull(it.root as? ViewRootForTest).view }
-        val original = compose.runOnIdle { checkNotNull(ViewCompat.getRootWindowInsets(view)) }
-        val cutoutType = WindowInsetsCompat.Type.displayCutout()
-        val actualCutout = original.getInsets(cutoutType)
-        val cutoutWidth = (56 * compose.density.density).roundToInt()
-        val cutouts = if (actualCutout.left > 0 || actualCutout.right > 0) listOf(actualCutout)
-            else listOf(Insets.of(cutoutWidth, actualCutout.top, 0, actualCutout.bottom),
-                Insets.of(0, actualCutout.top, cutoutWidth, actualCutout.bottom))
-        try {
-            cutouts.forEach { cutout ->
-                if (cutout != actualCutout) compose.runOnIdle {
-                    val injected = WindowInsetsCompat.Builder(original)
-                        .setInsets(cutoutType, cutout)
-                        .setInsetsIgnoringVisibility(cutoutType, cutout)
-                        .setVisible(cutoutType, true)
-                        .build()
-                    ViewCompat.dispatchApplyWindowInsets(view, injected)
-                }
-                val window = bounds("browser-back-motion")
-                val ambient = bounds("home-ambient")
-                assertEquals("左侧缺口 ${cutout.left}px 时，背景应画到窗口左缘", window.left, ambient.left, .5f)
-                assertEquals("右侧缺口 ${cutout.right}px 时，背景应画到窗口右缘", window.right, ambient.right, .5f)
-                val controls = listOf(avatar, play, more).map { it.readVerificationNode(compose) { node -> node.boundsInRoot } }
-                val pixels = root.captureToImage().toPixelMap()
-                val y = ((controls.first().bottom - window.top) + 16 * compose.density.density).roundToInt()
-                val x = if (cutout.left > 0) cutout.left / 2 else pixels.width - (cutout.right + 1) / 2
-                assertTrue("缺口所在的屏幕边缘应绘制深色氛围背景：cutout=$cutout color=${pixels[x, y]}",
-                    pixels[x, y].green < .5f)
-                list.performScrollToKey("home-libraries")
-                val libraryRow = bounds("home-libraries-content")
-                val shelf = bounds("library-shelf/home-return-library-0")
-                (controls + listOf(libraryRow, shelf)).forEach { content ->
-                    assertTrue("首页内容应避开缺口：cutout=$cutout content=$content window=$window",
-                        content.left >= window.left + cutout.left && content.right <= window.right - cutout.right)
-                }
-                list.performScrollToIndex(0)
+        VerificationDisplay.withSideCutouts(compose, root) { cutout ->
+            val window = bounds("browser-back-motion")
+            val ambient = bounds("home-ambient")
+            assertEquals("左侧缺口 ${cutout.left}px 时，背景应画到窗口左缘", window.left, ambient.left, .5f)
+            assertEquals("右侧缺口 ${cutout.right}px 时，背景应画到窗口右缘", window.right, ambient.right, .5f)
+            val controls = listOf(avatar, play, more).map { it.readVerificationNode(compose) { node -> node.boundsInRoot } }
+            val pixels = root.captureToImage().toPixelMap()
+            val y = ((controls.first().bottom - window.top) + 16 * compose.density.density).roundToInt()
+            val x = if (cutout.left > 0) cutout.left / 2 else pixels.width - (cutout.right + 1) / 2
+            assertTrue("缺口所在的屏幕边缘应绘制深色氛围背景：cutout=$cutout color=${pixels[x, y]}",
+                pixels[x, y].green < .5f)
+            list.performScrollToKey("home-libraries")
+            val libraryRow = bounds("home-libraries-content")
+            val shelf = bounds("library-shelf/home-return-library-0")
+            (controls + listOf(libraryRow, shelf)).forEach { content ->
+                assertTrue("首页内容应避开缺口：cutout=$cutout content=$content window=$window",
+                    content.left >= window.left + cutout.left && content.right <= window.right - cutout.right)
             }
-        } finally {
-            compose.runOnIdle { ViewCompat.dispatchApplyWindowInsets(view, original) }
+            list.performScrollToIndex(0)
+        }
+    }
+
+    @Test @SdkSuppress(minSdkVersion = 30)
+    fun pageHeadersFillTheWindowAndKeepControlsInsideSideCutouts() {
+        val initial = homeApp()
+        val library = initial.home.libraries.first()
+        val item = initial.home.resume.first()
+        val search = Route.LibrarySearch(library)
+        val state = showApp(initial.copy(browsers = mapOf(search.key to BrowserUiState(query = LibraryQuery(searchTerm = item.name)))))
+        val session = requireNotNull(initial.session)
+        val administration = compose.runOnIdle { ServerAdministrationState(session, viewModel.api, viewModel.viewModelScope) }
+        val root = compose.onNodeWithTag("browser-back-motion")
+        val pages = listOf(
+            Triple(Route.Search, "search-header", listOf("search-query", "search-filters")),
+            Triple(Route.Folder(library), "browser-toolbar-surface", listOf("browser-toolbar", "browser-grid")),
+            Triple(search, "library-search-header", listOf("library-search-input", "library-search-cancel")),
+            Triple(Route.Identification(item), "identification-screen", listOf("identification-back")),
+            Triple(Route.MediaTools(item), "metadata-title-bar", listOf("metadata-back", "metadata-save")),
+            Triple(Route.ServerAdministration, "server-administration-screen", listOf("server-administration-back")),
+        )
+        for ((route, background, controls) in pages) {
+            compose.runOnIdle { state.value = state.value.copy(routes = listOf(route), administration = administration) }
+            assertFullWidthAndSafeControls(background, controls, root)
+        }
+    }
+
+    @Test @SdkSuppress(minSdkVersion = 30)
+    fun serverSignInArtworkFillsTheWindowAndTheSubmitButtonAvoidsSideCutouts() {
+        val probe = ServerProbe(ServerConfig("https://layout.fixture.invalid"), PublicServerInfo("layout", "测试服务器", "1"), emptyList())
+        showApp(AppState(showServers = true, serverProbe = probe))
+        assertFullWidthAndSafeControls("server-connect-artwork", listOf("login-submit"), compose.onNodeWithTag("browser-back-motion"))
+    }
+
+    private fun assertFullWidthAndSafeControls(background: String, controls: List<String>,
+        root: SemanticsNodeInteraction) {
+        VerificationDisplay.awaitWindowReady(compose, background, root, compose.onNodeWithTag(background))
+        VerificationDisplay.withSideCutouts(compose, root) { cutout ->
+            val window = root.readVerificationNode(compose) { it.boundsInRoot }
+            val artwork = bounds(background)
+            assertEquals("$background 左缘 $cutout", window.left, artwork.left, .5f)
+            assertEquals("$background 右缘 $cutout", window.right, artwork.right, .5f)
+            for (tag in controls) {
+                val content = bounds(tag)
+                assertTrue("$tag 应在横向安全区内：$content, $cutout", content.width > 0f &&
+                    content.left >= window.left + cutout.left - .5f && content.right <= window.right - cutout.right + .5f)
+            }
         }
     }
 

@@ -3,12 +3,15 @@ package dev.pathfin.android
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.isFocused
@@ -19,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
@@ -42,19 +46,29 @@ import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.longClick
+import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import coil3.ImageLoader
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.data.LiveTvGroupSource
+import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.domain.MediaItem
 import dev.pathfin.android.domain.ServerConfig
+import dev.pathfin.android.domain.ServerProfile
 import dev.pathfin.android.domain.Session
+import dev.pathfin.android.i18n.tr
+import dev.pathfin.android.ui.AppState
+import dev.pathfin.android.ui.AppViewModel
 import dev.pathfin.android.ui.LiveTvScreen
 import dev.pathfin.android.ui.LiveTvState
 import dev.pathfin.android.ui.LocalPageActive
 import dev.pathfin.android.ui.LocalPageRefreshEnabled
 import dev.pathfin.android.ui.LocalNoticeHost
+import dev.pathfin.android.ui.PathfinApp
 import dev.pathfin.android.ui.PathfinSnackbarHost
+import dev.pathfin.android.ui.Route
 import dev.pathfin.android.ui.theme.PathfinTheme
 import dev.pathfin.android.ui.theme.ThemePreference
 import java.time.Instant
@@ -486,6 +500,44 @@ class LiveTvUiTest {
         compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
     }
 
+    @Test @SdkSuppress(minSdkVersion = 30)
+    fun liveBackdropFillsTheWindowWhileControlsAvoidTheCutout() {
+        val session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User",
+            "device", serverId = "server", isAdministrator = true)
+        Fixture(rich = true, session = session).use { fixture ->
+            show(fixture, groups = true, inApp = true)
+            val all = "live-tv-tab-${tr("全部")}"
+            waitFor(all)
+            val root = compose.onNodeWithTag("browser-back-motion")
+            VerificationDisplay.awaitWindowReady(compose, "live-tv-side-cutout", root)
+            VerificationDisplay.withSideCutouts(compose, root) { cutout ->
+                val window = channelBounds("browser-back-motion")
+                val cover = channelBounds("live-tv-resume")
+                assertEquals("直播背景左边缘，缺口 $cutout", window.left.value, cover.left.value, .5f)
+                assertEquals("直播背景右边缘，缺口 $cutout", window.right.value, cover.right.value, .5f)
+                val pixels = root.captureToImage().toPixelMap()
+                val x = if (cutout.left > 0) cutout.left / 2 else pixels.width - (cutout.right + 1) / 2
+                val y = with(compose.density) { ((cover.top + cover.bottom) / 2 - window.top).roundToPx() }
+                assertTrue("直播背景必须延伸到缺口一侧 $cutout", pixels[x, y].green < .5f)
+
+                val grid = compose.onNodeWithTag("live-tv-channel-list")
+                val controls = listOf("live-tv-resume-play", "live-tv-search-open", all)
+                val bounds = controls.map { it to channelBounds(it) }.toMutableList()
+                val channel = "live-tv-channel-harbour"
+                grid.performScrollToNode(hasTestTag(channel))
+                bounds += channel to channelBounds(channel)
+                val (left, right) = with(compose.density) {
+                    window.left + cutout.left.toDp() to window.right - cutout.right.toDp()
+                }
+                bounds.forEach { (control, position) ->
+                    assertTrue("$control 必须避开缺口 $cutout，实际位置 $position",
+                        position.left >= left && position.right <= right)
+                }
+                grid.performScrollToIndex(0)
+            }
+        }
+    }
+
     @Test fun groupTabsFilterTheListInPlaceAndAllIsTheDefault() {
         val fixture = Fixture(rich = true, session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User",
             "device", serverId = "server", isAdministrator = true))
@@ -837,8 +889,13 @@ class LiveTvUiTest {
         val notice = SnackbarHostState()
     }
 
-    private fun show(fixture: Fixture, initialQuery: String = "", groups: Boolean = false, onPlay: (MediaItem) -> Unit = {}): ScreenHost {
+    private fun show(fixture: Fixture, initialQuery: String = "", groups: Boolean = false, inApp: Boolean = false,
+        onPlay: (MediaItem) -> Unit = {}): ScreenHost {
         val host = ScreenHost(fixture)
+        val vm = if (inApp) compose.runOnUiThread {
+            compose.activity.enableEdgeToEdge()
+            ViewModelProvider(compose.activity)[AppViewModel::class.java]
+        } else null
         compose.setContent {
             val scope = rememberCoroutineScope()
             val current = host.fixture
@@ -849,12 +906,23 @@ class LiveTvUiTest {
             }
             DisposableEffect(state) { onDispose { state.cancel() } }
             PathfinTheme(ThemePreference.LIGHT) { Surface {
-                BackHandler(!host.active) { host.backgroundBacks.incrementAndGet() }
-                CompositionLocalProvider(LocalPageActive provides host.active, LocalPageRefreshEnabled provides host.active,
-                    LocalNoticeHost provides host.notice) {
-                    Box(Modifier.fillMaxSize()) {
-                        if (host.visible) LiveTvScreen(state, { host.visible = false }, onPlay)
-                        if (host.active) PathfinSnackbarHost(host.notice, Modifier.align(Alignment.BottomCenter))
+                if (vm != null) {
+                    val app = remember(state) {
+                        val profile = ServerProfile(id = "live-tv-layout", session = current.session, displayName = "直播布局")
+                        AppState(session = current.session, profiles = listOf(profile), currentProfileId = profile.id,
+                            preferences = AppPreferences(liveTvEnabled = true), liveTv = state, routes = listOf(Route.LiveTv))
+                    }
+                    val loader = remember { ImageLoader.Builder(compose.activity).diskCache(null).build() }
+                    DisposableEffect(loader) { onDispose { loader.shutdown() } }
+                    PathfinApp(vm, app, rememberSaveableStateHolder(), posterLoader = loader)
+                } else {
+                    BackHandler(!host.active) { host.backgroundBacks.incrementAndGet() }
+                    CompositionLocalProvider(LocalPageActive provides host.active, LocalPageRefreshEnabled provides host.active,
+                        LocalNoticeHost provides host.notice) {
+                        Box(Modifier.fillMaxSize()) {
+                            if (host.visible) LiveTvScreen(state, { host.visible = false }, onPlay)
+                            if (host.active) PathfinSnackbarHost(host.notice, Modifier.align(Alignment.BottomCenter))
+                        }
                     }
                 }
             } }

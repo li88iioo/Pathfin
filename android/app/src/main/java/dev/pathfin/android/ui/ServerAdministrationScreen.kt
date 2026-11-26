@@ -254,10 +254,11 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
     Box(Modifier.fillMaxSize().testTag("server-administration-screen")) {
         RefreshablePage(loading, { load() }, Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas),
             refreshOnEntry = false, enabled = !writing && session.isAdministrator, indicatorTopInset = contentTop) {
-            if (!session.isAdministrator) Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
+            if (!session.isAdministrator) Column(Modifier.fillMaxSize().pageHorizontalInsets().verticalScroll(rememberScrollState())
+                .padding(top = contentTop)) {
                 EmptyPanel(tr("需要管理员权限"), tr("请使用服务器管理员账号管理服务器。"), PathfinIcons.Lock)
             } else {
-                LazyColumn(Modifier.fillMaxSize().testTag("server-administration-list"), state = list,
+                LazyColumn(Modifier.fillMaxSize().pageHorizontalInsets().testTag("server-administration-list"), state = list,
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 8.dp, bottom = LocalNavigationBottomInset.current + 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (page == "overview") {
@@ -323,7 +324,7 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
             }
         }
         PageTitleBar(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }, height = contentTop) {
-            Row(Modifier.fillMaxWidth().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
+            Row(Modifier.fillMaxWidth().pageHorizontalInsets().padding(top = topInset).onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
                 .heightIn(min = 60.dp).padding(start = 4.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 PathfinIconButton(PathfinIcons.Back, tr("返回"), ::back, Modifier.testTag("server-administration-back"), enabled = !writing,
                     tint = PathfinAppearance.textMain, size = 44.dp)
@@ -342,7 +343,7 @@ fun ServerAdministrationScreen(state: ServerAdministrationState, onBack: () -> U
             }
         }
         // 错误与操作结果浮在页头下方：列表滚到哪里都看得到，出现或消失都不推动列表；两条各自淡入淡出。
-        if (session.isAdministrator) Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()
+        if (session.isAdministrator) Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().pageHorizontalInsets()
             .padding(start = 16.dp, end = 16.dp, top = contentTop + 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             FloatingMessage(error) { message -> InlineError(message, modifier = Modifier.testTag("server-administration-error")) }
             FloatingMessage(notice) { message -> AdministrationNotice(message, container = Color.Transparent) }

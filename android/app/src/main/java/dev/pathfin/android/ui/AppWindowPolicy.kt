@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -27,6 +29,11 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 internal val LocalPlaybackFullscreen = staticCompositionLocalOf { false }
+
+/** 让前景避开屏幕两侧的系统栏和缺口，页面背景与玻璃采样源仍可铺满窗口。 */
+@Composable
+internal fun Modifier.pageHorizontalInsets(): Modifier =
+    windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal))
 
 /** 首帧 Insets 尚未分发时使用系统尺寸；同一方向内不因浮层获焦短暂归零。 */
 @android.annotation.SuppressLint("InternalInsetResource", "DiscouragedApi")

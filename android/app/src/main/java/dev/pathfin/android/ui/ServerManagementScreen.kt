@@ -250,13 +250,19 @@ internal fun ServerManagementScreen(
 private fun StepScaffold(
     modifier: Modifier = Modifier,
     actions: @Composable ColumnScope.() -> Unit,
+    header: @Composable (Modifier) -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val formWidth = Modifier.pageHorizontalInsets().widthIn(max = 520.dp).fillMaxWidth()
     Column(modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Bottom)),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.weight(1f).widthIn(max = 520.dp).fillMaxWidth().verticalScroll(rememberScrollState()), content = content)
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            header(formWidth)
+            Column(formWidth, content = content)
+        }
         Column(
-            Modifier.widthIn(max = 520.dp).fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 16.dp),
+            formWidth.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
             content = actions,
@@ -307,7 +313,7 @@ private fun AddressStep(
         },
     ) {
         // 标题和表单共用滚动区域，横屏或键盘占用较多高度时仍能访问每个字段。
-        Row(Modifier.widthIn(max = 520.dp).fillMaxWidth()
+        Row(Modifier.fillMaxWidth()
             .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Top))
             .padding(start = if (firstRun) 24.dp else 10.dp, end = 20.dp, top = 12.dp, bottom = 8.dp)
             .heightIn(min = 52.dp).testTag("server-address-header"), verticalAlignment = Alignment.CenterVertically) {
@@ -493,8 +499,7 @@ private fun AccountStep(
     StepScaffold(actions = {
         SubmitButton(tr("进入媒体库"), chosen.isNotBlank(), busy, ::submit, Modifier.fillMaxWidth())
         QuietButton(tr("更换服务器"), onBack, enabled = !busy)
-    }) {
-        ServerHero(probe, api)
+    }, header = { formWidth -> ServerHero(probe, api, formWidth) }) {
         Column(Modifier.padding(horizontal = 20.dp)) {
             if (usersAboveFields) PublicAccountChoices(probe, selected, manual, busy, api) { selected = it }
             GroupCard(Modifier.padding(top = 16.dp)) {
@@ -534,7 +539,7 @@ private fun PublicAccountChoices(probe: ServerProbe, selected: String?, manual: 
 
 /** 服务器的公开启动图承担首屏颜色；未启用启动图时以柔光底图作底，标题保持同一位置。 */
 @Composable
-private fun ServerHero(probe: ServerProbe, api: JellyfinApi) {
+private fun ServerHero(probe: ServerProbe, api: JellyfinApi, titleWidth: Modifier) {
     val canvas = PathfinAppearance.canvas
     val topInset = AppSafeDrawingInsets.asPaddingValues().calculateTopPadding()
     var splashShown by remember(probe.config.baseUrl) { mutableStateOf(false) }
@@ -543,7 +548,7 @@ private fun ServerHero(probe: ServerProbe, api: JellyfinApi) {
         AsyncImage(api.splashscreenUrl(probe.config), null, imageLoader = LocalPosterLoader.current,
             contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize(), onSuccess = { splashShown = true })
         if (splashShown) Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Transparent, 0.35f to Color.Transparent, 0.96f to canvas)))
-        Column(Modifier.align(Alignment.BottomStart).padding(horizontal = 26.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.align(Alignment.BottomCenter).then(titleWidth).padding(horizontal = 26.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Eyebrow(tr("已连接"), color = PathfinAppearance.textSub)
             Text(probe.info.name.ifBlank { "Jellyfin" }, Modifier.semantics { heading() }, fontSize = 26.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.3.sp,
                 color = PathfinAppearance.textMain, maxLines = 2, overflow = TextOverflow.Ellipsis)
