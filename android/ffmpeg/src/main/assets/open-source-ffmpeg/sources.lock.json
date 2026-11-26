@@ -159,7 +159,7 @@
     },
     {
       "path": "build.gradle.kts",
-      "sha256": "b49f657a63d0d50603930afd5a08052c38b10e7ec2d840acca742f892fca133e"
+      "sha256": "94be18af10a45530e0f19931f554a6579044d0bf3ccd0e3d0a19a0ccf34febe6"
     },
     {
       "path": "src/main/cpp/pathfin_video_jni.cc",

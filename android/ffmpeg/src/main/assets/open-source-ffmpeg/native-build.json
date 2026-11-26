@@ -44,7 +44,7 @@
   },
   "sourceInputs": {
     "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
-    "build.gradle.kts": "b49f657a63d0d50603930afd5a08052c38b10e7ec2d840acca742f892fca133e",
+    "build.gradle.kts": "94be18af10a45530e0f19931f554a6579044d0bf3ccd0e3d0a19a0ccf34febe6",
     "src/main/cpp/ffmpeg_jni.cc": "7bd4a3d09cf1828543848a1abf271f984f665d25092c81c61a4fe4735879d3f0",
     "src/main/cpp/pathfin_video_jni.cc": "d96c6a7b84c7eac1338c5de464f730f11db8eeb8031a4cfc1e472df12c16980f",
     "src/main/cpp/pathfin_video_render.c": "0e0e7ec8a290d1fe1808d2ae5ea48e13c6ea7c3e5a46dc4def38be4c0f895632",
@@ -166,5 +166,5 @@
   "configSha256": "b8cf24aa4dc1afea1b60a385cdc50c3ea91fac6ef42efb5e8a499b7ecdd8e1cc",
   "componentConfigSha256": "e9317d218c14931ff06151402e47f9beaac2e63f6298b701ec68442ee83fafb2",
   "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
-  "sourceLockSha256": "196fc717b8dcfe1d96957b15a9a3301de524370774f5600777c88efc489d70af"
+  "sourceLockSha256": "a8be01b0cdcadbee6ce2518694e02fda94f41e44a6bb8551764c33334f50b07e"
 }

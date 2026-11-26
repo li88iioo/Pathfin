@@ -7,7 +7,6 @@ android {
     defaultConfig {
         minSdk = 26
         consumerProguardFiles("consumer-rules.pro", "video-consumer-rules.pro")
-        ndk { abiFilters += "arm64-v8a" }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
