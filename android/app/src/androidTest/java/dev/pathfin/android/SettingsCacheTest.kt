@@ -81,7 +81,7 @@ class SettingsCacheTest {
             compose.onNodeWithText("上限 1024 MB · 每个账号独立缓存", substring = true).assertVerificationDisplayed(compose)
             openCapacityDialog()
             assertEquals("1024", inputText())
-            compose.onNodeWithTag("cache-size-input").performTextReplacement("1536")
+            compose.onNodeWithTag("cache-size-input").performTextReplacement("1a536")
             compose.onNodeWithText("保存", substring = false).assertIsEnabled().performVerificationClick(compose)
             compose.onNodeWithTag("cache-size-input").assertDoesNotExist()
             compose.onNodeWithText("上限 1536 MB · 每个账号独立缓存", substring = true).assertVerificationDisplayed(compose)

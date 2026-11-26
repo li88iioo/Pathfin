@@ -37,10 +37,13 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.BasicSecureTextField
 import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
+import androidx.compose.foundation.text.input.TextFieldDecorator
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.input.TextObfuscationMode
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -81,7 +84,6 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -247,8 +249,7 @@ internal fun GroupIcon(icon: ImageVector, tint: Color = PathfinAppearance.textSu
  */
 @Composable
 internal fun GroupField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    state: TextFieldState,
     label: String,
     placeholder: String,
     icon: ImageVector,
@@ -256,8 +257,9 @@ internal fun GroupField(
     divider: Boolean = true,
     readOnly: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    visualTransformation: VisualTransformation = VisualTransformation.None,
+    onKeyboardAction: KeyboardActionHandler? = null,
+    inputTransformation: InputTransformation? = null,
+    passwordVisible: Boolean? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -266,36 +268,35 @@ internal fun GroupField(
     val textStyle = MaterialTheme.typography.bodyLarge.copy(
         fontSize = 15.5.sp, lineHeight = 22.sp, color = PathfinAppearance.textMain,
     )
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth().semantics { contentDescription = label }.onFocusChanged { focused = it.isFocused },
-        readOnly = readOnly,
-        singleLine = true,
-        textStyle = textStyle,
-        cursorBrush = SolidColor(PathfinAppearance.accent),
-        keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions,
-        visualTransformation = visualTransformation,
-        decorationBox = { inner ->
-            Row(
-                Modifier.fillMaxWidth().groupSeparator(line, divider).heightIn(min = 60.dp)
-                    .padding(start = 16.dp, end = if (trailing == null) 16.dp else 8.dp, top = 9.dp, bottom = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GroupIcon(icon, if (focused) PathfinAppearance.accent else PathfinAppearance.textSub)
-                Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(label, fontSize = 11.5.sp, lineHeight = 16.sp, letterSpacing = 0.3.sp, color = tone, maxLines = 1)
-                    Box {
-                        if (value.isEmpty()) Text(placeholder, style = textStyle, color = PathfinAppearance.textMuted,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        inner()
-                    }
+    val fieldModifier = modifier.fillMaxWidth().semantics { contentDescription = label }.onFocusChanged { focused = it.isFocused }
+    val cursor = SolidColor(PathfinAppearance.accent)
+    val decoration = TextFieldDecorator { inner ->
+        Row(
+            Modifier.fillMaxWidth().groupSeparator(line, divider).heightIn(min = 60.dp)
+                .padding(start = 16.dp, end = if (trailing == null) 16.dp else 8.dp, top = 9.dp, bottom = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            GroupIcon(icon, if (focused) PathfinAppearance.accent else PathfinAppearance.textSub)
+            Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(label, fontSize = 11.5.sp, lineHeight = 16.sp, letterSpacing = 0.3.sp, color = tone, maxLines = 1)
+                Box {
+                    if (state.text.isEmpty()) Text(placeholder, style = textStyle, color = PathfinAppearance.textMuted,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    inner()
                 }
-                trailing?.invoke()
             }
-        },
-    )
+            trailing?.invoke()
+        }
+    }
+    if (passwordVisible == null) {
+        BasicTextField(state, fieldModifier, readOnly = readOnly, lineLimits = TextFieldLineLimits.SingleLine,
+            textStyle = textStyle, cursorBrush = cursor, keyboardOptions = keyboardOptions, onKeyboardAction = onKeyboardAction,
+            inputTransformation = inputTransformation, decorator = decoration)
+    } else {
+        BasicSecureTextField(state, fieldModifier, readOnly = readOnly, textStyle = textStyle, cursorBrush = cursor,
+            keyboardOptions = keyboardOptions, onKeyboardAction = onKeyboardAction, inputTransformation = inputTransformation,
+            decorator = decoration, textObfuscationMode = if (passwordVisible) TextObfuscationMode.Visible else TextObfuscationMode.Hidden)
+    }
 }
 
 /** 分组卡片里的一行开关。 */

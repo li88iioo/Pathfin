@@ -3,6 +3,11 @@ package dev.pathfin.android.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.byValue
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -130,11 +135,11 @@ private fun SubtitleManagementContent(session: Session, item: MediaItem, api: Je
     var readError by remember { mutableStateOf<String?>(null) }
     var pendingVerification by remember { mutableStateOf<SubtitleVerification?>(null) }
     var authenticationExpired by remember { mutableStateOf(false) }
-    var language by remember { mutableStateOf("zho") }
+    val language = remember { TextFieldState("zho") }
     var forced by remember { mutableStateOf(false) }
     var hearingImpaired by remember { mutableStateOf(false) }
     var uploadFile by remember { mutableStateOf<SubtitleUploadFile?>(null) }
-    var searchLanguage by remember { mutableStateOf("zho") }
+    val searchLanguage = remember { TextFieldState("zho") }
     var perfectMatch by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var searchedLanguage by remember { mutableStateOf<String?>(null) }
@@ -292,7 +297,7 @@ private fun SubtitleManagementContent(session: Session, item: MediaItem, api: Je
     fun search() {
         val current = document ?: return
         if (searching || busy || !canManage) return
-        val requestedLanguage = searchLanguage
+        val requestedLanguage = searchLanguage.text.toString()
         val requestedPerfect = perfectMatch
         searching = true
         searchError = null
@@ -400,13 +405,13 @@ private fun SubtitleManagementContent(session: Session, item: MediaItem, api: Je
                             statusItems()
                             item(key = "search-controls") {
                                 GroupCard {
-                                    SubtitleLanguageRow(searchLanguage, { searchLanguage = it }, canManage && !searching && !busy, allowUndefined = false)
+                                    SubtitleLanguageRow(searchLanguage, canManage && !searching && !busy, allowUndefined = false)
                                     GroupToggle(PathfinIcons.CheckCircle, tr("仅精准匹配"), perfectMatch, canManage && !searching && !busy, { perfectMatch = it })
                                 }
                             }
                             item(key = "search-button") {
                                 InkButton(::search, Modifier.fillMaxWidth().testTag("subtitle-search-submit"),
-                                    enabled = canManage && !searching && !busy && searchLanguage.matches(Regex("[a-z]{3}")) && searchLanguage != "und") {
+                                    enabled = canManage && !searching && !busy && searchLanguage.text.matches(Regex("[a-z]{3}")) && searchLanguage.text.toString() != "und") {
                                     ButtonLabel(if (searching) tr("正在搜索…") else tr("搜索字幕"))
                                 }
                             }
@@ -449,7 +454,7 @@ private fun SubtitleManagementContent(session: Session, item: MediaItem, api: Je
                             }
                             item(key = "upload-options") {
                                 GroupCard {
-                                    SubtitleLanguageRow(language, { language = it }, !busy, allowUndefined = true)
+                                    SubtitleLanguageRow(language, !busy, allowUndefined = true)
                                     GroupToggle(PathfinIcons.Subtitles, tr("强制字幕"), forced, !busy, { forced = it })
                                     GroupToggle(PathfinIcons.Audio, tr("听障辅助字幕"), hearingImpaired, !busy, { hearingImpaired = it })
                                 }
@@ -460,11 +465,11 @@ private fun SubtitleManagementContent(session: Session, item: MediaItem, api: Je
                                     val file = uploadFile ?: return@InkButton
                                     val before = current.tracks.map { it.stream }
                                     write(tr("字幕已上传"), { latest -> latest.tracks.any { it.isExternal && it.stream !in before } }) {
-                                        management.upload(session, current, file, language, forced, hearingImpaired)
+                                        management.upload(session, current, file, language.text.toString(), forced, hearingImpaired)
                                         uploadFile = null
                                         page = SubtitlePage.TRACKS
                                     }
-                                }, Modifier.fillMaxWidth().testTag("subtitle-upload-submit"), enabled = !busy && !loading && pendingVerification == null && canManage && uploadFile != null && language.matches(Regex("[a-z]{3}"))) {
+                                }, Modifier.fillMaxWidth().testTag("subtitle-upload-submit"), enabled = !busy && !loading && pendingVerification == null && canManage && uploadFile != null && language.text.matches(Regex("[a-z]{3}"))) {
                                     ButtonLabel(if (writing) tr("正在上传…") else tr("上传字幕"))
                                 }
                             }
@@ -524,7 +529,8 @@ private fun SubtitleAction(label: String, icon: ImageVector, enabled: Boolean, m
 }
 
 @Composable
-private fun SubtitleLanguageRow(code: String, onChange: (String) -> Unit, enabled: Boolean, allowUndefined: Boolean) {
+private fun SubtitleLanguageRow(field: TextFieldState, enabled: Boolean, allowUndefined: Boolean) {
+    val code = field.text.toString()
     var menu by remember { mutableStateOf(false) }
     var custom by remember { mutableStateOf(false) }
     Box {
@@ -536,14 +542,14 @@ private fun SubtitleLanguageRow(code: String, onChange: (String) -> Unit, enable
         }
         AppDropdownMenu(menu, { menu = false }, shape = RoundedCornerShape(CardRadius), containerColor = PathfinAppearance.card) {
             SubtitleLanguages.common.filter { allowUndefined || it.code != "und" }.forEach { language ->
-                MenuRow(language.label, { menu = false; custom = false; onChange(language.code) }, checked = code == language.code,
+                MenuRow(language.label, { menu = false; custom = false; field.setTextAndPlaceCursorAtEnd(language.code) }, checked = code == language.code,
                     modifier = Modifier.testTag("subtitle-language/${language.code}"))
             }
-            MenuRow(tr("其他语言"), { menu = false; custom = true; onChange("") })
+            MenuRow(tr("其他语言"), { menu = false; custom = true; field.clearText() })
         }
     }
-    if (custom) GroupField(code, { value -> if (enabled) onChange(value.filter(Char::isLetter).take(3).lowercase()) },
-        tr("语言代码"), tr("ISO 639-2，如 ita"), PathfinIcons.Globe, readOnly = !enabled)
+    if (custom) GroupField(field, tr("语言代码"), tr("ISO 639-2，如 ita"), PathfinIcons.Globe, readOnly = !enabled,
+        inputTransformation = InputTransformation.byValue { _, input -> input.filter(Char::isLetter).take(3).toString().lowercase() })
 }
 
 @Composable

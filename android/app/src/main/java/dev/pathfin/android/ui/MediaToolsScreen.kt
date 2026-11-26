@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,7 +31,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,10 +68,23 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-internal val ProviderIdDraftSaver = mapSaver<Map<String, String>>(
-    save = { it },
-    restore = { saved -> saved.mapValues { (_, value) -> value as String } },
-)
+/** 草稿独立于可滚动的单个输入框。保存结构沿用键和值，以便旧的外部编号草稿也能恢复。 */
+internal class MediaTextDrafts(initial: Map<String, String> = emptyMap()) {
+    private val inputs = mutableStateMapOf<String, TextFieldState>().apply {
+        initial.forEach { (key, text) -> put(key, TextFieldState(text)) }
+    }
+
+    fun field(key: String, initial: String = "") = inputs.getOrPut(key) { TextFieldState(initial) }
+
+    fun values(): Map<String, String> = inputs.mapValues { (_, state) -> state.text.toString() }
+
+    companion object {
+        val Saver = mapSaver<MediaTextDrafts>(
+            save = { it.values() },
+            restore = { saved -> MediaTextDrafts(saved.mapValues { (_, value) -> value as String }) },
+        )
+    }
+}
 
 /** 所有写入均由明确按钮发起；离开页面取消尚未完成的请求。 */
 @Composable
@@ -82,7 +96,6 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     val currentSession by rememberUpdatedState(session)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val editorState = rememberSaveableStateHolder()
     var document by remember { mutableStateOf<EditableMediaMetadata?>(null) }
     // 外部编号来自服务器的提供程序清单；读取失败仍可编辑条目已有的编号。
     var externalIdFields by remember { mutableStateOf<List<ExternalIdField>>(emptyList()) }
@@ -102,11 +115,20 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     var deleteImage by remember { mutableStateOf<MediaImage?>(null) }
     var imageType by rememberSaveable { mutableStateOf(MediaImageType.PRIMARY.name) }
     var remoteSearchType by remember { mutableStateOf<MediaImageType?>(null) }
-    var draftDirty by remember { mutableStateOf(false) }
     var contentRevision by remember { mutableIntStateOf(0) }
     var metadataNeedsReload by remember { mutableStateOf(false) }
+    var savedMetadataVersion by rememberSaveable { mutableIntStateOf(0) }
     var allowBack by remember { mutableStateOf(false) }
     var leaveDialog by remember { mutableStateOf(false) }
+    val person = item.type == "Person"
+    val draft = document?.let { rememberMetadataDraft(it, person, savedMetadataVersion) }
+    val currentDraft by rememberUpdatedState(draft)
+    fun hasUnsavedEdits() = !metadataNeedsReload && currentDraft?.hasUnsavedEdits == true
+    fun replaceDocument(latest: EditableMediaMetadata) {
+        if (metadataNeedsReload) savedMetadataVersion++
+        document = latest
+        metadataNeedsReload = false
+    }
     val topInset = LocalPageTopInset.current
     val titleBarHeight = with(LocalDensity.current) {
         maxOf(60.dp, maxOf(MaterialTheme.typography.bodyMedium.lineHeight.toDp(),
@@ -140,19 +162,16 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
     suspend fun read() {
         val revision = contentRevision
         // 元数据对象已包含条目能力；文本编辑不等待无关的图片读取。
-        val latestDocument = if (initialPage == "metadata" && capabilities.canEditMetadata && !draftDirty)
+        val latestDocument = if (initialPage == "metadata" && capabilities.canEditMetadata && !hasUnsavedEdits())
             management.editableMetadata(session, item.id) else null
         val latestCapabilities = latestDocument?.capabilities ?: management.readCapabilities(session, item.id)
         val latestImages = if (initialPage == "images" && latestCapabilities.canEditImages)
             management.images(session, item.id) else null
         settled.awaitSettled()
-        // 保存/上传或新草稿产生后，整次旧读取不能覆盖更新后的元数据和图片。
+        // 保存或上传开始后，整次旧读取不能覆盖更新后的元数据和图片。
         if (revision != contentRevision) return
         // 后台重读期间仍允许编辑，返回的数据不能覆盖等待期间产生的草稿。
-        if (latestDocument != null && !draftDirty) {
-            document = latestDocument
-            metadataNeedsReload = false
-        }
+        if (latestDocument != null && !hasUnsavedEdits()) replaceDocument(latestDocument)
         if (latestImages != null) images = latestImages
     }
     fun action(success: String, metadataSave: Boolean = false,
@@ -193,7 +212,7 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
             }
         } finally { if (sequence == readSequence) loading = false }
     }
-    BackHandler(enabled = LocalPageActive.current && !allowBack && (busy || draftDirty)) { if (!busy) leaveDialog = true }
+    BackHandler(enabled = LocalPageActive.current && !allowBack && (busy || hasUnsavedEdits())) { if (!busy) leaveDialog = true }
     LaunchedEffect(allowBack) { if (allowBack) backDispatcher?.onBackPressed() }
 
     val upload = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -234,20 +253,15 @@ internal fun MediaToolsScreen(item: MediaItem, session: Session, api: JellyfinAp
                 when {
                     initialPage == "metadata" && capabilities.canEditMetadata -> {
                         val current = document
-                        if (current != null) editorState.SaveableStateProvider("metadata") { MetadataEditor(current, item.type == "Person", externalIdFields, externalIdsError, busy || metadataNeedsReload,
-                            saving = savingMetadata, titleBarHeight = titleBarHeight, onDirty = {
-                            if (it) contentRevision++
-                            draftDirty = it && !metadataNeedsReload
-                        }, onSave = { changed ->
+                        if (current != null && draft != null) MetadataEditor(current, draft, externalIdFields, externalIdsError,
+                            busy || metadataNeedsReload, savingMetadata, titleBarHeight) { changed ->
                             action(tr("元数据已保存"), metadataSave = true, refresh = {
-                                document = management.editableMetadata(it, item.id)
-                                metadataNeedsReload = false
+                                replaceDocument(management.editableMetadata(it, item.id))
                             }) {
                                 management.saveMetadata(it, current, changed)
                                 metadataNeedsReload = true
-                                draftDirty = false
                             }
-                        }) } else Column(Modifier.fillMaxSize().pageHorizontalInsets().padding(top = topInset + titleBarHeight)
+                        } else Column(Modifier.fillMaxSize().pageHorizontalInsets().padding(top = topInset + titleBarHeight)
                             .verticalScroll(rememberScrollState())) {
                             if (!loading) EmptyPanel(tr("无法读取元数据"), tr("请检查连接或当前账号权限。"))
                         }
@@ -565,61 +579,126 @@ private fun RemoteImageSearchSheet(management: MediaManagementApi, session: Sess
         dismissButton = { DialogAction(tr("取消"), { selected = null }) }) }
 }
 
+/** 日期未编辑时沿用包含时区和时间的服务端原值。 */
+private fun metadataEditorDate(value: String?): String =
+    value?.let { serverCalendarDate(it)?.toString() ?: it.take(10) }.orEmpty()
+
 @Composable
-private fun MetadataEditor(document: EditableMediaMetadata, person: Boolean, externalIdFields: List<ExternalIdField>, externalIdsError: String?, busy: Boolean, saving: Boolean, titleBarHeight: Dp,
-    onDirty: (Boolean) -> Unit, onSave: (MediaMetadata) -> Unit) {
-    val original = document.metadata
-    var title by rememberSaveable(document.itemId, original) { mutableStateOf(original.title) }
-    var originalTitle by rememberSaveable(document.itemId, original) { mutableStateOf(original.originalTitle) }
-    var sortTitle by rememberSaveable(document.itemId, original) { mutableStateOf(original.sortTitle) }
-    var overview by rememberSaveable(document.itemId, original) { mutableStateOf(original.overview) }
-    var year by rememberSaveable(document.itemId, original) { mutableStateOf(original.productionYear?.toString().orEmpty()) }
-    // 日期与详情页一样保留服务端日历日期；未改动时保存沿用完整服务器原值。
-    fun editorDate(value: String?) = value?.let { serverCalendarDate(it)?.toString() ?: it.take(10) }.orEmpty()
-    var premiere by rememberSaveable(document.itemId, original) { mutableStateOf(editorDate(original.premiereDate)) }
-    var genres by rememberSaveable(document.itemId, original) { mutableStateOf(original.genres.joinToString(tr("，"))) }
-    var tags by rememberSaveable(document.itemId, original) { mutableStateOf(original.tags.joinToString(tr("，"))) }
-    var rating by rememberSaveable(document.itemId, original) { mutableStateOf(original.officialRating.orEmpty()) }
-    var customRating by rememberSaveable(document.itemId, original) { mutableStateOf(original.customRating.orEmpty()) }
-    var community by rememberSaveable(document.itemId, original) { mutableStateOf(original.communityRating?.toString().orEmpty()) }
-    var critic by rememberSaveable(document.itemId, original) { mutableStateOf(original.criticRating?.toString().orEmpty()) }
-    var locked by rememberSaveable(document.itemId, original) { mutableStateOf(original.lockData) }
-    var death by rememberSaveable(document.itemId, original) { mutableStateOf(editorDate(original.endDate)) }
-    var birthplace by rememberSaveable(document.itemId, original) { mutableStateOf(original.productionLocations.firstOrNull().orEmpty()) }
-    // 与其余输入框一样保留旋转时的编号草稿；每次写入替换 Map，避免原地修改丢失重组通知。
-    var providerIds by rememberSaveable(document.itemId, original, stateSaver = ProviderIdDraftSaver) {
-        mutableStateOf(original.providerIds.toMap())
+private fun rememberMetadataDraft(document: EditableMediaMetadata, person: Boolean, savedVersion: Int): MetadataDraft =
+    key(document.itemId, document.metadata, savedVersion) {
+        val original = document.metadata
+        val separator = tr("，")
+        val fields = rememberSaveable(saver = MediaTextDrafts.Saver) { MediaTextDrafts() }
+        val locked = rememberSaveable { mutableStateOf(original.lockData) }
+        val providerIds by rememberSaveable(stateSaver = MediaTextDrafts.Saver) { mutableStateOf(MediaTextDrafts(original.providerIds)) }
+        remember {
+            MetadataDraft(original, person, separator, fields, locked, providerIds)
+        }
     }
-    val idFields = (externalIdFields.map { field ->
-        field.copy(key = original.providerIds.keys.firstOrNull { it.equals(field.key, ignoreCase = true) } ?: field.key)
-    } + original.providerIds.keys.map { ExternalIdField(it, it) }).distinctBy { it.key.lowercase() }
-    val editedProviderIds = original.providerIds.toMutableMap().apply {
-        providerIds.forEach { (key, value) -> if (value != original.providerIds[key]) {
-            if (value.isBlank()) remove(key) else put(key, value.trim())
-        } }
+
+@Stable
+private class MetadataDraft(
+    private val original: MediaMetadata,
+    val person: Boolean,
+    separator: String,
+    private val fields: MediaTextDrafts,
+    locked: MutableState<Boolean>,
+    val providerIds: MediaTextDrafts,
+) {
+    private val initialTexts = linkedMapOf<String, String>()
+
+    private fun field(key: String, text: String): TextFieldState {
+        initialTexts[key] = text
+        return fields.field(key, text)
     }
-    val value = original.copy(title = title, originalTitle = originalTitle, sortTitle = sortTitle, overview = overview,
-        productionYear = if (person) original.productionYear else year.toIntOrNull(),
-        premiereDate = if (premiere == editorDate(original.premiereDate)) original.premiereDate else premiere.takeIf(String::isNotBlank),
-        genres = if (person) original.genres else splitMetadataList(genres), tags = splitMetadataList(tags),
-        officialRating = if (person) original.officialRating else rating.takeIf(String::isNotBlank),
-        customRating = if (person) original.customRating else customRating.takeIf(String::isNotBlank),
-        communityRating = if (person) original.communityRating else community.toDoubleOrNull(),
-        criticRating = if (person) original.criticRating else critic.toDoubleOrNull(), lockData = locked,
-        endDate = if (!person || death == editorDate(original.endDate)) original.endDate else death.takeIf(String::isNotBlank),
-        // 只编辑第一条出生地，其余（服务器常存同一地点的多种写法）原样保留。
-        productionLocations = if (!person || birthplace == original.productionLocations.firstOrNull().orEmpty()) original.productionLocations
-            else listOfNotNull(birthplace.trim().takeIf(String::isNotEmpty)) + original.productionLocations.drop(1),
-        // 只提交实际修改的编号；未修改的服务器值（含空值）原样保留。
-        providerIds = editedProviderIds)
-    val validYear = year.isBlank() || year.toIntOrNull()?.let { it in 1..9999 } == true
-    val validDate = premiere.isBlank() || runCatching { LocalDate.parse(premiere) }.isSuccess
-    val validDeath = death.isBlank() || runCatching { LocalDate.parse(death) }.isSuccess
-    val validCommunity = community.isBlank() || community.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..10.0 } == true
-    val validCritic = critic.isBlank() || critic.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..100.0 } == true
-    val changed = value != original || year != original.productionYear?.toString().orEmpty() ||
-        community != original.communityRating?.toString().orEmpty() || critic != original.criticRating?.toString().orEmpty()
-    LaunchedEffect(changed) { onDirty(changed) }
+
+    val title = field("title", original.title)
+    val originalTitle = field("originalTitle", original.originalTitle)
+    val sortTitle = field("sortTitle", original.sortTitle)
+    val overview = field("overview", original.overview)
+    val year = field("year", original.productionYear?.toString().orEmpty())
+    val premiere = field("premiere", metadataEditorDate(original.premiereDate))
+    val genres = field("genres", original.genres.joinToString(separator))
+    val tags = field("tags", original.tags.joinToString(separator))
+    val rating = field("rating", original.officialRating.orEmpty())
+    val customRating = field("customRating", original.customRating.orEmpty())
+    val community = field("community", original.communityRating?.toString().orEmpty())
+    val critic = field("critic", original.criticRating?.toString().orEmpty())
+    val death = field("death", metadataEditorDate(original.endDate))
+    val birthplace = field("birthplace", original.productionLocations.firstOrNull().orEmpty())
+    var locked by locked
+
+    // 退出和刷新检查用户实际输入，保存仍只提交有效值。
+    val hasUnsavedEdits by derivedStateOf {
+        this.locked != original.lockData || fields.values() != initialTexts ||
+            providerIds.values().any { (key, value) -> value != original.providerIds[key].orEmpty() }
+    }
+
+    val form by derivedStateOf(structuralEqualityPolicy()) {
+        val yearText = year.text.toString()
+        val communityText = community.text.toString()
+        val criticText = critic.text.toString()
+        val premiereText = premiere.text.toString()
+        val deathText = death.text.toString()
+        val birthplaceText = birthplace.text.toString()
+        val editedProviderIds = original.providerIds.toMutableMap().apply {
+            providerIds.values().forEach { (key, value) ->
+                if (value != original.providerIds[key]) {
+                    if (value.isBlank()) remove(key) else put(key, value.trim())
+                }
+            }
+        }
+        val value = original.copy(
+            title = title.text.toString(), originalTitle = originalTitle.text.toString(),
+            sortTitle = sortTitle.text.toString(), overview = overview.text.toString(),
+            productionYear = if (person) original.productionYear else yearText.toIntOrNull(),
+            premiereDate = if (premiereText == metadataEditorDate(original.premiereDate)) original.premiereDate else premiereText.takeIf(String::isNotBlank),
+            genres = if (person) original.genres else splitMetadataList(genres.text.toString()), tags = splitMetadataList(tags.text.toString()),
+            officialRating = if (person) original.officialRating else rating.text.toString().takeIf(String::isNotBlank),
+            customRating = if (person) original.customRating else customRating.text.toString().takeIf(String::isNotBlank),
+            communityRating = if (person) original.communityRating else communityText.toDoubleOrNull(),
+            criticRating = if (person) original.criticRating else criticText.toDoubleOrNull(), lockData = this.locked,
+            endDate = if (!person || deathText == metadataEditorDate(original.endDate)) original.endDate else deathText.takeIf(String::isNotBlank),
+            // 只编辑第一条出生地，保留其它写法。
+            productionLocations = if (!person || birthplaceText == original.productionLocations.firstOrNull().orEmpty()) original.productionLocations
+                else listOfNotNull(birthplaceText.trim().takeIf(String::isNotEmpty)) + original.productionLocations.drop(1),
+            providerIds = editedProviderIds,
+        )
+        MetadataForm(
+            value = value,
+            changed = value != original || yearText != original.productionYear?.toString().orEmpty() ||
+                communityText != original.communityRating?.toString().orEmpty() || criticText != original.criticRating?.toString().orEmpty(),
+            validYear = yearText.isBlank() || yearText.toIntOrNull()?.let { it in 1..9999 } == true,
+            validDate = premiereText.isBlank() || runCatching { LocalDate.parse(premiereText) }.isSuccess,
+            validDeath = deathText.isBlank() || runCatching { LocalDate.parse(deathText) }.isSuccess,
+            validCommunity = communityText.isBlank() || communityText.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..10.0 } == true,
+            validCritic = criticText.isBlank() || criticText.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..100.0 } == true,
+        )
+    }
+}
+
+private data class MetadataForm(
+    val value: MediaMetadata,
+    val changed: Boolean,
+    val validYear: Boolean,
+    val validDate: Boolean,
+    val validDeath: Boolean,
+    val validCommunity: Boolean,
+    val validCritic: Boolean,
+)
+
+@Composable
+private fun MetadataEditor(document: EditableMediaMetadata, draft: MetadataDraft, externalIdFields: List<ExternalIdField>,
+    externalIdsError: String?, busy: Boolean, saving: Boolean, titleBarHeight: Dp, onSave: (MediaMetadata) -> Unit) {
+    val originalIds = document.metadata.providerIds
+    val idFields = remember(externalIdFields, originalIds) {
+        (externalIdFields.map { field ->
+            field.copy(key = originalIds.keys.firstOrNull { it.equals(field.key, ignoreCase = true) } ?: field.key)
+        } + originalIds.keys.map { ExternalIdField(it, it) }).distinctBy { it.key.lowercase() }
+    }
+    val providerFields = remember(idFields, draft) { idFields.associate { it.key to draft.providerIds.field(it.key) } }
+    val form = draft.form
+    val person = draft.person
     val topInset = LocalPageTopInset.current
     Box(Modifier.fillMaxSize()) {
     LazyColumn(Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas)
@@ -640,30 +719,30 @@ private fun MetadataEditor(document: EditableMediaMetadata, person: Boolean, ext
         // 人物只编辑生平相关字段；评分、分级与类型对人物没有意义。
         if (person) {
             item(key = "metadata-basic-label") { Eyebrow(tr("基本信息"), Modifier.padding(start = 6.dp, bottom = 8.dp)) }
-            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("姓名"), title, { title = it; onDirty(true) }, busy, tag = "metadata-title", required = true) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("简介"), overview, { overview = it; onDirty(true) }, busy, multiline = true) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("出生日期（YYYY-MM-DD）"), premiere, { premiere = it; onDirty(true) }, busy, error = !validDate, tag = "metadata-birth") } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("去世日期（YYYY-MM-DD）"), death, { death = it; onDirty(true) }, busy, error = !validDeath, tag = "metadata-death") } }
-            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("出生地"), birthplace, { birthplace = it; onDirty(true) }, busy, tag = "metadata-birthplace") } }
+            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("姓名"), draft.title, busy, tag = "metadata-title", required = true) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("简介"), draft.overview, busy, multiline = true) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("出生日期（YYYY-MM-DD）"), draft.premiere, busy, error = !form.validDate, tag = "metadata-birth") } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("去世日期（YYYY-MM-DD）"), draft.death, busy, error = !form.validDeath, tag = "metadata-death") } }
+            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("出生地"), draft.birthplace, busy, tag = "metadata-birthplace") } }
             item(key = "metadata-other-label") { Eyebrow(tr("其他信息"), Modifier.padding(start = 6.dp, bottom = 8.dp)) }
-            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("原始名称"), originalTitle, { originalTitle = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("排序名称"), sortTitle, { sortTitle = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("标签（逗号分隔）"), tags, { tags = it; onDirty(true) }, busy) } }
+            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("原始名称"), draft.originalTitle, busy) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("排序名称"), draft.sortTitle, busy) } }
+            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("标签（逗号分隔）"), draft.tags, busy) } }
         } else {
             item(key = "metadata-basic-label") { Eyebrow(tr("基本信息"), Modifier.padding(start = 6.dp, bottom = 8.dp)) }
-            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("标题"), title, { title = it; onDirty(true) }, busy, tag = "metadata-title", required = true) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("简介"), overview, { overview = it; onDirty(true) }, busy, multiline = true) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("社区评分（0–10）"), community, { community = it; onDirty(true) }, busy, numeric = true, error = !validCommunity, tag = "metadata-community-rating") } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("首映日期（YYYY-MM-DD）"), premiere, { premiere = it; onDirty(true) }, busy, error = !validDate) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("类型（逗号分隔）"), genres, { genres = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("官方分级"), rating, { rating = it; onDirty(true) }, busy) } }
+            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("标题"), draft.title, busy, tag = "metadata-title", required = true) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("简介"), draft.overview, busy, multiline = true) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("社区评分（0–10）"), draft.community, busy, numeric = true, error = !form.validCommunity, tag = "metadata-community-rating") } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("首映日期（YYYY-MM-DD）"), draft.premiere, busy, error = !form.validDate) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("类型（逗号分隔）"), draft.genres, busy) } }
+            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("官方分级"), draft.rating, busy) } }
             item(key = "metadata-other-label") { Eyebrow(tr("其他信息"), Modifier.padding(start = 6.dp, bottom = 8.dp)) }
-            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("原始标题"), originalTitle, { originalTitle = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("排序标题"), sortTitle, { sortTitle = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("年份"), year, { year = it; onDirty(true) }, busy, numeric = true, error = !validYear, tag = "metadata-year") } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("标签（逗号分隔）"), tags, { tags = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("自定义分级"), customRating, { customRating = it; onDirty(true) }, busy) } }
-            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("影评人评分（0–100）"), critic, { critic = it; onDirty(true) }, busy, numeric = true, error = !validCritic) } }
+            item { SettingsGroupItem(GroupPosition.TOP) { MetadataField(tr("原始标题"), draft.originalTitle, busy) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("排序标题"), draft.sortTitle, busy) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("年份"), draft.year, busy, numeric = true, error = !form.validYear, tag = "metadata-year") } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("标签（逗号分隔）"), draft.tags, busy) } }
+            item { SettingsGroupItem(GroupPosition.MIDDLE) { MetadataField(tr("自定义分级"), draft.customRating, busy) } }
+            item { SettingsGroupItem(GroupPosition.BOTTOM) { MetadataField(tr("影评人评分（0–100）"), draft.critic, busy, numeric = true, error = !form.validCritic) } }
         }
         if (idFields.isNotEmpty() || externalIdsError != null) {
             item(key = "metadata-ids-label") { Eyebrow(tr("外部编号"), Modifier.padding(start = 6.dp, top = 4.dp, bottom = 8.dp)) }
@@ -676,21 +755,21 @@ private fun MetadataEditor(document: EditableMediaMetadata, person: Boolean, ext
                     else -> GroupPosition.MIDDLE
                 }
                 SettingsGroupItem(position) {
-                    MetadataField(field.name, providerIds[field.key].orEmpty(), { providerIds = providerIds + (field.key to it); onDirty(true) }, busy,
+                    MetadataField(field.name, providerFields.getValue(field.key), busy,
                         tag = "metadata-id/${field.key}")
                 }
             }
         }
         item(key = "metadata-lock") {
             SettingsGroupItem(GroupPosition.SINGLE) {
-                GroupToggle(PathfinIcons.Lock, tr("锁定全部元数据，防止自动更新覆盖"), locked, !busy, { locked = it; onDirty(true) },
+                GroupToggle(PathfinIcons.Lock, tr("锁定全部元数据，防止自动更新覆盖"), draft.locked, !busy, { draft.locked = it },
                     Modifier.testTag("metadata-lock-all"), divider = false)
             }
         }
     }
-    val validVisibleFields = validDate && if (person) validDeath else validYear && validCommunity && validCritic
+    val validVisibleFields = form.validDate && if (person) form.validDeath else form.validYear && form.validCommunity && form.validCritic
     MetadataTitleBar(topInset, titleBarHeight, saving,
-        canSave = !busy && changed && title.isNotBlank() && validVisibleFields, onSave = { onSave(value) })
+        canSave = !busy && form.changed && form.value.title.isNotBlank() && validVisibleFields, onSave = { onSave(form.value) })
     }
 }
 
@@ -715,7 +794,7 @@ private fun MetadataTitleBar(topInset: Dp, height: Dp, saving: Boolean = false, 
 
 /** 分组卡片里的一行字段（分隔线由 SettingsGroupItem 画）：小标签在上、无框输入在下；出错时标签变红，必填加星号；只读时不暴露写入动作。 */
 @Composable
-private fun MetadataField(label: String, value: String, onChange: (String) -> Unit, busy: Boolean,
+private fun MetadataField(label: String, state: TextFieldState, busy: Boolean,
     multiline: Boolean = false, numeric: Boolean = false, error: Boolean = false, tag: String = "", required: Boolean = false) {
     Column(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -724,15 +803,15 @@ private fun MetadataField(label: String, value: String, onChange: (String) -> Un
                     color = if (error) MaterialTheme.colorScheme.error else PathfinAppearance.textSub)
                 if (required) Text("*", color = PathfinAppearance.accent, fontSize = 12.5.sp)
             }
-            BasicTextField(value, { if (it != value) onChange(it) }, Modifier.fillMaxWidth().testTag(tag).semantics { contentDescription = label },
-                readOnly = busy, singleLine = !multiline, minLines = if (multiline) 3 else 1,
+            BasicTextField(state, Modifier.fillMaxWidth().testTag(tag).semantics { contentDescription = label },
+                readOnly = busy, lineLimits = if (multiline) TextFieldLineLimits.MultiLine(minHeightInLines = 3) else TextFieldLineLimits.SingleLine,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.5.sp, lineHeight = 22.sp,
                     color = if (busy) PathfinAppearance.textMuted else PathfinAppearance.textMain),
                 cursorBrush = SolidColor(PathfinAppearance.accent),
                 keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text),
-                decorationBox = { inner ->
+                decorator = { inner ->
                     Box {
-                        if (value.isEmpty()) Text(tr("未填写"), fontSize = 15.5.sp, lineHeight = 22.sp, color = PathfinAppearance.textMuted)
+                        if (state.text.isEmpty()) Text(tr("未填写"), fontSize = 15.5.sp, lineHeight = 22.sp, color = PathfinAppearance.textMuted)
                         inner()
                     }
                 })

@@ -257,7 +257,7 @@ class ManagementFeaturesUiTest {
     @Test fun personIdentificationListsServerProviderIdsPrefilledAndSearchesWithoutYear() {
         Fixture().use { fixture ->
             val api = JellyfinApi(); val session = fixture.session()
-            val person = MediaItem("item", "Synthetic actor", "Person", providerIds = mapOf("Tmdb" to "85718", "Douban" to "not-offered"))
+            val person = MediaItem("item", "Synthetic actor", "Person", providerIds = mapOf("tmdb" to "85718", "Douban" to "not-offered"))
             compose.setContent { ManagementContent { MediaIdentificationScreen(person, session, api, {}, { _, _ -> }) } }
             compose.waitUntil(WAIT_MS) { fixture.assertHealthy(); exists("identification-id/Imdb") }
             compose.onNodeWithText("识别人物").assertVerificationDisplayed(compose)

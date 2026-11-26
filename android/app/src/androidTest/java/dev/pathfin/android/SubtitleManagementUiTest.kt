@@ -5,6 +5,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.pathfin.android.data.JellyfinApi
 import dev.pathfin.android.domain.MediaItem
@@ -52,8 +53,15 @@ class SubtitleManagementUiTest {
         compose.onNodeWithTag("subtitle-open-search").assertDoesNotExist()
         compose.onNodeWithTag("subtitle-upload-file").assertDoesNotExist()
         compose.onNodeWithTag("subtitle-management-back").assertDoesNotExist()
-        compose.onNodeWithTag("subtitle-search-submit").assertIsEnabled().performVerificationClick(compose)
+        compose.onNodeWithTag("subtitle-language").performVerificationClick(compose)
+        compose.onNodeWithText("其他语言").performVerificationClick(compose)
+        compose.onNodeWithTag("subtitle-search-submit").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("语言代码").performTextReplacement("I-TAx")
+        compose.onNodeWithContentDescription("语言代码").assertTextContains("ita")
+        Espresso.closeSoftKeyboard()
+        compose.onNodeWithTag("subtitle-search-submit").performScrollTo().assertIsEnabled().performVerificationClick(compose)
         compose.waitUntil(WAIT_MS) { fixture.searches.get() == 2 }
+        assertEquals("ita", fixture.lastSearchLanguage)
     }
 
     @Test fun playerSearchExplainsForbiddenManagementWithoutRequestingProviders() {
@@ -299,6 +307,7 @@ class SubtitleManagementUiTest {
         holdFirstReadAfterWrite: Boolean = false) {
         val userReads = AtomicInteger()
         val searches = AtomicInteger()
+        @Volatile var lastSearchLanguage: String? = null
         val writes = AtomicInteger()
         val failedReads = AtomicInteger()
         private val remainingReadFailures = AtomicInteger(if (failFirstReadAfterWrite) 1 else 0)
@@ -331,6 +340,7 @@ class SubtitleManagementUiTest {
                     """{"Items":[{"Id":"$ITEM","Name":"Subtitle fixture","Type":"Episode","MediaSources":[{"Id":"$ITEM","MediaStreams":[$tracks]}]}],"TotalRecordCount":1}"""
                 }
                 request.method == "GET" && "RemoteSearch" in request.url.pathSegments -> {
+                    lastSearchLanguage = request.url.pathSegments.last()
                     searches.incrementAndGet()
                     """[{"Id":"fixture-subtitle","Name":"Fixture Chinese subtitle","ProviderName":"Fixture","Format":"srt","ThreeLetterISOLanguageName":"zho"}]"""
                 }

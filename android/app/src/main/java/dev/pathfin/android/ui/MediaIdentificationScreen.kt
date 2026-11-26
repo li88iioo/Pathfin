@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,11 +47,12 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     val identification = remember(api) { MediaIdentificationApi(api) }
     val currentSession by rememberUpdatedState(session)
     val scope = rememberCoroutineScope()
-    var name by rememberSaveable { mutableStateOf(item.name) }
-    var year by rememberSaveable { mutableStateOf(item.year?.toString().orEmpty()) }
+    val name = rememberTextFieldState(item.name)
+    val year = rememberTextFieldState(item.year?.toString().orEmpty())
     val type = MediaIdentificationType.forItem(item)
     val byYear = type?.searchesByYear != false
-    var providerIds by rememberSaveable(stateSaver = ProviderIdDraftSaver) { mutableStateOf(item.providerIds.toMap()) }
+    val initialIds = remember { item.providerIds.toMap() }
+    val providerIds by rememberSaveable(stateSaver = MediaTextDrafts.Saver) { mutableStateOf(MediaTextDrafts(initialIds)) }
     var idFields by remember { mutableStateOf<List<ExternalIdField>?>(null) }
     var idFieldsError by remember { mutableStateOf<String?>(null) }
     var searching by remember { mutableStateOf(false) }
@@ -61,18 +63,26 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     var selected by remember { mutableStateOf<MediaIdentificationResult?>(null) }
     var replaceImages by remember { mutableStateOf(false) }
     var resultsPage by remember { mutableStateOf(false) }
-    val validYear = !byYear || year.isBlank() || year.toIntOrNull()?.let { it in 1..9999 } == true
+    val yearText = year.text.toString()
+    val validYear = !byYear || yearText.isBlank() || yearText.toIntOrNull()?.let { it in 1..9999 } == true
     val enabled = MediaIdentificationApi.supports(session, item)
     val fields = idFields.orEmpty()
     // null 是年份；其余项保留服务器顺序，按行组合，屏外的输入框不必首帧全部创建。
     val fieldRows = remember(fields, byYear) {
         buildList<ExternalIdField?> { if (byYear) add(null); addAll(fields) }.chunked(2)
     }
-    fun providerValue(key: String) = providerIds[key] ?: providerIds.entries.firstOrNull { it.key.equals(key, ignoreCase = true) }?.value.orEmpty()
+    fun initialId(key: String): String =
+        initialIds[key] ?: initialIds.entries.firstOrNull { it.key.equals(key, ignoreCase = true) }?.value.orEmpty()
+    val providerFields = remember(fields, providerIds) {
+        fields.associate { field -> field.key to providerIds.field(field.key, initialId(field.key)) }
+    }
     // 请求只带服务器提供的编号；完整表单快照单独用于判断用户是否修改了条件。
     // 清单晚到只补充输入框，不会让已经取得的名称搜索结果无故失效。
-    val form = MediaIdentificationQuery(name.trim(), if (byYear) year.toIntOrNull() else null, providerIds.toMap())
-    val filledIds = fields.mapNotNull { field -> providerValue(field.key).trim().takeIf(String::isNotEmpty)?.let { field.key to it } }.toMap()
+    val enteredIds = providerIds.values().filter { (key, value) -> key in initialIds || value != initialId(key) }
+    val form = MediaIdentificationQuery(name.text.toString().trim(), if (byYear) yearText.toIntOrNull() else null, enteredIds)
+    val filledIds = providerFields.mapNotNull { (key, state) ->
+        state.text.toString().trim().takeIf(String::isNotEmpty)?.let { key to it }
+    }.toMap()
     val query = form.copy(providerIds = filledIds)
     val canApply = enabled && !applyBusy && !searching && validYear && resultForm == form
 
@@ -121,7 +131,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
     Column(Modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Bottom)).testTag("identification-screen")) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             RefreshablePage(searching, ::search, Modifier.fillMaxSize().topBarBlurSource().background(PathfinAppearance.canvas), refreshOnEntry = false,
-                enabled = enabled && searched && validYear && (name.isNotBlank() || filledIds.isNotEmpty()), indicatorTopInset = contentTop) {
+                enabled = enabled && searched && validYear && (form.name.isNotBlank() || filledIds.isNotEmpty()), indicatorTopInset = contentTop) {
                 if (!enabled) {
                     Column(Modifier.fillMaxSize().pageHorizontalInsets().verticalScroll(rememberScrollState()).padding(top = contentTop)) {
                         EmptyPanel(tr("无法识别此媒体"), if (!session.isAdministrator) tr("需要服务器管理员权限。") else tr("此类型没有可用的远程识别接口。"))
@@ -144,7 +154,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentTop + 16.dp, bottom = 8.dp)) {
                     item(key = "identification-name") {
                         SettingsGroupItem(if (fieldRows.isEmpty()) GroupPosition.SINGLE else GroupPosition.TOP, dividerStartPadding = GroupTextInset) {
-                            GroupField(name, { name = it }, if (person) tr("姓名") else tr("名称"),
+                            GroupField(name, if (person) tr("姓名") else tr("名称"),
                                 if (person) tr("人物姓名") else tr("片名或剧名"), PathfinIcons.Type, Modifier.testTag("identification-name"),
                                 divider = false, readOnly = searching)
                         }
@@ -153,10 +163,10 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
                         SettingsGroupItem(if (index == fieldRows.lastIndex) GroupPosition.BOTTOM else GroupPosition.MIDDLE, dividerStartPadding = GroupTextInset) {
                             Row(Modifier.fillMaxWidth()) {
                                 row.forEach { field -> key(field?.key) {
-                                    if (field == null) GroupField(year, { year = it }, tr("年份"), tr("可选"), PathfinIcons.Calendar,
+                                    if (field == null) GroupField(year, tr("年份"), tr("可选"), PathfinIcons.Calendar,
                                         Modifier.weight(1f).testTag("identification-year"), divider = false, readOnly = searching,
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                                    else GroupField(providerValue(field.key), { providerIds = providerIds + (field.key to it) }, field.name, tr("可选"), PathfinIcons.Hash,
+                                    else GroupField(providerFields.getValue(field.key), field.name, tr("可选"), PathfinIcons.Hash,
                                         Modifier.weight(1f).testTag("identification-id/${field.key}"), divider = false, readOnly = searching)
                                 } }
                                 if (row.size == 1) Spacer(Modifier.weight(1f))
@@ -193,7 +203,7 @@ fun MediaIdentificationScreen(item: MediaItem, session: Session, api: JellyfinAp
         }
         // 编号清单异步到达只增补可滚动的字段，搜索动作始终固定，避免按钮随表单高度跳动。
         if (enabled && !resultsPage) {
-            val canSearch = !searching && validYear && (name.isNotBlank() || filledIds.isNotEmpty())
+            val canSearch = !searching && validYear && (form.name.isNotBlank() || filledIds.isNotEmpty())
             Box(Modifier.fillMaxWidth().pageHorizontalInsets().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 InkButton(::search, Modifier.fillMaxWidth().testTag("identification-search"), enabled = canSearch, muted = !canSearch) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -30,8 +30,15 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.KeyboardActionHandler
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.maxLengthReject
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -40,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -69,8 +77,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -90,10 +96,57 @@ import kotlinx.coroutines.delay
 
 private data class ServerDialog(val kind: String, val profileId: String? = null)
 
-private val ServerAddressInputSaver = listSaver<ServerAddressInputState, Any>(
-    save = { listOf(it.host, it.scheme, it.port, it.path, it.protocolSource.name, it.portSource.name) },
-    restore = { ServerAddressInputState(it[0] as String, it[1] as String, it[2] as String, it[3] as String, ServerAddressFieldSource.valueOf(it[4] as String), ServerAddressFieldSource.valueOf(it[5] as String)) },
-)
+@Stable
+private class ServerAddressDraft(initial: ServerAddressInputState = ServerAddressInputState()) {
+    val host = TextFieldState(initial.host)
+    val port = TextFieldState(initial.port)
+    val path = TextFieldState(initial.path)
+    private var resolved by mutableStateOf(initial)
+
+    // 输入、预览、保存都基于同一份当前文本，允许在下一次重组前立即提交。
+    val value: ServerAddressInputState
+        get() {
+            val hostText = host.text.toString()
+            val portText = port.text.toString()
+            val pathText = path.text.toString()
+            val parsed = if (hostText == resolved.host) resolved else resolved.withAddress(hostText)
+            val withPort = if (portText == resolved.port) parsed else parsed.withPort(portText)
+            return if (pathText == resolved.path) withPort else withPort.copy(path = pathText)
+        }
+
+    fun applyPendingEdits(): Boolean {
+        val current = value
+        if (current == resolved) return false
+        update(current)
+        return true
+    }
+
+    fun toggleScheme() {
+        val current = value
+        update(current.withScheme(if (current.scheme == "https") "http" else "https"))
+    }
+
+    private fun update(next: ServerAddressInputState) = Snapshot.withMutableSnapshot {
+        resolved = next
+        if (!port.text.contentEquals(next.port)) port.setTextAndPlaceCursorAtEnd(next.port)
+        if (!path.text.contentEquals(next.path)) path.setTextAndPlaceCursorAtEnd(next.path)
+    }
+
+    companion object {
+        val Saver = listSaver<ServerAddressDraft, String>(
+            save = { draft ->
+                val value = draft.value
+                listOf(value.host, value.scheme, value.port, value.path, value.protocolSource.name, value.portSource.name)
+            },
+            restore = {
+                ServerAddressDraft(ServerAddressInputState(it[0], it[1], it[2], it[3],
+                    ServerAddressFieldSource.valueOf(it[4]), ServerAddressFieldSource.valueOf(it[5])))
+            },
+        )
+    }
+}
+
+private val PortDigits = InputTransformation { if (!asCharSequence().all(Char::isDigit)) revertAllChanges() }
 
 private const val TicksPerMinute = 600_000_000L
 
@@ -198,17 +251,18 @@ internal fun ServerManagementScreen(
                 DisplayNameDialog(profile, api, dismiss) { name -> onUpdate(profile.copy(displayName = name)); dialog = null }
             }
             "password" -> target?.let { profile ->
-                var current by remember { mutableStateOf("") }
-                var password by remember { mutableStateOf("") }
-                var confirmation by remember { mutableStateOf("") }
-                val valid = password.isNotEmpty() && password == confirmation
+                val current = remember { TextFieldState() }
+                val password = remember { TextFieldState() }
+                val confirmation = remember { TextFieldState() }
+                val valid = password.text.isNotEmpty() && password.text.contentEquals(confirmation.text)
                 ServerDialogFrame(tr("修改密码"), busy = requestBusy, error = error, onDismiss = dismiss,
-                    onSubmit = { dispatch { onPassword(profile, current, password) } }, submitEnabled = valid, submitLabel = tr("修改"),
+                    onSubmit = { dispatch { onPassword(profile, current.text.toString(), password.text.toString()) } },
+                    submitEnabled = valid, submitLabel = tr("修改"),
                     subtitle = tr("修改 %1\$s 在 Jellyfin 服务器上的登录密码，其他设备也需用新密码登录", profile.session.userName)) {
                     GroupCard(container = PathfinAppearance.canvas) {
-                        PasswordField(current, { current = it }, tr("当前密码"), tr("输入当前密码"), requestBusy, divider = false)
-                        PasswordField(password, { password = it }, tr("新密码"), tr("输入新密码"), requestBusy)
-                        PasswordField(confirmation, { confirmation = it }, tr("确认新密码"), tr("再次输入新密码"), requestBusy, imeAction = ImeAction.Done)
+                        PasswordField(current, tr("当前密码"), tr("输入当前密码"), requestBusy, divider = false)
+                        PasswordField(password, tr("新密码"), tr("输入新密码"), requestBusy)
+                        PasswordField(confirmation, tr("确认新密码"), tr("再次输入新密码"), requestBusy, imeAction = ImeAction.Done)
                     }
                 }
             }
@@ -245,20 +299,23 @@ internal fun ServerManagementScreen(
 
 // ───────────────────────── 两步连接 ─────────────────────────
 
+@Composable
+private fun Modifier.serverFormWidth() = pageHorizontalInsets().widthIn(max = 520.dp).fillMaxWidth()
+
 /** 连接页骨架：内容可滚动，操作固定在底部并让出手势条与键盘，错误出现时不推动按钮。 */
 @Composable
 private fun StepScaffold(
     modifier: Modifier = Modifier,
     actions: @Composable ColumnScope.() -> Unit,
-    header: @Composable (Modifier) -> Unit = {},
+    header: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val formWidth = Modifier.pageHorizontalInsets().widthIn(max = 520.dp).fillMaxWidth()
+    val formWidth = Modifier.serverFormWidth()
     Column(modifier.fillMaxSize().windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Bottom)),
         horizontalAlignment = Alignment.CenterHorizontally) {
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            header(formWidth)
+            header()
             Column(formWidth, content = content)
         }
         Column(
@@ -295,13 +352,14 @@ private fun AddressStep(
     onProbe: (ServerConfig) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var address by rememberSaveable(stateSaver = ServerAddressInputSaver) { mutableStateOf(ServerAddressInputState()) }
+    val address by rememberSaveable(stateSaver = ServerAddressDraft.Saver) { mutableStateOf(ServerAddressDraft()) }
     var allowHttp by rememberSaveable { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
     fun submit() {
         if (busy) return
+        address.applyPendingEdits()
         try {
-            val config = address.toServerConfig(allowHttp)
+            val config = address.value.toServerConfig(allowHttp)
             localError = null
             onProbe(config)
         } catch (error: IllegalArgumentException) { localError = error.message ?: tr("请检查服务器地址") }
@@ -309,7 +367,7 @@ private fun AddressStep(
     StepScaffold(
         modifier = Modifier.background(PathfinAppearance.canvas).testTag("server-address-page"),
         actions = {
-            SubmitButton(tr("连接"), address.host.isNotBlank(), busy, ::submit, Modifier.fillMaxWidth())
+            SubmitButton(tr("连接"), address.host.text.isNotBlank(), busy, ::submit, Modifier.fillMaxWidth())
         },
     ) {
         // 标题和表单共用滚动区域，横屏或键盘占用较多高度时仍能访问每个字段。
@@ -334,7 +392,7 @@ private fun AddressStep(
             if (firstRun) Text(tr("添加服务器"),
                 Modifier.padding(start = 4.dp, end = 4.dp, bottom = 18.dp).semantics { heading() },
                 fontSize = 22.sp, lineHeight = 30.sp, fontWeight = FontWeight.Medium, color = PathfinAppearance.textMain)
-            ServerAddressInput(address, { address = it; localError = null }, allowHttp, { allowHttp = it }, busy, onDone = ::submit)
+            ServerAddressInput(address, allowHttp, { allowHttp = it }, busy, onDone = ::submit, onEdited = { localError = null })
             FormFeedback(localError ?: error, lines = 3, Modifier.padding(start = 6.dp, end = 6.dp, top = 8.dp))
         }
     }
@@ -346,19 +404,24 @@ private fun AddressStep(
  */
 @Composable
 private fun ServerAddressInput(
-    address: ServerAddressInputState,
-    onChange: (ServerAddressInputState) -> Unit,
+    draft: ServerAddressDraft,
     allowHttp: Boolean,
     onAllowHttp: (Boolean) -> Unit,
     busy: Boolean,
     onDone: () -> Unit,
     container: Color = PathfinAppearance.card,
+    onEdited: () -> Unit = {},
 ) {
+    val address = draft.value
+    SideEffect { if (draft.applyPendingEdits()) onEdited() }
     val http = address.scheme == "http"
     var advanced by rememberSaveable { mutableStateOf(address.path.isNotBlank() || address.portSource == ServerAddressFieldSource.Manual) }
     val endpoint = remember(address) { address.host.takeIf(String::isNotBlank)?.let { runCatching { address.toServerConfig(true).baseUrl }.getOrNull() } }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        AddressBar(address, onChange, busy, onDone, container)
+        AddressBar(draft.host, address.scheme, {
+            draft.toggleScheme()
+            onEdited()
+        }, busy, onDone, container)
         Text(endpoint?.let { tr("将连接 %1\$s", it) } ?: tr("支持域名、IP 或完整地址，端口自动识别"), Modifier.padding(horizontal = 8.dp).testTag("server-endpoint"),
             fontSize = 12.5.sp, lineHeight = 18.sp, color = if (endpoint != null) PathfinAppearance.textSub else PathfinAppearance.textMuted,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -381,13 +444,13 @@ private fun ServerAddressInput(
             Icon(PathfinIcons.ChevronDown, null, Modifier.size(14.dp).graphicsLayer { rotationZ = if (advanced) 180f else 0f }, tint = PathfinAppearance.textMuted)
         }
         if (advanced) GroupCard(container = container) {
-            GroupField(address.path, { if (!busy) onChange(address.copy(path = it)) }, tr("路径"), tr("可选，如 /jellyfin"), PathfinIcons.Link,
+            GroupField(draft.path, tr("路径"), tr("可选，如 /jellyfin"), PathfinIcons.Link,
                 divider = false, readOnly = busy,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = ImeAction.Next))
-            GroupField(address.port, { if (!busy && it.all(Char::isDigit)) onChange(address.withPort(it)) }, tr("端口"), "443", PathfinIcons.Hash,
+            GroupField(draft.port, tr("端口"), "443", PathfinIcons.Hash,
                 Modifier.testTag("server-port"), readOnly = busy,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { onDone() }))
+                onKeyboardAction = { onDone() }, inputTransformation = PortDigits)
         }
     }
 }
@@ -395,8 +458,9 @@ private fun ServerAddressInput(
 /** 类似浏览器地址栏的主机输入；协议块切换 HTTPS / HTTP，聚焦时描边变为点缀色。 */
 @Composable
 private fun AddressBar(
-    address: ServerAddressInputState,
-    onChange: (ServerAddressInputState) -> Unit,
+    host: TextFieldState,
+    scheme: String,
+    onToggleScheme: () -> Unit,
     busy: Boolean,
     onDone: () -> Unit,
     container: Color,
@@ -407,17 +471,16 @@ private fun AddressBar(
         color = PathfinAppearance.textMain)
     val outline = if (focused) PathfinAppearance.accent.copy(alpha = 0.6f) else PathfinAppearance.divider
     BasicTextField(
-        value = address.host,
-        onValueChange = { if (!busy) onChange(address.withAddress(it)) },
+        state = host,
         modifier = Modifier.fillMaxWidth().testTag("login-server").semantics { contentDescription = tr("服务器地址") }
             .onFocusChanged { focused = it.isFocused },
         readOnly = busy,
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         textStyle = textStyle,
         cursorBrush = SolidColor(PathfinAppearance.accent),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = ImeAction.Go),
-        keyboardActions = KeyboardActions(onGo = { onDone() }, onDone = { onDone() }),
-        decorationBox = { inner ->
+        onKeyboardAction = { onDone() },
+        decorator = { inner ->
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 58.dp)
                     .clip(shape).background(container)
@@ -426,19 +489,17 @@ private fun AddressBar(
             ) {
                 Row(
                     Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp))
-                        .clickable(enabled = !busy, role = Role.Button, onClickLabel = tr("切换协议")) {
-                            onChange(address.withScheme(if (address.scheme == "https") "http" else "https"))
-                        }
+                        .clickable(enabled = !busy, role = Role.Button, onClickLabel = tr("切换协议"), onClick = onToggleScheme)
                         .padding(start = 10.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(address.scheme.lowercase(), fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium,
-                        color = if (address.scheme == "https") PathfinAppearance.textSub else PathfinAppearance.accent)
+                    Text(scheme, fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium,
+                        color = if (scheme == "https") PathfinAppearance.textSub else PathfinAppearance.accent)
                     Icon(PathfinIcons.ChevronDown, null, Modifier.size(12.dp), tint = PathfinAppearance.textMuted)
                 }
                 Box(Modifier.padding(start = 8.dp).size(width = 1.dp, height = 20.dp).background(PathfinAppearance.divider))
                 Box(Modifier.weight(1f).padding(start = 12.dp)) {
-                    if (address.host.isEmpty()) Text(tr("服务器地址"), style = textStyle, color = PathfinAppearance.textMuted, maxLines = 1)
+                    if (host.text.isEmpty()) Text(tr("服务器地址"), style = textStyle, color = PathfinAppearance.textMuted, maxLines = 1)
                     inner()
                 }
             }
@@ -489,28 +550,31 @@ private fun AccountStep(
     onBack: () -> Unit,
 ) {
     var selected by rememberSaveable { mutableStateOf(probe.users.firstOrNull()?.name) }
-    var username by rememberSaveable { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var displayName by rememberSaveable { mutableStateOf(probe.info.name) }
+    val username = rememberTextFieldState()
+    val password = remember { TextFieldState() }
+    val displayName = rememberTextFieldState(probe.info.name)
     val usersAboveFields = remember { probe.users.isNotEmpty() }
     val manual = probe.users.isEmpty() || selected == null
-    val chosen = if (manual) username.trim() else selected.orEmpty()
-    fun submit() { if (!busy && chosen.isNotBlank()) onLogin(chosen, password, displayName.trim()) }
+    fun chosenAccount() = if (manual) username.text.toString().trim() else selected.orEmpty()
+    fun submit() {
+        val chosen = chosenAccount()
+        if (!busy && chosen.isNotBlank()) onLogin(chosen, password.text.toString(), displayName.text.toString().trim())
+    }
     StepScaffold(actions = {
-        SubmitButton(tr("进入媒体库"), chosen.isNotBlank(), busy, ::submit, Modifier.fillMaxWidth())
+        SubmitButton(tr("进入媒体库"), chosenAccount().isNotBlank(), busy, ::submit, Modifier.fillMaxWidth())
         QuietButton(tr("更换服务器"), onBack, enabled = !busy)
-    }, header = { formWidth -> ServerHero(probe, api, formWidth) }) {
+    }, header = { ServerHero(probe, api) }) {
         Column(Modifier.padding(horizontal = 20.dp)) {
             if (usersAboveFields) PublicAccountChoices(probe, selected, manual, busy, api) { selected = it }
             GroupCard(Modifier.padding(top = 16.dp)) {
-                if (manual) GroupField(username, { if (!busy) username = it }, tr("用户名"), tr("Jellyfin 用户名"), PathfinIcons.User,
+                if (manual) GroupField(username, tr("用户名"), tr("Jellyfin 用户名"), PathfinIcons.User,
                     Modifier.testTag("login-username"), divider = false, readOnly = busy,
                     keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, imeAction = ImeAction.Next))
-                PasswordField(password, { password = it }, if (manual) tr("密码") else tr("%1\$s 的密码", selected), tr("可留空"), busy,
+                PasswordField(password, if (manual) tr("密码") else tr("%1\$s 的密码", selected), tr("可留空"), busy,
                     Modifier.testTag("login-password"), divider = manual, imeAction = ImeAction.Done, onDone = ::submit)
-                GroupField(displayName, { if (!busy) displayName = it }, tr("在本机显示为"), tr("默认使用服务器名称"), PathfinIcons.Type,
+                GroupField(displayName, tr("在本机显示为"), tr("默认使用服务器名称"), PathfinIcons.Type,
                     Modifier.testTag("server-display-name"), readOnly = busy,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { submit() }))
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), onKeyboardAction = { submit() })
             }
             // 迟到的可选账号追加在表单之后，不能推移正在输入的用户名与密码。
             if (!usersAboveFields) PublicAccountChoices(probe, selected, manual, busy, api) { selected = it }
@@ -539,7 +603,7 @@ private fun PublicAccountChoices(probe: ServerProbe, selected: String?, manual: 
 
 /** 服务器的公开启动图承担首屏颜色；未启用启动图时以柔光底图作底，标题保持同一位置。 */
 @Composable
-private fun ServerHero(probe: ServerProbe, api: JellyfinApi, titleWidth: Modifier) {
+private fun ServerHero(probe: ServerProbe, api: JellyfinApi) {
     val canvas = PathfinAppearance.canvas
     val topInset = AppSafeDrawingInsets.asPaddingValues().calculateTopPadding()
     var splashShown by remember(probe.config.baseUrl) { mutableStateOf(false) }
@@ -548,7 +612,7 @@ private fun ServerHero(probe: ServerProbe, api: JellyfinApi, titleWidth: Modifie
         AsyncImage(api.splashscreenUrl(probe.config), null, imageLoader = LocalPosterLoader.current,
             contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize(), onSuccess = { splashShown = true })
         if (splashShown) Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Transparent, 0.35f to Color.Transparent, 0.96f to canvas)))
-        Column(Modifier.align(Alignment.BottomCenter).then(titleWidth).padding(horizontal = 26.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.align(Alignment.BottomCenter).serverFormWidth().padding(horizontal = 26.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Eyebrow(tr("已连接"), color = PathfinAppearance.textSub)
             Text(probe.info.name.ifBlank { "Jellyfin" }, Modifier.semantics { heading() }, fontSize = 26.sp, lineHeight = 34.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.3.sp,
                 color = PathfinAppearance.textMain, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -882,13 +946,13 @@ internal fun ReauthenticateServerDialog(
     onSubmit: (String) -> Unit,
 ) {
     // 密码仅留在当前弹窗内存中，不进入 SavedState、服务器资料或磁盘。
-    var password by remember(profile.id) { mutableStateOf("") }
+    val password = remember(profile.id) { TextFieldState() }
     var submitted by remember { mutableStateOf(false) }
     val requestBusy = busy || submitted
     LaunchedEffect(busy, submitted) {
         if (submitted && !busy) { withFrameNanos { }; submitted = false }
     }
-    fun submit() { if (!busy && !submitted) { submitted = true; onSubmit(password) } }
+    fun submit() { if (!busy && !submitted) { submitted = true; onSubmit(password.text.toString()) } }
     ServerDialogFrame(tr("重新登录"), requestBusy, error, onDismiss, onSubmit = ::submit, submitLabel = tr("登录"),
         subtitle = tr("登录状态已失效，请输入密码继续")) {
         Column(Modifier.padding(top = 6.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -898,7 +962,7 @@ internal fun ReauthenticateServerDialog(
                 color = PathfinAppearance.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         GroupCard(container = PathfinAppearance.canvas) {
-            PasswordField(password, { password = it }, tr("密码"), tr("可留空"), requestBusy, Modifier.testTag("reauth-password"),
+            PasswordField(password, tr("密码"), tr("可留空"), requestBusy, Modifier.testTag("reauth-password"),
                 divider = false, imeAction = ImeAction.Done, onDone = ::submit)
         }
     }
@@ -914,28 +978,28 @@ private fun ServerAddressDialog(
     onDismiss: () -> Unit,
     onSubmit: (ServerConfig, String) -> Unit,
 ) {
-    var address by rememberSaveable(stateSaver = ServerAddressInputSaver) {
-        mutableStateOf(if (kind == "edit") runCatching { ServerAddressInputState.fromConfig(profile.session.server) }.getOrNull() ?: ServerAddressInputState()
-            else ServerAddressInputState())
+    val address by rememberSaveable(stateSaver = ServerAddressDraft.Saver) {
+        val initial = if (kind == "edit") runCatching { ServerAddressInputState.fromConfig(profile.session.server) }.getOrNull() else null
+        mutableStateOf(ServerAddressDraft(initial ?: ServerAddressInputState()))
     }
-    var displayName by rememberSaveable { mutableStateOf(if (kind == "edit") profile.displayName else "") }
+    val displayName = rememberTextFieldState(if (kind == "edit") profile.displayName else "")
     var allowHttp by rememberSaveable { mutableStateOf(kind == "edit" && profile.session.server.allowInsecureHttp) }
     var localError by remember { mutableStateOf<String?>(null) }
     fun submit() {
         if (busy) return
         try {
-            val config = address.toServerConfig(allowHttp)
+            val config = address.value.toServerConfig(allowHttp)
             localError = null
-            onSubmit(config, displayName.trim())
+            onSubmit(config, displayName.text.toString().trim())
         } catch (error: IllegalArgumentException) { localError = error.message ?: tr("请检查服务器地址") }
     }
     ServerDialogFrame(if (kind == "edit") tr("编辑连接") else tr("添加备用地址"), busy, localError ?: error, onDismiss, ::submit,
-        submitEnabled = address.host.isNotBlank(), submitLabel = if (kind == "edit") tr("保存") else tr("添加"),
+        submitEnabled = address.host.text.isNotBlank(), submitLabel = if (kind == "edit") tr("保存") else tr("添加"),
         subtitle = if (kind == "address") tr("同一台服务器的其他访问地址，例如外网域名") else null) {
-        ServerAddressInput(address, { address = it }, allowHttp, { allowHttp = it }, busy, onDone = ::submit,
+        ServerAddressInput(address, allowHttp, { allowHttp = it }, busy, onDone = ::submit,
             container = PathfinAppearance.canvas)
         if (kind == "edit") GroupCard(Modifier.padding(top = 14.dp), container = PathfinAppearance.canvas) {
-            GroupField(displayName, { if (!busy) displayName = it }, tr("在本机显示为"), tr("默认使用服务器名称"), PathfinIcons.Type,
+            GroupField(displayName, tr("在本机显示为"), tr("默认使用服务器名称"), PathfinIcons.Type,
                 divider = false, readOnly = busy)
         }
     }
@@ -947,12 +1011,12 @@ private fun ServerAddressDialog(
  */
 @Composable
 private fun DisplayNameDialog(profile: ServerProfile, api: JellyfinApi, onDismiss: () -> Unit, onSave: (String) -> Unit) {
-    var name by rememberSaveable { mutableStateOf(profile.displayName) }
-    val valid = name.isNotBlank()
+    val name = rememberTextFieldState(profile.displayName)
+    val valid = name.text.isNotBlank()
     val focus = remember { FocusRequester() }
     var focused by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    fun submit() { if (valid) onSave(name.trim()) }
+    fun submit() { name.text.toString().trim().takeIf(String::isNotEmpty)?.let(onSave) }
     val host = remember(profile.session.server.baseUrl) { runCatching { java.net.URI(profile.session.server.baseUrl).host }.getOrNull().orEmpty() }
     AppDialog(onDismiss, tr("显示名称"), subtitle = tr("只改本机服务器列表里的名字，不影响服务器"), actions = {
         DialogAction(tr("取消"), onDismiss, Modifier.weight(1f))
@@ -962,7 +1026,7 @@ private fun DisplayNameDialog(profile: ServerProfile, api: JellyfinApi, onDismis
             .padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ServerAvatar(profile, api, 44.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(name.trim().ifEmpty { tr("未命名") }, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold,
+                Text(name.text.toString().trim().ifEmpty { tr("未命名") }, fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold,
                     color = if (valid) PathfinAppearance.textMain else PathfinAppearance.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(listOf(host, profile.session.userName).filter(String::isNotBlank).joinToString(" · "), fontSize = 12.sp, lineHeight = 17.sp,
                     color = PathfinAppearance.textSub, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -970,20 +1034,21 @@ private fun DisplayNameDialog(profile: ServerProfile, api: JellyfinApi, onDismis
         }
         val shape = RoundedCornerShape(14.dp)
         val textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 22.sp, color = PathfinAppearance.textMain)
-        BasicTextField(name, { if (it.length <= 64) name = it },
+        BasicTextField(name,
             Modifier.fillMaxWidth().padding(top = 10.dp).focusRequester(focus).onFocusChanged { focused = it.isFocused }
                 .semantics { contentDescription = tr("显示名称") }.testTag("server-name-input"),
-            singleLine = true, textStyle = textStyle, cursorBrush = SolidColor(PathfinAppearance.accent),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), keyboardActions = KeyboardActions(onDone = { submit() }),
-            decorationBox = { inner ->
+            lineLimits = TextFieldLineLimits.SingleLine, textStyle = textStyle, cursorBrush = SolidColor(PathfinAppearance.accent),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done), onKeyboardAction = { submit() },
+            inputTransformation = InputTransformation.maxLengthReject(64),
+            decorator = { inner ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(shape).background(PathfinAppearance.card)
                     .border(1.dp, if (focused) PathfinAppearance.accent.copy(alpha = 0.6f) else PathfinAppearance.divider, shape)
                     .padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) {
-                        if (name.isEmpty()) Text(host.ifEmpty { tr("为服务器起个名字") }, style = textStyle, color = PathfinAppearance.textMuted, maxLines = 1)
+                        if (name.text.isEmpty()) Text(host.ifEmpty { tr("为服务器起个名字") }, style = textStyle, color = PathfinAppearance.textMuted, maxLines = 1)
                         inner()
                     }
-                    if (name.isNotEmpty()) PathfinIconButton(PathfinIcons.Close, tr("清空名称"), { name = "" }, tint = PathfinAppearance.textMuted, size = 40.dp)
+                    if (name.text.isNotEmpty()) PathfinIconButton(PathfinIcons.Close, tr("清空名称"), name::clearText, tint = PathfinAppearance.textMuted, size = 40.dp)
                 }
             })
     }
@@ -1056,8 +1121,7 @@ private fun FormFeedback(error: String?, lines: Int, modifier: Modifier = Modifi
 
 @Composable
 private fun PasswordField(
-    value: String,
-    onValueChange: (String) -> Unit,
+    state: TextFieldState,
     label: String,
     placeholder: String,
     busy: Boolean,
@@ -1066,11 +1130,11 @@ private fun PasswordField(
     imeAction: ImeAction = ImeAction.Next,
     onDone: () -> Unit = {},
 ) {
-    var visible by remember { mutableStateOf(false) }
-    GroupField(value, { if (!busy) onValueChange(it) }, label, placeholder, PathfinIcons.Key, modifier, divider = divider, readOnly = busy,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = imeAction),
-        keyboardActions = KeyboardActions(onDone = { onDone() }),
-        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+    var visible by remember(state) { mutableStateOf(false) }
+    val action = if (imeAction == ImeAction.Done) KeyboardActionHandler { onDone() } else null
+    GroupField(state, label, placeholder, PathfinIcons.Key, modifier, divider = divider, readOnly = busy,
+        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Password, imeAction = imeAction),
+        onKeyboardAction = action, passwordVisible = visible,
         trailing = {
             PathfinIconButton(if (visible) PathfinIcons.EyeOff else PathfinIcons.Eye,
                 if (visible) tr("隐藏密码") else tr("显示密码"), { visible = !visible }, size = 32.dp, tint = PathfinAppearance.textMuted)

@@ -26,6 +26,10 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.byValue
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -73,10 +77,8 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
     val coroutineScope = rememberCoroutineScope()
     var clearingImages by remember { mutableStateOf(false) }
     var cacheSizeDialog by remember { mutableStateOf(false) }
-    var cacheSizeDraft by remember(p.imageCacheSizeMb) { mutableStateOf(p.imageCacheSizeMb.toString()) }
     var themeDialog by remember { mutableStateOf(false) }
     var languageDialog by remember { mutableStateOf<String?>(null) }
-    var languageSearch by remember { mutableStateOf("") }
     var backgroundDialog by remember { mutableStateOf(false) }
     var orientationDialog by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
@@ -213,11 +215,11 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
             }
             "tracks" -> {
                 item("audio-label") { SettingLabel(tr("音轨")) }
-                item("audio-language") { SettingsRow(tr("音轨语言"), languageName(p.preferredAudioLanguage), position = GroupPosition.TOP) { languageSearch = ""; languageDialog = "audio" } }
+                item("audio-language") { SettingsRow(tr("音轨语言"), languageName(p.preferredAudioLanguage), position = GroupPosition.TOP) { languageDialog = "audio" } }
                 item("gain") { SettingsSlider(tr("音量增益"), p.audioGainPercent.toFloat(), 0f..200f, 39, { "${it.roundToInt()}%" }, subtitle = tr("100% 为原音量，之后每 10% 增强 1.8 dB，峰值受限"), position = GroupPosition.BOTTOM) { onPreferences(p.copy(audioGainPercent = it.roundToInt())) } }
                 item("subtitles-label") { SettingLabel(tr("字幕")) }
                 item("subtitles") { SettingsSwitch(tr("启用字幕"), p.subtitlesEnabled, tr("播放时默认开启字幕轨"), position = GroupPosition.TOP) { onPreferences(p.copy(subtitlesEnabled = it)) } }
-                item("subtitle-language") { SettingsRow(tr("字幕语言"), languageName(p.preferredSubtitleLanguage), position = GroupPosition.BOTTOM) { languageSearch = ""; languageDialog = "subtitle" } }
+                item("subtitle-language") { SettingsRow(tr("字幕语言"), languageName(p.preferredSubtitleLanguage), position = GroupPosition.BOTTOM) { languageDialog = "subtitle" } }
             }
             "segments" -> {
                 item("intro-label") { SettingLabel(tr("片头")) }
@@ -246,7 +248,7 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
                     }
                     SettingsRow(tr("容量上限"), (used?.let { tr("已用 %1\$s · ", cacheSizeLabel(it)) } ?: "") + tr("上限 %1\$s MB · 每个账号独立缓存", p.imageCacheSizeMb),
                         tag = "cache-usage", position = GroupPosition.TOP) {
-                    cacheSizeDraft = p.imageCacheSizeMb.toString(); cacheSizeDialog = true
+                    cacheSizeDialog = true
                 } }
                 item("clear-cache") { SettingsRow(tr("清除缓存"),
                     if (state.session == null) tr("连接服务器后可清理") else if (clearingImages) tr("正在清理") else tr("仅清理当前账号的本机封面"),
@@ -277,21 +279,23 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
         }
     }
     if (cacheSizeDialog) {
-        val valid = cacheSizeDraft.toIntOrNull()?.let { it in 16..65536 } == true
+        val draft = remember(p.imageCacheSizeMb) { TextFieldState(p.imageCacheSizeMb.toString()) }
+        val sizeMb = draft.text.toString().toIntOrNull()
         AppDialog({ cacheSizeDialog = false }, tr("缓存容量"), subtitle = tr("16–65536 MB，每个账号独立计算"), actions = {
             DialogAction(tr("取消"), { cacheSizeDialog = false }, Modifier.weight(1f))
             DialogAction(tr("保存"), {
-                cacheSizeDraft.toIntOrNull()?.takeIf { it in 16..65536 }?.let { onPreferences(p.copy(imageCacheSizeMb = it)); cacheSizeDialog = false }
-            }, Modifier.weight(1f), enabled = valid, role = DialogActionRole.Primary)
+                draft.text.toString().toIntOrNull()?.takeIf { it in 16..65536 }?.let { onPreferences(p.copy(imageCacheSizeMb = it)); cacheSizeDialog = false }
+            }, Modifier.weight(1f), enabled = sizeMb != null && sizeMb in 16..65536, role = DialogActionRole.Primary)
         }) {
             GroupCard(container = PathfinAppearance.canvas) {
-                GroupField(cacheSizeDraft, { cacheSizeDraft = it.filter(Char::isDigit).take(5) }, tr("容量（MB）"), "1024", PathfinIcons.Archive,
+                GroupField(draft, tr("容量（MB）"), "1024", PathfinIcons.Archive,
                     Modifier.testTag("cache-size-input"), divider = false,
+                    inputTransformation = InputTransformation.byValue { _, input -> input.filter(Char::isDigit).take(5) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(512, 1024, 2048).forEach { size ->
-                    PresetChip(if (size < 1024) "$size MB" else "${size / 1024} GB", cacheSizeDraft.toIntOrNull() == size) { cacheSizeDraft = size.toString() }
+                    PresetChip(if (size < 1024) "$size MB" else "${size / 1024} GB", sizeMb == size) { draft.setTextAndPlaceCursorAtEnd(size.toString()) }
                 }
             }
         }
@@ -304,13 +308,15 @@ internal fun SettingsScreen(state: AppState, onTheme: (ThemePreference) -> Unit,
     }
     if (languageDialog != null) AppDialog({ languageDialog = null }, if (languageDialog == "audio") tr("首选音轨语言") else tr("首选字幕语言"),
         actions = { DialogAction(tr("取消"), { languageDialog = null }, Modifier.weight(1f)) }) {
+        val languageSearch = remember(languageDialog) { TextFieldState() }
         GroupCard(container = PathfinAppearance.canvas) {
-            GroupField(languageSearch, { languageSearch = it }, tr("搜索"), tr("语言名称或代码"), PathfinIcons.Globe, divider = false)
+            GroupField(languageSearch, tr("搜索"), tr("语言名称或代码"), PathfinIcons.Globe, divider = false)
         }
         val languageOptions = remember(LocalConfiguration.current.locales[0]) { preferredLanguageOptions() }
-        val matching = remember(languageSearch, languageOptions) {
+        val query = languageSearch.text.trim().toString()
+        val matching = remember(query, languageOptions) {
             languageOptions.filter { (code, label) ->
-                languageSearch.isBlank() || label.contains(languageSearch.trim(), true) || code.contains(languageSearch.trim(), true)
+                query.isEmpty() || label.contains(query, true) || code.contains(query, true)
             }
         }
         GroupCard(Modifier.padding(top = 10.dp), container = PathfinAppearance.canvas) {
