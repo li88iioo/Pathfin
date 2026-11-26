@@ -1,11 +1,11 @@
 {
   "archive": "pathfin-ffmpeg-corresponding-source.tar",
-  "bytes": 21872640,
+  "bytes": 22568960,
   "lockedUpstreamArchives": 4,
-  "pairedNativeBuildSha256": "708a1ec3e82756beaf6bec9af120e74ff64341772bc77a1e6f16cc1463b08ce4",
-  "pairedSourceLockSha256": "4d2eaa235c416cd35604bb89e568602680363afe16fa4698bc5121fd4105042c",
+  "pairedNativeBuildSha256": "342741a2fc892e44b4e525b0e9f77400023a8fc5afe6a95e072381909b9ef1d1",
+  "pairedSourceLockSha256": "196fc717b8dcfe1d96957b15a9a3301de524370774f5600777c88efc489d70af",
   "releaseRequirement": "Distribute this matching archive and SHA-256 alongside the APK containing the paired native libraries.",
   "schemaVersion": 1,
-  "sha256": "f39f03ded16250d804f61ef6039dc71784abc39ca85accf24b78e97dc6bd46ef",
-  "sourceInventorySha256": "762f2c552724f88a5f1dc16385aa8b201bff2008087e1ad1b9d7f1c6125a7af8"
+  "sha256": "39389eaa0cfb3651bab5440c7f10feab60928ba3a89c106a4eebce75923d302a",
+  "sourceInventorySha256": "730bb44c5de96773679ead2207eee1d576de6e97613ad38c62603a5c29f5fc14"
 }

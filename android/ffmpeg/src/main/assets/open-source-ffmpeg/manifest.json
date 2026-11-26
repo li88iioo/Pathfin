@@ -96,7 +96,7 @@
     {
       "artifact": "ffmpeg",
       "group": "native",
-      "id": "native:ffmpeg:946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+      "id": "native:ffmpeg:74e4393595cf2b5857f0da925c4e0dd74ea306e5",
       "kind": "native",
       "licenseIds": [
         "LGPL-2.1-or-later"
@@ -104,41 +104,41 @@
       "links": [
         {
           "label": "固定源码提交",
-          "url": "https://github.com/FFmpeg/FFmpeg/tree/946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+          "url": "https://github.com/FFmpeg/FFmpeg/tree/74e4393595cf2b5857f0da925c4e0dd74ea306e5"
         }
       ],
       "modifications": [],
       "name": "FFmpeg audio/video decoders",
       "sourceArchive": {
-        "archive": "ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz",
-        "commit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
-        "sha256": "0aa2b1de2a5698b20a23e93d539a9a8e82ca0117496c5bdf05d198805f42bb3b",
-        "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+        "archive": "ffmpeg-74e4393595cf2b5857f0da925c4e0dd74ea306e5.tar.gz",
+        "commit": "74e4393595cf2b5857f0da925c4e0dd74ea306e5",
+        "sha256": "4ae3618b0d38a14bb8f86a6b90de63c4b6b55d4de8e812a4900d07d2188b54de",
+        "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/74e4393595cf2b5857f0da925c4e0dd74ea306e5"
       },
       "texts": [
         {
           "kind": "license",
-          "path": "texts/2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af.txt",
-          "sha256": "2e1d16c72fd74e12063776371da757322f8b77589386532f4fd8634bde7de1af",
-          "source": "https://github.com/FFmpeg/FFmpeg/blob/946fcce07b6dcd0331c8cc609192aeff5e1924f8/LICENSE.md",
+          "path": "texts/e6dc72d5665a1ebd6dcc841de59278dad4ca77ecc47b03f1064a55c3e9ea8bb8.txt",
+          "sha256": "e6dc72d5665a1ebd6dcc841de59278dad4ca77ecc47b03f1064a55c3e9ea8bb8",
+          "source": "https://github.com/FFmpeg/FFmpeg/blob/74e4393595cf2b5857f0da925c4e0dd74ea306e5/LICENSE.md",
           "title": "LICENSE.md"
         },
         {
           "kind": "license",
           "path": "texts/246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30.txt",
           "sha256": "246041b6ecf9bc32d718a62c57877c78b5eb397b6467e74ed7ae2626ab189c30",
-          "source": "https://github.com/FFmpeg/FFmpeg/blob/946fcce07b6dcd0331c8cc609192aeff5e1924f8/COPYING.LGPLv2.1",
+          "source": "https://github.com/FFmpeg/FFmpeg/blob/74e4393595cf2b5857f0da925c4e0dd74ea306e5/COPYING.LGPLv2.1",
           "title": "COPYING.LGPLv2.1"
         },
         {
           "kind": "notice",
-          "path": "texts/d510f4293c637d46c1307472af81c504864d88a14efa17156d0eb885379ae0e3.txt",
-          "sha256": "d510f4293c637d46c1307472af81c504864d88a14efa17156d0eb885379ae0e3",
-          "source": "https://github.com/FFmpeg/FFmpeg/tree/946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+          "path": "texts/42d97892e0a6965515fadf992a646c09a6ddfe43f4a32ce32c85b2a7f5cc61ba.txt",
+          "sha256": "42d97892e0a6965515fadf992a646c09a6ddfe43f4a32ce32c85b2a7f5cc61ba",
+          "source": "https://github.com/FFmpeg/FFmpeg/tree/74e4393595cf2b5857f0da925c4e0dd74ea306e5",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "n9.0.2"
+      "version": "n9.1"
     },
     {
       "artifact": "glad",

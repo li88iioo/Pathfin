@@ -2,7 +2,7 @@ plugins { id("com.android.library") }
 
 android {
     namespace = "dev.pathfin.ffmpeg"
-    compileSdk = 37
+    compileSdk { version = release(37) { minorApiLevel = 2 } }
     ndkVersion = "30.0.16248370"
     defaultConfig {
         minSdk = 26
@@ -22,5 +22,5 @@ dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-annotations-jvm:2.4.21")
     api("androidx.media3:media3-decoder:1.11.1")
     api("androidx.media3:media3-exoplayer:1.11.1")
-    compileOnly("org.checkerframework:checker-qual:3.43.0")
+    compileOnly("org.checkerframework:checker-qual:4.4.0")
 }

@@ -83,12 +83,12 @@
       {
         "name": "ffmpeg",
         "repository": "https://github.com/FFmpeg/FFmpeg",
-        "ref": "n9.0.2",
-        "commit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
-        "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/946fcce07b6dcd0331c8cc609192aeff5e1924f8",
-        "sha256": "0aa2b1de2a5698b20a23e93d539a9a8e82ca0117496c5bdf05d198805f42bb3b",
-        "archive": "ffmpeg-946fcce07b6dcd0331c8cc609192aeff5e1924f8.tar.gz",
-        "bytes": 17333895
+        "ref": "n9.1",
+        "commit": "74e4393595cf2b5857f0da925c4e0dd74ea306e5",
+        "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/74e4393595cf2b5857f0da925c4e0dd74ea306e5",
+        "sha256": "4ae3618b0d38a14bb8f86a6b90de63c4b6b55d4de8e812a4900d07d2188b54de",
+        "archive": "ffmpeg-74e4393595cf2b5857f0da925c4e0dd74ea306e5.tar.gz",
+        "bytes": 18036608
       },
       {
         "name": "libplacebo",
@@ -159,7 +159,7 @@
     },
     {
       "path": "build.gradle.kts",
-      "sha256": "f268bd7095c1c5d4bc8dad087623de5ece9ccaea79737d9888d3edb9d043b43e"
+      "sha256": "b49f657a63d0d50603930afd5a08052c38b10e7ec2d840acca742f892fca133e"
     },
     {
       "path": "src/main/cpp/pathfin_video_jni.cc",

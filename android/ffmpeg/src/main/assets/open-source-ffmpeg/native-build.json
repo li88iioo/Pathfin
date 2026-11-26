@@ -5,7 +5,7 @@
   "abi": "arm64-v8a",
   "androidApi": 26,
   "ndkVersion": "30.0.16248370",
-  "ffmpegCommit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+  "ffmpegCommit": "74e4393595cf2b5857f0da925c4e0dd74ea306e5",
   "ffmpegLicense": "LGPL-2.1-or-later",
   "gpl": false,
   "nonfree": false,
@@ -40,11 +40,11 @@
     "MarkupSafe": "3.0.4"
   },
   "staticArchives": {
-    "libplacebo.a": "7ee32a88d80a9a5713a6177c296b34c16b70348c1c958282134094d94cb0ffbe"
+    "libplacebo.a": "2ff12b6325ffa4f8728956a130fb59894ef9b7973c538c549b1d994a27d45e4b"
   },
   "sourceInputs": {
     "CMakeLists.txt": "f0123053929ecc5417478cc43211b949e530523df5b71c241c44e340e43eb759",
-    "build.gradle.kts": "f268bd7095c1c5d4bc8dad087623de5ece9ccaea79737d9888d3edb9d043b43e",
+    "build.gradle.kts": "b49f657a63d0d50603930afd5a08052c38b10e7ec2d840acca742f892fca133e",
     "src/main/cpp/ffmpeg_jni.cc": "7bd4a3d09cf1828543848a1abf271f984f665d25092c81c61a4fe4735879d3f0",
     "src/main/cpp/pathfin_video_jni.cc": "d96c6a7b84c7eac1338c5de464f730f11db8eeb8031a4cfc1e472df12c16980f",
     "src/main/cpp/pathfin_video_render.c": "0e0e7ec8a290d1fe1808d2ae5ea48e13c6ea7c3e5a46dc4def38be4c0f895632",
@@ -60,13 +60,13 @@
     "video-consumer-rules.pro": "d3726d0b9c258ecf14c2b234a2569dcee3718685aeb953d2664b23ad678d5774"
   },
   "copiedAvformatHeaders": {
-    "avformat.h": "694da025f30497481f4703e06de106bd417a5718f8fdcdf5e09e34f4b5f21114",
-    "avio.h": "30312971fc299e65bc69cf1beddb76f50394e044d9c71fe32fec3ae9c13bd1af",
-    "version.h": "6e75a8cd7772f334958ffce859e3e23987963e3b406f12d9ec71650ca437fb92",
-    "version_major.h": "436db6c1b56db87e83682639fd0285e8b0138acc4fb572868c70a690eda7bb5e"
+    "avformat.h": "862ad366484554ac23e131916083b61daf26cc001d9024a7ae774307b8e45d79",
+    "avio.h": "a8ac57107c70f3d96e1180eac12dfc0f7e2d7724c72fcd0fc1c793f715b31572",
+    "version.h": "08b64bb52109a07ae3ee1a1dafd12ad336d0a646c23aea075c5024b9437f3b29",
+    "version_major.h": "c5fd8bec06a4a5336bbf81cef88e27ed39ef32dda3397fc20b504cd51e05fc4e"
   },
   "libplaceboConfigSha256": "8bea5588b23fa28996f8add84022be7901598e37a8d01d8001067b69fbc90d3d",
-  "crossFileSha256": "307efa2779f2b5244b14754dac1294ea1304d04688064b9a3b9b90df1e72007b",
+  "crossFileSha256": "176ab7cdd24309aa5f8f7e4d6e8a61b5d4fc0b29d3be1cb9114c1503467ab329",
   "decoders": [
     "aac",
     "ac3",
@@ -97,8 +97,8 @@
   "libraries": [
     {
       "file": "libavcodec.so",
-      "bytes": 4719448,
-      "sha256": "d083bbbb5869fd78806bd703f23e2d6c133d04b23df5553904a187737501b58c",
+      "bytes": 4781248,
+      "sha256": "3987b349e52b10a1dcee1e58425a821f2b9237d6cd3125c1d27ee2ae42602912",
       "loadAlignments": [
         16384,
         16384,
@@ -113,8 +113,8 @@
     },
     {
       "file": "libavutil.so",
-      "bytes": 730008,
-      "sha256": "bb17a83a5df75129241f24b42aea8d5fd6f2c7c4b428c04c03a8063878b96724",
+      "bytes": 746800,
+      "sha256": "a19571ec781abe775d5f390e9b536215062dd4adebf5b40dd7ad35f64fefacd8",
       "loadAlignments": [
         16384,
         16384,
@@ -127,9 +127,10 @@
     },
     {
       "file": "libswresample.so",
-      "bytes": 96424,
-      "sha256": "b17835cebcedacc50b88a1e5ecc5f7093de403ba1f89a7604c1e3d067f4fdd4b",
+      "bytes": 100992,
+      "sha256": "cba317c60c3730c9c54132d532b74bd655100828ded9cdb121c7e7f67b00b43a",
       "loadAlignments": [
+        16384,
         16384,
         16384
       ],
@@ -141,8 +142,8 @@
     },
     {
       "file": "libffmpegJNI.so",
-      "bytes": 763856,
-      "sha256": "2815a30f3b2ffc090a28abc43d74d880a3639000e89edc392f9dd3fafb2a15ae",
+      "bytes": 763872,
+      "sha256": "bd607918265a38ccde0b684adf5ad9b3eb102fb18e4d39efb69c4a31da97f5d0",
       "loadAlignments": [
         16384,
         16384,
@@ -162,8 +163,8 @@
       ]
     }
   ],
-  "configSha256": "b34cf9695bc9f695f17243c73a9b42b8f318d600da2055f5b0d1443ae8e91268",
-  "componentConfigSha256": "c552ffa72b0e59b2e804695cb4bc608cec6f6c20a1de45f436cee7427dc3f384",
+  "configSha256": "b8cf24aa4dc1afea1b60a385cdc50c3ea91fac6ef42efb5e8a499b7ecdd8e1cc",
+  "componentConfigSha256": "e9317d218c14931ff06151402e47f9beaac2e63f6298b701ec68442ee83fafb2",
   "recipeSha256": "1bf83f601191fdc31f67b36cf46a091492ea7c899b7b9c3d1f2cf2ccff46299b",
-  "sourceLockSha256": "4d2eaa235c416cd35604bb89e568602680363afe16fa4698bc5121fd4105042c"
+  "sourceLockSha256": "196fc717b8dcfe1d96957b15a9a3301de524370774f5600777c88efc489d70af"
 }
