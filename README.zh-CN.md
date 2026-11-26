@@ -71,7 +71,7 @@
 
 ## 构建
 
-需要 JDK 17、Android SDK 37，以及项目锁定的 NDK 30.0.16248370 和 CMake 3.22.1。使用 `ANDROID_HOME` 或本地 `android/local.properties` 指定 SDK。
+需要 JDK 17、Android SDK Platform 37.2，以及项目锁定的 NDK 30.0.16248370 和 CMake 3.22.1。使用 `ANDROID_HOME` 或本地 `android/local.properties` 指定 SDK。
 
 原生库不入库；首次构建先生成 ASS 与 FFmpeg 音视频模块及其许可资产和对应源码归档：
 

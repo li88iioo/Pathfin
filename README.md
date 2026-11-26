@@ -71,7 +71,7 @@ The server must provide the `variants` / `resolve` endpoints of `mediaflux.playb
 
 ## Building
 
-Requires JDK 17, Android SDK 37, and the project-locked NDK 30.0.16248370 and CMake 3.22.1. Point to the SDK with `ANDROID_HOME` or a local `android/local.properties`.
+Requires JDK 17, Android SDK Platform 37.2, and the project-locked NDK 30.0.16248370 and CMake 3.22.1. Point to the SDK with `ANDROID_HOME` or a local `android/local.properties`.
 
 Native libraries are not committed. Before the first build, generate the ASS and FFmpeg audio/video modules with their license assets and corresponding source archives:
 

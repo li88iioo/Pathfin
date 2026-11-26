@@ -23,8 +23,7 @@
     {
       "components": [
         "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0",
-        "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.11.0"
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.11.0"
       ],
       "kind": "license",
       "path": "evidence/upstream/coroutines-license.txt",
@@ -60,7 +59,6 @@
         "androidx.media3:media3-datasource-okhttp:1.11.1",
         "androidx.media3:media3-datasource:1.11.1",
         "androidx.media3:media3-decoder:1.11.1",
-        "androidx.media3:media3-effect:1.11.1",
         "androidx.media3:media3-exoplayer-dash:1.11.1",
         "androidx.media3:media3-exoplayer-hls:1.11.1",
         "androidx.media3:media3-exoplayer:1.11.1",

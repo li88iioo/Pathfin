@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.click
@@ -75,11 +76,14 @@ class PlayerControlsLayoutTest {
         try {
             showControls(player)
             assertTimeFits()
-            val before = compose.onNodeWithTag("player-seek-slider").readVerificationNode(compose) { it.boundsInRoot }
+            val slider = compose.onNodeWithTag("player-seek-slider")
+            val before = slider.readVerificationNode(compose) { it.boundsInRoot }
             compose.runOnUiThread { player.setPosition(35_000_000) }
-            compose.waitForIdle()
+            compose.waitUntil(5_000) {
+                slider.fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current == 35_000_000f
+            }
             assertTimeFits()
-            assertEquals(before, compose.onNodeWithTag("player-seek-slider").readVerificationNode(compose) { it.boundsInRoot })
+            assertEquals(before, slider.readVerificationNode(compose) { it.boundsInRoot })
         } finally { compose.runOnUiThread { player.release() } }
     }
 

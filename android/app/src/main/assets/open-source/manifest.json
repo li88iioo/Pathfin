@@ -1,5 +1,5 @@
 {
-  "componentCount": 123,
+  "componentCount": 125,
   "components": [
     {
       "artifact": "activity-compose",
@@ -565,18 +565,18 @@
       "artifacts": [
         {
           "fileName": "animation.aar",
-          "id": "androidx.compose.animation:animation-android:1.12.1",
-          "sha256": "4a619ca869b9724e9cf6127ead53d8fb7dd8601a931c4006b15caf5bb3bf19f8",
+          "id": "androidx.compose.animation:animation-android:1.13.0",
+          "sha256": "2ee220773b320285f19ae6234c01912e46aaf10eda55a7099875e4f9f22ce873",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.animation",
-      "id": "androidx.compose.animation:animation-android:1.12.1",
+      "id": "androidx.compose.animation:animation-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.animation:animation-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.animation__animation-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.animation:animation-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.animation__animation-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -588,11 +588,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-android/1.12.1/animation-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-android/1.13.0/animation-android-1.13.0.pom"
         }
       ],
       "name": "Compose Animation",
@@ -608,29 +608,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.animation:animation-android:1.12.1/animation.aar!/META-INF/androidx/compose/animation/animation/LICENSE.txt",
+          "source": "androidx.compose.animation:animation-android:1.13.0/animation.aar!/META-INF/androidx/compose/animation/animation/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "animation-core-android",
       "artifacts": [
         {
           "fileName": "animation-core.aar",
-          "id": "androidx.compose.animation:animation-core-android:1.12.1",
-          "sha256": "29e26959b2c5645c53a42aa8302570bf8cc3644755d6ca97bf1028d08a665b97",
+          "id": "androidx.compose.animation:animation-core-android:1.13.0",
+          "sha256": "2b8fc2beedd30bff72faeb44515110ad5c0b651304dcf5b25fc61f251d589b79",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.animation",
-      "id": "androidx.compose.animation:animation-core-android:1.12.1",
+      "id": "androidx.compose.animation:animation-core-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.animation:animation-core-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.animation__animation-core-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.animation:animation-core-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.animation__animation-core-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -642,11 +642,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-animation#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-core-android/1.12.1/animation-core-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/animation/animation-core-android/1.13.0/animation-core-android-1.13.0.pom"
         }
       ],
       "name": "Compose Animation Core",
@@ -662,29 +662,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.animation:animation-core-android:1.12.1/animation-core.aar!/META-INF/androidx/compose/animation/animation-core/LICENSE.txt",
+          "source": "androidx.compose.animation:animation-core-android:1.13.0/animation-core.aar!/META-INF/androidx/compose/animation/animation-core/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "foundation-android",
       "artifacts": [
         {
           "fileName": "foundation.aar",
-          "id": "androidx.compose.foundation:foundation-android:1.12.1",
-          "sha256": "444749ea7b5a563e530504b9035c87e47ed0fb62b9f7ba00e90af8aa81e6bfb8",
+          "id": "androidx.compose.foundation:foundation-android:1.13.0",
+          "sha256": "9c97dbb937321607311a081ac095551f160293b78624df51129e17b25b627f2c",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.foundation",
-      "id": "androidx.compose.foundation:foundation-android:1.12.1",
+      "id": "androidx.compose.foundation:foundation-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.foundation:foundation-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.foundation__foundation-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.foundation:foundation-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.foundation__foundation-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -696,11 +696,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-android/1.12.1/foundation-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-android/1.13.0/foundation-android-1.13.0.pom"
         }
       ],
       "name": "Compose Foundation",
@@ -716,29 +716,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.foundation:foundation-android:1.12.1/foundation.aar!/META-INF/androidx/compose/foundation/foundation/LICENSE.txt",
+          "source": "androidx.compose.foundation:foundation-android:1.13.0/foundation.aar!/META-INF/androidx/compose/foundation/foundation/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "foundation-layout-android",
       "artifacts": [
         {
           "fileName": "foundation-layout.aar",
-          "id": "androidx.compose.foundation:foundation-layout-android:1.12.1",
-          "sha256": "274370a88621e001417e76c2d862ffad61ebc8ca2d9f151c7b60dd02d65ebe51",
+          "id": "androidx.compose.foundation:foundation-layout-android:1.13.0",
+          "sha256": "32d2dd25683e8b18fd88370241072acab1cf275646e37cfb6b7677f52e107975",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.foundation",
-      "id": "androidx.compose.foundation:foundation-layout-android:1.12.1",
+      "id": "androidx.compose.foundation:foundation-layout-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.foundation:foundation-layout-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.foundation__foundation-layout-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.foundation:foundation-layout-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.foundation__foundation-layout-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -750,11 +750,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-foundation#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-layout-android/1.12.1/foundation-layout-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/foundation/foundation-layout-android/1.13.0/foundation-layout-android-1.13.0.pom"
         }
       ],
       "name": "Compose Layouts",
@@ -770,29 +770,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.foundation:foundation-layout-android:1.12.1/foundation-layout.aar!/META-INF/androidx/compose/foundation/foundation-layout/LICENSE.txt",
+          "source": "androidx.compose.foundation:foundation-layout-android:1.13.0/foundation-layout.aar!/META-INF/androidx/compose/foundation/foundation-layout/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "material3-android",
       "artifacts": [
         {
           "fileName": "material3.aar",
-          "id": "androidx.compose.material3:material3-android:1.4.0",
-          "sha256": "3a37e8b36df3822fe1e6059f0f9fafda8800388860477624ac1b9422c418a36e",
+          "id": "androidx.compose.material3:material3-android:1.5.0",
+          "sha256": "dd17540643810cd13007f64c85091fd98c6f7e7619437d2fd18e0c2e41155ee1",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.material3",
-      "id": "androidx.compose.material3:material3-android:1.4.0",
+      "id": "androidx.compose.material3:material3-android:1.5.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.material3:material3-android:1.4.0",
-          "evidence": "evidence/poms/androidx.compose.material3__material3-android__1.4.0.pom",
+          "declaredBy": "androidx.compose.material3:material3-android:1.5.0",
+          "evidence": "evidence/poms/androidx.compose.material3__material3-android__1.5.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -804,11 +804,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.4.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.5.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3-android/1.4.0/material3-android-1.4.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3-android/1.5.0/material3-android-1.5.0.pom"
         }
       ],
       "name": "Compose Material3 Components",
@@ -824,11 +824,65 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.material3:material3-android:1.4.0/material3.aar!/META-INF/androidx/compose/material3/material3/LICENSE.txt",
+          "source": "androidx.compose.material3:material3-android:1.5.0/material3.aar!/META-INF/androidx/compose/material3/material3/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
+    },
+    {
+      "artifact": "material3-ripple-android",
+      "artifacts": [
+        {
+          "fileName": "material3-ripple.aar",
+          "id": "androidx.compose.material3:material3-ripple-android:1.5.0",
+          "sha256": "8d947b02b21f6af335dbb92332a09d3029955cc5f62d8e3116b4474b04f30848",
+          "type": "aar"
+        }
+      ],
+      "group": "androidx.compose.material3",
+      "id": "androidx.compose.material3:material3-ripple-android:1.5.0",
+      "kind": "maven",
+      "licenseDeclarations": [
+        {
+          "declaredBy": "androidx.compose.material3:material3-ripple-android:1.5.0",
+          "evidence": "evidence/poms/androidx.compose.material3__material3-ripple-android__1.5.0.pom",
+          "id": "Apache-2.0",
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "licenseIds": [
+        "Apache-2.0"
+      ],
+      "links": [
+        {
+          "label": "项目主页",
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-material3#1.5.0"
+        },
+        {
+          "label": "精确版本 POM",
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3-ripple-android/1.5.0/material3-ripple-android-1.5.0.pom"
+        }
+      ],
+      "name": "Compose Material3 Ripple",
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+          "title": "Apache License 2.0"
+        },
+        {
+          "kind": "license",
+          "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
+          "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+          "source": "androidx.compose.material3:material3-ripple-android:1.5.0/material3-ripple.aar!/META-INF/androidx/compose/material3/material3-ripple/LICENSE.txt",
+          "title": "LICENSE.txt"
+        }
+      ],
+      "version": "1.5.0"
     },
     {
       "artifact": "material-icons-core-android",
@@ -929,18 +983,18 @@
       "artifacts": [
         {
           "fileName": "material-ripple.aar",
-          "id": "androidx.compose.material:material-ripple-android:1.12.1",
-          "sha256": "795d8742165875ee96383ca64ff4cd8bc12b83efb0918f68472e7c2f9d5826df",
+          "id": "androidx.compose.material:material-ripple-android:1.13.0",
+          "sha256": "c031c2416a283f8a7f58a969149c4247250237a194218fee4a9ff56cbd250cc2",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.material",
-      "id": "androidx.compose.material:material-ripple-android:1.12.1",
+      "id": "androidx.compose.material:material-ripple-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.material:material-ripple-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.material__material-ripple-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.material:material-ripple-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.material__material-ripple-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -952,11 +1006,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-material#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-ripple-android/1.12.1/material-ripple-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/material/material-ripple-android/1.13.0/material-ripple-android-1.13.0.pom"
         }
       ],
       "name": "Compose Material Ripple",
@@ -972,29 +1026,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.material:material-ripple-android:1.12.1/material-ripple.aar!/META-INF/androidx/compose/material/material-ripple/LICENSE.txt",
+          "source": "androidx.compose.material:material-ripple-android:1.13.0/material-ripple.aar!/META-INF/androidx/compose/material/material-ripple/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "runtime-android",
       "artifacts": [
         {
           "fileName": "runtime.aar",
-          "id": "androidx.compose.runtime:runtime-android:1.12.1",
-          "sha256": "1701a61d06d2f6144f2cd8b015abbc5ad6952eacb70c24c208cdfd2bb188dde7",
+          "id": "androidx.compose.runtime:runtime-android:1.13.0",
+          "sha256": "39caa686185abd9b3366c04eb4691eb38828af9469d5df1cd6455b89d3b43bd3",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.runtime",
-      "id": "androidx.compose.runtime:runtime-android:1.12.1",
+      "id": "androidx.compose.runtime:runtime-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.runtime:runtime-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.runtime__runtime-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.runtime:runtime-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.runtime__runtime-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1006,11 +1060,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-android/1.12.1/runtime-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-android/1.13.0/runtime-android-1.13.0.pom"
         }
       ],
       "name": "Compose Runtime",
@@ -1026,29 +1080,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.runtime:runtime-android:1.12.1/runtime.aar!/META-INF/androidx/compose/runtime/runtime/LICENSE.txt",
+          "source": "androidx.compose.runtime:runtime-android:1.13.0/runtime.aar!/META-INF/androidx/compose/runtime/runtime/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "runtime-annotation-android",
       "artifacts": [
         {
           "fileName": "runtime-annotation.aar",
-          "id": "androidx.compose.runtime:runtime-annotation-android:1.12.1",
-          "sha256": "071d6200f5f34ffb5ce69cc19ee8db577c188832bb472779213d4633eca26565",
+          "id": "androidx.compose.runtime:runtime-annotation-android:1.13.0",
+          "sha256": "e2a54a464a34924dd824d54c4208cc69b3765adc981ad773bdc11297b1ce0781",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.runtime",
-      "id": "androidx.compose.runtime:runtime-annotation-android:1.12.1",
+      "id": "androidx.compose.runtime:runtime-annotation-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.runtime:runtime-annotation-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.runtime__runtime-annotation-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.runtime:runtime-annotation-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.runtime__runtime-annotation-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1060,11 +1114,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-annotation-android/1.12.1/runtime-annotation-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-annotation-android/1.13.0/runtime-annotation-android-1.13.0.pom"
         }
       ],
       "name": "Compose Runtime Annotation",
@@ -1080,29 +1134,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.runtime:runtime-annotation-android:1.12.1/runtime-annotation.aar!/META-INF/androidx/compose/runtime/runtime-annotation/LICENSE.txt",
+          "source": "androidx.compose.runtime:runtime-annotation-android:1.13.0/runtime-annotation.aar!/META-INF/androidx/compose/runtime/runtime-annotation/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "runtime-retain-android",
       "artifacts": [
         {
           "fileName": "runtime-retain.aar",
-          "id": "androidx.compose.runtime:runtime-retain-android:1.12.1",
-          "sha256": "6e32111eed0f67ef2ae70c2d9c83cb6bfb54095fe2fb2fdc800febd14d0d7a61",
+          "id": "androidx.compose.runtime:runtime-retain-android:1.13.0",
+          "sha256": "cdd5001eaf098540aa7bf8d8b0b52c6d0f34deb116cdbd1eb6ef5bb02fa95c0b",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.runtime",
-      "id": "androidx.compose.runtime:runtime-retain-android:1.12.1",
+      "id": "androidx.compose.runtime:runtime-retain-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.runtime:runtime-retain-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.runtime__runtime-retain-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.runtime:runtime-retain-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.runtime__runtime-retain-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1114,11 +1168,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain-android/1.12.1/runtime-retain-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-retain-android/1.13.0/runtime-retain-android-1.13.0.pom"
         }
       ],
       "name": "Compose Runtime Retain",
@@ -1134,29 +1188,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.runtime:runtime-retain-android:1.12.1/runtime-retain.aar!/META-INF/androidx/compose/runtime/runtime-retain/LICENSE.txt",
+          "source": "androidx.compose.runtime:runtime-retain-android:1.13.0/runtime-retain.aar!/META-INF/androidx/compose/runtime/runtime-retain/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "runtime-saveable-android",
       "artifacts": [
         {
           "fileName": "runtime-saveable.aar",
-          "id": "androidx.compose.runtime:runtime-saveable-android:1.12.1",
-          "sha256": "0c83d47820fbc8ffb6e3e49311ccd4755676d6f94bb8c6d8564ab4c799df8779",
+          "id": "androidx.compose.runtime:runtime-saveable-android:1.13.0",
+          "sha256": "b4adce846e4c5c5f557cb727897a329a46b8293d772b9f2f1be6e860b016ae49",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.runtime",
-      "id": "androidx.compose.runtime:runtime-saveable-android:1.12.1",
+      "id": "androidx.compose.runtime:runtime-saveable-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.runtime:runtime-saveable-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.runtime__runtime-saveable-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.runtime:runtime-saveable-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.runtime__runtime-saveable-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1168,11 +1222,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-runtime#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-saveable-android/1.12.1/runtime-saveable-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/runtime/runtime-saveable-android/1.13.0/runtime-saveable-android-1.13.0.pom"
         }
       ],
       "name": "Compose Saveable",
@@ -1188,29 +1242,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.runtime:runtime-saveable-android:1.12.1/runtime-saveable.aar!/META-INF/androidx/compose/runtime/runtime-saveable/LICENSE.txt",
+          "source": "androidx.compose.runtime:runtime-saveable-android:1.13.0/runtime-saveable.aar!/META-INF/androidx/compose/runtime/runtime-saveable/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-android",
       "artifacts": [
         {
           "fileName": "ui.aar",
-          "id": "androidx.compose.ui:ui-android:1.12.1",
-          "sha256": "3f1ae17e237d9dc0a2a0f42cb04b85b8de6e12f67adc5f5c12173fe31e501cb2",
+          "id": "androidx.compose.ui:ui-android:1.13.0",
+          "sha256": "b5d23c05886f9c441e3cb004f8ac4614f96e9c1901795742bd9ddb5b8bad1b61",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-android:1.12.1",
+      "id": "androidx.compose.ui:ui-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1222,11 +1276,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.12.1/ui-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-android/1.13.0/ui-android-1.13.0.pom"
         }
       ],
       "name": "Compose UI",
@@ -1242,29 +1296,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-android:1.12.1/ui.aar!/META-INF/androidx/compose/ui/ui/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-android:1.13.0/ui.aar!/META-INF/androidx/compose/ui/ui/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-geometry-android",
       "artifacts": [
         {
           "fileName": "ui-geometry.aar",
-          "id": "androidx.compose.ui:ui-geometry-android:1.12.1",
-          "sha256": "09a23c76f5d52ea5ec61d4a78d4876940f0f033c975e5c604246f89a63532754",
+          "id": "androidx.compose.ui:ui-geometry-android:1.13.0",
+          "sha256": "d86f77f8f78b27c50755753d3e68bf4215c7071f9ee9ce6d3335f30b91eb0b18",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-geometry-android:1.12.1",
+      "id": "androidx.compose.ui:ui-geometry-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-geometry-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-geometry-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-geometry-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-geometry-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1276,11 +1330,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-geometry-android/1.12.1/ui-geometry-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-geometry-android/1.13.0/ui-geometry-android-1.13.0.pom"
         }
       ],
       "name": "Compose Geometry",
@@ -1296,29 +1350,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-geometry-android:1.12.1/ui-geometry.aar!/META-INF/androidx/compose/ui/ui-geometry/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-geometry-android:1.13.0/ui-geometry.aar!/META-INF/androidx/compose/ui/ui-geometry/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-graphics-android",
       "artifacts": [
         {
           "fileName": "ui-graphics.aar",
-          "id": "androidx.compose.ui:ui-graphics-android:1.12.1",
-          "sha256": "1e6451f05ad569e306e7022b3c41d16aa75080bb2c99b59c4d67e7dbf6f428e7",
+          "id": "androidx.compose.ui:ui-graphics-android:1.13.0",
+          "sha256": "4b0db977082ad677338f471a2b97776162e7fcbf578c74a55af712c843cc5917",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-graphics-android:1.12.1",
+      "id": "androidx.compose.ui:ui-graphics-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-graphics-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-graphics-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-graphics-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-graphics-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1330,11 +1384,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics-android/1.12.1/ui-graphics-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-graphics-android/1.13.0/ui-graphics-android-1.13.0.pom"
         }
       ],
       "name": "Compose Graphics",
@@ -1350,29 +1404,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-graphics-android:1.12.1/ui-graphics.aar!/META-INF/androidx/compose/ui/ui-graphics/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-graphics-android:1.13.0/ui-graphics.aar!/META-INF/androidx/compose/ui/ui-graphics/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-text-android",
       "artifacts": [
         {
           "fileName": "ui-text.aar",
-          "id": "androidx.compose.ui:ui-text-android:1.12.1",
-          "sha256": "e710a5776966537df09a2e5c4ca1dacc14ca11d7b20a6af16c0e992ddd3aecd3",
+          "id": "androidx.compose.ui:ui-text-android:1.13.0",
+          "sha256": "da7a21ac01fde97c5377926719e8731ee4035e30a9bde77fae8ec56d1a09d115",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-text-android:1.12.1",
+      "id": "androidx.compose.ui:ui-text-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-text-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-text-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-text-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-text-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1384,11 +1438,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text-android/1.12.1/ui-text-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-text-android/1.13.0/ui-text-android-1.13.0.pom"
         }
       ],
       "name": "Compose UI Text",
@@ -1404,29 +1458,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-text-android:1.12.1/ui-text.aar!/META-INF/androidx/compose/ui/ui-text/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-text-android:1.13.0/ui-text.aar!/META-INF/androidx/compose/ui/ui-text/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-tooling-preview-android",
       "artifacts": [
         {
           "fileName": "ui-tooling-preview.aar",
-          "id": "androidx.compose.ui:ui-tooling-preview-android:1.12.1",
-          "sha256": "e5d8e697fcfda732734e01168296682682d31e085b77ec8245e72badbc673686",
+          "id": "androidx.compose.ui:ui-tooling-preview-android:1.13.0",
+          "sha256": "898124443aca4ad75450b1f0ed03244a3cc340f028631eb2b827b41dd8fbe6a6",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-tooling-preview-android:1.12.1",
+      "id": "androidx.compose.ui:ui-tooling-preview-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-tooling-preview-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-tooling-preview-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-tooling-preview-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-tooling-preview-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1438,11 +1492,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-preview-android/1.12.1/ui-tooling-preview-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-tooling-preview-android/1.13.0/ui-tooling-preview-android-1.13.0.pom"
         }
       ],
       "name": "Compose UI Preview Tooling",
@@ -1458,29 +1512,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-tooling-preview-android:1.12.1/ui-tooling-preview.aar!/META-INF/androidx/compose/ui/ui-tooling-preview/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-tooling-preview-android:1.13.0/ui-tooling-preview.aar!/META-INF/androidx/compose/ui/ui-tooling-preview/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-unit-android",
       "artifacts": [
         {
           "fileName": "ui-unit.aar",
-          "id": "androidx.compose.ui:ui-unit-android:1.12.1",
-          "sha256": "97d2bf062395d981435bc8d571b1d5d75587a7f26f3444671b2287f233e18ae7",
+          "id": "androidx.compose.ui:ui-unit-android:1.13.0",
+          "sha256": "51dbb2719c5ffca99fb96afc7531b22225a69d2c455677558a4c6a89f40fe70e",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-unit-android:1.12.1",
+      "id": "androidx.compose.ui:ui-unit-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-unit-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-unit-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-unit-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-unit-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1492,11 +1546,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-unit-android/1.12.1/ui-unit-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-unit-android/1.13.0/ui-unit-android-1.13.0.pom"
         }
       ],
       "name": "Compose Unit",
@@ -1512,29 +1566,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-unit-android:1.12.1/ui-unit.aar!/META-INF/androidx/compose/ui/ui-unit/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-unit-android:1.13.0/ui-unit.aar!/META-INF/androidx/compose/ui/ui-unit/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "ui-util-android",
       "artifacts": [
         {
           "fileName": "ui-util.aar",
-          "id": "androidx.compose.ui:ui-util-android:1.12.1",
-          "sha256": "cd47f06626c19a06086e16823a32e49e0a0c7d903451668da2f777d063507aa5",
+          "id": "androidx.compose.ui:ui-util-android:1.13.0",
+          "sha256": "ef6862049e8eafc4e478e295aee38e015e11f6e35e3026c5ff45cdd626879f34",
           "type": "aar"
         }
       ],
       "group": "androidx.compose.ui",
-      "id": "androidx.compose.ui:ui-util-android:1.12.1",
+      "id": "androidx.compose.ui:ui-util-android:1.13.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.compose.ui:ui-util-android:1.12.1",
-          "evidence": "evidence/poms/androidx.compose.ui__ui-util-android__1.12.1.pom",
+          "declaredBy": "androidx.compose.ui:ui-util-android:1.13.0",
+          "evidence": "evidence/poms/androidx.compose.ui__ui-util-android__1.13.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1546,11 +1600,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.12.1"
+          "url": "https://developer.android.com/jetpack/androidx/releases/compose-ui#1.13.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-util-android/1.12.1/ui-util-android-1.12.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/compose/ui/ui-util-android/1.13.0/ui-util-android-1.13.0.pom"
         }
       ],
       "name": "Compose Util",
@@ -1566,11 +1620,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.compose.ui:ui-util-android:1.12.1/ui-util.aar!/META-INF/androidx/compose/ui/ui-util/LICENSE.txt",
+          "source": "androidx.compose.ui:ui-util-android:1.13.0/ui-util.aar!/META-INF/androidx/compose/ui/ui-util/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.12.1"
+      "version": "1.13.0"
     },
     {
       "artifact": "concurrent-futures-ktx",
@@ -1933,19 +1987,19 @@
       "artifact": "emoji2",
       "artifacts": [
         {
-          "fileName": "emoji2-1.4.0.aar",
-          "id": "androidx.emoji2:emoji2:1.4.0",
-          "sha256": "433febd3434a45667176c76a64f3f205ca6335a6b544c5b5d57f25a38a375242",
+          "fileName": "emoji2-1.7.0.aar",
+          "id": "androidx.emoji2:emoji2:1.7.0",
+          "sha256": "121738bd60060c7bb3742f10c034edc93f2a38b6de8ca8648bc799eda65b1bbf",
           "type": "aar"
         }
       ],
       "group": "androidx.emoji2",
-      "id": "androidx.emoji2:emoji2:1.4.0",
+      "id": "androidx.emoji2:emoji2:1.7.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.emoji2:emoji2:1.4.0",
-          "evidence": "evidence/poms/androidx.emoji2__emoji2__1.4.0.pom",
+          "declaredBy": "androidx.emoji2:emoji2:1.7.0",
+          "evidence": "evidence/poms/androidx.emoji2__emoji2__1.7.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -1957,11 +2011,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/emoji2#1.4.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/emoji2#1.7.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/emoji2/emoji2/1.4.0/emoji2-1.4.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/emoji2/emoji2/1.7.0/emoji2-1.7.0.pom"
         }
       ],
       "name": "Emoji2",
@@ -1972,9 +2026,16 @@
           "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
           "source": "https://www.apache.org/licenses/LICENSE-2.0.txt",
           "title": "Apache License 2.0"
+        },
+        {
+          "kind": "license",
+          "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
+          "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+          "source": "androidx.emoji2:emoji2:1.7.0/emoji2-1.7.0.aar!/META-INF/androidx/emoji2/emoji2/LICENSE.txt",
+          "title": "LICENSE.txt"
         }
       ],
-      "version": "1.4.0"
+      "version": "1.7.0"
     },
     {
       "artifact": "exifinterface",
@@ -2034,19 +2095,73 @@
       "artifact": "graphics-path",
       "artifacts": [
         {
-          "fileName": "graphics-path-1.0.1.aar",
-          "id": "androidx.graphics:graphics-path:1.0.1",
-          "sha256": "8ca4032b6d79b351f0b59ad4b580eddbb9423e1652f7c958830687f1eee2ec03",
+          "fileName": "graphics-path-1.1.0.aar",
+          "id": "androidx.graphics:graphics-path:1.1.0",
+          "sha256": "d031370d45ba4129a175fe9de913328a512b01a3c267e0eaf6b9b759f35842ae",
           "type": "aar"
         }
       ],
       "group": "androidx.graphics",
-      "id": "androidx.graphics:graphics-path:1.0.1",
+      "id": "androidx.graphics:graphics-path:1.1.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.graphics:graphics-path:1.0.1",
-          "evidence": "evidence/poms/androidx.graphics__graphics-path__1.0.1.pom",
+          "declaredBy": "androidx.graphics:graphics-path:1.1.0",
+          "evidence": "evidence/poms/androidx.graphics__graphics-path__1.1.0.pom",
+          "id": "Apache-2.0",
+          "name": "The Apache Software License, Version 2.0",
+          "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
+        }
+      ],
+      "licenseIds": [
+        "Apache-2.0"
+      ],
+      "links": [
+        {
+          "label": "项目主页",
+          "url": "https://developer.android.com/jetpack/androidx/releases/graphics#1.1.0"
+        },
+        {
+          "label": "精确版本 POM",
+          "url": "https://dl.google.com/dl/android/maven2/androidx/graphics/graphics-path/1.1.0/graphics-path-1.1.0.pom"
+        }
+      ],
+      "name": "Android Graphics Path",
+      "texts": [
+        {
+          "kind": "license",
+          "path": "texts/cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+          "title": "Apache License 2.0"
+        },
+        {
+          "kind": "license",
+          "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
+          "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+          "source": "androidx.graphics:graphics-path:1.1.0/graphics-path-1.1.0.aar!/META-INF/androidx/graphics/graphics-path/LICENSE.txt",
+          "title": "LICENSE.txt"
+        }
+      ],
+      "version": "1.1.0"
+    },
+    {
+      "artifact": "graphics-shapes-android",
+      "artifacts": [
+        {
+          "fileName": "graphics-shapes-release.aar",
+          "id": "androidx.graphics:graphics-shapes-android:1.0.1",
+          "sha256": "7171269a4122feabb071768df46d10b362e47ac75fd0aa8dbcafa1f44f61b40c",
+          "type": "aar"
+        }
+      ],
+      "group": "androidx.graphics",
+      "id": "androidx.graphics:graphics-shapes-android:1.0.1",
+      "kind": "maven",
+      "licenseDeclarations": [
+        {
+          "declaredBy": "androidx.graphics:graphics-shapes-android:1.0.1",
+          "evidence": "evidence/poms/androidx.graphics__graphics-shapes-android__1.0.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2062,10 +2177,10 @@
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/graphics/graphics-path/1.0.1/graphics-path-1.0.1.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/graphics/graphics-shapes-android/1.0.1/graphics-shapes-android-1.0.1.pom"
         }
       ],
-      "name": "Android Graphics Path",
+      "name": "Graphics Shapes",
       "texts": [
         {
           "kind": "license",
@@ -2073,6 +2188,13 @@
           "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
           "source": "https://www.apache.org/licenses/LICENSE-2.0.txt",
           "title": "Apache License 2.0"
+        },
+        {
+          "kind": "license",
+          "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
+          "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+          "source": "androidx.graphics:graphics-shapes-android:1.0.1/graphics-shapes-release.aar!/META-INF/androidx/graphics/graphics-shapes/LICENSE.txt",
+          "title": "LICENSE.txt"
         }
       ],
       "version": "1.0.1"
@@ -2128,19 +2250,19 @@
       "artifact": "lifecycle-common-java8",
       "artifacts": [
         {
-          "fileName": "lifecycle-common-java8-2.11.0.jar",
-          "id": "androidx.lifecycle:lifecycle-common-java8:2.11.0",
+          "fileName": "lifecycle-common-java8-2.11.1.jar",
+          "id": "androidx.lifecycle:lifecycle-common-java8:2.11.1",
           "sha256": "895e71679cd319db8140664d650af6695b0530f5896be9b8ecccd24cc4f6674f",
           "type": "jar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-common-java8:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-common-java8:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-common-java8:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-common-java8__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-common-java8:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-common-java8__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2152,11 +2274,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-java8/2.11.0/lifecycle-common-java8-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-java8/2.11.1/lifecycle-common-java8-2.11.1.pom"
         }
       ],
       "name": "Lifecycle-Common for Java 8",
@@ -2172,29 +2294,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-common-java8:2.11.0/lifecycle-common-java8-2.11.0.jar!/META-INF/androidx/lifecycle/lifecycle-common-java8/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-common-java8:2.11.1/lifecycle-common-java8-2.11.1.jar!/META-INF/androidx/lifecycle/lifecycle-common-java8/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-common-jvm",
       "artifacts": [
         {
-          "fileName": "lifecycle-common-jvm-2.11.0.jar",
-          "id": "androidx.lifecycle:lifecycle-common-jvm:2.11.0",
+          "fileName": "lifecycle-common-jvm-2.11.1.jar",
+          "id": "androidx.lifecycle:lifecycle-common-jvm:2.11.1",
           "sha256": "e6a66e67b9f63a0fb6344f165c1d872376e5fe6d235bffb138af45122cf452a9",
           "type": "jar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-common-jvm:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-common-jvm:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-common-jvm:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-common-jvm__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-common-jvm:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-common-jvm__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2206,11 +2328,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-jvm/2.11.0/lifecycle-common-jvm-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-common-jvm/2.11.1/lifecycle-common-jvm-2.11.1.pom"
         }
       ],
       "name": "Lifecycle-Common",
@@ -2226,29 +2348,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-common-jvm:2.11.0/lifecycle-common-jvm-2.11.0.jar!/META-INF/androidx/lifecycle/lifecycle-common/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-common-jvm:2.11.1/lifecycle-common-jvm-2.11.1.jar!/META-INF/androidx/lifecycle/lifecycle-common/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-livedata-core-ktx",
       "artifacts": [
         {
-          "fileName": "lifecycle-livedata-core-ktx-2.11.0.aar",
-          "id": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0",
-          "sha256": "408fac99b61a7ca9d0620f4f24891f85c14ee007cfd027abc3df759a31b0086a",
+          "fileName": "lifecycle-livedata-core-ktx-2.11.1.aar",
+          "id": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.1",
+          "sha256": "7b2fa180b01bc15304bc68b9823f7ab553aa5760f5b65c8cd9745fd90de2c0d8",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core-ktx__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core-ktx__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2260,11 +2382,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata-core-ktx/2.11.0/lifecycle-livedata-core-ktx-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata-core-ktx/2.11.1/lifecycle-livedata-core-ktx-2.11.1.pom"
         }
       ],
       "name": "LiveData Core Kotlin Extensions",
@@ -2280,29 +2402,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0/lifecycle-livedata-core-ktx-2.11.0.aar!/META-INF/androidx/lifecycle/lifecycle-livedata-core-ktx/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.1/lifecycle-livedata-core-ktx-2.11.1.aar!/META-INF/androidx/lifecycle/lifecycle-livedata-core-ktx/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-livedata-core",
       "artifacts": [
         {
-          "fileName": "lifecycle-livedata-core-2.11.0.aar",
-          "id": "androidx.lifecycle:lifecycle-livedata-core:2.11.0",
-          "sha256": "39b26ef1e081fc88d7054ff1a63d0a5d71876373c33a711ab789c8228d025ad1",
+          "fileName": "lifecycle-livedata-core-2.11.1.aar",
+          "id": "androidx.lifecycle:lifecycle-livedata-core:2.11.1",
+          "sha256": "ca91fb3d46a7ba74eceeba816abfd28e885aa2121daa74851f021e1600c06d0e",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-livedata-core:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-livedata-core:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-livedata-core:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-livedata-core:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2314,11 +2436,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata-core/2.11.0/lifecycle-livedata-core-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata-core/2.11.1/lifecycle-livedata-core-2.11.1.pom"
         }
       ],
       "name": "Lifecycle LiveData Core",
@@ -2334,29 +2456,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-livedata-core:2.11.0/lifecycle-livedata-core-2.11.0.aar!/META-INF/androidx/lifecycle/lifecycle-livedata-core/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-livedata-core:2.11.1/lifecycle-livedata-core-2.11.1.aar!/META-INF/androidx/lifecycle/lifecycle-livedata-core/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-livedata",
       "artifacts": [
         {
-          "fileName": "lifecycle-livedata-2.11.0.aar",
-          "id": "androidx.lifecycle:lifecycle-livedata:2.11.0",
-          "sha256": "1bc28e40e06ff5e0478b9276ca6287ce6993415b70910745ac916b14dec9b72f",
+          "fileName": "lifecycle-livedata-2.11.1.aar",
+          "id": "androidx.lifecycle:lifecycle-livedata:2.11.1",
+          "sha256": "917081edc738291d8764fa95aa796730a3a0e2b5b70ac9e22cd5345134ce6405",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-livedata:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-livedata:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-livedata:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-livedata__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-livedata:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-livedata__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2368,11 +2490,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata/2.11.0/lifecycle-livedata-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-livedata/2.11.1/lifecycle-livedata-2.11.1.pom"
         }
       ],
       "name": "Lifecycle LiveData",
@@ -2388,29 +2510,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-livedata:2.11.0/lifecycle-livedata-2.11.0.aar!/META-INF/androidx/lifecycle/lifecycle-livedata/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-livedata:2.11.1/lifecycle-livedata-2.11.1.aar!/META-INF/androidx/lifecycle/lifecycle-livedata/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-process",
       "artifacts": [
         {
-          "fileName": "lifecycle-process-2.11.0.aar",
-          "id": "androidx.lifecycle:lifecycle-process:2.11.0",
-          "sha256": "9743f0c7baf27d34497b7e9a1cd497d8260251b03124507963abfaad66c3f552",
+          "fileName": "lifecycle-process-2.11.1.aar",
+          "id": "androidx.lifecycle:lifecycle-process:2.11.1",
+          "sha256": "b5a3dcc64a185badb88784c16a1c9b229529410cc8776cec3c4b624a4189135a",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-process:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-process:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-process:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-process__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-process:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-process__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2422,11 +2544,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-process/2.11.0/lifecycle-process-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-process/2.11.1/lifecycle-process-2.11.1.pom"
         }
       ],
       "name": "Lifecycle Process",
@@ -2442,29 +2564,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-process:2.11.0/lifecycle-process-2.11.0.aar!/META-INF/androidx/lifecycle/lifecycle-process/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-process:2.11.1/lifecycle-process-2.11.1.aar!/META-INF/androidx/lifecycle/lifecycle-process/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-runtime-android",
       "artifacts": [
         {
           "fileName": "lifecycle-runtime.aar",
-          "id": "androidx.lifecycle:lifecycle-runtime-android:2.11.0",
-          "sha256": "8711865f8d3603bc05decc03bb42aab2faa8d8bc55b3b12a0a8e516b562b60ca",
+          "id": "androidx.lifecycle:lifecycle-runtime-android:2.11.1",
+          "sha256": "f2d47c2a332fe66a0119958c5d7e4ad8e8f9c1da0672adf00bbd728791c91481",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-runtime-android:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-runtime-android:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-runtime-android:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-runtime-android__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-runtime-android:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-runtime-android__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2476,11 +2598,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-android/2.11.0/lifecycle-runtime-android-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-android/2.11.1/lifecycle-runtime-android-2.11.1.pom"
         }
       ],
       "name": "Lifecycle Runtime",
@@ -2496,29 +2618,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-runtime-android:2.11.0/lifecycle-runtime.aar!/META-INF/androidx/lifecycle/lifecycle-runtime/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-runtime-android:2.11.1/lifecycle-runtime.aar!/META-INF/androidx/lifecycle/lifecycle-runtime/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-runtime-compose-android",
       "artifacts": [
         {
           "fileName": "lifecycle-runtime-compose.aar",
-          "id": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0",
-          "sha256": "7b31489e6e162143c481f14e1ae5a4dc089f8ec58e65976a0502b910c641987f",
+          "id": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.1",
+          "sha256": "74ba4d662557b0d88d32301f63b1e995c9d1b7d9e48dd72d1476c1d252b2d944",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-runtime-compose-android__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-runtime-compose-android__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2530,11 +2652,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose-android/2.11.0/lifecycle-runtime-compose-android-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-compose-android/2.11.1/lifecycle-runtime-compose-android-2.11.1.pom"
         }
       ],
       "name": "Lifecycle Runtime Compose",
@@ -2550,29 +2672,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0/lifecycle-runtime-compose.aar!/META-INF/androidx/lifecycle/lifecycle-runtime-compose/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.1/lifecycle-runtime-compose.aar!/META-INF/androidx/lifecycle/lifecycle-runtime-compose/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-runtime-ktx-android",
       "artifacts": [
         {
           "fileName": "lifecycle-runtime-ktx.aar",
-          "id": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0",
-          "sha256": "1fead96607f8b4ebd2bc5840c6fcf08b09fc47ceb1665e4b381dce80b19f32a0",
+          "id": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.1",
+          "sha256": "e455fb2d40292c6050d33fbfc5d7575487f957e17ddbbe38aa12f58088ce315a",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-runtime-ktx-android__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-runtime-ktx-android__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2584,11 +2706,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx-android/2.11.0/lifecycle-runtime-ktx-android-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx-android/2.11.1/lifecycle-runtime-ktx-android-2.11.1.pom"
         }
       ],
       "name": "Lifecycle Kotlin Extensions",
@@ -2604,29 +2726,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0/lifecycle-runtime-ktx.aar!/META-INF/androidx/lifecycle/lifecycle-runtime-ktx/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.1/lifecycle-runtime-ktx.aar!/META-INF/androidx/lifecycle/lifecycle-runtime-ktx/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-service",
       "artifacts": [
         {
-          "fileName": "lifecycle-service-2.11.0.aar",
-          "id": "androidx.lifecycle:lifecycle-service:2.11.0",
-          "sha256": "262c24e5218c19610c12a07465cf34e2e45b9cf63eb10471013f6ba01ff18522",
+          "fileName": "lifecycle-service-2.11.1.aar",
+          "id": "androidx.lifecycle:lifecycle-service:2.11.1",
+          "sha256": "741bb5eb9df9076cf737f391f66701a7c05546fd8929f338f968ef192f234df3",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-service:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-service:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-service:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-service__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-service:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-service__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2638,11 +2760,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-service/2.11.0/lifecycle-service-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-service/2.11.1/lifecycle-service-2.11.1.pom"
         }
       ],
       "name": "Lifecycle Service",
@@ -2658,29 +2780,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-service:2.11.0/lifecycle-service-2.11.0.aar!/META-INF/androidx/lifecycle/lifecycle-service/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-service:2.11.1/lifecycle-service-2.11.1.aar!/META-INF/androidx/lifecycle/lifecycle-service/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-viewmodel-android",
       "artifacts": [
         {
           "fileName": "lifecycle-viewmodel.aar",
-          "id": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.0",
-          "sha256": "509aa5c0711e61a1571024b4f8431dc9aa20960d23cbadb01f21a33fd864352a",
+          "id": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.1",
+          "sha256": "5305020bb0eb1944014407ec16b1c056eba196baa5a4693c05b2267d32e96331",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-android__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-android__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2692,11 +2814,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-android/2.11.0/lifecycle-viewmodel-android-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-android/2.11.1/lifecycle-viewmodel-android-2.11.1.pom"
         }
       ],
       "name": "Lifecycle ViewModel",
@@ -2712,29 +2834,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.0/lifecycle-viewmodel.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.1/lifecycle-viewmodel.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-viewmodel-compose-android",
       "artifacts": [
         {
           "fileName": "lifecycle-viewmodel-compose.aar",
-          "id": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0",
-          "sha256": "2bafd402807bd4af05c06cf58c48cbdad09521e2145273faae90908b7712f689",
+          "id": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.1",
+          "sha256": "ccbd1f3ed5683847240aec4e3005f3e39178aa0884491b68a905b86b80a71075",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-compose-android__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-compose-android__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2746,11 +2868,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-compose-android/2.11.0/lifecycle-viewmodel-compose-android-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-compose-android/2.11.1/lifecycle-viewmodel-compose-android-2.11.1.pom"
         }
       ],
       "name": "Lifecycle ViewModel Compose",
@@ -2766,29 +2888,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0/lifecycle-viewmodel-compose.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel-compose/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.1/lifecycle-viewmodel-compose.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel-compose/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-viewmodel-ktx",
       "artifacts": [
         {
-          "fileName": "lifecycle-viewmodel-ktx-2.11.0.aar",
-          "id": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0",
-          "sha256": "230af6c866076d320d92c22c7c44bb52afca97f6892ddf987e2906ef2919998f",
+          "fileName": "lifecycle-viewmodel-ktx-2.11.1.aar",
+          "id": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.1",
+          "sha256": "9319f246bb273721a50cd03b50536cbb29f01694ce4df3c132787946dbb32070",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-ktx__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-ktx__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2800,11 +2922,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-ktx/2.11.0/lifecycle-viewmodel-ktx-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-ktx/2.11.1/lifecycle-viewmodel-ktx-2.11.1.pom"
         }
       ],
       "name": "Lifecycle ViewModel Kotlin Extensions",
@@ -2820,29 +2942,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0/lifecycle-viewmodel-ktx-2.11.0.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel-ktx/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.1/lifecycle-viewmodel-ktx-2.11.1.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel-ktx/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "lifecycle-viewmodel-savedstate-android",
       "artifacts": [
         {
           "fileName": "lifecycle-viewmodel-savedstate.aar",
-          "id": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0",
-          "sha256": "1761707c1ddee002bd97e1a0889a5016f7cd6bd8e0b6b069bcba8b2523d63723",
+          "id": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.1",
+          "sha256": "0956b541392dbb4f05387b045829079433276c6fc221fc494e9cf4378cc95448",
           "type": "aar"
         }
       ],
       "group": "androidx.lifecycle",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.1",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0",
-          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-savedstate-android__2.11.0.pom",
+          "declaredBy": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.1",
+          "evidence": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-savedstate-android__2.11.1.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -2854,11 +2976,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/lifecycle#2.11.1"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-savedstate-android/2.11.0/lifecycle-viewmodel-savedstate-android-2.11.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-savedstate-android/2.11.1/lifecycle-viewmodel-savedstate-android-2.11.1.pom"
         }
       ],
       "name": "Lifecycle ViewModel with SavedState",
@@ -2874,11 +2996,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0/lifecycle-viewmodel-savedstate.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel-savedstate/LICENSE.txt",
+          "source": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.1/lifecycle-viewmodel-savedstate.aar!/META-INF/androidx/lifecycle/lifecycle-viewmodel-savedstate/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "2.11.0"
+      "version": "2.11.1"
     },
     {
       "artifact": "media3-common",
@@ -3358,18 +3480,18 @@
       "artifacts": [
         {
           "fileName": "navigationevent.aar",
-          "id": "androidx.navigationevent:navigationevent-android:1.0.0",
-          "sha256": "cda4bb83d1c892a208732e99c2d59e4f247ab5c23a1d2524fc004db2e4e9a780",
+          "id": "androidx.navigationevent:navigationevent-android:1.1.0",
+          "sha256": "ea7943bc61d52b42a7a2cbcbde14c9b10e7baf9e09a8fe54d8cb17d3bb5dbfd9",
           "type": "aar"
         }
       ],
       "group": "androidx.navigationevent",
-      "id": "androidx.navigationevent:navigationevent-android:1.0.0",
+      "id": "androidx.navigationevent:navigationevent-android:1.1.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.navigationevent:navigationevent-android:1.0.0",
-          "evidence": "evidence/poms/androidx.navigationevent__navigationevent-android__1.0.0.pom",
+          "declaredBy": "androidx.navigationevent:navigationevent-android:1.1.0",
+          "evidence": "evidence/poms/androidx.navigationevent__navigationevent-android__1.1.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -3381,11 +3503,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.0.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.1.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/navigationevent/navigationevent-android/1.0.0/navigationevent-android-1.0.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/navigationevent/navigationevent-android/1.1.0/navigationevent-android-1.1.0.pom"
         }
       ],
       "name": "Navigation Event",
@@ -3401,29 +3523,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.navigationevent:navigationevent-android:1.0.0/navigationevent.aar!/META-INF/androidx/navigationevent/navigationevent/LICENSE.txt",
+          "source": "androidx.navigationevent:navigationevent-android:1.1.0/navigationevent.aar!/META-INF/androidx/navigationevent/navigationevent/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "artifact": "navigationevent-compose-android",
       "artifacts": [
         {
           "fileName": "navigationevent-compose.aar",
-          "id": "androidx.navigationevent:navigationevent-compose-android:1.0.0",
-          "sha256": "5cee018dbe130b538d2c43cc6f383a109a98f19ba9c8d7a6dda8ca90a2034671",
+          "id": "androidx.navigationevent:navigationevent-compose-android:1.1.0",
+          "sha256": "487fd434793393f4c6d2ceac0a9f5fc6d23b682f508ff6ff18793907b5882032",
           "type": "aar"
         }
       ],
       "group": "androidx.navigationevent",
-      "id": "androidx.navigationevent:navigationevent-compose-android:1.0.0",
+      "id": "androidx.navigationevent:navigationevent-compose-android:1.1.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.navigationevent:navigationevent-compose-android:1.0.0",
-          "evidence": "evidence/poms/androidx.navigationevent__navigationevent-compose-android__1.0.0.pom",
+          "declaredBy": "androidx.navigationevent:navigationevent-compose-android:1.1.0",
+          "evidence": "evidence/poms/androidx.navigationevent__navigationevent-compose-android__1.1.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -3435,11 +3557,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.0.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/navigationevent#1.1.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/navigationevent/navigationevent-compose-android/1.0.0/navigationevent-compose-android-1.0.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/navigationevent/navigationevent-compose-android/1.1.0/navigationevent-compose-android-1.1.0.pom"
         }
       ],
       "name": "NavigationEvent Compose",
@@ -3455,11 +3577,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.navigationevent:navigationevent-compose-android:1.0.0/navigationevent-compose.aar!/META-INF/androidx/navigationevent/navigationevent-compose/LICENSE.txt",
+          "source": "androidx.navigationevent:navigationevent-compose-android:1.1.0/navigationevent-compose.aar!/META-INF/androidx/navigationevent/navigationevent-compose/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "artifact": "profileinstaller",
@@ -3675,18 +3797,18 @@
       "artifacts": [
         {
           "fileName": "savedstate.aar",
-          "id": "androidx.savedstate:savedstate-android:1.4.0",
-          "sha256": "1656ce62cd233d488bdbbd42e533b80b22435b7a690acae6dbe7302392512c14",
+          "id": "androidx.savedstate:savedstate-android:1.5.0",
+          "sha256": "c191b2b0d3ed2f765743e634f213c0e8150825547810789fc13487332bfc9cd3",
           "type": "aar"
         }
       ],
       "group": "androidx.savedstate",
-      "id": "androidx.savedstate:savedstate-android:1.4.0",
+      "id": "androidx.savedstate:savedstate-android:1.5.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.savedstate:savedstate-android:1.4.0",
-          "evidence": "evidence/poms/androidx.savedstate__savedstate-android__1.4.0.pom",
+          "declaredBy": "androidx.savedstate:savedstate-android:1.5.0",
+          "evidence": "evidence/poms/androidx.savedstate__savedstate-android__1.5.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -3698,11 +3820,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-android/1.4.0/savedstate-android-1.4.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-android/1.5.0/savedstate-android-1.5.0.pom"
         }
       ],
       "name": "Saved State",
@@ -3718,29 +3840,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.savedstate:savedstate-android:1.4.0/savedstate.aar!/META-INF/androidx/savedstate/savedstate/LICENSE.txt",
+          "source": "androidx.savedstate:savedstate-android:1.5.0/savedstate.aar!/META-INF/androidx/savedstate/savedstate/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     {
       "artifact": "savedstate-compose-android",
       "artifacts": [
         {
           "fileName": "savedstate-compose.aar",
-          "id": "androidx.savedstate:savedstate-compose-android:1.4.0",
-          "sha256": "0f0ae3032d6c6eea834ee22179c8976160d09d841d30e47f53f56b1b3438774b",
+          "id": "androidx.savedstate:savedstate-compose-android:1.5.0",
+          "sha256": "01682c0de6796d31f9c7863bb18e65443e512e4dc95a13cc8c3d0d4931c2c10b",
           "type": "aar"
         }
       ],
       "group": "androidx.savedstate",
-      "id": "androidx.savedstate:savedstate-compose-android:1.4.0",
+      "id": "androidx.savedstate:savedstate-compose-android:1.5.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.savedstate:savedstate-compose-android:1.4.0",
-          "evidence": "evidence/poms/androidx.savedstate__savedstate-compose-android__1.4.0.pom",
+          "declaredBy": "androidx.savedstate:savedstate-compose-android:1.5.0",
+          "evidence": "evidence/poms/androidx.savedstate__savedstate-compose-android__1.5.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -3752,11 +3874,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-compose-android/1.4.0/savedstate-compose-android-1.4.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-compose-android/1.5.0/savedstate-compose-android-1.5.0.pom"
         }
       ],
       "name": "Saved State Compose",
@@ -3772,29 +3894,29 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.savedstate:savedstate-compose-android:1.4.0/savedstate-compose.aar!/META-INF/androidx/savedstate/savedstate-compose/LICENSE.txt",
+          "source": "androidx.savedstate:savedstate-compose-android:1.5.0/savedstate-compose.aar!/META-INF/androidx/savedstate/savedstate-compose/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     {
       "artifact": "savedstate-ktx",
       "artifacts": [
         {
-          "fileName": "savedstate-ktx-1.4.0.aar",
-          "id": "androidx.savedstate:savedstate-ktx:1.4.0",
-          "sha256": "23593939446bc5a154a1e35fddd87b82f19e2adf072207f115bf29a8b431c1d3",
+          "fileName": "savedstate-ktx-1.5.0.aar",
+          "id": "androidx.savedstate:savedstate-ktx:1.5.0",
+          "sha256": "1de99f31e90d55828e1f00f856274410e6e3e997605a40d478e7065c38b3252e",
           "type": "aar"
         }
       ],
       "group": "androidx.savedstate",
-      "id": "androidx.savedstate:savedstate-ktx:1.4.0",
+      "id": "androidx.savedstate:savedstate-ktx:1.5.0",
       "kind": "maven",
       "licenseDeclarations": [
         {
-          "declaredBy": "androidx.savedstate:savedstate-ktx:1.4.0",
-          "evidence": "evidence/poms/androidx.savedstate__savedstate-ktx__1.4.0.pom",
+          "declaredBy": "androidx.savedstate:savedstate-ktx:1.5.0",
+          "evidence": "evidence/poms/androidx.savedstate__savedstate-ktx__1.5.0.pom",
           "id": "Apache-2.0",
           "name": "The Apache Software License, Version 2.0",
           "url": "http://www.apache.org/licenses/LICENSE-2.0.txt"
@@ -3806,11 +3928,11 @@
       "links": [
         {
           "label": "项目主页",
-          "url": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.4.0"
+          "url": "https://developer.android.com/jetpack/androidx/releases/savedstate#1.5.0"
         },
         {
           "label": "精确版本 POM",
-          "url": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-ktx/1.4.0/savedstate-ktx-1.4.0.pom"
+          "url": "https://dl.google.com/dl/android/maven2/androidx/savedstate/savedstate-ktx/1.5.0/savedstate-ktx-1.5.0.pom"
         }
       ],
       "name": "SavedState Kotlin Extensions",
@@ -3826,11 +3948,11 @@
           "kind": "license",
           "path": "texts/809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0.txt",
           "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
-          "source": "androidx.savedstate:savedstate-ktx:1.4.0/savedstate-ktx-1.4.0.aar!/META-INF/androidx/savedstate/savedstate-ktx/LICENSE.txt",
+          "source": "androidx.savedstate:savedstate-ktx:1.5.0/savedstate-ktx-1.5.0.aar!/META-INF/androidx/savedstate/savedstate-ktx/LICENSE.txt",
           "title": "LICENSE.txt"
         }
       ],
-      "version": "1.4.0"
+      "version": "1.5.0"
     },
     {
       "artifact": "sqlite-android",
@@ -6271,7 +6393,7 @@
     }
   ],
   "configuration": "releaseRuntimeClasspath",
-  "embeddedLegalEntryCount": 74,
+  "embeddedLegalEntryCount": 78,
   "evidenceFiles": [
     {
       "bytes": 4545,
@@ -6330,28 +6452,33 @@
     },
     {
       "bytes": 4945,
-      "path": "evidence/poms/androidx.compose.animation__animation-android__1.12.1.pom",
-      "sha256": "f2d25dda3ff212feb5db2737ac1882e26b19f18111ee81923d06c7947af7c6b6"
+      "path": "evidence/poms/androidx.compose.animation__animation-android__1.13.0.pom",
+      "sha256": "5e428062db7536949ec167cbd6df9cdcc1dcf20b933f44cd8aea867de2276c70"
     },
     {
       "bytes": 4547,
-      "path": "evidence/poms/androidx.compose.animation__animation-core-android__1.12.1.pom",
-      "sha256": "aa08f41b2aed8aaedb11de353f6198a16bc3f8fc19cc0ecf436936f60f53d07a"
+      "path": "evidence/poms/androidx.compose.animation__animation-core-android__1.13.0.pom",
+      "sha256": "976ed8b2da24d7b56b1ebe5a2504bcc89c15a68cdc0461b3b7910d1e91283f58"
     },
     {
-      "bytes": 4737,
-      "path": "evidence/poms/androidx.compose.foundation__foundation-android__1.12.1.pom",
-      "sha256": "9415263f478c2b6924eab712c427ab887c6d47fb81050aa2efe21049df3af325"
+      "bytes": 4954,
+      "path": "evidence/poms/androidx.compose.foundation__foundation-android__1.13.0.pom",
+      "sha256": "6019dd70bd3373eea78d1767b2d31c2a6d5fdcb64218c9e639e8d6f255f76412"
     },
     {
       "bytes": 4123,
-      "path": "evidence/poms/androidx.compose.foundation__foundation-layout-android__1.12.1.pom",
-      "sha256": "8572c5141594ec2a2bbba2c43a225f3c346a5de19a6cf82788e6b0f4c2cae2b8"
+      "path": "evidence/poms/androidx.compose.foundation__foundation-layout-android__1.13.0.pom",
+      "sha256": "c23307d737014010e1d39894f17d8958692164024b35f1abbd8353dd1f6e3e91"
     },
     {
-      "bytes": 5391,
-      "path": "evidence/poms/androidx.compose.material3__material3-android__1.4.0.pom",
-      "sha256": "cc0362653240708a010de50fee8caf884a610fbb10b6013e86694d77c43febc7"
+      "bytes": 6103,
+      "path": "evidence/poms/androidx.compose.material3__material3-android__1.5.0.pom",
+      "sha256": "7657336a442c4965a3ce575c484544d2a91b3380afea2bb1213d122275ef6070"
+    },
+    {
+      "bytes": 4003,
+      "path": "evidence/poms/androidx.compose.material3__material3-ripple-android__1.5.0.pom",
+      "sha256": "5743fbae96014746c439ed73ccf1106e8f4c6c7fb30d24eda7585407ae15d87d"
     },
     {
       "bytes": 3295,
@@ -6365,63 +6492,63 @@
     },
     {
       "bytes": 2939,
-      "path": "evidence/poms/androidx.compose.material__material-ripple-android__1.12.1.pom",
-      "sha256": "95bf6d27eba03c66a058e98caf766ed30da8556d79eb3dbb110449a7eb25957b"
+      "path": "evidence/poms/androidx.compose.material__material-ripple-android__1.13.0.pom",
+      "sha256": "69b21ef04b5fdf9e8f4d24e078e918ab1c8bb919ca1021b2b75e0a922740ae76"
     },
     {
       "bytes": 4961,
-      "path": "evidence/poms/androidx.compose.runtime__runtime-android__1.12.1.pom",
-      "sha256": "29840cf32960ed985bed82c072b7662b8066327187081e0fcfd5467cee5c6709"
+      "path": "evidence/poms/androidx.compose.runtime__runtime-android__1.13.0.pom",
+      "sha256": "198f605b3af41e662c4430b0cce896063dc183f9b6cd2be912f3134f3456911d"
     },
     {
       "bytes": 3739,
-      "path": "evidence/poms/androidx.compose.runtime__runtime-annotation-android__1.12.1.pom",
-      "sha256": "8407a3d85d7090d0baccc728050e7e822a34e9eb6076a469d397ebd27729e856"
+      "path": "evidence/poms/androidx.compose.runtime__runtime-annotation-android__1.13.0.pom",
+      "sha256": "c3771c6abc8a379c536ed93151b96ef392880529318ba446e2bcb673a3e36f33"
     },
     {
       "bytes": 4381,
-      "path": "evidence/poms/androidx.compose.runtime__runtime-retain-android__1.12.1.pom",
-      "sha256": "6b6fd5244e038c4c1b182361e503a5e11cc1090ad582c9e29090ea46e98ace5b"
+      "path": "evidence/poms/androidx.compose.runtime__runtime-retain-android__1.13.0.pom",
+      "sha256": "f578f5cc96ae38054f059c76d685aa290ba6d4967afb50df046104b7133fa5ee"
     },
     {
-      "bytes": 4945,
-      "path": "evidence/poms/androidx.compose.runtime__runtime-saveable-android__1.12.1.pom",
-      "sha256": "b24f9d787b16e356331ab5aeee85363aeb3a008bdd674da12b0a1362236b8ee9"
+      "bytes": 4946,
+      "path": "evidence/poms/androidx.compose.runtime__runtime-saveable-android__1.13.0.pom",
+      "sha256": "5b53fdc38da095f236bd3ffb0bf98c806021bef0bef3817dc4811e854ebee5a5"
     },
     {
-      "bytes": 10805,
-      "path": "evidence/poms/androidx.compose.ui__ui-android__1.12.1.pom",
-      "sha256": "8cb01b7d4c70e2492012d1d212ea6d7701485dc79c199edcb560eafa4375dde7"
+      "bytes": 11031,
+      "path": "evidence/poms/androidx.compose.ui__ui-android__1.13.0.pom",
+      "sha256": "df44b540314b4b22bc9cee75713ce4d86778faa6e4254d31acbd57295f7d01a7"
     },
     {
       "bytes": 5747,
-      "path": "evidence/poms/androidx.compose.ui__ui-geometry-android__1.12.1.pom",
-      "sha256": "d7721b420b6bee2d7bbbd12581e0abff1cd02e8eaa2ea1805f11080b2eb82b22"
+      "path": "evidence/poms/androidx.compose.ui__ui-geometry-android__1.13.0.pom",
+      "sha256": "f95e472f1ff9e230aee3ee527eb48cf3d445fc4218c9dde94582834e403f329b"
     },
     {
       "bytes": 6729,
-      "path": "evidence/poms/androidx.compose.ui__ui-graphics-android__1.12.1.pom",
-      "sha256": "0de7f78d822c6fa1e37f855ba27bfc7d3043e77b5ea5b381a0d229feaa50c650"
+      "path": "evidence/poms/androidx.compose.ui__ui-graphics-android__1.13.0.pom",
+      "sha256": "264d4f5638b771a77fa1451733c4c6c338a82d3a20eb7410bedfee61132684c2"
     },
     {
       "bytes": 7378,
-      "path": "evidence/poms/androidx.compose.ui__ui-text-android__1.12.1.pom",
-      "sha256": "37c3f8b6d0fe79bef2a2cb83dcc4d690e99db282785ffb7f1ce6b1a64c6f7440"
+      "path": "evidence/poms/androidx.compose.ui__ui-text-android__1.13.0.pom",
+      "sha256": "7153495bff64b8b9ddbecc0b490d0f34d2c5747515fc93b505be22254928b03c"
     },
     {
       "bytes": 5606,
-      "path": "evidence/poms/androidx.compose.ui__ui-tooling-preview-android__1.12.1.pom",
-      "sha256": "383b1d980d7d69383a8576dfa5dedb703441a90d2fadfcbd367302ce82525e7f"
+      "path": "evidence/poms/androidx.compose.ui__ui-tooling-preview-android__1.13.0.pom",
+      "sha256": "d7c7ef38c935c623eee91730cd1c4a026ba24ad3076aea2c5e588c3e981d2af5"
     },
     {
       "bytes": 6531,
-      "path": "evidence/poms/androidx.compose.ui__ui-unit-android__1.12.1.pom",
-      "sha256": "8f5f5e53877101442ebdcfe03ff0c167c03362928ffcbeca5fef02573a535ac1"
+      "path": "evidence/poms/androidx.compose.ui__ui-unit-android__1.13.0.pom",
+      "sha256": "ca15c0262488a192fc2a5cb2848427cc5efb8a6a565d7b027110b7614ef50b70"
     },
     {
       "bytes": 5745,
-      "path": "evidence/poms/androidx.compose.ui__ui-util-android__1.12.1.pom",
-      "sha256": "106eedaed281f62f2fc17bade34c966ddf8cb93ea45627b1592e2e964b027199"
+      "path": "evidence/poms/androidx.compose.ui__ui-util-android__1.13.0.pom",
+      "sha256": "4258949a2e23422bfb93d97a4b27f39f5c619b61cbdb6e05377d4954f56a8da1"
     },
     {
       "bytes": 2516,
@@ -6459,9 +6586,9 @@
       "sha256": "ce9e47b87184f5bd5e139e9becd5b26476d42d78c31bf2fdedc37acb41b9ad49"
     },
     {
-      "bytes": 3339,
-      "path": "evidence/poms/androidx.emoji2__emoji2__1.4.0.pom",
-      "sha256": "1f67221484f7d1260eb6e2b490cd4e7046bf5cb536276d79f972ad3f198b474d"
+      "bytes": 3783,
+      "path": "evidence/poms/androidx.emoji2__emoji2__1.7.0.pom",
+      "sha256": "ae1844ff8beaf74ae953346d5e3cc1581fda05372f3a267a3469b2276932465e"
     },
     {
       "bytes": 2004,
@@ -6469,9 +6596,14 @@
       "sha256": "b11c0763f3094d28664412b7d3316bb5d1a785810fb7b4fe5f356cd5cbcd1725"
     },
     {
-      "bytes": 2051,
-      "path": "evidence/poms/androidx.graphics__graphics-path__1.0.1.pom",
-      "sha256": "866fb357c7146f5f7678ad44e4bc6c2823d568defce1ed2805bb6c899606b228"
+      "bytes": 2233,
+      "path": "evidence/poms/androidx.graphics__graphics-path__1.1.0.pom",
+      "sha256": "5f190798b00fe8fd49887962f2f9b7aab4315491f9087d8935449399bedbd3de"
+    },
+    {
+      "bytes": 5079,
+      "path": "evidence/poms/androidx.graphics__graphics-shapes-android__1.0.1.pom",
+      "sha256": "81de7bcc8549084d104d5af33b120f93e10d45424a15a454cfa1f24304aa4d11"
     },
     {
       "bytes": 1608,
@@ -6480,73 +6612,73 @@
     },
     {
       "bytes": 5631,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-common-java8__2.11.0.pom",
-      "sha256": "3d02f40af88dba161d4be407ed07723d7131ac464193ffe05c96bc9cb72e9034"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-common-java8__2.11.1.pom",
+      "sha256": "003e83f02a1191accf9f304bd8f625aed1419690684b35a2f6ccb36cafdc5a15"
     },
     {
       "bytes": 6157,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-common-jvm__2.11.0.pom",
-      "sha256": "421918e01dd8508b0c376207a9e98159ef77fed11eb1d9098294344ed67750c7"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-common-jvm__2.11.1.pom",
+      "sha256": "6cbf5f7e94cb415eb0a82b8beeb0259b1d0ac128e38fdb22ed9dd2d06d0ec0c8"
     },
     {
       "bytes": 5701,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core-ktx__2.11.0.pom",
-      "sha256": "cf5d8651182e43675968e4bff5b018a7b5d9ad75d777ded594ffc7c2d8c0948a"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core-ktx__2.11.1.pom",
+      "sha256": "c8a006ebc4be37ecf721c9404c4db5a08a4f356796fa8a70c832cc24d657b9ab"
     },
     {
       "bytes": 6209,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core__2.11.0.pom",
-      "sha256": "bedbe8c2230f207c7b27c15a67fa85aff7df681b145a45fd4fd9d6ccedafb2d4"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-livedata-core__2.11.1.pom",
+      "sha256": "229493555df53cf4b5309f549b4b88302c877a93b88d8a20c73180296645c24c"
     },
     {
       "bytes": 6650,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-livedata__2.11.0.pom",
-      "sha256": "ec47faea1d2f68625ac49ad260f5f5233d9b40da922253b57aa153d49b5f5ca8"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-livedata__2.11.1.pom",
+      "sha256": "6126f05726ec01199d3083335f0270dbd1840288c6c525f3f9741344d71705af"
     },
     {
       "bytes": 6026,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-process__2.11.0.pom",
-      "sha256": "63f3303cb0f0ece424fedaba55cd3984e44422e7dd5071debca4a4423216c420"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-process__2.11.1.pom",
+      "sha256": "b026576bf0252e17f12eae0ee2af25570ed8dbc905b907fe95e33fd262d9600a"
     },
     {
       "bytes": 7337,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-runtime-android__2.11.0.pom",
-      "sha256": "1dfd1f739d71957166a0511a6fb2cbfc8da766c1840d5664063898ed6dac8aa6"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-runtime-android__2.11.1.pom",
+      "sha256": "59e583b7f9c521b00bba4b15e1f4d35059e5aedc512a5cf7fa2a0731b1646254"
     },
     {
       "bytes": 6667,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-runtime-compose-android__2.11.0.pom",
-      "sha256": "006872b13e979a262c15b40e1422eaebce90bab240b1a08ac9fd7f6020fcca8e"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-runtime-compose-android__2.11.1.pom",
+      "sha256": "8fee5fc20edc4b3e3a7e24ce22c81f34666b37311639750860362ab9f227bca7"
     },
     {
       "bytes": 6089,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-runtime-ktx-android__2.11.0.pom",
-      "sha256": "a5e598838f5ce314cff3b7b5cd4ed53119ae7a307a51a9a519fef9f1fe95d57f"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-runtime-ktx-android__2.11.1.pom",
+      "sha256": "acbd085226fa42d2c55288f19309bb52fb92efb286448a3da05149c6ab2b6eb9"
     },
     {
       "bytes": 5637,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-service__2.11.0.pom",
-      "sha256": "ade67ab3ef85ba4a18f28a6eaf558c2128b01021cd0ca20c3999a566f1a29454"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-service__2.11.1.pom",
+      "sha256": "fefe4983adb7b6dac86d548eadf06a43fd9f5f5ca1b7ad6b7bc06fca94b52951"
     },
     {
       "bytes": 6591,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-android__2.11.0.pom",
-      "sha256": "c6d78741c43ccf10d5da5f0e040dedfffda20b9748caa038dc58be25d35c90a3"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-android__2.11.1.pom",
+      "sha256": "531c1abdf880dc6c6a8db6ff451897973fa72c272d4a834340f95a039529ddb4"
     },
     {
       "bytes": 7604,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-compose-android__2.11.0.pom",
-      "sha256": "350daf4884944f4f0c82edd3e66ea195342bcffd4945689057a5fada9cd79f4c"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-compose-android__2.11.1.pom",
+      "sha256": "f2ac1e31bb0342d2ff3f7703b79ac635f01ccd7fa9824cd270607fa71554136f"
     },
     {
       "bytes": 5876,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-ktx__2.11.0.pom",
-      "sha256": "98cee40062344063eef3f71f9d66032d69e6304ba0858561fc823d73c61b63b4"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-ktx__2.11.1.pom",
+      "sha256": "a70c03d3d78a4a78dee21d05e78e7dbb0ad4dd6b34bcf5a3fdef7e296b9d7dd3"
     },
     {
       "bytes": 7668,
-      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-savedstate-android__2.11.0.pom",
-      "sha256": "658d326b66a0768ccd35df85c7487494569c63951e090c3a1b019b97bb8a0110"
+      "path": "evidence/poms/androidx.lifecycle__lifecycle-viewmodel-savedstate-android__2.11.1.pom",
+      "sha256": "9864405bfa5043a6feb82e768bf8438c2d0e6a66919091a49c5ccdd8294cb4d9"
     },
     {
       "bytes": 9848,
@@ -6604,14 +6736,14 @@
       "sha256": "d8b304aa239e0d09ab8bc841e1eb37e4d26a28bf87cfed99279376e8eb20da30"
     },
     {
-      "bytes": 3576,
-      "path": "evidence/poms/androidx.navigationevent__navigationevent-android__1.0.0.pom",
-      "sha256": "5cabbb40f3fba11166576a839acf4eb6db59ab5e5ebcb16361d41f8bec805b50"
+      "bytes": 3626,
+      "path": "evidence/poms/androidx.navigationevent__navigationevent-android__1.1.0.pom",
+      "sha256": "b0cf4fc58c165b9d1ee4836e6e21d512afebf8841746a9e2bd5fddf5d3a7714e"
     },
     {
-      "bytes": 3301,
-      "path": "evidence/poms/androidx.navigationevent__navigationevent-compose-android__1.0.0.pom",
-      "sha256": "6a3b7e989b18ab25274dbd0531dcc4d66e4efb8de4985daff539d5131285bff8"
+      "bytes": 3177,
+      "path": "evidence/poms/androidx.navigationevent__navigationevent-compose-android__1.1.0.pom",
+      "sha256": "3528fc88ebfcaa55b4573015483ae555a3e1378ed6ab3005bab9131afea8ea69"
     },
     {
       "bytes": 2477,
@@ -6634,19 +6766,19 @@
       "sha256": "f592f541a9c19e506ab2b033d589a6124887aff58156ceb747db4cae4f1e83b0"
     },
     {
-      "bytes": 3923,
-      "path": "evidence/poms/androidx.savedstate__savedstate-android__1.4.0.pom",
-      "sha256": "b44b215b4cce24ca64b5faa58ff463f4b91abc02af95ba405ade488828f4f779"
+      "bytes": 3927,
+      "path": "evidence/poms/androidx.savedstate__savedstate-android__1.5.0.pom",
+      "sha256": "1b270ea1272838d496583dab77791f4706a3098f153e116eb23e919eeae33bfd"
     },
     {
-      "bytes": 3074,
-      "path": "evidence/poms/androidx.savedstate__savedstate-compose-android__1.4.0.pom",
-      "sha256": "de19831dabb84a4d0e120e86dceb08cf62c08606b5d99e91a8f8e6b4a4658883"
+      "bytes": 3424,
+      "path": "evidence/poms/androidx.savedstate__savedstate-compose-android__1.5.0.pom",
+      "sha256": "e854c31eefbf8de709a1026fbdf6d07aed0f0c40adef0a178c3ca4bc9c23d1d3"
     },
     {
-      "bytes": 2775,
-      "path": "evidence/poms/androidx.savedstate__savedstate-ktx__1.4.0.pom",
-      "sha256": "b085af7cc4bb297ed0f25ca85d3629613ab253c0b532684c6cf77c2aee7471c5"
+      "bytes": 2639,
+      "path": "evidence/poms/androidx.savedstate__savedstate-ktx__1.5.0.pom",
+      "sha256": "ea6df978e1dccaff1d96c95a3942fca040a2d6ed6060fdddeab2f4bb7d8e6d72"
     },
     {
       "bytes": 3184,
@@ -6935,10 +7067,10 @@
     }
   ],
   "manualSourceCount": 0,
-  "resolvedArtifactRecordCount": 124,
-  "runtimeArtifactCount": 123,
-  "runtimeComponentCount": 123,
+  "resolvedArtifactRecordCount": 126,
+  "runtimeArtifactCount": 125,
+  "runtimeComponentCount": 125,
   "schemaVersion": 1,
   "unresolved": [],
-  "upstreamCatalogSha256": "914a6bd744a17cb61a42d3f87d95c7608098b995d4c05cfb7d82c16f1a5a8569"
+  "upstreamCatalogSha256": "e58bcf6736ccb30ef6a12ca1f370dbb654dc962204be93c719b1fbfb9e67c932"
 }

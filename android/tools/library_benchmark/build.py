@@ -54,7 +54,7 @@ def main():
     if output == SOURCE or SOURCE in output.parents:
         parser.error("输出必须为源码目录之外的临时目录")
     tools = args.sdk / "build-tools/37.0.0"
-    android_jar = args.sdk / "platforms/android-37.0/android.jar"
+    android_jar = args.sdk / "platforms/android-37.2/android.jar"
     manifest = checked([tools / "aapt2", "dump", "xmltree", apk, "--file", "AndroidManifest.xml"])
     package = re.search(r'^\s+A: package="([^"]+)"', manifest, re.M)
     if not package or package[1] != TARGET or re.search(r':(?:debuggable|testOnly)\([^)]*\)=(?:true|0xffffffff)', manifest):

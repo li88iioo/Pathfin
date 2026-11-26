@@ -68,7 +68,7 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-37.0' 'platforms;android-37.2' "build-tools;$BUILD_TOOLS" 'ndk;30.0.16248370' 'cmake;3.22.1'
+          sdkmanager 'platforms;android-37.2' "build-tools;$BUILD_TOOLS" 'ndk;30.0.16248370' 'cmake;3.22.1'
 
       # 上游源码压缩包由构建脚本按锁定的字节数与 SHA-256 校验，缓存只省下载时间。
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

@@ -3,6 +3,7 @@ package dev.pathfin.android.ui.player
 import androidx.compose.ui.platform.LocalWindowInfo
 import dev.pathfin.android.i18n.tr
 import dev.pathfin.android.ui.PathfinSpinner
+import dev.pathfin.android.ui.rememberControlledSliderState
 import dev.pathfin.android.ui.PathfinAppearance
 import dev.pathfin.android.ui.MediaNavigationIcons
 import dev.pathfin.android.ui.PathfinIcons
@@ -258,7 +259,8 @@ internal fun PlayerControlsOverlay(
                     val progressColor = PathfinAppearance.accent
                     val colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = progressColor,
                         inactiveTrackColor = Color.White.copy(alpha = .2f))
-                    Slider(value = if (scrubbing) scrubPosition else snapshot.positionMs.coerceAtMost(snapshot.durationMs.coerceAtLeast(1)).toFloat(),
+                    val maximum = snapshot.durationMs.coerceAtLeast(1).toFloat()
+                    Slider(state = rememberControlledSliderState(if (scrubbing) scrubPosition else snapshot.positionMs.toFloat(), 0f..maximum),
                         onValueChange = { position ->
                             onInteraction()
                             if (!scrubbing) rapidSeek.reset()
@@ -272,7 +274,7 @@ internal fun PlayerControlsOverlay(
                             scrubbing = false
                             rapidSeek.reset()
                             onInteraction()
-                        }, valueRange = 0f..snapshot.durationMs.coerceAtLeast(1).toFloat(), enabled = sliderEnabled,
+                        }, enabled = sliderEnabled,
                         colors = colors, interactionSource = sliderInteraction,
                         thumb = {
                             val dragging by sliderInteraction.collectIsDraggedAsState()
@@ -283,7 +285,6 @@ internal fun PlayerControlsOverlay(
                         },
                         track = { slider ->
                             Canvas(Modifier.fillMaxWidth().height(trackHeight).testTag("player-progress-track")) {
-                                val maximum = snapshot.durationMs.coerceAtLeast(1).toFloat()
                                 val thickness = 3.dp.toPx()
                                 val top = (size.height - thickness) / 2
                                 fun segment(color: Color, fraction: Float) {
@@ -292,7 +293,7 @@ internal fun PlayerControlsOverlay(
                                 }
                                 segment(Color.White.copy(alpha = .2f), 1f)
                                 segment(Color.White.copy(alpha = .36f), snapshot.bufferedPositionMs / maximum)
-                                segment(if (sliderEnabled) progressColor else Color.White.copy(alpha = .35f), slider.value / maximum)
+                                segment(if (sliderEnabled) progressColor else Color.White.copy(alpha = .35f), slider.coercedValueAsFraction)
                             }
                         }, modifier = Modifier.weight(1f).height(48.dp).testTag("player-seek-slider").semantics { contentDescription = tr("播放进度") })
                     if (landscape) {

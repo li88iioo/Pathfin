@@ -12,13 +12,13 @@
 
 ## 构建
 
-需要 JDK17、SDK API37 和 build-tools37.0.0；使用 `javac → d8 → aapt2 → zipalign`，没有 Gradle 依赖或网络下载。仓库根目录运行：
+需要 JDK 17、Android SDK Platform 37.2 和 Build Tools 37.0.0；使用 `javac → d8 → aapt2 → zipalign`，没有 Gradle 依赖或网络下载。仓库根目录运行：
 
 ```bash
 python3 android/tools/production_smoke/build.py \
   --sdk "$ANDROID_SDK_ROOT" \
   --build-tools "$ANDROID_SDK_ROOT/build-tools/37.0.0" \
-  --android-jar "$ANDROID_SDK_ROOT/platforms/android-37.0/android.jar" \
+  --android-jar "$ANDROID_SDK_ROOT/platforms/android-37.2/android.jar" \
   --target-apk /absolute/path/to/Pathfin-0.1.0.apk
 ```
 

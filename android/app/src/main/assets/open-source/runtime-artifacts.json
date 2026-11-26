@@ -68,32 +68,38 @@
     },
     {
       "fileName": "animation.aar",
-      "id": "androidx.compose.animation:animation-android:1.12.1",
-      "sha256": "4a619ca869b9724e9cf6127ead53d8fb7dd8601a931c4006b15caf5bb3bf19f8",
+      "id": "androidx.compose.animation:animation-android:1.13.0",
+      "sha256": "2ee220773b320285f19ae6234c01912e46aaf10eda55a7099875e4f9f22ce873",
       "type": "aar"
     },
     {
       "fileName": "animation-core.aar",
-      "id": "androidx.compose.animation:animation-core-android:1.12.1",
-      "sha256": "29e26959b2c5645c53a42aa8302570bf8cc3644755d6ca97bf1028d08a665b97",
+      "id": "androidx.compose.animation:animation-core-android:1.13.0",
+      "sha256": "2b8fc2beedd30bff72faeb44515110ad5c0b651304dcf5b25fc61f251d589b79",
       "type": "aar"
     },
     {
       "fileName": "foundation.aar",
-      "id": "androidx.compose.foundation:foundation-android:1.12.1",
-      "sha256": "444749ea7b5a563e530504b9035c87e47ed0fb62b9f7ba00e90af8aa81e6bfb8",
+      "id": "androidx.compose.foundation:foundation-android:1.13.0",
+      "sha256": "9c97dbb937321607311a081ac095551f160293b78624df51129e17b25b627f2c",
       "type": "aar"
     },
     {
       "fileName": "foundation-layout.aar",
-      "id": "androidx.compose.foundation:foundation-layout-android:1.12.1",
-      "sha256": "274370a88621e001417e76c2d862ffad61ebc8ca2d9f151c7b60dd02d65ebe51",
+      "id": "androidx.compose.foundation:foundation-layout-android:1.13.0",
+      "sha256": "32d2dd25683e8b18fd88370241072acab1cf275646e37cfb6b7677f52e107975",
       "type": "aar"
     },
     {
       "fileName": "material3.aar",
-      "id": "androidx.compose.material3:material3-android:1.4.0",
-      "sha256": "3a37e8b36df3822fe1e6059f0f9fafda8800388860477624ac1b9422c418a36e",
+      "id": "androidx.compose.material3:material3-android:1.5.0",
+      "sha256": "dd17540643810cd13007f64c85091fd98c6f7e7619437d2fd18e0c2e41155ee1",
+      "type": "aar"
+    },
+    {
+      "fileName": "material3-ripple.aar",
+      "id": "androidx.compose.material3:material3-ripple-android:1.5.0",
+      "sha256": "8d947b02b21f6af335dbb92332a09d3029955cc5f62d8e3116b4474b04f30848",
       "type": "aar"
     },
     {
@@ -110,74 +116,74 @@
     },
     {
       "fileName": "material-ripple.aar",
-      "id": "androidx.compose.material:material-ripple-android:1.12.1",
-      "sha256": "795d8742165875ee96383ca64ff4cd8bc12b83efb0918f68472e7c2f9d5826df",
+      "id": "androidx.compose.material:material-ripple-android:1.13.0",
+      "sha256": "c031c2416a283f8a7f58a969149c4247250237a194218fee4a9ff56cbd250cc2",
       "type": "aar"
     },
     {
       "fileName": "runtime.aar",
-      "id": "androidx.compose.runtime:runtime-android:1.12.1",
-      "sha256": "1701a61d06d2f6144f2cd8b015abbc5ad6952eacb70c24c208cdfd2bb188dde7",
+      "id": "androidx.compose.runtime:runtime-android:1.13.0",
+      "sha256": "39caa686185abd9b3366c04eb4691eb38828af9469d5df1cd6455b89d3b43bd3",
       "type": "aar"
     },
     {
       "fileName": "runtime-annotation.aar",
-      "id": "androidx.compose.runtime:runtime-annotation-android:1.12.1",
-      "sha256": "071d6200f5f34ffb5ce69cc19ee8db577c188832bb472779213d4633eca26565",
+      "id": "androidx.compose.runtime:runtime-annotation-android:1.13.0",
+      "sha256": "e2a54a464a34924dd824d54c4208cc69b3765adc981ad773bdc11297b1ce0781",
       "type": "aar"
     },
     {
       "fileName": "runtime-retain.aar",
-      "id": "androidx.compose.runtime:runtime-retain-android:1.12.1",
-      "sha256": "6e32111eed0f67ef2ae70c2d9c83cb6bfb54095fe2fb2fdc800febd14d0d7a61",
+      "id": "androidx.compose.runtime:runtime-retain-android:1.13.0",
+      "sha256": "cdd5001eaf098540aa7bf8d8b0b52c6d0f34deb116cdbd1eb6ef5bb02fa95c0b",
       "type": "aar"
     },
     {
       "fileName": "runtime-saveable.aar",
-      "id": "androidx.compose.runtime:runtime-saveable-android:1.12.1",
-      "sha256": "0c83d47820fbc8ffb6e3e49311ccd4755676d6f94bb8c6d8564ab4c799df8779",
+      "id": "androidx.compose.runtime:runtime-saveable-android:1.13.0",
+      "sha256": "b4adce846e4c5c5f557cb727897a329a46b8293d772b9f2f1be6e860b016ae49",
       "type": "aar"
     },
     {
       "fileName": "ui.aar",
-      "id": "androidx.compose.ui:ui-android:1.12.1",
-      "sha256": "3f1ae17e237d9dc0a2a0f42cb04b85b8de6e12f67adc5f5c12173fe31e501cb2",
+      "id": "androidx.compose.ui:ui-android:1.13.0",
+      "sha256": "b5d23c05886f9c441e3cb004f8ac4614f96e9c1901795742bd9ddb5b8bad1b61",
       "type": "aar"
     },
     {
       "fileName": "ui-geometry.aar",
-      "id": "androidx.compose.ui:ui-geometry-android:1.12.1",
-      "sha256": "09a23c76f5d52ea5ec61d4a78d4876940f0f033c975e5c604246f89a63532754",
+      "id": "androidx.compose.ui:ui-geometry-android:1.13.0",
+      "sha256": "d86f77f8f78b27c50755753d3e68bf4215c7071f9ee9ce6d3335f30b91eb0b18",
       "type": "aar"
     },
     {
       "fileName": "ui-graphics.aar",
-      "id": "androidx.compose.ui:ui-graphics-android:1.12.1",
-      "sha256": "1e6451f05ad569e306e7022b3c41d16aa75080bb2c99b59c4d67e7dbf6f428e7",
+      "id": "androidx.compose.ui:ui-graphics-android:1.13.0",
+      "sha256": "4b0db977082ad677338f471a2b97776162e7fcbf578c74a55af712c843cc5917",
       "type": "aar"
     },
     {
       "fileName": "ui-text.aar",
-      "id": "androidx.compose.ui:ui-text-android:1.12.1",
-      "sha256": "e710a5776966537df09a2e5c4ca1dacc14ca11d7b20a6af16c0e992ddd3aecd3",
+      "id": "androidx.compose.ui:ui-text-android:1.13.0",
+      "sha256": "da7a21ac01fde97c5377926719e8731ee4035e30a9bde77fae8ec56d1a09d115",
       "type": "aar"
     },
     {
       "fileName": "ui-tooling-preview.aar",
-      "id": "androidx.compose.ui:ui-tooling-preview-android:1.12.1",
-      "sha256": "e5d8e697fcfda732734e01168296682682d31e085b77ec8245e72badbc673686",
+      "id": "androidx.compose.ui:ui-tooling-preview-android:1.13.0",
+      "sha256": "898124443aca4ad75450b1f0ed03244a3cc340f028631eb2b827b41dd8fbe6a6",
       "type": "aar"
     },
     {
       "fileName": "ui-unit.aar",
-      "id": "androidx.compose.ui:ui-unit-android:1.12.1",
-      "sha256": "97d2bf062395d981435bc8d571b1d5d75587a7f26f3444671b2287f233e18ae7",
+      "id": "androidx.compose.ui:ui-unit-android:1.13.0",
+      "sha256": "51dbb2719c5ffca99fb96afc7531b22225a69d2c455677558a4c6a89f40fe70e",
       "type": "aar"
     },
     {
       "fileName": "ui-util.aar",
-      "id": "androidx.compose.ui:ui-util-android:1.12.1",
-      "sha256": "cd47f06626c19a06086e16823a32e49e0a0c7d903451668da2f777d063507aa5",
+      "id": "androidx.compose.ui:ui-util-android:1.13.0",
+      "sha256": "ef6862049e8eafc4e478e295aee38e015e11f6e35e3026c5ff45cdd626879f34",
       "type": "aar"
     },
     {
@@ -223,9 +229,9 @@
       "type": "aar"
     },
     {
-      "fileName": "emoji2-1.4.0.aar",
-      "id": "androidx.emoji2:emoji2:1.4.0",
-      "sha256": "433febd3434a45667176c76a64f3f205ca6335a6b544c5b5d57f25a38a375242",
+      "fileName": "emoji2-1.7.0.aar",
+      "id": "androidx.emoji2:emoji2:1.7.0",
+      "sha256": "121738bd60060c7bb3742f10c034edc93f2a38b6de8ca8648bc799eda65b1bbf",
       "type": "aar"
     },
     {
@@ -235,9 +241,15 @@
       "type": "aar"
     },
     {
-      "fileName": "graphics-path-1.0.1.aar",
-      "id": "androidx.graphics:graphics-path:1.0.1",
-      "sha256": "8ca4032b6d79b351f0b59ad4b580eddbb9423e1652f7c958830687f1eee2ec03",
+      "fileName": "graphics-path-1.1.0.aar",
+      "id": "androidx.graphics:graphics-path:1.1.0",
+      "sha256": "d031370d45ba4129a175fe9de913328a512b01a3c267e0eaf6b9b759f35842ae",
+      "type": "aar"
+    },
+    {
+      "fileName": "graphics-shapes-release.aar",
+      "id": "androidx.graphics:graphics-shapes-android:1.0.1",
+      "sha256": "7171269a4122feabb071768df46d10b362e47ac75fd0aa8dbcafa1f44f61b40c",
       "type": "aar"
     },
     {
@@ -247,87 +259,87 @@
       "type": "aar"
     },
     {
-      "fileName": "lifecycle-common-java8-2.11.0.jar",
-      "id": "androidx.lifecycle:lifecycle-common-java8:2.11.0",
+      "fileName": "lifecycle-common-java8-2.11.1.jar",
+      "id": "androidx.lifecycle:lifecycle-common-java8:2.11.1",
       "sha256": "895e71679cd319db8140664d650af6695b0530f5896be9b8ecccd24cc4f6674f",
       "type": "jar"
     },
     {
-      "fileName": "lifecycle-common-jvm-2.11.0.jar",
-      "id": "androidx.lifecycle:lifecycle-common-jvm:2.11.0",
+      "fileName": "lifecycle-common-jvm-2.11.1.jar",
+      "id": "androidx.lifecycle:lifecycle-common-jvm:2.11.1",
       "sha256": "e6a66e67b9f63a0fb6344f165c1d872376e5fe6d235bffb138af45122cf452a9",
       "type": "jar"
     },
     {
-      "fileName": "lifecycle-livedata-core-ktx-2.11.0.aar",
-      "id": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0",
-      "sha256": "408fac99b61a7ca9d0620f4f24891f85c14ee007cfd027abc3df759a31b0086a",
+      "fileName": "lifecycle-livedata-core-ktx-2.11.1.aar",
+      "id": "androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.1",
+      "sha256": "7b2fa180b01bc15304bc68b9823f7ab553aa5760f5b65c8cd9745fd90de2c0d8",
       "type": "aar"
     },
     {
-      "fileName": "lifecycle-livedata-core-2.11.0.aar",
-      "id": "androidx.lifecycle:lifecycle-livedata-core:2.11.0",
-      "sha256": "39b26ef1e081fc88d7054ff1a63d0a5d71876373c33a711ab789c8228d025ad1",
+      "fileName": "lifecycle-livedata-core-2.11.1.aar",
+      "id": "androidx.lifecycle:lifecycle-livedata-core:2.11.1",
+      "sha256": "ca91fb3d46a7ba74eceeba816abfd28e885aa2121daa74851f021e1600c06d0e",
       "type": "aar"
     },
     {
-      "fileName": "lifecycle-livedata-2.11.0.aar",
-      "id": "androidx.lifecycle:lifecycle-livedata:2.11.0",
-      "sha256": "1bc28e40e06ff5e0478b9276ca6287ce6993415b70910745ac916b14dec9b72f",
+      "fileName": "lifecycle-livedata-2.11.1.aar",
+      "id": "androidx.lifecycle:lifecycle-livedata:2.11.1",
+      "sha256": "917081edc738291d8764fa95aa796730a3a0e2b5b70ac9e22cd5345134ce6405",
       "type": "aar"
     },
     {
-      "fileName": "lifecycle-process-2.11.0.aar",
-      "id": "androidx.lifecycle:lifecycle-process:2.11.0",
-      "sha256": "9743f0c7baf27d34497b7e9a1cd497d8260251b03124507963abfaad66c3f552",
+      "fileName": "lifecycle-process-2.11.1.aar",
+      "id": "androidx.lifecycle:lifecycle-process:2.11.1",
+      "sha256": "b5a3dcc64a185badb88784c16a1c9b229529410cc8776cec3c4b624a4189135a",
       "type": "aar"
     },
     {
       "fileName": "lifecycle-runtime.aar",
-      "id": "androidx.lifecycle:lifecycle-runtime-android:2.11.0",
-      "sha256": "8711865f8d3603bc05decc03bb42aab2faa8d8bc55b3b12a0a8e516b562b60ca",
+      "id": "androidx.lifecycle:lifecycle-runtime-android:2.11.1",
+      "sha256": "f2d47c2a332fe66a0119958c5d7e4ad8e8f9c1da0672adf00bbd728791c91481",
       "type": "aar"
     },
     {
       "fileName": "lifecycle-runtime-compose.aar",
-      "id": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0",
-      "sha256": "7b31489e6e162143c481f14e1ae5a4dc089f8ec58e65976a0502b910c641987f",
+      "id": "androidx.lifecycle:lifecycle-runtime-compose-android:2.11.1",
+      "sha256": "74ba4d662557b0d88d32301f63b1e995c9d1b7d9e48dd72d1476c1d252b2d944",
       "type": "aar"
     },
     {
       "fileName": "lifecycle-runtime-ktx.aar",
-      "id": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0",
-      "sha256": "1fead96607f8b4ebd2bc5840c6fcf08b09fc47ceb1665e4b381dce80b19f32a0",
+      "id": "androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.1",
+      "sha256": "e455fb2d40292c6050d33fbfc5d7575487f957e17ddbbe38aa12f58088ce315a",
       "type": "aar"
     },
     {
-      "fileName": "lifecycle-service-2.11.0.aar",
-      "id": "androidx.lifecycle:lifecycle-service:2.11.0",
-      "sha256": "262c24e5218c19610c12a07465cf34e2e45b9cf63eb10471013f6ba01ff18522",
+      "fileName": "lifecycle-service-2.11.1.aar",
+      "id": "androidx.lifecycle:lifecycle-service:2.11.1",
+      "sha256": "741bb5eb9df9076cf737f391f66701a7c05546fd8929f338f968ef192f234df3",
       "type": "aar"
     },
     {
       "fileName": "lifecycle-viewmodel.aar",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.0",
-      "sha256": "509aa5c0711e61a1571024b4f8431dc9aa20960d23cbadb01f21a33fd864352a",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-android:2.11.1",
+      "sha256": "5305020bb0eb1944014407ec16b1c056eba196baa5a4693c05b2267d32e96331",
       "type": "aar"
     },
     {
       "fileName": "lifecycle-viewmodel-compose.aar",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0",
-      "sha256": "2bafd402807bd4af05c06cf58c48cbdad09521e2145273faae90908b7712f689",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.1",
+      "sha256": "ccbd1f3ed5683847240aec4e3005f3e39178aa0884491b68a905b86b80a71075",
       "type": "aar"
     },
     {
-      "fileName": "lifecycle-viewmodel-ktx-2.11.0.aar",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0",
-      "sha256": "230af6c866076d320d92c22c7c44bb52afca97f6892ddf987e2906ef2919998f",
+      "fileName": "lifecycle-viewmodel-ktx-2.11.1.aar",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.1",
+      "sha256": "9319f246bb273721a50cd03b50536cbb29f01694ce4df3c132787946dbb32070",
       "type": "aar"
     },
     {
       "fileName": "lifecycle-viewmodel-savedstate.aar",
-      "id": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0",
-      "sha256": "1761707c1ddee002bd97e1a0889a5016f7cd6bd8e0b6b069bcba8b2523d63723",
+      "id": "androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.1",
+      "sha256": "0956b541392dbb4f05387b045829079433276c6fc221fc494e9cf4378cc95448",
       "type": "aar"
     },
     {
@@ -398,14 +410,14 @@
     },
     {
       "fileName": "navigationevent.aar",
-      "id": "androidx.navigationevent:navigationevent-android:1.0.0",
-      "sha256": "cda4bb83d1c892a208732e99c2d59e4f247ab5c23a1d2524fc004db2e4e9a780",
+      "id": "androidx.navigationevent:navigationevent-android:1.1.0",
+      "sha256": "ea7943bc61d52b42a7a2cbcbde14c9b10e7baf9e09a8fe54d8cb17d3bb5dbfd9",
       "type": "aar"
     },
     {
       "fileName": "navigationevent-compose.aar",
-      "id": "androidx.navigationevent:navigationevent-compose-android:1.0.0",
-      "sha256": "5cee018dbe130b538d2c43cc6f383a109a98f19ba9c8d7a6dda8ca90a2034671",
+      "id": "androidx.navigationevent:navigationevent-compose-android:1.1.0",
+      "sha256": "487fd434793393f4c6d2ceac0a9f5fc6d23b682f508ff6ff18793907b5882032",
       "type": "aar"
     },
     {
@@ -434,20 +446,20 @@
     },
     {
       "fileName": "savedstate.aar",
-      "id": "androidx.savedstate:savedstate-android:1.4.0",
-      "sha256": "1656ce62cd233d488bdbbd42e533b80b22435b7a690acae6dbe7302392512c14",
+      "id": "androidx.savedstate:savedstate-android:1.5.0",
+      "sha256": "c191b2b0d3ed2f765743e634f213c0e8150825547810789fc13487332bfc9cd3",
       "type": "aar"
     },
     {
       "fileName": "savedstate-compose.aar",
-      "id": "androidx.savedstate:savedstate-compose-android:1.4.0",
-      "sha256": "0f0ae3032d6c6eea834ee22179c8976160d09d841d30e47f53f56b1b3438774b",
+      "id": "androidx.savedstate:savedstate-compose-android:1.5.0",
+      "sha256": "01682c0de6796d31f9c7863bb18e65443e512e4dc95a13cc8c3d0d4931c2c10b",
       "type": "aar"
     },
     {
-      "fileName": "savedstate-ktx-1.4.0.aar",
-      "id": "androidx.savedstate:savedstate-ktx:1.4.0",
-      "sha256": "23593939446bc5a154a1e35fddd87b82f19e2adf072207f115bf29a8b431c1d3",
+      "fileName": "savedstate-ktx-1.5.0.aar",
+      "id": "androidx.savedstate:savedstate-ktx:1.5.0",
+      "sha256": "1de99f31e90d55828e1f00f856274410e6e3e997605a40d478e7065c38b3252e",
       "type": "aar"
     },
     {
@@ -740,6 +752,6 @@
     }
   ],
   "configuration": "releaseRuntimeClasspath",
-  "resolvedArtifactRecordCount": 124,
+  "resolvedArtifactRecordCount": 126,
   "schemaVersion": 1
 }

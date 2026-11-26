@@ -40,8 +40,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.LocalContentColor
@@ -542,8 +542,15 @@ internal fun PathfinProgressRing(progress: Float, modifier: Modifier = Modifier,
     }
 }
 
+/** 取值由调用方控制；播放时钟可以主动移动滑块，切换媒体后按新时长重新测量。 */
+@Composable
+internal fun rememberControlledSliderState(value: Float, range: ClosedFloatingPointRange<Float>, steps: Int = 0): SliderState {
+    val state = remember(range, steps) { SliderState(value, steps, range) }
+    state.value = value
+    return state
+}
+
 /** 细轨道白色圆点滑块；Material Slider 只提供拖动与无障碍行为，外观全部自绘。深色面板传入自己的轨道色。 */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PathfinSlider(
     value: Float,
@@ -556,7 +563,7 @@ internal fun PathfinSlider(
     activeColor: Color = if (enabled) PathfinAppearance.accent else PathfinAppearance.textMuted,
     inactiveColor: Color = PathfinAppearance.segmentTrack,
 ) {
-    Slider(value, onValueChange, modifier, enabled = enabled, valueRange = range, steps = steps,
+    Slider(rememberControlledSliderState(value, range, steps), onValueChange, modifier, enabled = enabled,
         onValueChangeFinished = onValueChangeFinished,
         thumb = {
             Box(Modifier.size(20.dp).shadow(2.dp, CircleShape).background(Color.White, CircleShape)
@@ -564,8 +571,7 @@ internal fun PathfinSlider(
         },
         track = { state ->
             Canvas(Modifier.fillMaxWidth().height(20.dp)) {
-                val span = (state.valueRange.endInclusive - state.valueRange.start).takeIf { it > 0f } ?: 1f
-                val fraction = ((state.value - state.valueRange.start) / span).coerceIn(0f, 1f)
+                val fraction = state.coercedValueAsFraction
                 val y = size.height / 2f
                 drawLine(inactiveColor, Offset(0f, y), Offset(size.width, y), 2.5.dp.toPx(), StrokeCap.Round)
                 drawLine(activeColor, Offset(0f, y), Offset(size.width * fraction, y), 2.5.dp.toPx(), StrokeCap.Round)
