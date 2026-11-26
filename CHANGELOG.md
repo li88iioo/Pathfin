@@ -4,6 +4,15 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.9] - 2026-11-27
+
+### 优化与修复
+
+- 修复横屏时首页、直播等页面在摄像头一侧出现空白条的问题。背景和毛玻璃延伸至屏幕边缘，频道、表单和操作按钮避开摄像头。[首页](https://github.com/li88iioo/Pathfin/commit/72142ba45961e738cb9848adc9ba648f856eb238) · [直播及其他页面](https://github.com/li88iioo/Pathfin/commit/ff047757548785e06caf8ad965c96ebcc7a09b5c)
+- 更新 ASS 字幕使用的 HarfBuzz 至 15.2.0、libunibreak 至 8.0.1，改善播放含异常内嵌字体的影片时的稳定性。[字幕组件](https://github.com/li88iioo/Pathfin/commit/a4e6e765de94114304312cdb8e7cf4003df5ffc3)
+- ARM64 音视频软解使用的 FFmpeg 升级至 9.1，同步更新应用内开源许可和随版本提供的对应源码。[播放组件](https://github.com/li88iioo/Pathfin/commit/c54d1cf754128424538d0ff4d21b14ba474fcc78)
+- 媒体库搜索清空后会取消旧查询，直播搜索取消后回到原滚动位置。编辑媒体元数据时，后台刷新会保留尚未保存的输入。[搜索](https://github.com/li88iioo/Pathfin/commit/1fbe2aa6000607a784cad5ea926e0ea81646b25a) · [表单编辑](https://github.com/li88iioo/Pathfin/commit/a4b393d29b287f6b482bbe514ccd344e101902dc)
+
 ## [0.1.8] - 2026-11-23
 
 ### 新增
@@ -182,6 +191,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.9]: https://github.com/li88iioo/Pathfin/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/li88iioo/Pathfin/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/li88iioo/Pathfin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/li88iioo/Pathfin/compare/v0.1.5...v0.1.6
