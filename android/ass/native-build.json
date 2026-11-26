@@ -7,8 +7,8 @@
   "libraries": [
     {
       "file": "libpathfin_ass_jni.so",
-      "bytes": 2044160,
-      "sha256": "f5ae39e80c7aceaf9691b0dd2d7f1f2d34ee8cdf7a8e0996fd8fc455ccb5e9ee",
+      "bytes": 2089496,
+      "sha256": "997595e50da1b8c7ac9c965ecace4e773d1c30c5a880f448125efef0d60d18d2",
       "loadAlignments": [
         16384,
         16384,
@@ -40,9 +40,9 @@
   ],
   "sourceInputs": {
     "CMakeLists.txt": "b4b24b4ec45e50955d2938e8032a85b19aecc08bece46deb6b80df790ab2d15b",
-    "sources.lock.json": "1ae792195b17b299f4d9d22e36da774599ad362047be15142c3b9bbd06dccadc",
+    "sources.lock.json": "947e6cc25edc24ace182cf4dc8bcd580c88db8573434658130aaf5382e796645",
     "build_native.py": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24",
-    "build.gradle.kts": "1fe8ef2834566629ba00098d027a03948a3f9f344223b6414af4de65950b443f",
+    "build.gradle.kts": "734348472cd587150520be95ca93cebab78fec2e10a5bfff5ee8c809d5fe3a2e",
     "requirements-build.txt": "746ea600cc5e102de3f0bce7ab846e08e0963557ae451e9589db03b956f9adfa",
     "vendor/libass/ass_types.h": "b3ac4ad4d655f4d90e5e8d05cc2868ce17e5ff89ef1fe76cabcc8f3093e6134b",
     "vendor/libass/ass.h": "04582aa925d4ed2d1206f21915d382584e8b49c50a6b88419d4112f4f88d24da",
@@ -62,10 +62,10 @@
     "libass.a": "23770ee93c493bf954ea1399a7f37d3c0fcd6f0ae943f89eef4fd3a88ebb5805",
     "libfreetype.a": "8155519c3ae1a85a131f49fd9ed4ee73982f9a7673684e82a4b43ed6b13f69d9",
     "libfribidi.a": "643a395b767d492885d8069c58be8c84c6f8f138e7516fb0ccd572494d961049",
-    "libharfbuzz.a": "bc1f0a2fa96f1c3d1cc38dfb7fedcd0dc2ccb1ecad020300fb4a7511c2d23ebe",
-    "liblinebreak.a": "8cc2b923e31801f336178de5dbff26e50711d0d95bde5cfa9fc8e95e2a75a86f",
-    "libunibreak.a": "8cc2b923e31801f336178de5dbff26e50711d0d95bde5cfa9fc8e95e2a75a86f"
+    "libharfbuzz.a": "4b480ab973b3bd34691cd940553269153914b141f33921b2a115655ec575eb7a",
+    "liblinebreak.a": "9c082ced101dd149bbead84f55875d471b66b2b911a5eb301c22b5f4f6b95959",
+    "libunibreak.a": "9c082ced101dd149bbead84f55875d471b66b2b911a5eb301c22b5f4f6b95959"
   },
   "recipeSha256": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24",
-  "sourceLockSha256": "1ae792195b17b299f4d9d22e36da774599ad362047be15142c3b9bbd06dccadc"
+  "sourceLockSha256": "947e6cc25edc24ace182cf4dc8bcd580c88db8573434658130aaf5382e796645"
 }

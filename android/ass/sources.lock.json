@@ -47,7 +47,7 @@
     },
     {
       "path": "build.gradle.kts",
-      "sha256": "1fe8ef2834566629ba00098d027a03948a3f9f344223b6414af4de65950b443f"
+      "sha256": "734348472cd587150520be95ca93cebab78fec2e10a5bfff5ee8c809d5fe3a2e"
     },
     {
       "path": "build_native.py",
@@ -140,22 +140,22 @@
       {
         "name": "harfbuzz",
         "repository": "https://github.com/harfbuzz/harfbuzz",
-        "ref": "15.1.0",
-        "commit": "3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
-        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
-        "sha256": "ae2c028546880de8ac2a4616a3d437ecfc50140b31eace909aa61a29d0623cdd",
-        "archive": "harfbuzz-3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372.tar.gz",
-        "bytes": 39194126
+        "ref": "15.2.0",
+        "commit": "ed51d202cfd0c29372d3ee056eb0dc715688a410",
+        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/ed51d202cfd0c29372d3ee056eb0dc715688a410",
+        "sha256": "e427eb8c7ca5f0911dc008273b59257fa1bc718f00c296daf163b5c763f38d62",
+        "archive": "harfbuzz-ed51d202cfd0c29372d3ee056eb0dc715688a410.tar.gz",
+        "bytes": 39644195
       },
       {
         "name": "unibreak",
         "repository": "https://github.com/adah1972/libunibreak",
-        "ref": "libunibreak_8_0",
-        "commit": "28a2756b864c343f438cd22537d49d394d4666a5",
-        "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/28a2756b864c343f438cd22537d49d394d4666a5",
-        "sha256": "4d0714d29207bfcaabe2a9376f83330bfb477673ecfb53994e47bd6d07738581",
-        "archive": "unibreak-28a2756b864c343f438cd22537d49d394d4666a5.tar.gz",
-        "bytes": 348048
+        "ref": "libunibreak_8_0_1",
+        "commit": "ff24f284a567a006c183b3507b6c650d6ec68b94",
+        "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/ff24f284a567a006c183b3507b6c650d6ec68b94",
+        "sha256": "af0578a41869495401fa65d7071216af969cc40005f8c599ef97ed8c9828b578",
+        "archive": "unibreak-ff24f284a567a006c183b3507b6c650d6ec68b94.tar.gz",
+        "bytes": 351045
       }
     ]
   }

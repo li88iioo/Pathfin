@@ -150,7 +150,7 @@
     {
       "artifact": "harfbuzz",
       "group": "native",
-      "id": "native:harfbuzz:3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
+      "id": "native:harfbuzz:ed51d202cfd0c29372d3ee056eb0dc715688a410",
       "kind": "native",
       "licenseIds": [
         "MIT-Modern-Variant"
@@ -158,34 +158,34 @@
       "links": [
         {
           "label": "固定源码提交",
-          "url": "https://github.com/harfbuzz/harfbuzz/tree/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372"
+          "url": "https://github.com/harfbuzz/harfbuzz/tree/ed51d202cfd0c29372d3ee056eb0dc715688a410"
         }
       ],
       "modifications": [],
       "name": "HarfBuzz",
       "sourceArchive": {
-        "archive": "harfbuzz-3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372.tar.gz",
-        "commit": "3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
-        "sha256": "ae2c028546880de8ac2a4616a3d437ecfc50140b31eace909aa61a29d0623cdd",
-        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372"
+        "archive": "harfbuzz-ed51d202cfd0c29372d3ee056eb0dc715688a410.tar.gz",
+        "commit": "ed51d202cfd0c29372d3ee056eb0dc715688a410",
+        "sha256": "e427eb8c7ca5f0911dc008273b59257fa1bc718f00c296daf163b5c763f38d62",
+        "url": "https://codeload.github.com/harfbuzz/harfbuzz/tar.gz/ed51d202cfd0c29372d3ee056eb0dc715688a410"
       },
       "texts": [
         {
           "kind": "license",
           "path": "texts/ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64.txt",
           "sha256": "ba8f810f2455c2f08e2d56bb49b72f37fcf68f1f4fade38977cfd7372050ad64",
-          "source": "https://github.com/harfbuzz/harfbuzz/blob/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372/COPYING",
+          "source": "https://github.com/harfbuzz/harfbuzz/blob/ed51d202cfd0c29372d3ee056eb0dc715688a410/COPYING",
           "title": "COPYING"
         },
         {
           "kind": "notice",
           "path": "texts/517ad6845aad6f7cc44add8c18ffee91a67cd393dac52638915b8d471412ed92.txt",
           "sha256": "517ad6845aad6f7cc44add8c18ffee91a67cd393dac52638915b8d471412ed92",
-          "source": "https://github.com/harfbuzz/harfbuzz/tree/3df40d9b98d6b32f0e4288d4ecfbb158ddb3a372",
+          "source": "https://github.com/harfbuzz/harfbuzz/tree/ed51d202cfd0c29372d3ee056eb0dc715688a410",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "15.1.0"
+      "version": "15.2.0"
     },
     {
       "artifact": "libass",
@@ -230,7 +230,7 @@
     {
       "artifact": "unibreak",
       "group": "native",
-      "id": "native:unibreak:28a2756b864c343f438cd22537d49d394d4666a5",
+      "id": "native:unibreak:ff24f284a567a006c183b3507b6c650d6ec68b94",
       "kind": "native",
       "licenseIds": [
         "Zlib"
@@ -238,34 +238,34 @@
       "links": [
         {
           "label": "固定源码提交",
-          "url": "https://github.com/adah1972/libunibreak/tree/28a2756b864c343f438cd22537d49d394d4666a5"
+          "url": "https://github.com/adah1972/libunibreak/tree/ff24f284a567a006c183b3507b6c650d6ec68b94"
         }
       ],
       "modifications": [],
       "name": "libunibreak",
       "sourceArchive": {
-        "archive": "unibreak-28a2756b864c343f438cd22537d49d394d4666a5.tar.gz",
-        "commit": "28a2756b864c343f438cd22537d49d394d4666a5",
-        "sha256": "4d0714d29207bfcaabe2a9376f83330bfb477673ecfb53994e47bd6d07738581",
-        "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/28a2756b864c343f438cd22537d49d394d4666a5"
+        "archive": "unibreak-ff24f284a567a006c183b3507b6c650d6ec68b94.tar.gz",
+        "commit": "ff24f284a567a006c183b3507b6c650d6ec68b94",
+        "sha256": "af0578a41869495401fa65d7071216af969cc40005f8c599ef97ed8c9828b578",
+        "url": "https://codeload.github.com/adah1972/libunibreak/tar.gz/ff24f284a567a006c183b3507b6c650d6ec68b94"
       },
       "texts": [
         {
           "kind": "license",
           "path": "texts/0c57e2ec42ece17791a75d2f9b2f8e0663181be008667a507f765b3ef22522db.txt",
           "sha256": "0c57e2ec42ece17791a75d2f9b2f8e0663181be008667a507f765b3ef22522db",
-          "source": "https://github.com/adah1972/libunibreak/blob/28a2756b864c343f438cd22537d49d394d4666a5/LICENCE",
+          "source": "https://github.com/adah1972/libunibreak/blob/ff24f284a567a006c183b3507b6c650d6ec68b94/LICENCE",
           "title": "LICENCE"
         },
         {
           "kind": "notice",
           "path": "texts/93c1562cf2e67eb63709a5ab773e1a1d1c8c123e602f600aa41647f45a12c4e4.txt",
           "sha256": "93c1562cf2e67eb63709a5ab773e1a1d1c8c123e602f600aa41647f45a12c4e4",
-          "source": "https://github.com/adah1972/libunibreak/tree/28a2756b864c343f438cd22537d49d394d4666a5",
+          "source": "https://github.com/adah1972/libunibreak/tree/ff24f284a567a006c183b3507b6c650d6ec68b94",
           "title": "实编译输入原始版权声明"
         }
       ],
-      "version": "libunibreak_8_0"
+      "version": "libunibreak_8_0_1"
     },
     {
       "artifact": "pathfin-ass-overlay",
