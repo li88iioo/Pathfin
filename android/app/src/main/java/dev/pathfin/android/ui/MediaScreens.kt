@@ -84,6 +84,7 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
     onPlay: ((MediaItem) -> Unit)? = null, preparingIds: Set<String> = emptySet(), chrome: @Composable (Boolean) -> Unit = {}) {
     val bottomInset = LocalNavigationBottomInset.current
     val topInset = LocalPageTopInset.current
+    val safeContent = Modifier.windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal))
     val ambient = remember(home) { homeAmbientEntries(home) }
     val showAmbient = ambient.isNotEmpty() || homeAmbientPending(home)
     val list = rememberLazyListState()
@@ -96,8 +97,7 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
     val hasContent = ambient.isNotEmpty() || home.libraries.isNotEmpty() || home.recent.isNotEmpty()
     RefreshFailureNotice(home.error?.takeIf { hasContent }, settled = !home.loading, retry = retry)
     HomePageLayout(covered = covered, chrome = chrome) {
-        RefreshablePage(home.loading, retry, Modifier.fillMaxSize()
-            .windowInsetsPadding(AppSafeDrawingInsets.only(WindowInsetsSides.Horizontal)).topBarBlurSource(),
+        RefreshablePage(home.loading, retry, Modifier.fillMaxSize().topBarBlurSource(),
             refreshOnEntry = home.loaded || home.error != null) {
             LazyColumn(
                 Modifier.fillMaxSize().testTag("home-list"),
@@ -109,7 +109,7 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
                     HomeAmbient(ambient, session, api, topInset, preparingIds, onOpen, onPlay)
                 }
                 item(key = "home-libraries") {
-                    Box(Modifier.fillMaxWidth().height(40.dp).testTag("home-libraries-content"), contentAlignment = Alignment.Center) {
+                    Box(safeContent.fillMaxWidth().height(40.dp).testTag("home-libraries-content"), contentAlignment = Alignment.Center) {
                         if (home.libraries.isNotEmpty()) {
                             LazyRow(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(home.libraries, key = { it.id }) { library -> LibraryPill(library) { onOpen(library) } }
@@ -126,15 +126,15 @@ internal fun HomeScreen(home: HomeState, session: Session, api: JellyfinApi, onO
                             loading = !home.libraryItems.containsKey(library.id),
                             keepEmptySpace = true, leading = { LatestArrivalIcon(libraryTypeIcon(library)) },
                             leadWide = library.collectionType.equals("movies", ignoreCase = true),
-                            modifier = Modifier.testTag("library-shelf/${library.id}"),
+                            modifier = safeContent.testTag("library-shelf/${library.id}"),
                         )
                     }
                 }
                 if (home.recent.isNotEmpty() && home.libraries.isEmpty()) item(key = "home-recent") {
-                    PosterShelf(tr("最近入库"), home.recent, session, api, onOpen, compactHeading = true)
+                    PosterShelf(tr("最近入库"), home.recent, session, api, onOpen, modifier = safeContent, compactHeading = true)
                 }
                 home.error?.takeUnless { hasContent }?.let { error ->
-                    item(key = "home-error") { ErrorPanel(error, modifier = Modifier.padding(horizontal = 16.dp), retry = retry) }
+                    item(key = "home-error") { ErrorPanel(error, modifier = safeContent.padding(horizontal = 16.dp), retry = retry) }
                 }
             }
         }

@@ -20,7 +20,9 @@ import kotlin.math.roundToInt
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -29,6 +31,7 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -119,6 +122,57 @@ class ImmersiveLayoutUiTest {
         // 用真实触摸打开末项操作，避免只验证被导航遮挡的语义节点仍然存在。
         compose.onNodeWithContentDescription("服务器操作 ${profiles.last().displayName}").performVerificationClick(compose)
         compose.onNodeWithText("显示名称").assertVerificationDisplayed(compose)
+    }
+
+    @Test @SdkSuppress(minSdkVersion = 30)
+    fun homeBackdropFillsTheWindowWithEitherSideCutout() {
+        showApp(homeApp())
+        val root = compose.onNodeWithTag("browser-back-motion")
+        val avatar = compose.onNodeWithContentDescription("切换服务器")
+        val more = compose.onNodeWithTag("home-more")
+        val play = compose.onNodeWithTag("home-ambient-play")
+        val list = compose.onNodeWithTag("home-list")
+        VerificationDisplay.awaitWindowReady(compose, "home-side-cutout", root, avatar, more, play)
+        val view = root.readVerificationNode(compose) { checkNotNull(it.root as? ViewRootForTest).view }
+        val original = compose.runOnIdle { checkNotNull(ViewCompat.getRootWindowInsets(view)) }
+        val cutoutType = WindowInsetsCompat.Type.displayCutout()
+        val actualCutout = original.getInsets(cutoutType)
+        val cutoutWidth = (56 * compose.density.density).roundToInt()
+        val cutouts = if (actualCutout.left > 0 || actualCutout.right > 0) listOf(actualCutout)
+            else listOf(Insets.of(cutoutWidth, actualCutout.top, 0, actualCutout.bottom),
+                Insets.of(0, actualCutout.top, cutoutWidth, actualCutout.bottom))
+        try {
+            cutouts.forEach { cutout ->
+                if (cutout != actualCutout) compose.runOnIdle {
+                    val injected = WindowInsetsCompat.Builder(original)
+                        .setInsets(cutoutType, cutout)
+                        .setInsetsIgnoringVisibility(cutoutType, cutout)
+                        .setVisible(cutoutType, true)
+                        .build()
+                    ViewCompat.dispatchApplyWindowInsets(view, injected)
+                }
+                val window = bounds("browser-back-motion")
+                val ambient = bounds("home-ambient")
+                assertEquals("左侧缺口 ${cutout.left}px 时，背景应画到窗口左缘", window.left, ambient.left, .5f)
+                assertEquals("右侧缺口 ${cutout.right}px 时，背景应画到窗口右缘", window.right, ambient.right, .5f)
+                val controls = listOf(avatar, play, more).map { it.readVerificationNode(compose) { node -> node.boundsInRoot } }
+                val pixels = root.captureToImage().toPixelMap()
+                val y = ((controls.first().bottom - window.top) + 16 * compose.density.density).roundToInt()
+                val x = if (cutout.left > 0) cutout.left / 2 else pixels.width - (cutout.right + 1) / 2
+                assertTrue("缺口所在的屏幕边缘应绘制深色氛围背景：cutout=$cutout color=${pixels[x, y]}",
+                    pixels[x, y].green < .5f)
+                list.performScrollToKey("home-libraries")
+                val libraryRow = bounds("home-libraries-content")
+                val shelf = bounds("library-shelf/home-return-library-0")
+                (controls + listOf(libraryRow, shelf)).forEach { content ->
+                    assertTrue("首页内容应避开缺口：cutout=$cutout content=$content window=$window",
+                        content.left >= window.left + cutout.left && content.right <= window.right - cutout.right)
+                }
+                list.performScrollToIndex(0)
+            }
+        } finally {
+            compose.runOnIdle { ViewCompat.dispatchApplyWindowInsets(view, original) }
+        }
     }
 
     @Test @SdkSuppress(minSdkVersion = 31)
