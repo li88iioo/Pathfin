@@ -52,10 +52,11 @@ jobs:
         run: |
           python3 android/tools/extract_release_notes.py CHANGELOG.md "$VERSION" --output "$RUNNER_TEMP/notes.md"
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: '17'
+          problem-matcher: true
 
       - name: Install native build tools
         run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends autoconf automake libtool make pkg-config
@@ -67,10 +68,10 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-37.0' "build-tools;$BUILD_TOOLS" 'ndk;30.0.16248370' 'cmake;3.22.1'
+          sdkmanager 'platforms;android-37.0' 'platforms;android-37.2' "build-tools;$BUILD_TOOLS" 'ndk;30.0.16248370' 'cmake;3.22.1'
 
       # 上游源码压缩包由构建脚本按锁定的字节数与 SHA-256 校验，缓存只省下载时间。
-      - uses: actions/cache@v4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .superpowers/tmp/ffmpeg-native/downloads

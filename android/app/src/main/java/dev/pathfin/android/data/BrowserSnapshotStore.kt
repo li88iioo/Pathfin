@@ -46,7 +46,7 @@ internal class BrowserSnapshotStore(private val directory: File) {
 
     /** 主动刷新同时失效同父库下的字母、筛选及入口别名，保留其他会话与父库。 */
     fun invalidate(session: Session, scope: ProfileHomeKey, parentId: String?) = synchronized(SnapshotFiles.lock) {
-        if (scope != ProfileHomeKey.of(scope.profileId, session)) return
+        if (scope != ProfileHomeKey.of(scope.profileId, session)) return@synchronized
         val prefix = profileSessionPrefix(scope.profileId, session)
         directory.listFiles()?.filter { it.extension == "json" && it.name.startsWith(prefix) }?.forEach { file ->
             val entry = read(file) ?: return@forEach
