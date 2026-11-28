@@ -4,6 +4,7 @@
 #include <android/bitmap.h>
 #include <ass.h>
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
@@ -92,7 +93,7 @@ Java_dev_pathfin_ass_AssNative_create(JNIEnv *env, jobject, jstring defaultFont,
     applyFonts(engine);
     ass_set_hinting(engine->renderer, ASS_HINTING_NONE);
     ass_set_shaper(engine->renderer, ASS_SHAPING_COMPLEX);
-    ass_set_use_margins(engine->renderer, 0);
+    ass_set_use_margins(engine->renderer, 1);
     ass_set_cache_limits(engine->renderer, 1000, 24);
     return reinterpret_cast<jlong>(engine);
 }
@@ -173,24 +174,43 @@ Java_dev_pathfin_ass_AssNative_processChunk(JNIEnv *env, jobject, jlong trackHan
 
 extern "C" JNIEXPORT jint JNICALL
 Java_dev_pathfin_ass_AssNative_render(JNIEnv *env, jobject, jlong handle, jlong trackHandle, jlong time,
-                                   jint width, jint height, jint storageWidth, jint storageHeight) {
+                                   jint width, jint height, jint storageWidth, jint storageHeight,
+                                   jint topMargin, jint bottomMargin, jint leftMargin, jint rightMargin, jintArray outputSize) {
     auto *engine = ptr<Engine>(handle);
     auto *track = ptr<ASS_Track>(trackHandle);
     if (!engine || !track || width <= 0 || height <= 0 ||
         static_cast<int64_t>(width) * height > 2'100'000 || width > 4096 || height > 4096) {
         fail(env, "Invalid ASS frame size"); return 0;
     }
+    // LayoutRes overrides libass's pixel aspect setting. Render in its square-pixel plane
+    // so anamorphic correction cannot move ordinary lines around a cropped-away origin.
+    // Canvas maps the resulting bitmap back to the visible display rectangle.
+    if ((leftMargin || rightMargin || topMargin || bottomMargin) && track->LayoutResX > 0 && track->LayoutResY > 0) {
+        const double videoWidth = static_cast<double>(width) - leftMargin - rightMargin;
+        const double videoHeight = static_cast<double>(height) - topMargin - bottomMargin;
+        const double ratio = (track->LayoutResX * videoHeight) / (track->LayoutResY * videoWidth);
+        auto shrink = [](jint &extent, jint &start, jint &end, double scale) {
+            extent = std::max(1L, std::lround(extent * scale));
+            start = std::lround(start * scale);
+            end = std::lround(end * scale);
+        };
+        if (ratio < 1.0) shrink(width, leftMargin, rightMargin, ratio);
+        else if (ratio > 1.0) shrink(height, topMargin, bottomMargin, 1.0 / ratio);
+    }
     bool force = engine->changed || engine->lastTrack != track || engine->width != width || engine->height != height;
     ass_set_frame_size(engine->renderer, width, height);
+    // Negative margins locate the cropped video. libass keeps dialogue in frame and signs on the video.
+    ass_set_margins(engine->renderer, topMargin, bottomMargin, leftMargin, rightMargin);
     ass_set_storage_size(engine->renderer, std::max(storageWidth, 1), std::max(storageHeight, 1));
     ass_set_pixel_aspect(engine->renderer, 1.0);
     int changed = 0;
     engine->images = ass_render_frame(engine->renderer, track, std::max<jlong>(time, 0), &changed);
     engine->lastTrack = track; engine->width = width; engine->height = height; engine->changed = false;
     if (!force && !changed) return 0;
-    int count = 0;
-    for (auto *image = engine->images; image; image = image->next) ++count;
-    return count == 0 ? -1 : count;
+    if (!engine->images) return -1;
+    const jint dimensions[] = {width, height};
+    env->SetIntArrayRegion(outputSize, 0, 2, dimensions);
+    return 1;
 }
 
 extern "C" JNIEXPORT void JNICALL

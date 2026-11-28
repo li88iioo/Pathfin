@@ -1,11 +1,11 @@
 {
   "archive": "pathfin-ass-corresponding-source.tar",
-  "bytes": 47278080,
+  "bytes": 47288320,
   "lockedUpstreamArchives": 5,
-  "pairedNativeBuildSha256": "4670c6e81b5223f43b3a5c663cebe3991818e645f701409a8c1eda8fb194b9a8",
-  "pairedSourceLockSha256": "947e6cc25edc24ace182cf4dc8bcd580c88db8573434658130aaf5382e796645",
+  "pairedNativeBuildSha256": "15e3139775ababfed796f4de00ad57b0ba26e645b8d899e7a8c6c0b8a98ffb6b",
+  "pairedSourceLockSha256": "32a889dd04caeccf55ada5ceb8954ae771903d5c8a8b3aa529fa34295760dcdc",
   "releaseRequirement": "Distribute this matching archive and SHA-256 alongside the APK containing the paired native libraries.",
   "schemaVersion": 1,
-  "sha256": "fee20086a59043e86bb4b339f92a5c4d33171d3a5b3e5fad7312a9596e7239f2",
-  "sourceInventorySha256": "4246d49697393fa11963cec5214d0254aa8c5337bdc92e270235265062e0b418"
+  "sha256": "57c6e8bfb3a634aeba1d8349755d5e995e7d7589fa6aff1b9e016a1fb2b1f0d3",
+  "sourceInventorySha256": "543b103f2175449fe9d4a9b3ab0f301016961c3aa903c1ecbe18538d479d6f39"
 }

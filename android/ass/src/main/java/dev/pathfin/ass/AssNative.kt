@@ -13,8 +13,9 @@ internal object AssNative {
     external fun freeTrack(engine: Long, track: Long)
     external fun processData(engine: Long, track: Long, bytes: ByteArray)
     external fun processChunk(track: Long, bytes: ByteArray, startMs: Long, durationMs: Long)
-    /** 0 = unchanged, -1 = changed to no image, positive = actual image count. */
+    /** 0 = unchanged, -1 = cleared, 1 = new bitmap of the dimensions written to outputSize. */
     external fun render(engine: Long, track: Long, timeMs: Long, width: Int, height: Int,
-                        storageWidth: Int, storageHeight: Int): Int
+                        storageWidth: Int, storageHeight: Int, topMargin: Int, bottomMargin: Int,
+                        leftMargin: Int, rightMargin: Int, outputSize: IntArray): Int
     external fun copyFrame(engine: Long, bitmap: Bitmap)
 }

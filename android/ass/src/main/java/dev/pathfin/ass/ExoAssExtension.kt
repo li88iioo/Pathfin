@@ -160,13 +160,7 @@ class ExoAssExtension(context: Context, onStatus: (String?) -> Unit = {}) : Auto
         val view = attached ?: return
         val canvas = overlay ?: return
         val size = player?.videoSize ?: VideoSize.UNKNOWN
-        val rect = canvas.videoRect(view, size)
-        // libass renders in the same untransformed plane as the physical video buffer;
-        // Canvas applies the display transform once, including intentional FILL stretching.
-        val surface = view.videoSurfaceView
-        val width = surface?.width?.takeIf { it > 0 } ?: rect.width().toInt()
-        val height = surface?.height?.takeIf { it > 0 } ?: rect.height().toInt()
-        if (width > 0 && height > 0) controller.viewport(width, height, size.width, size.height)
+        canvas.viewport(view, size)?.let(controller::viewport)
     }
 
     override fun close() {

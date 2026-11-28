@@ -7,8 +7,8 @@
   "libraries": [
     {
       "file": "libpathfin_ass_jni.so",
-      "bytes": 2089496,
-      "sha256": "997595e50da1b8c7ac9c965ecace4e773d1c30c5a880f448125efef0d60d18d2",
+      "bytes": 2089864,
+      "sha256": "abc6ae9d832a022947533ca8294c7f4d7f293c4ded92d8a5d55c967326d943ab",
       "loadAlignments": [
         16384,
         16384,
@@ -40,22 +40,22 @@
   ],
   "sourceInputs": {
     "CMakeLists.txt": "b4b24b4ec45e50955d2938e8032a85b19aecc08bece46deb6b80df790ab2d15b",
-    "sources.lock.json": "947e6cc25edc24ace182cf4dc8bcd580c88db8573434658130aaf5382e796645",
+    "sources.lock.json": "32a889dd04caeccf55ada5ceb8954ae771903d5c8a8b3aa529fa34295760dcdc",
     "build_native.py": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24",
     "build.gradle.kts": "734348472cd587150520be95ca93cebab78fec2e10a5bfff5ee8c809d5fe3a2e",
     "requirements-build.txt": "746ea600cc5e102de3f0bce7ab846e08e0963557ae451e9589db03b956f9adfa",
     "vendor/libass/ass_types.h": "b3ac4ad4d655f4d90e5e8d05cc2868ce17e5ff89ef1fe76cabcc8f3093e6134b",
     "vendor/libass/ass.h": "04582aa925d4ed2d1206f21915d382584e8b49c50a6b88419d4112f4f88d24da",
-    "src/main/cpp/ass_jni.cpp": "e761cb282048305b1649aa765efcd15e34d91c5116e093a86210d1d6b668654b",
-    "src/main/java/dev/pathfin/ass/AssOverlayView.kt": "013bea46f3844dce511fefc095fd7978237107de9cfc9eb94e6b2fc7184cb7aa",
+    "src/main/cpp/ass_jni.cpp": "2a53db8e0899b1b9755cd7951c475b1457ea40b05a31ff6b6b4fa50b15abc531",
+    "src/main/java/dev/pathfin/ass/AssOverlayView.kt": "8bee6c67bd314dd5683f0853676dce708deb030af9130edd3f7a3b5221eaa92f",
     "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt": "3e84fb4dee58389d3220e8eaa0cb818548980ccfd018062b136d241d26258f23",
     "src/main/java/dev/pathfin/ass/AssSubtitleDataSource.kt": "b803c18c69b4ff30fe84d024ce8dce67815211493695ff49f65ffacf9caf32d5",
-    "src/main/java/dev/pathfin/ass/AssController.kt": "a71bbbd0dc8a86426dd3be01946579655b4ca05cda26e1ee76e165c84ece7a9d",
+    "src/main/java/dev/pathfin/ass/AssController.kt": "04ea5c92ce5d1df6c31891b848b83704b38b0a8706e4060ff85d6a11415621ae",
     "src/main/java/dev/pathfin/ass/SupExtractor.kt": "853ceaf6761512c424115bd96149ec8beb1073cec799ddbb974a141278467b43",
-    "src/main/java/dev/pathfin/ass/AssNative.kt": "d9b1892f49ca748ae1770a895c80b53966ae7cad98d1911493823c09a1cb2029",
+    "src/main/java/dev/pathfin/ass/AssNative.kt": "842652ca082f65437563bb2b846afd121d9c45cb831d39a728d01e2dfd899007",
     "src/main/java/dev/pathfin/ass/AssMediaSource.kt": "1408a1cf0740b1697e79d0b30bef4f7f614eefc24a49e298a3f0bc0f2452b088",
     "src/main/java/dev/pathfin/ass/AssPacket.kt": "c14f33d2dd9750ef1cf5c7bc382a3eba8df58fb93212fba4b5d29349a5eb73f8",
-    "src/main/java/dev/pathfin/ass/ExoAssExtension.kt": "7c8243a0f690cc9ddfde33b9415d1f52378dba8a2bbf0240980c569d587f37f8",
+    "src/main/java/dev/pathfin/ass/ExoAssExtension.kt": "d36beeaa5ca66ed0f0fa137bae4b18cde54130a2dbe0d56d4709f567c8b78572",
     "src/test/java/dev/pathfin/ass/AssPacketTest.kt": "f434aa06cc4d114a79106cebb4fadc562c8c139771aa6bb252032f8e6364c28d"
   },
   "staticArchives": {
@@ -67,5 +67,5 @@
     "libunibreak.a": "9c082ced101dd149bbead84f55875d471b66b2b911a5eb301c22b5f4f6b95959"
   },
   "recipeSha256": "9129c0cebe7cb9406b2ae3fe2f37f0bba2088608e30df9be82c66958bf8fae24",
-  "sourceLockSha256": "947e6cc25edc24ace182cf4dc8bcd580c88db8573434658130aaf5382e796645"
+  "sourceLockSha256": "32a889dd04caeccf55ada5ceb8954ae771903d5c8a8b3aa529fa34295760dcdc"
 }

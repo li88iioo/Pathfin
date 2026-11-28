@@ -8,7 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.C
@@ -20,11 +23,12 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.pathfin.android.playback.PlayerFrameCapture
 import dev.pathfin.android.playback.SubtitleSeekPrerollExtractorsFactory
+import dev.pathfin.android.ui.GesturePlayerView
+import dev.pathfin.android.ui.player.PlayerResizeMode
 import dev.pathfin.ass.ExoAssExtension
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -46,7 +50,7 @@ import org.junit.runner.RunWith
 @androidx.annotation.OptIn(UnstableApi::class)
 class ExoAssExtensionFlowTest {
     @get:Rule val compose = createVerificationComposeRule<ComponentActivity>()
-    private var view: PlayerView? = null
+    private var view: GesturePlayerView? = null
 
     @Test fun embeddedAssMovesAtActualSeekPositionAndUsesFontAttachment() =
         withPlayer("embedded-font.mkv") { player, extension, _ ->
@@ -133,6 +137,55 @@ class ExoAssExtensionFlowTest {
             assertFalse(extension.failed)
             assertNull(main { player.playerError })
         }
+
+    @Test fun croppedVideoKeepsDialogueReadableAndPositionedSignsOnThePicture() =
+        assertCroppedDialogue("crop-dialogue.ass", 2.7f, 1f)
+
+    @Test fun sideCropKeepsDialogueCenteredWithAnExplicitLayoutResolution() =
+        assertCroppedDialogue("crop-layout-res.ass", 1f)
+
+    private fun assertCroppedDialogue(subtitle: String, vararg ratios: Float) {
+        val aspect = mutableFloatStateOf(ratios.first())
+        withPlayer("plain.mp4", external = subtitle, viewport = { Modifier.aspectRatio(aspect.floatValue) }) { player, extension, _ ->
+            awaitNative(player, extension)
+            val position = main { player.pause(); player.currentPosition }
+            // A wide viewport crops the top/bottom. A square one crops the sides, even if the
+            // physical phone stays portrait, so both geometries can be checked in one paused clip.
+            for (ratio in ratios) {
+                main { aspect.floatValue = ratio }
+                compose.waitUntil(WAIT) { main {
+                    val target = checkNotNull(view)
+                    abs(target.width.toFloat() / target.height - ratio) < .02f && extension.diagnostics.hasPresentedCurrentFrame
+                } }
+                val fit = overlayPixels()
+                val fitGlyphs = dialogueGlyphs(fit)
+                assertEquals("Fixture must render all six words before cropping", 24, fitGlyphs.count)
+                val (fitX, fitY) = signCenter(fit)
+
+                main { checkNotNull(view).presentationMode = PlayerResizeMode.ZOOM }
+                compose.waitUntil(WAIT) { extension.diagnostics.hasPresentedCurrentFrame }
+                val cropped = overlayPixels()
+                val visible = dialogueGlyphs(cropped)
+                assertEquals("Crop at aspect $ratio must retain every dialogue glyph", fitGlyphs.count, visible.count)
+                assertEquals("Dialogue should stay horizontally centered after cropping", fitGlyphs.centerX, visible.centerX, cropped.width * .01)
+                assertTrue("Dialogue should sit just above the visible bottom at aspect $ratio: ${visible.bottom}",
+                    visible.bottom in (cropped.height * .85f).toInt() until cropped.height - 1)
+                val (zoomX, zoomY) = signCenter(cropped)
+                val scale = maxOf(fit.width / fit.videoWidth, fit.height / fit.videoHeight)
+                assertEquals("Explicit ASS sign must follow the video crop horizontally", fit.width / 2.0 + (fitX - fit.width / 2.0) * scale, zoomX, 3.0)
+                assertEquals("Explicit ASS sign must follow the video crop vertically", fit.height / 2.0 + (fitY - fit.height / 2.0) * scale, zoomY, 3.0)
+
+                main { checkNotNull(view).presentationMode = PlayerResizeMode.FIT }
+                compose.waitUntil(WAIT) { extension.diagnostics.hasPresentedCurrentFrame }
+                val restored = overlayPixels()
+                assertEquals("Returning to FIT must restore the original dialogue", fitGlyphs, dialogueGlyphs(restored))
+                val (restoredX, restoredY) = signCenter(restored)
+                assertEquals("Returning to FIT must restore the original sign", fitX, restoredX, 1.0)
+                assertEquals("Returning to FIT must restore the original sign", fitY, restoredY, 1.0)
+            }
+            main { assertFalse(player.playWhenReady); assertTrue(abs(player.currentPosition - position) < 200) }
+        }
+    }
 
     @Test fun blockedMainRetainsOnlyOnePendingNativeFrameAndOneDeliveryTask() =
         withPlayer("embedded-font.mkv") { player, extension, _ ->
@@ -232,6 +285,7 @@ class ExoAssExtensionFlowTest {
         }
 
     private fun withPlayer(file: String, external: String? = null, clipStartMs: Long = 0, disabledText: Boolean = false,
+                           viewport: () -> Modifier = { Modifier.fillMaxSize() },
                            block: (ExoPlayer, ExoAssExtension, FixtureSource) -> Unit) {
         assumeTrue("Native tests require actual ARM64 JNI, never count SSA fallback as success", ExoAssExtension.supportedOnDevice())
         val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -250,10 +304,14 @@ class ExoAssExtensionFlowTest {
         }
         try {
             compose.setContent {
-                AndroidView(factory = { PlayerView(it).also { playerView ->
-                    playerView.useController = false; playerView.player = player; view = playerView
-                    extension.attach(playerView)
-                } }, modifier = Modifier.fillMaxSize())
+                Box(Modifier.fillMaxSize()) {
+                    AndroidView(factory = { GesturePlayerView(it).also { playerView ->
+                        playerView.useController = false
+                        playerView.bindPlayer(player)
+                        playerView.bindAss(extension) { error("Failed to attach the real ASS overlay") }
+                        view = playerView
+                    } }, modifier = viewport())
+                }
             }
             compose.waitUntil(WAIT) { main { view?.width?.let { it > 0 } == true } }
             val item = MediaItem.Builder().setUri("https://pathfin-fixture.invalid/$file").apply {
@@ -267,7 +325,14 @@ class ExoAssExtensionFlowTest {
             main { player.setMediaItem(item); player.prepare(); player.play() }
             block(player, extension, source)
         } finally {
-            main { view?.let(extension::detach); extension.close(); extension.close(); player.release(); view = null }
+            main {
+                view?.bindAss(null)
+                view?.releasePlayerOutput()
+                extension.close()
+                extension.close()
+                player.release()
+                view = null
+            }
         }
     }
 
@@ -305,6 +370,51 @@ class ExoAssExtensionFlowTest {
             (surfaceOrigin[1] - origin[1]).toFloat(), surface.width.toFloat(), surface.height.toFloat())
         bitmap.recycle(); result
     }
+
+    private data class DialogueGlyphs(val count: Int, val bottom: Int, val centerX: Double)
+
+    /** Each red H has a solid vertical stem and is separated from its neighboring glyphs. */
+    private fun dialogueGlyphs(image: OverlayPixels): DialogueGlyphs {
+        var count = 0
+        var bottom = -1
+        var left = image.width
+        var right = -1
+        var inLine = false
+        val columns = BooleanArray(image.width)
+        for (y in 0..image.height) {
+            var occupied = false
+            if (y < image.height) for (x in 0 until image.width) {
+                val pixel = image.pixels[y * image.width + x]
+                if (Color.alpha(pixel) > 180 && Color.red(pixel) > 180 && Color.green(pixel) < 90 && Color.blue(pixel) < 90) {
+                    occupied = true
+                    columns[x] = true
+                    left = minOf(left, x)
+                    right = maxOf(right, x)
+                }
+            }
+            if (occupied) bottom = y else if (inLine) {
+                count += columns.indices.count { columns[it] && (it == 0 || !columns[it - 1]) }
+                columns.fill(false)
+            }
+            inLine = occupied
+        }
+        return DialogueGlyphs(count, bottom, (left + right) / 2.0)
+    }
+
+    private fun signCenter(image: OverlayPixels): Pair<Double, Double> {
+        var x = 0L
+        var y = 0L
+        var count = 0
+        image.pixels.forEachIndexed { index, pixel ->
+            if (Color.alpha(pixel) > 180 && Color.red(pixel) < 90 && Color.green(pixel) > 180 && Color.blue(pixel) > 180) {
+                x += index % image.width
+                y += index / image.width
+                count++
+            }
+        }
+        assertTrue("The positioned cyan sign must actually be drawn", count > 20)
+        return x.toDouble() / count to y.toDouble() / count
+    }
     private fun yellowCentroid(image: OverlayPixels): Double {
         var sum = 0.0; var count = 0
         image.pixels.forEachIndexed { index, color ->
@@ -337,7 +447,10 @@ class ExoAssExtensionFlowTest {
         private val assets = InstrumentationRegistry.getInstrumentation().context.assets
         private val files = listOf("embedded-font.mkv", "plain.mp4", "animated-inline-font.ass", "cjk-fallback.ass").associateWith {
             assets.open("ass-extension/$it").use { input -> input.readBytes() }
-        }
+        } + mapOf(
+            "crop-dialogue.ass" to CropDialogue.toByteArray(),
+            "crop-layout-res.ass" to CropDialogue.replace("PlayResY: 360", "PlayResY: 360\nLayoutResX: 480\nLayoutResY: 360").toByteArray(),
+        )
         val subtitleOpens = AtomicInteger()
         override fun createDataSource(): DataSource = object : DataSource {
             private var uri: Uri? = null
@@ -361,5 +474,23 @@ class ExoAssExtensionFlowTest {
             override fun close() { input = null; uri = null }
         }
     }
-    companion object { private const val WAIT = 20_000L }
+    companion object {
+        private const val WAIT = 20_000L
+        private val CropDialogue = """
+            [Script Info]
+            ScriptType: v4.00+
+            PlayResX: 640
+            PlayResY: 360
+            ScaledBorderAndShadow: yes
+
+            [V4+ Styles]
+            Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+            Style: Default,Arial,34,&H000000FF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,1,0,2,12,12,8,1
+
+            [Events]
+            Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+            Dialogue: 0,0:00:00.50,0:00:20.00,Default,,0,0,0,,HHHH HHHH HHHH HHHH HHHH HHHH
+            Dialogue: 1,0:00:00.50,0:00:20.00,Default,,0,0,0,,{\an7\pos(224,132)\c&HFFFF00&\bord0\p1}m 0 0 l 22 0 22 22 0 22
+        """.trimIndent()
+    }
 }

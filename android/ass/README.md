@@ -19,7 +19,7 @@
 - 显式外部 SRT、VTT、ASS 在 DataSource.open 已知长度超过 8MiB 时、SubtitleExtractor 分配之前拒绝；未知长度读入最多 8MiB，另有 1 字节 EOF 探测。range 不能绕过文件上限。
 - MKV font 单个最大 8MiB、owner 合计 32MiB，文件名禁止路径/控制符，只接受 ttf/ttc/otf/otc；读取后留在内存，没有附件解压路径。全文件 ASS 内联 `[Fonts]` 由 libass 内存提供器处理。Android 回退字体仅在 worker 读固定只读系统字体目录。不会按 ASS 字体名、图片名或 URL 请求网络。
 - 仅一个 worker + 一个待提交最新 bitmap + 至多一个 Main 投递 runnable。渲染最多约 30fps，seek 等代次变化立即处理；每帧不超过 2,073,600 像素。未提交帧可 GC，已提交 bitmap 不提前 recycle。旧代次结果不能覆盖关闭字幕的 pending clear。
-- Canvas 用公开 View 矩阵把视频 Surface 映射到自身坐标，监听实际布局；显示比例改变时在 Main 调用 `updateViewport()`。libass 仍在未变换的物理 Surface 尺寸渲染，Canvas 只应用一次显示变换，FILL 的拉伸及 ZOOM 的裁切与视频一致。显示比例改变不 seek、不恢复暂停、不重建字幕轨。非 ASS 字幕继续 Media3 原解析。
+- Canvas 用公开 View 矩阵把视频 Surface 映射到自身坐标，监听实际布局；显示比例改变时在 Main 调用 `updateViewport()`。FILL 沿物理 Surface 渲染后拉伸。ZOOM 按画面可见区渲染，并以负边距将被裁掉的区域告知 libass。普通对白在可见区排版，显式定位的标注仍随原画裁切。显示比例改变不 seek、不恢复暂停、不重建字幕轨。非 ASS 字幕继续 Media3 原解析。
 - 关闭不等待 Main 上的 native/文件操作。worker 依次销毁 renderer、其拥有的 tracks、library；旧 owner 不操作新 owner 的画布。
 
 ### 外挂字幕媒体源

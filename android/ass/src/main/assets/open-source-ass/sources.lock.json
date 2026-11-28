@@ -59,11 +59,11 @@
     },
     {
       "path": "src/main/cpp/ass_jni.cpp",
-      "sha256": "e761cb282048305b1649aa765efcd15e34d91c5116e093a86210d1d6b668654b"
+      "sha256": "2a53db8e0899b1b9755cd7951c475b1457ea40b05a31ff6b6b4fa50b15abc531"
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssController.kt",
-      "sha256": "a71bbbd0dc8a86426dd3be01946579655b4ca05cda26e1ee76e165c84ece7a9d"
+      "sha256": "04ea5c92ce5d1df6c31891b848b83704b38b0a8706e4060ff85d6a11415621ae"
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssMediaSource.kt",
@@ -71,11 +71,11 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssNative.kt",
-      "sha256": "d9b1892f49ca748ae1770a895c80b53966ae7cad98d1911493823c09a1cb2029"
+      "sha256": "842652ca082f65437563bb2b846afd121d9c45cb831d39a728d01e2dfd899007"
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssOverlayView.kt",
-      "sha256": "013bea46f3844dce511fefc095fd7978237107de9cfc9eb94e6b2fc7184cb7aa"
+      "sha256": "8bee6c67bd314dd5683f0853676dce708deb030af9130edd3f7a3b5221eaa92f"
     },
     {
       "path": "src/main/java/dev/pathfin/ass/AssPacket.kt",
@@ -87,7 +87,7 @@
     },
     {
       "path": "src/main/java/dev/pathfin/ass/ExoAssExtension.kt",
-      "sha256": "7c8243a0f690cc9ddfde33b9415d1f52378dba8a2bbf0240980c569d587f37f8"
+      "sha256": "d36beeaa5ca66ed0f0fa137bae4b18cde54130a2dbe0d56d4709f567c8b78572"
     },
     {
       "path": "src/main/java/dev/pathfin/ass/SubtitleMediaSourceFactory.kt",

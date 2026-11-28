@@ -18,8 +18,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.min
-import kotlin.math.sqrt
 
 /** Safe, URL-free diagnostics. A rendered frame means libass produced actual ASS_Image pixels. */
 data class ExoAssDiagnostics(
@@ -49,7 +47,6 @@ internal class AssController(
         val pending = ArrayList<AssPacket>()
         val readOrders = HashSet<Long>()
     }
-    internal data class Viewport(val width: Int, val height: Int, val storageWidth: Int, val storageHeight: Int)
 
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor { task ->
@@ -78,12 +75,13 @@ internal class AssController(
     private val inputError = AtomicReference<String?>()
     private val pendingFonts = LinkedHashMap<String, ByteArray>() // worker only
     private var engine = 0L // worker only
+    private val outputSize = IntArray(2) // worker only, populated on changed, non-empty frames
     private var lastBitmap: Bitmap? = null // worker only; safe immutable after native composition
     private var lastRenderNanos = 0L
     private var lastRenderEpoch = -1L
     @Volatile private var selectedFormat: Format? = null
     @Volatile private var selectedTrack: Track? = null
-    @Volatile private var viewport: Viewport? = null
+    @Volatile private var viewport: AssViewport? = null
     @Volatile private var mediaTimeMs = 0L
     @Volatile private var active = true
     private var lastStatus: String? = null // main only
@@ -181,11 +179,7 @@ internal class AssController(
         statusForSelection()
     }
 
-    fun viewport(width: Int, height: Int, storageWidth: Int, storageHeight: Int) {
-        if (width <= 0 || height <= 0) return
-        val scale = min(1.0, min(2048.0 / maxOf(width, height), sqrt(2_073_600.0 / (width.toDouble() * height))))
-        val next = Viewport((width * scale).toInt().coerceAtLeast(1),
-            (height * scale).toInt().coerceAtLeast(1), storageWidth.coerceAtLeast(1), storageHeight.coerceAtLeast(1))
+    fun viewport(next: AssViewport) {
         if (next != viewport) { viewport = next; epoch.incrementAndGet() }
         requestFrame(mediaTimeMs)
     }
@@ -212,8 +206,8 @@ internal class AssController(
             try {
                 dirty.set(false)
                 val track = selectedTrack ?: return@submit
-                val size = viewport ?: return@submit
                 val generation = epoch.get()
+                val size = viewport ?: return@submit
                 val time = mediaTimeMs
                 if (!active || track.failed || failed) return@submit
                 prepareSelected(track)
@@ -225,10 +219,11 @@ internal class AssController(
                 val newGeneration = generation != lastRenderEpoch
                 lastRenderNanos = now
                 lastRenderEpoch = generation
-                val imageCount = AssNative.render(engine, track.handle, time, size.width, size.height,
-                    size.storageWidth, size.storageHeight)
-                if (imageCount != 0) {
-                    val bitmap = if (imageCount > 0) Bitmap.createBitmap(size.width, size.height,
+                val change = AssNative.render(engine, track.handle, time, size.width, size.height,
+                    size.storageWidth, size.storageHeight, size.topMargin, size.bottomMargin,
+                    size.leftMargin, size.rightMargin, outputSize)
+                if (change != 0) {
+                    val bitmap = if (change > 0) Bitmap.createBitmap(outputSize[0], outputSize[1],
                         Bitmap.Config.ARGB_8888).also { AssNative.copyFrame(engine, it) } else null
                     if (bitmap != null) { rendered.incrementAndGet(); lastTime.set(time) }
                     lastBitmap = bitmap

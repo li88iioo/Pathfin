@@ -310,6 +310,9 @@ class PlayerControlsFlowTest {
                 try {
                     for (mode in listOf("fit", "fill", "zoom")) {
                         chooseAspect(mode)
+                        compose.waitUntil(WAIT_MS) {
+                            main { active.playback.assExtensionFor(active.player)?.diagnostics?.hasPresentedCurrentFrame == true }
+                        }
                         hideControls()
                         val screen = aspectScreenshot("player-aspect-ass-$mode")
                         try { assertAssAspectPixels(mode, source, glyphMask, screen) } finally { screen.recycle() }
@@ -426,6 +429,8 @@ class PlayerControlsFlowTest {
         val viewport = screenViewport()
         val fit = expectedVideoRect(viewport, "fit")
         val target = expectedVideoRect(viewport, mode)
+        // The fixture is ordinary ASS dialogue. In ZOOM it retains its FIT size and follows the visible bottom.
+        val subtitle = if (mode == "zoom") RectF(fit.left, viewport.bottom - fit.height(), fit.right, viewport.bottom) else target
         var samples = 0
         var white = 0
         val pixels = IntArray(mask.width * mask.height)
@@ -443,11 +448,13 @@ class PlayerControlsFlowTest {
             val u = (viewport.left + x - fit.left) / fit.width()
             val v = (viewport.top + y - fit.top) / fit.height()
             if (u !in 0f..1f || v !in 0f..1f) continue
-            val background = source.getPixel((u * (source.width - 1)).toInt(), (v * (source.height - 1)).toInt())
-            if (minOf(Color.red(background), Color.green(background), Color.blue(background)) > 180) continue
-            val sx = target.left + target.width() * u
-            val sy = target.top + target.height() * v
+            val sx = subtitle.left + subtitle.width() * u
+            val sy = subtitle.top + subtitle.height() * v
             if (!viewport.contains(sx, sy) || sx < 3 || sy < 3 || sx >= screen.width - 3 || sy >= screen.height - 3) continue
+            val backgroundU = (sx - target.left) / target.width()
+            val backgroundV = (sy - target.top) / target.height()
+            val background = source.getPixel((backgroundU * (source.width - 1)).toInt(), (backgroundV * (source.height - 1)).toInt())
+            if (minOf(Color.red(background), Color.green(background), Color.blue(background)) > 180) continue
             samples++
             if ((-2..2).any { dx -> (-2..2).any { dy ->
                     val p = screen.getPixel(sx.toInt() + dx, sy.toInt() + dy)
@@ -455,7 +462,7 @@ class PlayerControlsFlowTest {
                 } }) white++
         }
         assertTrue("$mode 必须有真实ASS高对比字形可检查，samples=$samples", samples > 40)
-        assertTrue("$mode 屏幕字形必须跟随源视频同一矩形，不能留在旧位置：white=$white,samples=$samples", white * 100 >= samples * 85)
+        assertTrue("$mode 屏幕字形必须落在对应字幕区域：white=$white,samples=$samples", white * 100 >= samples * 85)
     }
 
     @Test fun largeTextKeepsControlsReachableInPortraitAndLandscape() {
