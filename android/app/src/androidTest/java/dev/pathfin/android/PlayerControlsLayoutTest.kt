@@ -672,7 +672,7 @@ class PlayerControlsLayoutTest {
                             onSeekTo = onSeekTo, onSpeedChange = onSpeed, onResizeModeChange = {}, onLock = {}, onShowQuality = onQuality,
                             onShowEpisodes = onEpisodes, onScreenshot = onScreenshot, onTrackSelection = { _, _, _, _ -> },
                             onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
-                            onSetSleepTimer = onSetSleepTimer, titleLogo = titleLogo)
+                            onSetSleepTimer = onSetSleepTimer, titleLogo = titleLogo, onReconnect = {})
                     }
                 }
             }

@@ -439,7 +439,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                         .build()
                 } + current.localSubtitles.map(LocalSubtitle::configuration))
             }.build()
-            exoPlayer.setMediaItem(mediaItem, request.startPositionMs.coerceAtLeast(0))
+            exoPlayer.setMediaItem(mediaItem, if (request.item.isLiveChannel) C.TIME_UNSET else request.startPositionMs.coerceAtLeast(0))
             exoPlayer.prepare()
             exoPlayer.playWhenReady = restored?.playing ?: true
             if (reloadSegments) loadMediaSegments(current)
@@ -651,7 +651,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                         val revision = current.manualTrackRevision
                         val tracks = serverTrackSelection(current, owner)
                         val info = api.playbackInfo(previous.session, previous.item.id, previous.source.id,
-                            TimeUnits.msToTicks(owner.currentPosition.coerceAtLeast(0)), previous.quality, target, tracks.first, tracks.second,
+                            if (previous.item.isLiveChannel) 0L else TimeUnits.msToTicks(owner.currentPosition.coerceAtLeast(0)),
+                            previous.quality, target, tracks.first, tracks.second,
                             videoPreflight = if (retainOriginalHttp || previous.item.isLiveChannel && current.tuning.preferOriginalLive)
                                 VideoPreflightPolicy.TRY_ORIGINAL_SOURCE else VideoPreflightPolicy.NEGOTIATE_UNSUPPORTED)
                         if (active !== current || player !== owner) return@launch
@@ -1118,6 +1119,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     exoPlayer.currentTracks.groups.none { it.type == C.TRACK_TYPE_VIDEO }))
                 acceptPlaybackSource(current)
             if (playbackState == Player.STATE_ENDED) {
+                if (current.request.item.isLiveChannel) {
+                    mutableState.update { it.copy(isPreparing = false, isBuffering = false, isPlaying = false,
+                        errorMessage = tr("直播信号已中断")) }
+                    return
+                }
                 completedPlayback = trackContinuityIdentity(current.request)?.let {
                     CompletedPlayback(it, current.manualTracks, current.request.preferredQuality)
                 }

@@ -1,10 +1,22 @@
 package dev.pathfin.android
 
 import android.content.Context
+import android.content.res.Configuration
+import android.os.SystemClock
+import android.view.InputDevice
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.ViewConfiguration
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.swipe
 import androidx.lifecycle.ViewModelProvider
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.common.util.UnstableApi
@@ -14,6 +26,7 @@ import dev.pathfin.android.data.AppPreferencesStore
 import dev.pathfin.android.data.SessionStore
 import dev.pathfin.android.domain.AppPreferences
 import dev.pathfin.android.domain.MediaItem
+import dev.pathfin.android.domain.PlayerOrientation
 import dev.pathfin.android.playback.PlaybackViewModel
 import dev.pathfin.android.ui.AppViewModel
 import dev.pathfin.android.ui.Route
@@ -338,10 +351,10 @@ class PendingPlaybackCancellationTest {
     }
 
     private fun fixture(blockDetail: Boolean = false, blockPlayback: Boolean = false, multipleSources: Boolean = false,
-        allowDeletes: Boolean = false): Fixture {
+        allowDeletes: Boolean = false, liveChannels: Boolean = false): Fixture {
         check(context.packageName == TARGET)
         val video = instrumentation.context.assets.open("ass-extension/plain.mp4").use { it.readBytes() }
-        return Fixture(video, blockDetail, blockPlayback, multipleSources, allowDeletes = allowDeletes)
+        return Fixture(video, blockDetail, blockPlayback, multipleSources, allowDeletes = allowDeletes, liveChannels = liveChannels)
     }
 
     private fun login(fixture: Fixture): AppViewModel {
@@ -417,6 +430,196 @@ class PendingPlaybackCancellationTest {
         store.clear()
     }
 
+    @Test fun liveSwitchesAndReconnectsInPlace() {
+        fixture(blockPlayback = true, liveChannels = true).use { fixture ->
+            val app = login(fixture)
+            val playback = main { ViewModelProvider(compose.activity)[PlaybackViewModel::class.java] }
+            fun preview(name: String) {
+                if (InstrumentationRegistry.getArguments().containsKey("pathfin.screenshotRun")) ExternalScreenshotCheckpoint.capture(name)
+            }
+            fun playingChannel(id: String): ExoPlayer {
+                await(fixture) {
+                    app.state.value.playbackError?.let { throw AssertionError("合成直播准备失败：$it") }
+                    playback.state.value.errorMessage?.let { throw AssertionError("合成直播播放失败：$it") }
+                    main { playback.currentRequest?.item?.id == id && playback.state.value.hasRenderedFrame &&
+                        playback.player?.isPlaying == true }
+                }
+                return main { checkNotNull(playback.player) }
+            }
+            main {
+                app.setPreferences(preferences().copy(liveTvEnabled = true, playerOrientation = PlayerOrientation.PORTRAIT))
+                app.selectTab(Route.LiveTv)
+            }
+            try {
+                await(fixture) { main { app.state.value.liveTv?.loaded == true } }
+                tap("live-tv-channel-$ONE")
+                val first = playingChannel(ONE)
+                checkLiveControls()
+                preview("live-controls")
+                val video = compose.onNodeWithTag("player-video")
+                video.performVerificationTouchInput(compose) { doubleClick(Offset(centerX, height * .36f)) }
+                await(fixture) { main { !first.playWhenReady } }
+                val pausedAt = main { first.currentPosition }
+                for (fraction in listOf(.23f, .77f)) {
+                    video.performVerificationTouchInput(compose) { doubleClick(Offset(width * fraction, height * .36f)) }
+                    main {
+                        assertFalse("左右双击不切换直播播放状态", first.playWhenReady)
+                        assertEquals("左右双击不应改变直播位置", pausedAt, first.currentPosition)
+                    }
+                }
+                video.performVerificationTouchInput(compose) {
+                    swipe(Offset(width * .25f, height * .36f), Offset(width * .75f, height * .36f), durationMillis = 360)
+                }
+                main { assertEquals("横滑不应改变直播位置", pausedAt, first.currentPosition) }
+                video.performVerificationTouchInput(compose) { doubleClick(Offset(centerX, height * .36f)) }
+                await(fixture) { main { first.isPlaying } }
+                holdVideoLeft()
+                assertCurrentChannel(ONE, landscape = false)
+                preview("live-channels-portrait")
+                main { assertTrue("打开列表时继续播放原台", first.isPlaying) }
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+                await(fixture) { !exists("player-live-channel-list") && main { playback.player === first } }
+
+                showLiveControls()
+                tap("player-orientation")
+                await(fixture) { main { compose.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE } }
+                showLiveControls()
+                tap("player-live-channels")
+                assertCurrentChannel(ONE, landscape = true)
+                preview("live-channels-landscape")
+                tap("player-live-channel-$TWO")
+                fixture.nextPlayback.awaitEntered()
+                val pending = pendingJob(app)
+                fixture.nextPlayback.expectCancellation.set(true)
+                main {
+                    assertEquals(TWO, app.state.value.pendingPlayback?.item?.id)
+                    assertSame("协商切台期间保留当前播放器", first, playback.player)
+                }
+                showLiveControls()
+                tap("player-live-channels")
+                tap("player-live-channel-$THREE")
+                val third = playingChannel(THREE)
+                fixture.nextPlayback.release()
+                fixture.nextPlayback.awaitResponseAttempt()
+                join(pending)
+                assertTrue(pending.isCancelled)
+                main { assertTrue(first.isReleased); assertSame(third, playback.player) }
+                assertEquals("被取代的频道不应读取实际媒体", 0, fixture.nextMediaRequests.get())
+
+                // 返回 503 时明确给出失败反馈，取消后继续使用第三台。
+                fixture.playbackStatus.set(503)
+                showLiveControls()
+                tap("player-live-channels")
+                assertCurrentChannel(THREE, landscape = true)
+                tap("player-live-channel-$TWO")
+                val retry = "playback-preparation-retry"
+                await(fixture) { exists(retry) }
+                VerificationDisplay.awaitWindowReady(compose, "live-switch-failed", compose.onNodeWithTag(retry))
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+                await(fixture) { !exists(retry) && app.state.value.pendingPlayback == null }
+                main { assertSame("换台失败不能替换原播放器", third, playback.player) }
+
+                showLiveControls()
+                val generation = playback.state.value.playerGeneration
+                val mediaRequests = fixture.serverMediaRequests.get()
+                tap("player-live-reconnect")
+                await(fixture) { playback.state.value.playerGeneration > generation }
+                val reconnected = playingChannel(THREE)
+                main { assertTrue(third.isReleased); assertNotSame(third, reconnected) }
+                assertTrue("重连须实际读取当前频道流", fixture.serverMediaRequests.get() > mediaRequests)
+                joinReports(playback)
+                assertEquals("切台只停止旧会话一次", 1, fixture.eventCount("stop", ONE))
+                assertEquals("两次未成功的换台都不能上报起播", 0, fixture.eventCount("start", TWO))
+                assertEquals("频道抽屉直接复用既有列表", 1, fixture.channelRequests.get())
+
+                // 真实读到文件末尾模拟上游关闭直播，播放器应留下重连与选台的入口。
+                main { reconnected.seekTo(reconnected.duration) }
+                await(fixture) { playback.state.value.errorMessage == "直播信号已中断" }
+                main { assertEquals(THREE, app.state.value.activePlayback?.item?.id) }
+                compose.onNodeWithTag("player-live-channels").assertExists()
+                val retryStream = compose.onNodeWithText("重试")
+                VerificationDisplay.awaitWindowReady(compose, "live-stream-ended", retryStream)
+                retryStream.performVerificationClick(compose)
+                val recovered = playingChannel(THREE)
+                main { assertNotSame(reconnected, recovered) }
+
+                VerificationDisplay.awaitWindowReady(compose, "live-player-return", video)
+                instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+                await(fixture) { app.state.value.activePlayback == null && exists("live-tv-screen") }
+                main {
+                    assertEquals(Route.LiveTv, app.state.value.route)
+                    assertEquals("切台后上次观看应指向新台", THREE, app.state.value.liveTv?.watchedId)
+                }
+            } finally {
+                fixture.nextPlayback.release()
+                main { playback.stop(); app.playerClosed(playback.lastPositionMs) }
+                joinReports(playback)
+            }
+        }
+    }
+
+    private fun checkLiveControls() {
+        showLiveControls()
+        compose.onNodeWithTag("player-live-channels").assertExists()
+        compose.onNodeWithTag("player-live-reconnect").assertExists()
+        for (tag in listOf("player-seek-back", "player-seek-forward", "player-seek-slider", "player-time"))
+            compose.onNodeWithTag(tag).assertDoesNotExist()
+    }
+
+    private fun showLiveControls() {
+        if (!exists("player-controls")) compose.onNodeWithTag("player-video").performVerificationTouchInput(compose) {
+            click(Offset(width * .72f, height * .36f))
+        }
+        compose.waitUntil(WAIT) { exists("player-live-channels") }
+    }
+
+    private fun holdVideoLeft() {
+        val video = compose.onNodeWithTag("player-video")
+        VerificationDisplay.awaitWindowReady(compose, "live-long-press", video)
+        val bounds = video.readVerificationNode(compose) { it.boundsInWindow }
+        val (x, y) = main {
+            val decor = compose.activity.window.decorView
+            val screen = IntArray(2).also(decor::getLocationOnScreen)
+            val window = IntArray(2).also(decor::getLocationInWindow)
+            (screen[0] - window[0] + bounds.left + bounds.width * .25f) to
+                (screen[1] - window[1] + bounds.top + bounds.height * .36f)
+        }
+        val downTime = SystemClock.uptimeMillis()
+        fun send(action: Int) {
+            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
+            try { event.source = InputDevice.SOURCE_TOUCHSCREEN; instrumentation.sendPointerSync(event) }
+            finally { event.recycle() }
+        }
+        send(MotionEvent.ACTION_DOWN)
+        try {
+            // GestureDetector 由 Android 主线程的真实时钟触发。
+            SystemClock.sleep(ViewConfiguration.getLongPressTimeout().toLong() + 120L)
+        } finally { send(MotionEvent.ACTION_UP) }
+    }
+
+    private fun assertCurrentChannel(id: String, landscape: Boolean) {
+        val tag = "player-live-channel-$id"
+        compose.waitUntil(WAIT) { exists(tag) }
+        val row = compose.onNodeWithTag(tag)
+        VerificationDisplay.awaitWindowReady(compose, "live-channel-picker", row)
+        row.assertVerificationDisplayed(compose).assertIsSelected()
+        val list = compose.onNodeWithTag("player-live-channel-list").readVerificationNode(compose) { it.boundsInWindow }
+        val video = compose.onNodeWithTag("player-video").readVerificationNode(compose) { it.boundsInWindow }
+        if (landscape) assertTrue("横屏抽屉应留出主要画面", list.right < video.left + video.width * .6f)
+        else assertTrue("竖屏抽屉应从画面下方展开", list.top > video.top + video.height * .22f)
+    }
+
+    private fun tap(tag: String) {
+        compose.waitUntil(WAIT) { exists(tag) }
+        val node = compose.onNodeWithTag(tag)
+        VerificationDisplay.awaitWindowReady(compose, tag, node)
+        node.performVerificationClick(compose)
+    }
+
+    private fun exists(tag: String): Boolean = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1
+
+    private fun joinReports(playback: PlaybackViewModel) = runBlocking { withTimeout(WAIT) { playback.awaitPendingReports() } }
+
     private data class Active(val app: AppViewModel, val playback: PlaybackViewModel, val player: ExoPlayer)
 
     internal class ResponseGate(block: Boolean) {
@@ -435,7 +638,7 @@ class PendingPlaybackCancellationTest {
         private val externalSource: String? = null, private val cloudScenario: CloudScenario? = null,
         private val negotiationVideo: JSONObject? = null, private val allowDeletes: Boolean = false,
         private val reverseProxyPayload: Boolean = false, private val homePlaybackType: String? = null,
-        private val detailChapters: Boolean = false) : Closeable {
+        private val detailChapters: Boolean = false, private val liveChannels: Boolean = false) : Closeable {
         enum class CloudScenario { ORIGINAL_ONLY, WITH_H264_RENDITIONS }
 
         private val cloudProxy = if (reverseProxyPayload && externalSource != null)
@@ -451,6 +654,7 @@ class PendingPlaybackCancellationTest {
         val acceptVideoNegotiation = AtomicBoolean(true)
         val nextPlaybackRequests = AtomicInteger()
         val nextMediaRequests = AtomicInteger()
+        val channelRequests = AtomicInteger()
         val cloudVariantRequests = AtomicInteger()
         val cloudResolveStatus = AtomicInteger(200)
         val cloudExtensionProtocol = AtomicReference("mediaflux.playback.v1")
@@ -582,6 +786,11 @@ class PendingPlaybackCancellationTest {
             }
             path == "/System/Info/Public" -> JSONObject().put("Id", SERVER_ID).put("ServerName", "Pending fixture").put("Version", "12.3.0")
             path == "/Users/Me" -> user()
+            liveChannels && path == "/LiveTv/Info" -> JSONObject().put("IsEnabled", true)
+            liveChannels && path == "/LiveTv/Channels" -> {
+                channelRequests.incrementAndGet()
+                page(item(ONE), item(TWO), item(THREE)).put("StartIndex", 0)
+            }
             homePlaybackType != null && path.startsWith("/Items/") && "/Images/" in path -> null
             allowDeletes && path in setOf("/Items/$ONE", "/Items/$TWO", "/Items/$SERIES", "/Items/$SEASON") -> {
                 val id = path.removePrefix("/Items/")
@@ -627,7 +836,7 @@ class PendingPlaybackCancellationTest {
                 val event = when (path) { "/Sessions/Playing" -> "start"; "/Sessions/Playing/Progress" -> "progress"; "/Sessions/Playing/Stopped" -> "stop"; else -> error("未知上报路径") }
                 val report = JSONObject(body)
                 val id = report.getString("ItemId")
-                check(id == ONE || id == TWO)
+                check(id == ONE || id == TWO || (liveChannels && id == THREE))
                 check(report.getString("PlaySessionId") == "pending-session-$id")
                 events += event to id
                 null
@@ -637,9 +846,14 @@ class PendingPlaybackCancellationTest {
 
         private fun user() = JSONObject().put("Id", "pending-user").put("Name", "Pending fixture").apply {
             if (allowDeletes) put("Policy", JSONObject().put("EnableContentDeletion", true))
+            if (liveChannels) put("Policy", JSONObject().put("EnableLiveTvAccess", true).put("EnableMediaPlayback", true))
         }
 
-        private fun item(id: String) = JSONObject().put("Id", id).put("Name", "Pending $id")
+        private fun item(id: String): JSONObject = if (liveChannels) JSONObject()
+            .put("Id", id).put("Name", when (id) { ONE -> "港湾新闻"; TWO -> "海鸥影视频道"; else -> "灯塔纪录" })
+            .put("Type", if (id == ONE) "TvChannel" else "LiveTvChannel")
+            .put("ChannelNumber", when (id) { ONE -> "01"; TWO -> "02"; else -> "03" })
+        else JSONObject().put("Id", id).put("Name", "Pending $id")
             .put("Type", when (id) { SERIES -> "Series"; SEASON -> "Season"; else -> homePlaybackType ?: "Episode" })
             .put("SeriesId", SERIES).put("SeasonId", SEASON).put("SeriesName", "Pending series").put("ParentIndexNumber", 1)
             .put("IndexNumber", if (id == ONE) 1 else 2).put("RunTimeTicks", 240_000_000L).put("ImageTags", JSONObject())
@@ -736,6 +950,7 @@ class PendingPlaybackCancellationTest {
         const val TOKEN = "pending-playback-synthetic-token"
         const val ONE = "pending-episode-one"
         const val TWO = "pending-episode-two"
+        const val THREE = "pending-live-three"
         const val SERIES = "pending-series"
         const val SEASON = "pending-season"
         const val WAIT = 25_000L

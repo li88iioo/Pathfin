@@ -22,7 +22,7 @@ import kotlinx.coroutines.delay
 /** 只在控制层可见时轮询位置；视频和父页面不订阅这个高频状态。 */
 @UnstableApi
 @Composable
-internal fun rememberPlayerControlSnapshot(player: Player?): PlayerControlSnapshot {
+internal fun rememberPlayerControlSnapshot(player: Player?, pollProgress: Boolean = true): PlayerControlSnapshot {
     var snapshot by remember(player) { mutableStateOf(capture(player)) }
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -33,7 +33,8 @@ internal fun rememberPlayerControlSnapshot(player: Player?): PlayerControlSnapsh
         if (player != null && !player.pathfinReleased()) player.addListener(listener)
         onDispose { if (player != null && !player.pathfinReleased()) player.removeListener(listener) }
     }
-    LaunchedEffect(player) {
+    LaunchedEffect(player, pollProgress) {
+        if (!pollProgress) return@LaunchedEffect
         while (player != null && !player.pathfinReleased()) {
             snapshot = capture(player)
             delay(250)

@@ -128,6 +128,8 @@ fun PlayerScreen(
     onShowChapters: (() -> Unit)? = null,
     isInPictureInPicture: Boolean = false,
     navigationPanelVisible: Boolean = false,
+    onShowChannels: (() -> Unit)? = null,
+    pendingChannelName: String? = null,
     onAuthenticationExpired: (dev.pathfin.android.domain.Session) -> Unit = {},
     titleLogo: coil3.request.ImageRequest? = null,
 ) {
@@ -191,9 +193,9 @@ fun PlayerScreen(
         controlsVisible = true
         interactionSequence += 1
     }
-    LaunchedEffect(controlsVisible, interactionSequence, state.controlsLocked, state.isPlaying, state.isPreparing,
+    LaunchedEffect(controlsVisible, interactionSequence, pendingChannelName, state.controlsLocked, state.isPlaying, state.isPreparing,
         state.isBuffering, externalPanelVisible, keepControlsVisible, isInPictureInPicture) {
-        if (!isInPictureInPicture && controlsVisible && !externalPanelVisible && !keepControlsVisible &&
+        if (!isInPictureInPicture && controlsVisible && pendingChannelName == null && !externalPanelVisible && !keepControlsVisible &&
             (state.isPlaying || state.controlsLocked) && !state.isPreparing && !state.isBuffering
         ) {
             delay(if (state.controlsLocked) 2_500 else 4_000)
@@ -220,6 +222,13 @@ fun PlayerScreen(
     var seekDuration by remember { mutableLongStateOf(0L) }
     var seekTarget by remember { mutableStateOf<Long?>(null) }
     var gestureSequence by remember { mutableLongStateOf(0L) }
+    val openChannels = onShowChannels?.let { show ->
+        {
+            gestureMessage = null
+            interact()
+            show()
+        }
+    }
     LaunchedEffect(state.qualityError) {
         state.qualityError?.let { gestureMessage = PlayerFeedback(it); gestureSequence++ }
     }
@@ -330,6 +339,7 @@ fun PlayerScreen(
                 view.gesturesLocked = state.controlsLocked
                 view.allowPlaybackGestures = state.errorMessage == null && !state.ended && !isInPictureInPicture
                 view.longPressEnabled = preferences.longPressSpeedEnabled && !state.live
+                view.onChannelListLongPress = openChannels.takeIf { state.live && !isInPictureInPicture && !externalPanelVisible }
                 view.onSingleTap = {
                     if (!isInPictureInPicture && state.errorMessage == null && !state.ended) {
                         controlsVisible = !controlsVisible
@@ -349,7 +359,7 @@ fun PlayerScreen(
                     adjustingLevel = false
                     if (cancelled) level = null
                 }
-                view.horizontalSeekEnabled = preferences.horizontalSeekEnabled
+                view.horizontalSeekEnabled = !state.live && preferences.horizontalSeekEnabled
                 view.onHorizontalSeekStart = {
                     val current = viewModel.player
                     seekOrigin = current?.currentPosition ?: 0L
@@ -374,7 +384,8 @@ fun PlayerScreen(
                         gestureSequence += 1
                     }
                 }
-                view.onDoubleTapPosition = { fraction ->
+                view.onDoubleTapPosition = doubleTap@{ fraction ->
+                    if (state.live && fraction !in .35f.. .65f) return@doubleTap
                     when {
                         fraction < 0.35f -> {
                             viewModel.seekByGesture(false)
@@ -415,6 +426,7 @@ fun PlayerScreen(
                     clock = clock.takeIf { preferences.showClock },
                     battery = if (preferences.showBattery) battery?.let { "$it%" } ?: "—" else null,
                     onBack = leave, onInteraction = interact, onKeepVisibleChange = { keepControlsVisible = it },
+                    onShowChannels = openChannels, onReconnect = viewModel::retry, pendingChannelName = pendingChannelName,
                     onTogglePlay = viewModel::togglePlayPause, onSeekBack = { viewModel.seekByGesture(false) },
                     onSeekForward = { viewModel.seekByGesture(true) },
                     onSeekTo = { if (viewModel.player === player) viewModel.seekToPosition(it) },
@@ -529,7 +541,8 @@ fun PlayerScreen(
                 Text(error, color = PlayerText, textAlign = TextAlign.Center, fontSize = 15.sp, lineHeight = 22.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     PlayerPillButton(tr("重试"), primary = true, onClick = viewModel::retry)
-                    PlayerPillButton(tr("返回详情"), primary = false, onClick = leave)
+                    if (state.live && openChannels != null) PlayerPillButton(tr("切换频道"), primary = false, onClick = openChannels)
+                    else PlayerPillButton(tr("返回详情"), primary = false, onClick = leave)
                 }
             }
         }
@@ -671,6 +684,7 @@ internal class GesturePlayerView(context: Context) : PlayerView(context) {
     var gesturesLocked = false
     var allowPlaybackGestures = true
     var longPressEnabled = true
+    var onChannelListLongPress: (() -> Unit)? = null
     var onSingleTap: () -> Unit = {}
     var onLongPressStart: () -> Unit = {}
     var onLongPressEnd: () -> Unit = {}
@@ -729,7 +743,11 @@ internal class GesturePlayerView(context: Context) : PlayerView(context) {
         }
 
         override fun onLongPress(event: MotionEvent) {
-            if (allowPlaybackGestures && !gesturesLocked && longPressEnabled && videoGesture && !multiplePointers && verticalGesture == null) {
+            if (gesturesLocked || !videoGesture || multiplePointers || verticalGesture != null || horizontalGesture) return
+            val channels = onChannelListLongPress
+            if (channels != null) {
+                if (downX in edgeInset..(width * .35f) && downY in edgeInset..(height - edgeInset)) channels()
+            } else if (allowPlaybackGestures && longPressEnabled) {
                 longPressed = true
                 onLongPressStart()
             }

@@ -242,7 +242,7 @@ private data class LiveTvChannelRow(val channel: LiveTvChannel) : LiveTvRow { ov
 private data class LiveTvSkeletonRow(val index: Int) : LiveTvRow { override val key = "skeleton/$index" }
 private data class LiveTvStatusRow(val title: String, val detail: String, val error: Boolean = false) : LiveTvRow { override val key = "status" }
 private data object LiveTvFillerRow : LiveTvRow { override val key = "filler" }
-private const val OTHER_GROUP = "\u0000other"
+internal const val OTHER_GROUP = "\u0000other"
 
 /**
  * 直播页：顶部是上次观看，下面一行分组标签（默认“全部”），点哪个组网格就只剩那组频道，不用长距离滑动。
@@ -257,7 +257,7 @@ fun LiveTvScreen(state: LiveTvState, onBack: () -> Unit, onPlay: (MediaItem) -> 
     val pageActive = LocalPageActive.current
     val now = liveTvClock()
     val canPlay = access?.canPlay == true
-    val play: (LiveTvChannel) -> Unit = { channel -> watchedId = channel.id; onPlay(channel.item) }
+    val play: (LiveTvChannel) -> Unit = { channel -> onPlay(channel.item) }
     val guide: (LiveTvChannel) -> Unit = { selected = it }
 
     RefreshFailureNotice(error?.takeIf { channels.isNotEmpty() }, settled = !refreshing, retry = { load() })
@@ -659,7 +659,7 @@ private fun LiveTvPlayButton(label: String, enabled: Boolean, preparing: Boolean
 }
 
 /** 正在播出且有起止时间的节目；时间缺失的当前节目照常显示，但不计进度。 */
-private fun LiveTvChannel.nowShowing(now: Instant): LiveTvProgram? =
+internal fun LiveTvChannel.nowShowing(now: Instant): LiveTvProgram? =
     currentProgram?.takeIf { it.isAiring(now) || it.start == null || it.end == null }
 
 private fun LiveTvProgram.remainingMinutes(now: Instant): Long? = end?.takeIf { isAiring(now) }
@@ -670,7 +670,7 @@ private fun LiveTvProgram.remainingMinutes(now: Instant): Long? = end?.takeIf { 
  * 浅底上会看不清，深底在明暗主题下都清楚；没有台标时显示台号或电视图标，准备播放时叠加载圈。
  */
 @Composable
-private fun LiveTvChannelMark(channel: LiveTvChannel, session: Session, api: JellyfinApi, preparing: Boolean,
+internal fun LiveTvChannelMark(channel: LiveTvChannel, session: Session, api: JellyfinApi, preparing: Boolean,
     modifier: Modifier = Modifier) {
     val logo = rememberServerImage(session, api.imageUrl(session, channel.item, width = 240), api)
     val screen = if (PathfinAppearance.isDark()) Color(0xFF2A2B31) else Color(0xFF24252B)
@@ -916,7 +916,7 @@ private const val CHANNEL_PAGE_SIZE = 100
 private const val PROGRAM_PAGE_SIZE = 80
 
 @Composable
-private fun liveTvClock(): Instant {
+internal fun liveTvClock(): Instant {
     var now by remember { mutableStateOf(Instant.now()) }
     val owner = LocalLifecycleOwner.current
     val active = LocalPageActive.current

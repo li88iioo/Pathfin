@@ -1898,6 +1898,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             loadDetails = full == null, quality = quality)
     }
 
+    fun switchLiveChannel(channel: LiveTvChannel) {
+        val current = state.value
+        val playing = current.activePlayback ?: return
+        if (!playing.item.isLiveChannel || !playing.session.hasSameAuthentication(current.session) ||
+            current.liveTv?.access?.canPlay != true) return
+        val pending = current.pendingPlayback
+        if (pending?.item?.id == channel.id && current.preparingPlay) return
+        if (pending != null) cancelPendingPlayback()
+        if (channel.id != playing.item.id) preparePlayback(channel.item, fromStart = true)
+    }
+
     fun retryPendingPlayback() {
         val pending = state.value.pendingPlayback ?: return
         preparePlayback(pending.item, pending.fromStart, pending.sourceId, pending.loadDetails, pending.quality)
@@ -2042,8 +2053,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         ensureLocalNetworkAccess(request.stream.uri)
         currentCoroutineContext().ensureActive()
         if (!isCurrentPreparation(pending.id, session, profileId, epoch) || state.value.sourceSelection != selection) return
+        val liveTv = if (request.item.isLiveChannel) liveTvFor(state.value.session ?: return).also {
+            it.watchedId = request.item.id
+        } else state.value.liveTv
         mutableState.update { it.copy(pendingPlayback = null, sourceSelection = null, preparingPlay = false,
-            activePlayback = request, playbackError = null, playbackNeighbors = emptyList(),
+            activePlayback = request, liveTv = liveTv, playbackError = null, playbackNeighbors = emptyList(),
             playbackEpisodes = if (it.activePlayback?.item?.seriesId == request.item.seriesId) it.playbackEpisodes else ContentState()) }
         recordLastPlayed(request, epoch)
         loadPlaybackNeighbors(request)
@@ -2072,7 +2086,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun cancelPendingPlayback() {
+    fun cancelPendingPlayback() {
         playJob?.cancel()
         playJob = null
         mutableState.update { it.copy(pendingPlayback = null, sourceSelection = null, preparingPlay = false, playbackError = null) }
@@ -2147,8 +2161,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun dismissPlaybackError() { mutableState.update { it.copy(playbackError = null) } }
-
-    fun dismissSourceSelection() = cancelPendingPlayback()
 
     fun playerClosed(positionMs: Long) {
         // 下一集/版本选择可在旧播放器关闭后才返回；即使尚未建立 activePlayback 也必须取消。

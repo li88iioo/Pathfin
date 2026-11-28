@@ -43,15 +43,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -72,13 +75,13 @@ import dev.pathfin.android.ui.player.PlayerSecondary
 import dev.pathfin.android.ui.player.PlayerText
 import dev.pathfin.android.ui.player.playerAccent
 /**
- * 播放器统一的侧面板：横屏从右侧滑出，背景是从透明渐变到深色的一整片，没有卡片边框，视频仍露出大半；
+ * 播放器共用面板，横屏从侧面滑入（频道在左，其他面板在右），渐变遮罩保留另一侧的视频画面。
  * 竖屏从底部升起，同样以渐变过渡。选集、章节、播放质量与控制栏的全部弹层共用它，点面板外或返回键关闭。
  */
 @Composable
 internal fun PlayerSidePanel(title: String, onDismiss: () -> Unit, actions: @Composable RowScope.() -> Unit = {},
-    closeLabel: String = tr("关闭%1\$s", title), closeTag: String = "playback-panel-close",
-    content: @Composable ColumnScope.() -> Unit) {
+    closeLabel: String = tr("关闭%1\$s", title), closeTag: String = "playback-panel-close", fromStart: Boolean = false,
+    portraitContentHeight: Dp? = null, content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         // 对话框是独立窗口，不继承播放器的沉浸模式；在这里同样隐藏系统栏，并取消整窗变暗，让渐变自己承担遮挡。
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
@@ -93,12 +96,17 @@ internal fun PlayerSidePanel(title: String, onDismiss: () -> Unit, actions: @Com
         }
         val windowSize = LocalWindowInfo.current.containerSize
         val landscape = windowSize.width > windowSize.height
+        val startsAtLeft = fromStart == (LocalLayoutDirection.current == LayoutDirection.Ltr)
         val density = LocalDensity.current
         val panelWidth = with(density) { windowSize.width.toDp() }.coerceAtMost(352.dp)
+        val portraitFraction = portraitContentHeight?.let { contentHeight ->
+            val inset = AppSafeDrawingInsets.getBottom(density)
+            ((with(density) { contentHeight.toPx() } + inset) / windowSize.height.coerceAtLeast(1)).coerceAtMost(.58f)
+        } ?: .58f
         // 背景与面板分层：宽幅缓入缓出的暗场固定在窗口坐标，切换菜单不会出现移动的黑墙。
-        val scrim = remember(windowSize, density.density, landscape, panelWidth) {
+        val scrim = remember(windowSize, density.density, landscape, panelWidth, startsAtLeft, portraitFraction) {
             val extent = (if (landscape) windowSize.width else windowSize.height).toFloat().coerceAtLeast(1f)
-            val edge = if (landscape) extent - with(density) { panelWidth.toPx() } else extent * .42f
+            val edge = if (landscape) extent - with(density) { panelWidth.toPx() } else extent * (1f - portraitFraction)
             val start = (edge - with(density) { (if (landscape) 220.dp else 160.dp).toPx() }).coerceAtLeast(0f)
             val end = (edge + with(density) { 64.dp.toPx() }).coerceAtMost(extent)
             val stops = Array(25) { index ->
@@ -106,22 +114,28 @@ internal fun PlayerSidePanel(title: String, onDismiss: () -> Unit, actions: @Com
                 val eased = t * t * t * (t * (t * 6f - 15f) + 10f)
                 (start + (end - start) * t) / extent to Color.Black.copy(alpha = .985f * eased)
             }
-            if (landscape) Brush.horizontalGradient(*stops) else Brush.verticalGradient(*stops)
+            when {
+                !landscape -> Brush.verticalGradient(*stops)
+                startsAtLeft -> Brush.horizontalGradient(*stops, startX = extent, endX = 0f)
+                else -> Brush.horizontalGradient(*stops)
+            }
         }
+        val side = if (fromStart) Alignment.CenterStart else Alignment.CenterEnd
+        val sideInset = if (fromStart) WindowInsetsSides.Start else WindowInsetsSides.End
         val shown = remember { MutableTransitionState(false) }.apply { targetState = true }
         // 外部关闭不合并语义；内容空白区也接住点击，避免点到列表空隙就关闭。
         Box(Modifier.fillMaxSize().pointerInput(onDismiss) { detectTapGestures { onDismiss() } }) {
             AnimatedVisibility(shown, Modifier.fillMaxSize(), enter = fadeIn(tween(180)), exit = fadeOut(tween(120))) {
                 Box(Modifier.fillMaxSize().background(scrim)) {
                     Column(
-                        (if (landscape) Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(panelWidth)
-                         else Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(.58f))
-                            .animateEnterExit(enter = if (landscape) slideInHorizontally(tween(200)) { it / 8 }
+                        (if (landscape) Modifier.align(side).fillMaxHeight().width(panelWidth)
+                         else Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(portraitFraction))
+                            .animateEnterExit(enter = if (landscape) slideInHorizontally(tween(200)) { if (startsAtLeft) -it / 8 else it / 8 }
                                 else slideInVertically(tween(200)) { it / 8 })
                             .pointerInput(Unit) { detectTapGestures { } }
                             .testTag("player-side-panel")
                             .windowInsetsPadding(AppSafeDrawingInsets.only(
-                                if (landscape) WindowInsetsSides.Vertical + WindowInsetsSides.End else WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
+                                if (landscape) WindowInsetsSides.Vertical + sideInset else WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)),
                     ) {
                         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp).heightIn(min = 48.dp),
                             verticalAlignment = Alignment.CenterVertically) {

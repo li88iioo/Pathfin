@@ -24,6 +24,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -44,7 +45,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -61,6 +65,7 @@ import dev.pathfin.android.playback.RapidSeekThrottle
 import dev.pathfin.android.playback.SubtitlePresentation
 import dev.pathfin.android.playback.formatPlaybackTransferRate
 import dev.pathfin.android.playback.pathfinReleased
+import kotlinx.coroutines.delay
 
 /** 暗角独立于按钮与面板，打开侧栏时保留视频已有的明暗关系。 */
 @Composable
@@ -114,8 +119,11 @@ internal fun PlayerControlsOverlay(
     subtitlePresentation: SubtitlePresentation = SubtitlePresentation(),
     onSubtitlePresentationChange: (SubtitlePresentation) -> Unit = {},
     titleLogo: ImageRequest? = null,
+    onShowChannels: (() -> Unit)? = null,
+    pendingChannelName: String? = null,
+    onReconnect: () -> Unit,
 ) {
-    val snapshot = rememberPlayerControlSnapshot(player)
+    val snapshot = rememberPlayerControlSnapshot(player, pollProgress = !state.live)
     var panel by remember(player) { mutableStateOf<PlayerControlPanel?>(null) }
     var scrubbing by remember(player) { mutableStateOf(false) }
     var scrubPosition by remember(player) { mutableFloatStateOf(0f) }
@@ -149,7 +157,7 @@ internal fun PlayerControlsOverlay(
                 verticalAlignment = Alignment.CenterVertically) {
                 PlayerRoundButton(PathfinIcons.Back, tr("返回"), "player-back", onClick = { interaction(onBack) })
                 Column(Modifier.weight(1f).padding(start = 4.dp, end = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    if (landscape) PlayerHeaderTitle(headerTitle, titleLogo)
+                    if (landscape && !state.live) PlayerHeaderTitle(headerTitle, titleLogo)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(if (availableWidth < 380.dp) 0.dp else 4.dp),
                     verticalAlignment = Alignment.CenterVertically) {
@@ -170,7 +178,15 @@ internal fun PlayerControlsOverlay(
             Box(Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 60.dp)) {
                 PlayerStatusLine(clock, battery, state, audioGainPercent)
             }
-            if (state.errorMessage == null && !state.ended) {
+            if (state.live && state.errorMessage == null && !state.ended) {
+                LiveReconnectButton(
+                    loading = showLoading,
+                    connecting = state.isPreparing || state.isBuffering,
+                    enabled = transportEnabled && !state.isPreparing && pendingChannelName == null,
+                    modifier = Modifier.align(Alignment.Center),
+                    onClick = { interaction(onReconnect) },
+                )
+            } else if (state.errorMessage == null && !state.ended) {
                 val sideSize = if (availableWidth < 360.dp || largeText) 48.dp else 56.dp
                 val transportWidth = if (largeText) 174.dp else (availableWidth * .56f).coerceIn(200.dp, 280.dp)
                 Row(Modifier.align(Alignment.Center).offset(x = if (largeText) (-12).dp else 0.dp)
@@ -200,8 +216,6 @@ internal fun PlayerControlsOverlay(
             val speedVisible = state.errorMessage == null && !state.ended && !state.live
             val speedEnabled = transportEnabled && snapshot.canChangeSpeed
             val speedWidth = if (largeText) 72.dp else 48.dp
-            val bottomToolsWidth = if (landscape) { if (showSubtitles) 104.dp else 52.dp } else 0.dp
-            val timeLayout = rememberPlayerTimeLayout(snapshot.durationMs, (availableWidth * .45f - bottomToolsWidth).coerceAtLeast(80.dp))
             // 竖屏横排在底栏；横屏竖排在画面右侧中部，与左侧截图 / 锁定对称，底栏只留音轨与字幕。
             val speedLabel: @Composable () -> Unit = {
                     Box(Modifier.height(48.dp).width(speedWidth).clip(RoundedCornerShape(12.dp))
@@ -226,8 +240,23 @@ internal fun PlayerControlsOverlay(
                 speedLabel()
                 SpeedStep(increase = false, enabled = speedEnabled, speed = snapshot.speed, interaction = interaction, onChange = onSpeedChange)
             }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 6.dp)
+            val bottomControls = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp)
+                .padding(bottom = 6.dp)
+            if (state.live) LiveBottomControls(
+                title = state.title.ifBlank { headerTitle },
+                pendingChannelName = pendingChannelName,
+                onShowChannels = onShowChannels,
+                modifier = bottomControls,
+            ) {
+                if (landscape) PlayerRoundButton(PathfinIcons.Camera, tr("保存视频截图"),
+                    "player-capture", enabled = onScreenshot != null, onClick = { onScreenshot?.let { interaction(it) } })
+                PlayerRoundButton(PathfinIcons.LockOpen, tr("锁定屏幕"), "player-lock", onClick = { interaction(onLock) })
+                TrackButtons(hasAudio, showSubtitles, interaction, { showPanel(PlayerControlPanel.AUDIO) },
+                    { showPanel(PlayerControlPanel.SUBTITLES) })
+            } else Column(bottomControls
                 .testTag("player-bottom-controls")) {
+                val bottomToolsWidth = if (landscape) { if (showSubtitles) 104.dp else 52.dp } else 0.dp
+                val timeLayout = rememberPlayerTimeLayout(snapshot.durationMs, (availableWidth * .45f - bottomToolsWidth).coerceAtLeast(80.dp))
                 if (!landscape || state.title != headerTitle || onShowEpisodes != null || onPrevious != null || onNext != null) {
                     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (onShowEpisodes != null || onPrevious != null || onNext != null) {
@@ -322,6 +351,84 @@ internal fun PlayerControlsOverlay(
                 onSetSleepTimer = onSetSleepTimer, sleepTimerLabel = sleepTimerLabel,
                 onAddSubtitle = onAddSubtitle, onManageSubtitles = onManageSubtitles,
                 subtitlePresentation = subtitlePresentation, onSubtitlePresentationChange = onSubtitlePresentationChange)
+        }
+    }
+}
+
+@Composable
+private fun LiveReconnectButton(
+    loading: Boolean,
+    connecting: Boolean,
+    enabled: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val label = tr("刷新直播")
+    val connectingLabel = tr("正在连接直播")
+    Box(
+        modifier.size(76.dp).clip(CircleShape).background(Color.Black.copy(alpha = .48f))
+            .border(1.dp, Color.White.copy(alpha = .20f), CircleShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics {
+                contentDescription = label
+                if (connecting) stateDescription = connectingLabel
+            }
+            .testTag("player-live-reconnect"),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (loading) PathfinSpinner(PlayerText, Modifier.size(60.dp))
+        Icon(PathfinIcons.Refresh, null, Modifier.size(34.dp), tint = if (enabled) PlayerText else PlayerSecondary)
+    }
+}
+
+@Composable
+private fun LiveBottomControls(
+    title: String,
+    pendingChannelName: String?,
+    onShowChannels: (() -> Unit)?,
+    modifier: Modifier,
+    tools: @Composable RowScope.() -> Unit,
+) {
+    val channelShape = RoundedCornerShape(24.dp)
+    var showTuning by remember(pendingChannelName) { mutableStateOf(false) }
+    LaunchedEffect(pendingChannelName) {
+        if (pendingChannelName != null) {
+            delay(300)
+            showTuning = true
+        }
+    }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (pendingChannelName != null && showTuning) Row(
+            Modifier.widthIn(max = 360.dp).background(PlayerSurface, channelShape)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite }.testTag("player-live-tuning"),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            PathfinSpinner(PlayerSecondary, Modifier.size(14.dp))
+            Text(tr("正在切换到 %1\$s", pendingChannelName), color = PlayerText, fontSize = 13.sp,
+                lineHeight = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("player-bottom-controls"),
+            horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            val switchAction = if (onShowChannels != null) Modifier.clip(channelShape)
+                .background(PlayerSurface)
+                .border(1.dp, Color.White.copy(alpha = .16f), channelShape)
+                .clickable(role = Role.Button, onClickLabel = tr("切换频道"), onClick = onShowChannels)
+                .testTag("player-live-channels")
+            else Modifier
+            Row(
+                Modifier.weight(1f, fill = false).widthIn(max = 360.dp).heightIn(min = 48.dp).then(switchAction)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(PathfinIcons.Tv, null, Modifier.size(18.dp), tint = PlayerSecondary)
+                Text(title, Modifier.weight(1f, fill = false), color = PlayerText, fontSize = 16.sp,
+                    lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (onShowChannels != null) Icon(PathfinIcons.ChevronDown, null, Modifier.size(16.dp), tint = PlayerSecondary)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, content = tools)
         }
     }
 }

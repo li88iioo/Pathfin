@@ -19,6 +19,8 @@ RUNNER = TARGET + ".test/androidx.test.runner.AndroidJUnitRunner"
 UI_TEST = "dev.pathfin.android.UiPreviewTest#exportRepresentativeScreens"
 PLAYER_TEST = "dev.pathfin.android.PlayerControlsFlowTest#exportReferencePlaybackFrames"
 ASPECT_TEST = "dev.pathfin.android.PlayerControlsFlowTest#pausedAspectModesHaveRealScreenPixelsAndKeepAssAligned"
+LIVE_TEST = "dev.pathfin.android.PendingPlaybackCancellationTest#liveSwitchesAndReconnectsInPlace"
+LIVE_FRAMES = ("live-controls", "live-channels-portrait", "live-channels-landscape")
 UI_FRAMES = (
     "01-servers-light", "02-add-server-light", "03-home-light", "04-libraries-light",
     "05-grid-light", "06-detail-light", "07-settings-light", "08-home-dark",
@@ -48,10 +50,11 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 def frame_plan(suite, requested):
-    if suite in {"player", "aspect"}:
+    fixed = {"player": PLAYER_FRAMES, "aspect": ASPECT_FRAMES, "live": LIVE_FRAMES}
+    if suite in fixed:
         if requested:
             raise ValueError("播放器导出使用固定帧，不接受 --frames")
-        return ASPECT_FRAMES if suite == "aspect" else PLAYER_FRAMES
+        return fixed[suite]
     selected = tuple(part.strip() for part in (requested or "").split(",") if part.strip())
     if len(selected) != len(set(selected)) or any(name not in UI_FRAMES for name in selected):
         raise ValueError("--frames 只允许不重复的预设合成 UI 帧名")
@@ -151,7 +154,7 @@ def ready_frame(line, run, expected):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--serial", required=True, help="明确指定已安装 verification APK 的设备")
-    parser.add_argument("--suite", choices=("ui", "player", "aspect"), default="ui")
+    parser.add_argument("--suite", choices=("ui", "player", "aspect", "live"), default="ui")
     parser.add_argument("--output", type=Path, required=True, help="新的或空的导出目录")
     parser.add_argument("--frames", help="仅 UI 套件：逗号分隔的预设帧名；省略为全部")
     parser.add_argument("--fixture-url", help="仅 UI 套件：回环 fixture 地址，默认 http://127.0.0.1:8097")
@@ -187,7 +190,7 @@ def main():
     uid = int(uid_match.group(1))
     sizes = screen_sizes(command("shell", "wm", "size"))
     run = uuid.uuid4().hex
-    test = {"ui": UI_TEST, "player": PLAYER_TEST, "aspect": ASPECT_TEST}[args.suite]
+    test = {"ui": UI_TEST, "player": PLAYER_TEST, "aspect": ASPECT_TEST, "live": LIVE_TEST}[args.suite]
     invocation = ["shell", "am", "instrument", "-w", "-r", "-e", "class", test,
                   "-e", "pathfin.screenshotRun", run]
     if args.suite == "ui":
@@ -195,7 +198,7 @@ def main():
                        "-e", "pathfin.previewFrames", ",".join(frames)]
     elif args.suite == "player":
         invocation += ["-e", "pathfin.playerPreviews", "true"]
-    else:
+    elif args.suite == "aspect":
         invocation += ["-e", "pathfin.aspectPreviews", "true"]
     invocation.append(RUNNER)
     process = subprocess.Popen(adb + ["shell", shlex.join(invocation[1:])], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

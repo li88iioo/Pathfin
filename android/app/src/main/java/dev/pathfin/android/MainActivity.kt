@@ -22,6 +22,7 @@ import dev.pathfin.android.domain.PlayerOrientation
 import dev.pathfin.android.domain.TimeUnits
 import dev.pathfin.android.i18n.onLocaleChanged
 import dev.pathfin.android.i18n.tr
+import dev.pathfin.android.ui.PlayerLiveChannels
 import dev.pathfin.android.ui.PlaybackChaptersSheet
 import dev.pathfin.android.ui.PosterRequests
 import dev.pathfin.android.ui.PlaybackEpisodesSheet
@@ -165,7 +166,7 @@ class MainActivity : ComponentActivity() {
                 pictureInPicture, state.preferences.autoPlayNextEpisode) {
                 val current = state.activePlayback ?: return@LaunchedEffect
                 val endedGeneration = playback.playerGeneration
-                if (!playback.ended || state.pendingPlayback != null || autoAdvancedGeneration == endedGeneration) return@LaunchedEffect
+                if (!playback.ended || current.item.isLiveChannel || state.pendingPlayback != null || autoAdvancedGeneration == endedGeneration) return@LaunchedEffect
                 val next = if (state.preferences.autoPlayNextEpisode) appViewModel.nextPlaybackEpisode() else null
                 // 等相邻集时可能已经返回或手动换片，旧播放结束不能关闭或替换新请求。
                 val latest = appViewModel.state.value
@@ -230,10 +231,14 @@ class MainActivity : ComponentActivity() {
                     state.activePlayback?.let { playbackViewModel.play(it, state.preferences) } ?: playbackViewModel.stop()
                 }
                 if (state.activePlayback != null) {
-                    val playbackItem = state.activePlayback?.item
-                    val titleLogo = remember(state.session, playbackItem?.id, playbackItem?.logoTag, playbackItem?.logoItemId) {
+                    val playbackItem = checkNotNull(state.activePlayback).item
+                    val liveChannels = state.liveTv.takeIf { playbackItem.isLiveChannel }
+                    val pendingChannel = state.pendingPlayback?.item?.takeIf { liveChannels != null && it.isLiveChannel }
+                    var showChannels by rememberSaveable(state.currentProfileId, playbackItem.id) { mutableStateOf(false) }
+                    if (pictureInPicture && showChannels) SideEffect { showChannels = false }
+                    val titleLogo = remember(state.session, playbackItem.id, playbackItem.logoTag, playbackItem.logoItemId) {
                         val session = state.session
-                        if (session != null && playbackItem != null) PosterRequests.logo(this@MainActivity, session, appViewModel.api, playbackItem) else null
+                        if (session != null && !playbackItem.isLiveChannel) PosterRequests.logo(this@MainActivity, session, appViewModel.api, playbackItem) else null
                     }
                     CompositionLocalProvider(LocalPosterLoader provides posterLoader) {
                     PlayerScreen(
@@ -259,11 +264,19 @@ class MainActivity : ComponentActivity() {
                             !state.preferences.hideChaptersWithoutImage || it.hasThumbnail()
                         } == true) ({ showChapters = true }) else null,
                         isInPictureInPicture = pictureInPicture,
-                        navigationPanelVisible = showEpisodes || showChapters,
+                        onShowChannels = liveChannels?.let { { showChannels = true } },
+                        pendingChannelName = pendingChannel?.name?.takeIf { state.preparingPlay },
+                        navigationPanelVisible = showEpisodes || showChapters || showChannels,
                         titleLogo = titleLogo,
                     )
                     }
                     if (!pictureInPicture) {
+                        if (showChannels && liveChannels != null) CompositionLocalProvider(LocalPosterLoader provides posterLoader) {
+                            PlayerLiveChannels(liveChannels, playbackItem.id, onSelect = { channel ->
+                                showChannels = false
+                                appViewModel.switchLiveChannel(channel)
+                            }, onDismiss = { showChannels = false })
+                        }
                         if (showEpisodes) CompositionLocalProvider(LocalPosterLoader provides posterLoader) {
                             PlaybackEpisodesSheet(state.playbackEpisodes, state.activePlayback!!.item.id, state.preparingPlay,
                             onSelect = { showEpisodes = false; appViewModel.prepareEpisodePlayback(it, playbackViewModel.preferredQuality) },
@@ -279,8 +292,15 @@ class MainActivity : ComponentActivity() {
                                 item = state.activePlayback!!.item, api = appViewModel.api,
                                 hideWithoutImage = state.preferences.hideChaptersWithoutImage)
                         }
-                        state.playbackError?.let { error -> AppAlertDialog(onDismissRequest = appViewModel::dismissPlaybackError,
-                            text = { Text(error) }, confirmButton = { DialogAction(tr("确定"), appViewModel::dismissPlaybackError, role = DialogActionRole.Primary) }) }
+                        state.playbackError?.let { error ->
+                            if (pendingChannel != null) AppAlertDialog(onDismissRequest = appViewModel::cancelPendingPlayback,
+                                title = { Text(tr("无法切换到 %1\$s", pendingChannel.name)) }, text = { Text(error) },
+                                dismissButton = { DialogAction(tr("取消"), appViewModel::cancelPendingPlayback) },
+                                confirmButton = { DialogAction(tr("重试"), appViewModel::retryPendingPlayback,
+                                    Modifier.testTag("playback-preparation-retry"), role = DialogActionRole.Primary) })
+                            else AppAlertDialog(onDismissRequest = appViewModel::dismissPlaybackError,
+                                text = { Text(error) }, confirmButton = { DialogAction(tr("确定"), appViewModel::dismissPlaybackError, role = DialogActionRole.Primary) })
+                        }
                     }
                 } else {
                     PathfinApp(appViewModel, state, browsingState, posterLoader = posterLoader)
@@ -294,7 +314,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 if (showingPlayback && !pictureInPicture) state.sourceSelection?.takeIf { it.info.sources.size > 1 }?.let {
-                    PlaybackSourceDialog(it, appViewModel::chooseSource, appViewModel::dismissSourceSelection)
+                    PlaybackSourceDialog(it, appViewModel::chooseSource, appViewModel::cancelPendingPlayback)
                 }
                 if (state.localNetworkPermissionDenied) AppAlertDialog(
                     onDismissRequest = appViewModel::dismissLocalNetworkPermissionExplanation,
