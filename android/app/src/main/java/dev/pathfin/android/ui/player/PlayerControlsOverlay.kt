@@ -24,7 +24,6 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -178,15 +177,7 @@ internal fun PlayerControlsOverlay(
             Box(Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 60.dp)) {
                 PlayerStatusLine(clock, battery, state, audioGainPercent)
             }
-            if (state.live && state.errorMessage == null && !state.ended) {
-                LiveReconnectButton(
-                    loading = showLoading,
-                    connecting = state.isPreparing || state.isBuffering,
-                    enabled = transportEnabled && !state.isPreparing && pendingChannelName == null,
-                    modifier = Modifier.align(Alignment.Center),
-                    onClick = { interaction(onReconnect) },
-                )
-            } else if (state.errorMessage == null && !state.ended) {
+            if (!state.live && state.errorMessage == null && !state.ended) {
                 val sideSize = if (availableWidth < 360.dp || largeText) 48.dp else 56.dp
                 val transportWidth = if (largeText) 174.dp else (availableWidth * .56f).coerceIn(200.dp, 280.dp)
                 Row(Modifier.align(Alignment.Center).offset(x = if (largeText) (-12).dp else 0.dp)
@@ -248,6 +239,11 @@ internal fun PlayerControlsOverlay(
                 onShowChannels = onShowChannels,
                 modifier = bottomControls,
             ) {
+                val connecting = state.isPreparing || state.isBuffering
+                PlayerRoundButton(PathfinIcons.Refresh, tr("刷新直播"), "player-live-reconnect",
+                    modifier = Modifier.semantics { if (connecting) stateDescription = tr("正在连接直播") },
+                    enabled = transportEnabled && !state.isPreparing && pendingChannelName == null,
+                    loading = showLoading, onClick = { interaction(onReconnect) })
                 if (landscape) PlayerRoundButton(PathfinIcons.Camera, tr("保存视频截图"),
                     "player-capture", enabled = onScreenshot != null, onClick = { onScreenshot?.let { interaction(it) } })
                 PlayerRoundButton(PathfinIcons.LockOpen, tr("锁定屏幕"), "player-lock", onClick = { interaction(onLock) })
@@ -266,15 +262,8 @@ internal fun PlayerControlsOverlay(
                                 onClick = { onNext?.let { interaction(it) } })
                             Spacer(Modifier.width(8.dp))
                         }
-                        // 标题即选集入口，点击范围随内容收紧，右侧空白不响应选集。
-                        Row(Modifier.weight(1f, fill = false).widthIn(min = 48.dp).height(48.dp).clip(RoundedCornerShape(12.dp))
-                            .clickable(enabled = onShowEpisodes != null) { onShowEpisodes?.let { interaction(it) } }
-                            .padding(horizontal = 4.dp).testTag("player-title"), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(state.title, Modifier.weight(1f, fill = false), color = PlayerText, fontSize = 16.sp,
-                                lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (onShowEpisodes != null) Icon(PathfinIcons.ChevronDown, tr("选集"), Modifier.size(16.dp), tint = PlayerSecondary)
-                        }
+                        PlayerTitleAction(state.title, tr("选集"), "player-title", Modifier.weight(1f, fill = false),
+                            onShowEpisodes?.let { show -> { interaction(show) } })
                     }
                 }
                 Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -355,29 +344,16 @@ internal fun PlayerControlsOverlay(
     }
 }
 
+/** 标题本身就是选集或换台入口，右侧留白不拦截画面手势。 */
 @Composable
-private fun LiveReconnectButton(
-    loading: Boolean,
-    connecting: Boolean,
-    enabled: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    val label = tr("刷新直播")
-    val connectingLabel = tr("正在连接直播")
-    Box(
-        modifier.size(76.dp).clip(CircleShape).background(Color.Black.copy(alpha = .48f))
-            .border(1.dp, Color.White.copy(alpha = .20f), CircleShape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            .semantics {
-                contentDescription = label
-                if (connecting) stateDescription = connectingLabel
-            }
-            .testTag("player-live-reconnect"),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (loading) PathfinSpinner(PlayerText, Modifier.size(60.dp))
-        Icon(PathfinIcons.Refresh, null, Modifier.size(34.dp), tint = if (enabled) PlayerText else PlayerSecondary)
+private fun PlayerTitleAction(title: String, actionLabel: String, tag: String, modifier: Modifier, onClick: (() -> Unit)?) {
+    val action = if (onClick == null) Modifier.semantics(mergeDescendants = true) {} else Modifier.clip(RoundedCornerShape(12.dp))
+        .clickable(role = Role.Button, onClickLabel = actionLabel, onClick = onClick)
+    Row(modifier.widthIn(min = 48.dp).heightIn(min = 48.dp).then(action).testTag(tag).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, Modifier.weight(1f, fill = false), color = PlayerText, fontSize = 16.sp, lineHeight = 22.sp,
+            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (onClick != null) Icon(PathfinIcons.ChevronDown, actionLabel, Modifier.size(16.dp), tint = PlayerSecondary)
     }
 }
 
@@ -389,7 +365,6 @@ private fun LiveBottomControls(
     modifier: Modifier,
     tools: @Composable RowScope.() -> Unit,
 ) {
-    val channelShape = RoundedCornerShape(24.dp)
     var showTuning by remember(pendingChannelName) { mutableStateOf(false) }
     LaunchedEffect(pendingChannelName) {
         if (pendingChannelName != null) {
@@ -399,8 +374,7 @@ private fun LiveBottomControls(
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (pendingChannelName != null && showTuning) Row(
-            Modifier.widthIn(max = 360.dp).background(PlayerSurface, channelShape)
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+            Modifier.widthIn(max = 360.dp).padding(horizontal = 4.dp)
                 .semantics { liveRegion = LiveRegionMode.Polite }.testTag("player-live-tuning"),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -411,23 +385,8 @@ private fun LiveBottomControls(
         }
         Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("player-bottom-controls"),
             horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            val switchAction = if (onShowChannels != null) Modifier.clip(channelShape)
-                .background(PlayerSurface)
-                .border(1.dp, Color.White.copy(alpha = .16f), channelShape)
-                .clickable(role = Role.Button, onClickLabel = tr("切换频道"), onClick = onShowChannels)
-                .testTag("player-live-channels")
-            else Modifier
-            Row(
-                Modifier.weight(1f, fill = false).widthIn(max = 360.dp).heightIn(min = 48.dp).then(switchAction)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(PathfinIcons.Tv, null, Modifier.size(18.dp), tint = PlayerSecondary)
-                Text(title, Modifier.weight(1f, fill = false), color = PlayerText, fontSize = 16.sp,
-                    lineHeight = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (onShowChannels != null) Icon(PathfinIcons.ChevronDown, null, Modifier.size(16.dp), tint = PlayerSecondary)
-            }
+            PlayerTitleAction(title, tr("切换频道"), "player-live-channels",
+                Modifier.weight(1f, fill = false).widthIn(max = 360.dp), onShowChannels)
             Row(verticalAlignment = Alignment.CenterVertically, content = tools)
         }
     }
@@ -519,11 +478,13 @@ internal val PlayerSurface = Color(0xFF1C1D20).copy(alpha = .94f)
 /** 裸白色细线图标按钮：48dp 起的触控区，不带底色，依靠顶部/底部暗角保证可读。 */
 @Composable
 internal fun PlayerRoundButton(icon: ImageVector, label: String, tag: String, modifier: Modifier = Modifier,
-    size: Dp = 48.dp, enabled: Boolean = true, seekSeconds: Int? = null, onClick: () -> Unit) {
+    size: Dp = 48.dp, enabled: Boolean = true, seekSeconds: Int? = null, loading: Boolean = false, onClick: () -> Unit) {
     Box(modifier.size(size).clip(CircleShape).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
         .semantics { contentDescription = label }.testTag(tag), contentAlignment = Alignment.Center) {
         val tint = if (enabled) PlayerText else PlayerDisabled
-        Icon(icon, null, Modifier.size(if (size >= 56.dp) 30.dp else 24.dp).seekIntervalLabel(seekSeconds, tint), tint = tint)
+        val glyph = Modifier.size(if (size >= 56.dp) 30.dp else 24.dp)
+        if (loading) PathfinSpinner(PlayerText, glyph)
+        else Icon(icon, null, glyph.seekIntervalLabel(seekSeconds, tint), tint = tint)
     }
 }
 

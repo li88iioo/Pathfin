@@ -20,7 +20,7 @@ UI_TEST = "dev.pathfin.android.UiPreviewTest#exportRepresentativeScreens"
 PLAYER_TEST = "dev.pathfin.android.PlayerControlsFlowTest#exportReferencePlaybackFrames"
 ASPECT_TEST = "dev.pathfin.android.PlayerControlsFlowTest#pausedAspectModesHaveRealScreenPixelsAndKeepAssAligned"
 LIVE_TEST = "dev.pathfin.android.PendingPlaybackCancellationTest#liveSwitchesAndReconnectsInPlace"
-LIVE_FRAMES = ("live-controls", "live-channels-portrait", "live-channels-landscape")
+LIVE_FRAMES = ("live-controls", "live-channels-portrait", "live-controls-landscape", "live-channels-landscape")
 UI_FRAMES = (
     "01-servers-light", "02-add-server-light", "03-home-light", "04-libraries-light",
     "05-grid-light", "06-detail-light", "07-settings-light", "08-home-dark",

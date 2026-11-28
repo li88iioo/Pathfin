@@ -47,6 +47,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.abs
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -454,7 +455,7 @@ class PendingPlaybackCancellationTest {
                 await(fixture) { main { app.state.value.liveTv?.loaded == true } }
                 tap("live-tv-channel-$ONE")
                 val first = playingChannel(ONE)
-                checkLiveControls()
+                checkLiveControls(landscape = false)
                 preview("live-controls")
                 val video = compose.onNodeWithTag("player-video")
                 video.performVerificationTouchInput(compose) { doubleClick(Offset(centerX, height * .36f)) }
@@ -483,7 +484,8 @@ class PendingPlaybackCancellationTest {
                 showLiveControls()
                 tap("player-orientation")
                 await(fixture) { main { compose.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE } }
-                showLiveControls()
+                checkLiveControls(landscape = true)
+                preview("live-controls-landscape")
                 tap("player-live-channels")
                 assertCurrentChannel(ONE, landscape = true)
                 preview("live-channels-landscape")
@@ -558,10 +560,23 @@ class PendingPlaybackCancellationTest {
         }
     }
 
-    private fun checkLiveControls() {
+    private fun checkLiveControls(landscape: Boolean) {
+        val video = compose.onNodeWithTag("player-video")
+        compose.waitUntil(WAIT) {
+            video.readVerificationNode(compose) { (it.boundsInWindow.width > it.boundsInWindow.height) == landscape }
+        }
         showLiveControls()
-        compose.onNodeWithTag("player-live-channels").assertExists()
-        compose.onNodeWithTag("player-live-reconnect").assertExists()
+        val channel = compose.onNodeWithTag("player-live-channels")
+        val reconnect = compose.onNodeWithTag("player-live-reconnect")
+        val bottom = compose.onNodeWithTag("player-bottom-controls")
+        VerificationDisplay.awaitWindowReady(compose, "live-controls-layout", channel, reconnect, bottom)
+        val bar = bottom.readVerificationNode(compose) { it.boundsInWindow }
+        val channelBounds = channel.assertVerificationDisplayed(compose).readVerificationNode(compose) { it.boundsInWindow }
+        val reconnectBounds = reconnect.assertVerificationDisplayed(compose).readVerificationNode(compose) { it.boundsInWindow }
+        assertTrue("频道入口与刷新应在同一底栏居中对齐",
+            abs(channelBounds.center.y - bar.center.y) <= 1f && abs(reconnectBounds.center.y - bar.center.y) <= 1f)
+        assertTrue("频道入口与刷新触控区不能重叠",
+            channelBounds.right <= reconnectBounds.left || reconnectBounds.right <= channelBounds.left)
         for (tag in listOf("player-seek-back", "player-seek-forward", "player-seek-slider", "player-time"))
             compose.onNodeWithTag(tag).assertDoesNotExist()
     }
