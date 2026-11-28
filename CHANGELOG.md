@@ -4,6 +4,17 @@
 
 首版内容涵盖从[初始源码](https://github.com/li88iioo/Pathfin/commit/ed01b3e91565d31fcf736ed4d010eda69132050d)到 `v0.1.0` 标签的全部提交。本地测试 build 不单独列为正式版本。
 
+## [0.1.10] - 2026-11-28
+
+### 新增
+
+- 电视直播支持在播放器内换台。点左下角的频道名或长按画面左侧，即可打开频道列表。横屏从左侧展开，竖屏从底部展开，浏览时原台继续播放。[播放器内换台](https://github.com/li88iioo/Pathfin/commit/7799d40c0000208cc2d5de50f0accc40948e14da)
+- 直播断流后可直接重连当前频道，也可以切到其他台。直播底栏新增刷新按钮，移除了直播的快进、快退和进度条。[重连与直播控制](https://github.com/li88iioo/Pathfin/commit/c94ae7429f4cdfd9cdc49809ee5900553935ea41)
+
+### 修复
+
+- 修复「裁切填满」时普通 ASS 对白可能被裁到屏幕外的问题。对白会按可见画面排版，带定位的字幕标注仍跟随原画位置。[ASS 字幕裁切](https://github.com/li88iioo/Pathfin/commit/0e05055690a34bff5acf8d8cf999528d994d896c)
+
 ## [0.1.9] - 2026-11-27
 
 ### 优化与修复
@@ -191,6 +202,7 @@
 - 在线字幕需要服务器配置提供商并授予相应权限；实际解码性能取决于设备和媒体，不能保证所有设备都能流畅软解 4K。
 - 正式版与开发版使用独立包名，账号和设置不互通；覆盖升级需保持相同包名和签名。
 
+[0.1.10]: https://github.com/li88iioo/Pathfin/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/li88iioo/Pathfin/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/li88iioo/Pathfin/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/li88iioo/Pathfin/compare/v0.1.6...v0.1.7
