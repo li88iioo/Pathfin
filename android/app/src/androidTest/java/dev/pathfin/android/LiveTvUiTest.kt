@@ -6,12 +6,16 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assert
@@ -29,6 +33,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasAnyAncestor
 import dev.pathfin.android.createVerificationComposeRule
@@ -43,8 +48,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextReplacement
-import androidx.compose.ui.test.swipeLeft
-import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.longClick
 import androidx.lifecycle.ViewModelProvider
@@ -544,51 +548,70 @@ class LiveTvUiTest {
     @Test fun groupTabsFilterTheListInPlaceAndAllIsTheDefault() {
         val fixture = Fixture(rich = true, session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User",
             "device", serverId = "server", isAdministrator = true))
-        show(fixture, groups = true)
-        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("live-tv-tab-夜航").fetchSemanticsNodes().size == 1 }
-        compose.onNodeWithTag("live-tv-tab-全部").assertIsSelected()
-        listOf("harbour", "seagull", "lighthouse").forEach { compose.onNodeWithTag("live-tv-channel-$it").assertExists() }
+        val host = show(fixture, groups = true)
+        val grid = compose.onNodeWithTag("live-tv-channel-list")
+
+        fun visibleTab(label: String): SemanticsNodeInteraction {
+            grid.performScrollToNode(hasTestTag("live-tv-tabs"))
+            return compose.onNodeWithTag("live-tv-tab-$label").performScrollTo()
+        }
+        fun assertGroup(label: String?) {
+            compose.waitUntil(WAIT_MS) { compose.runOnIdle { host.state.group == label } }
+            visibleTab(label ?: "全部").assertIsSelected()
+        }
+        fun swipeOnChannels(id: String, left: Boolean) {
+            val row = revealChannel(grid, id)
+            val relativeY = row.readVerificationNode(compose) { it.boundsInRoot.center.y } -
+                grid.readVerificationNode(compose) { it.boundsInRoot.top }
+            // 手势阈值随整个网格宽度变化。用频道所在的高度横跨网格，横屏多列时也能滑过阈值。
+            grid.performVerificationTouchInput(compose) {
+                val start = Offset(width * .78f, relativeY)
+                val end = Offset(width * .22f, relativeY)
+                if (left) swipe(start, end) else swipe(end, start)
+            }
+        }
+
+        awaitChannelGroups(host)
+        assertGroup(null)
+        listOf("harbour", "seagull", "lighthouse").forEach { revealChannel(grid, it) }
         val requests = fixture.channelPages.requests.size
-        compose.onNodeWithTag("live-tv-tab-夜航").performVerificationClick(compose)
-        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("live-tv-channel-seagull").fetchSemanticsNodes().isEmpty() }
-        compose.onNodeWithTag("live-tv-channel-lighthouse").assertVerificationDisplayed(compose)
-        compose.onNodeWithTag("live-tv-channel-harbour").assertDoesNotExist()
+        visibleTab("夜航").performVerificationClick(compose)
+        assertGroup("夜航")
+        revealChannel(grid, "lighthouse")
+        assertChannelExcluded(grid, "harbour")
+        assertChannelExcluded(grid, "seagull")
         // 选组时不显示分组标题，标签本身就是标题。
+        visibleTab("夜航").assertIsSelected()
         compose.onNodeWithText("沿海").assertExists()
         compose.onAllNodesWithText("夜航").fetchSemanticsNodes().let { assertEquals(1, it.size) }
-        compose.onNodeWithTag("live-tv-tab-全部").performVerificationClick(compose)
-        waitFor("live-tv-channel-seagull")
-        compose.onNodeWithTag("live-tv-channel-harbour").assertExists()
-        // 在频道行滑动，不从整页中心误滑到可横向滚动的标签条。
-        val coastal = compose.onNodeWithTag("live-tv-channel-seagull")
-        coastal.performScrollTo().performVerificationTouchInput(compose) { swipeLeft() }
-        compose.waitUntil(WAIT_MS) { compose.onAllNodesWithTag("live-tv-channel-lighthouse").fetchSemanticsNodes().isEmpty() }
-        compose.onNodeWithTag("live-tv-tab-沿海").assertIsSelected()
-        coastal.performScrollTo().performVerificationTouchInput(compose) { swipeRight() }
-        waitFor("live-tv-channel-lighthouse")
-        compose.onNodeWithTag("live-tv-tab-全部").assertIsSelected()
-        coastal.performScrollTo().performVerificationTouchInput(compose) { swipeRight() }
-        compose.waitForIdle()
-        compose.onNodeWithTag("live-tv-tab-全部").assertIsSelected()
+        visibleTab("全部").performVerificationClick(compose)
+        assertGroup(null)
+        revealChannel(grid, "harbour")
+        swipeOnChannels("seagull", left = true)
+        assertGroup("沿海")
+        assertChannelExcluded(grid, "lighthouse")
+        swipeOnChannels("seagull", left = false)
+        assertGroup(null)
+        revealChannel(grid, "lighthouse")
+        swipeOnChannels("seagull", left = false)
+        assertGroup(null)
         // 点击第二个标签后也能右滑返回，不能沿用创建手势时的选中索引。
-        compose.onNodeWithTag("live-tv-tab-沿海").performVerificationClick(compose)
-        compose.onNodeWithTag("live-tv-tab-沿海").assertIsSelected()
-        coastal.performScrollTo().performVerificationTouchInput(compose) { swipeRight() }
-        waitFor("live-tv-channel-lighthouse")
-        compose.onNodeWithTag("live-tv-tab-全部").assertIsSelected()
+        visibleTab("沿海").performVerificationClick(compose)
+        assertGroup("沿海")
+        swipeOnChannels("seagull", left = false)
+        assertGroup(null)
+        revealChannel(grid, "lighthouse")
         // 末尾左滑不循环；随后连续右滑，应逐组回到全部。
-        compose.onNodeWithTag("live-tv-tab-夜航").performVerificationClick(compose)
-        val last = compose.onNodeWithTag("live-tv-channel-lighthouse")
-        last.performScrollTo().performVerificationTouchInput(compose) { swipeLeft() }
-        compose.waitForIdle()
-        compose.onNodeWithTag("live-tv-tab-夜航").assertIsSelected()
-        last.performVerificationTouchInput(compose) { swipeRight() }
-        waitFor("live-tv-channel-seagull")
-        compose.onNodeWithTag("live-tv-tab-沿海").assertIsSelected()
-        compose.onNodeWithTag("live-tv-channel-lighthouse").assertDoesNotExist()
-        coastal.performScrollTo().performVerificationTouchInput(compose) { swipeRight() }
-        waitFor("live-tv-channel-lighthouse")
-        compose.onNodeWithTag("live-tv-tab-全部").assertIsSelected()
+        visibleTab("夜航").performVerificationClick(compose)
+        assertGroup("夜航")
+        swipeOnChannels("lighthouse", left = true)
+        assertGroup("夜航")
+        swipeOnChannels("lighthouse", left = false)
+        assertGroup("沿海")
+        assertChannelExcluded(grid, "lighthouse")
+        swipeOnChannels("seagull", left = false)
+        assertGroup(null)
+        revealChannel(grid, "lighthouse")
         assertNoNewRequests(fixture.channelPages, requests)
     }
 
@@ -598,17 +621,24 @@ class LiveTvUiTest {
             session = Session(ServerConfig("https://jellyfin.invalid/proxy"), "synthetic-token", "user", "User",
                 "device", serverId = "server", isAdministrator = true)).use { fixture ->
             val played = AtomicReference<MediaItem?>()
-            val host = show(fixture, groups = true) { played.set(it) }
+            // 让标签实际发生横向滚动，验收条件独立于真机当前方向与宽度。
+            val host = show(fixture, groups = true, viewportWidth = 320.dp) { played.set(it) }
+            val grid = compose.onNodeWithTag("live-tv-channel-list")
+            awaitChannelGroups(host)
+            grid.performScrollToNode(hasTestTag("live-tv-tabs"))
             val tabTag = "live-tv-tab-${labels.last()}"
-            waitFor(tabTag)
             val tab = compose.onNodeWithTag(tabTag)
             tab.performScrollTo().performVerificationClick(compose)
             tab.assertIsSelected()
-            val channel = compose.onNodeWithTag("live-tv-channel-lighthouse")
-            channel.performScrollTo().performVerificationClick(compose)
+            val channel = revealChannel(grid, "lighthouse")
+            channel.performVerificationClick(compose)
             compose.runOnIdle { assertEquals("lighthouse", played.get()?.id) }
             VerificationDisplay.awaitWindowReady(compose, "live-tv-before-playback-return", tab, channel)
-            assertTrue("标签条必须已横向滚动", channelBounds("live-tv-tab-全部").left.value < 0f)
+            fun scrollPosition() = compose.runOnIdle {
+                Triple(host.state.tabScroll.value, host.state.list.firstVisibleItemIndex, host.state.list.firstVisibleItemScrollOffset)
+            }
+            val position = scrollPosition()
+            assertTrue("标签条必须已横向滚动", position.first > 0)
             val tabBefore = channelBounds(tabTag)
             val channelBefore = channelBounds("live-tv-channel-lighthouse")
             val requests = fixture.paths.toList()
@@ -618,9 +648,10 @@ class LiveTvUiTest {
                 VerificationDisplay.awaitWindowReady(compose, "live-tv-playback-return", tab, channel)
                 tab.assertIsSelected()
                 tab.assertVerificationDisplayed(compose)
+                assertEquals(position, scrollPosition())
                 assertSameBounds(tabBefore, channelBounds(tabTag))
                 assertSameBounds(channelBefore, channelBounds("live-tv-channel-lighthouse"))
-                compose.onNodeWithTag("live-tv-channel-seagull").assertDoesNotExist()
+                assertChannelExcluded(grid, "seagull")
                 assertEquals(requests, fixture.paths.toList())
             }
         }
@@ -881,6 +912,21 @@ class LiveTvUiTest {
 
     private fun waitFor(tag: String) = compose.waitUntil(5_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().size == 1 }
 
+    private fun awaitChannelGroups(host: ScreenHost) = compose.waitUntil(WAIT_MS) {
+        compose.runOnIdle { host.state.loaded && host.state.groups.entries.isNotEmpty() }
+    }
+
+    private fun revealChannel(grid: SemanticsNodeInteraction, id: String): SemanticsNodeInteraction {
+        val tag = "live-tv-channel-$id"
+        grid.performScrollToNode(hasTestTag(tag))
+        return compose.onNodeWithTag(tag).assertVerificationDisplayed(compose)
+    }
+
+    private fun assertChannelExcluded(grid: SemanticsNodeInteraction, id: String) {
+        val index = grid.readVerificationNode(compose) { it.config[SemanticsProperties.IndexForKey]("channel/$id") }
+        assertEquals("频道 $id 必须被分组过滤", -1, index)
+    }
+
     private class ScreenHost(fixture: Fixture) {
         lateinit var state: LiveTvState
         var fixture by mutableStateOf(fixture)
@@ -893,7 +939,7 @@ class LiveTvUiTest {
     }
 
     private fun show(fixture: Fixture, initialQuery: String = "", groups: Boolean = false, inApp: Boolean = false,
-        onPlay: (MediaItem) -> Unit = {}): ScreenHost {
+        viewportWidth: Dp = Dp.Unspecified, onPlay: (MediaItem) -> Unit = {}): ScreenHost {
         val host = ScreenHost(fixture)
         val vm = if (inApp) compose.runOnUiThread {
             compose.activity.enableEdgeToEdge()
@@ -923,7 +969,9 @@ class LiveTvUiTest {
                     CompositionLocalProvider(LocalPageActive provides host.active, LocalPageRefreshEnabled provides host.active,
                         LocalNoticeHost provides host.notice) {
                         Box(Modifier.fillMaxSize()) {
-                            if (host.visible) LiveTvScreen(state, { host.visible = false }, onPlay)
+                            if (host.visible) Box(Modifier.widthIn(max = viewportWidth)) {
+                                LiveTvScreen(state, { host.visible = false }, onPlay)
+                            }
                             if (host.active) PathfinSnackbarHost(host.notice, Modifier.align(Alignment.BottomCenter))
                         }
                     }
